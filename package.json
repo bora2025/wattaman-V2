@@ -1,0 +1,18 @@
+{
+  "name": "wattanam-v2",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A modernized school attendance system using QR codes.",
+  "scripts": {
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "build:marketplace": "cd apps/marketplace-api && npm run build",
+    "test:marketplace": "cd apps/marketplace-api && npm test",
+    "install:all": "cd backend && npm install && cd ../frontend && npm install"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

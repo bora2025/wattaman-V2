@@ -1,0 +1,64 @@
+import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
+import { AppModule } from './app.module';
+import compression from 'compression';
+import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
+import express from 'express';
+import { readRuntimeConfig } from './config/environment';
+import { readUpdateRepositoryConfig } from './updates/update-config';
+
+async function bootstrap() {
+  const config = readRuntimeConfig();
+  // Validate optional repository trust configuration before opening a network port.
+  readUpdateRepositoryConfig();
+  const app = await NestFactory.create(AppModule, {
+    logger: config.nodeEnv === 'production'
+      ? ['error', 'warn']
+      : ['log', 'error', 'warn'],
+  });
+
+  // Security headers (X-Frame-Options, X-Content-Type-Options, HSTS, etc.)
+  app.use(helmet());
+
+  // Parse cookies (needed for HttpOnly token cookies)
+  app.use(cookieParser());
+
+  // Body size limits to prevent DoS via large payloads
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+  // Compress all responses
+  app.use(compression());
+
+  // Global input validation — strips unknown properties, rejects invalid data
+  app.useGlobalPipes(new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+  }));
+
+  // CORS — use env var in production
+  const allowedOrigins = config.corsOrigins.length
+    ? config.corsOrigins
+    : ['http://localhost:3000', 'http://localhost:3004'];
+  app.enableCors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, server-to-server, curl)
+      if (!origin) return callback(null, true);
+      // Allow configured origins
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+  });
+
+  app.enableShutdownHooks();
+
+  await app.listen(config.port, '0.0.0.0');
+  console.log(`API server running on port ${config.port}`);
+}
+bootstrap().catch((error) => {
+  console.error('API startup failed:', error instanceof Error ? error.message : error);
+  process.exit(1);
+});

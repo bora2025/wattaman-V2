@@ -1,0 +1,42 @@
+name: wattanam-marketplace
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: marketplace
+      POSTGRES_USER: marketplace
+      POSTGRES_PASSWORD: ${MARKETPLACE_POSTGRES_PASSWORD:?MARKETPLACE_POSTGRES_PASSWORD is required}
+    volumes: [marketplace_database:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U marketplace -d marketplace"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build:
+      context: ../..
+      dockerfile: apps/marketplace-api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      NODE_ENV: ${MARKETPLACE_NODE_ENV:-production}
+      PORT: 3010
+      DATABASE_URL: postgresql://marketplace:${MARKETPLACE_POSTGRES_PASSWORD}@postgres:5432/marketplace
+      PUBLIC_BASE_URL: ${MARKETPLACE_PUBLIC_BASE_URL:?MARKETPLACE_PUBLIC_BASE_URL is required}
+      MARKETPLACE_ADMIN_TOKEN: ${MARKETPLACE_ADMIN_TOKEN:?MARKETPLACE_ADMIN_TOKEN is required}
+      METADATA_SIGNING_PRIVATE_KEY_FILE: /run/repository-key/plugin-signing-private.pem
+      METADATA_SIGNING_PRIVATE_KEY: ${METADATA_SIGNING_PRIVATE_KEY:-}
+      METADATA_SIGNING_KEY_ID: ${METADATA_SIGNING_KEY_ID:?METADATA_SIGNING_KEY_ID is required}
+      ARTIFACT_STORAGE_PATH: /data/artifacts
+    volumes:
+      - marketplace_artifacts:/data/artifacts
+      - ../../secrets/repository-signing:/run/repository-key:ro
+    ports: ["${MARKETPLACE_PORT:-3010}:3010"]
+
+volumes:
+  marketplace_database:
+  marketplace_artifacts:

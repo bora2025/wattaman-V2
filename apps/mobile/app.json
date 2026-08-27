@@ -1,0 +1,59 @@
+{
+  "expo": {
+    "name": "Wattaman",
+    "slug": "wattaman",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#EEFFF7"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Wattaman needs camera access to scan QR codes for attendance."
+      }
+    },
+    "android": {
+      "package": "com.wattaman.app",
+      "permissions": [
+        "CAMERA",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ],
+      "adaptiveIcon": {
+        "backgroundColor": "#FFFFFF",
+        "foregroundImage": "./assets/android-icon-foreground.png"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Wattaman needs camera access to scan QR codes for attendance."
+        }
+      ],
+      "expo-secure-store",
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Wattaman needs location to record attendance location."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "f6bf2081-bd1f-40af-98ae-54cd8eef338f"
+      }
+    }
+  }
+}

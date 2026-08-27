@@ -1,0 +1,18 @@
+export const COLORS = {
+  primary: '#00C9A7',
+  primaryDark: '#00A88A',
+  primaryLight: '#E6FFF7',
+  background: '#EEFFF7',
+  card: '#FFFFFF',
+  cardBorder: 'rgba(0, 201, 167, 0.4)',
+  text: '#0F172A',
+  textSecondary: '#64748B',
+  textLight: '#94A3B8',
+  inputBg: '#F5F5F5',
+  inputBorder: '#E2E8F0',
+  white: '#FFFFFF',
+  error: '#EF4444',
+  success: '#22C55E',
+  iconColor: '#0F766E',
+  statusBg: '#1E293B',
+};
