@@ -4,7 +4,7 @@
 
 Legend: `[x]` verified · `[~]` in progress (remainder noted) · `[ ]` not started.
 
-Last reconciled: 2026-08-28, against commits through `224bd90` plus the uncommitted C-007 plugin security review increment.
+Last reconciled: 2026-08-28, including Phase D implementation evidence through the live Railway key-rotation drill.
 
 ## 0. Business decisions (Product Owner) — block their listed freeze gate
 
@@ -70,13 +70,13 @@ Manual proof exists that the Railway Core reference topology (private PostgreSQL
 
 ## Phase D — official repository & release operations · Gate D0/D1/D2
 
-- [~] **D-001** (SRE) Production marketplace deployment with managed PostgreSQL + artifact storage — separate marketplace PostgreSQL, restart-surviving immutable artifacts, and signed index are verified in the foundation drill; production object-storage/custody hardening remains
-- [ ] **D-002** (SEC) Separate publisher/repository key custody + rotation + quorum procedure
-- [ ] **D-003** (PL) Compatibility resolver + signed core/plugin/advisory index
-- [ ] **D-004** (SRE) Release pipeline: SBOM/provenance/signatures/staged channel promotion
-- [ ] **D-005** (BE) School update preflight + maintenance workflow
-- [ ] **D-006** (SEC/SUP) Advisory/withdrawal/emergency-disable/communication process
-- [ ] **D-007** (QA) Outage/slow-network/corrupt-artifact/replay/downgrade/restore test suite
+- [x] **D-001** (SRE) Production marketplace deployment with managed PostgreSQL + artifact storage — isolated Railway project, managed PostgreSQL and persistent artifact volume; migrations, immutable-object restart, remove/restore, and checksum drills passed ([Gate D evidence](./acceptance/gate-d-official-repository-2026-08-28.md))
+- [x] **D-002** (SEC) Separate publisher/repository key custody + rotation + quorum procedure — multi-signature overlap is implemented; the live `repository-2026`/`repository-2027` drill verified both old and new clients, with custody/revocation/two-of-three approval documented
+- [x] **D-003** (PL) Compatibility resolver + signed core/plugin/advisory index — core/plugin/advisory resolution, canonical signatures, trusted-key selection, cross-version filtering, and tamper/replay/downgrade rejection are implemented and tested
+- [x] **D-004** (SRE) Release pipeline: SBOM/provenance/signatures/staged channel promotion — GitHub workflows build once, record digests/SBOM/provenance/notes, Cosign images, publish beta, and promote the same release rows/bytes to stable with `rebuilt:false`
+- [x] **D-005** (BE) School update preflight + maintenance workflow — incompatible active plugins block before backup; prepare creates a native backup and durable maintenance journal; completion records healthy or recovery-required and preserves the recovery path
+- [x] **D-006** (SEC/SUP) Advisory/withdrawal/emergency-disable/communication process — atomic withdrawal/review/advisory, communication URL, signed non-destructive emergency disable, incident runbook, and compromised-plugin/repository-key tabletop are complete
+- [x] **D-007** (QA) Outage/slow-network/corrupt-artifact/replay/downgrade/restore test suite — automated update tests plus live repository restart/restore prove repository failures do not change installed school state or prevent offline operation
 
 ## Phase E — customer identity, licensing, entitlements, payments · Gate E0/E1/E2/E3
 
@@ -100,7 +100,7 @@ Manual proof exists that the Railway Core reference topology (private PostgreSQL
 
 - [~] **Security** — 0 high/critical production findings; 12 moderate + 10 dev-tool findings and the A-009 controlled upgrade remain; A-004 threat model and A-008 secret custody/rotation records not started
 - [ ] **Reliability/observability** — no structured-logging/metrics/alerting implementation yet (§13.2)
-- [ ] **CI/CD** — no automated PR/release pipeline in the repo yet; all verification this session was run manually (§13.3)
+- [~] **CI/CD** — automated core beta release and no-rebuild stable-promotion workflows now exist; PR validation and broader deployment automation remain (§13.3)
 - [~] **Data privacy/lifecycle** — model-level ownership mapped ([technical-inventory.md](./architecture/technical-inventory.md)); field-level classification/retention/export/deletion rules remain (§13.4, tied to A-002/A-008)
 - [ ] **Documentation/support readiness** — no QA/Support runbook rehearsal evidence yet (§13.5)
 - [ ] **Accessibility/localization** — Khmer/English, timezone/currency, keyboard/screen-reader work not yet evidenced (§13.6)
@@ -112,7 +112,7 @@ Manual proof exists that the Railway Core reference topology (private PostgreSQL
 | A0/A1 (architecture baseline) | not reached — 0/13 decisions accepted |
 | B0/B1/B2 (installable core) | not reached — manual Railway Core proof exists; automated provisioning/legacy/domain/recovery gates open |
 | C0–C3 (plugin-capable core) | not reached — no third-party access is correctly still closed (and correctly so: no third-party publisher exists yet); C-001 through C-007 are all done; public CLI/tooling (C-008) is the one remaining item before Gate C3 (SDK 1.0 frozen for the published support window) can close |
-| D0–D2 (official repository) | not reached — production key custody and outage drills open |
+| D0–D2 (official repository) | implementation complete for D-001–D-007; formal gates remain pending upstream B-005 and the Product Owner's DEC-012 telemetry approval |
 | E0–E3 (paid official plugins) | **furthest along** — E-003/004/007/008/009 done; E0 decisions, E-001/002/005/006/010/011, and E3 finance reconciliation remain |
 | F0–F2 (controlled marketplace) | correctly untouched by design |
 

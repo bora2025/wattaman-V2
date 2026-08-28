@@ -147,7 +147,7 @@ Core update:
 ## Key rotation and incident response
 
 - Publisher key: add a new publisher key, publish packages under the new key, distribute it to school plugin trust stores, then revoke the old key. Existing installed packages remain auditable.
-- Repository key: ship the new public key/key ID to schools through a trusted core release before signing indexes only with the new key. The current single-signature contract does not support an unannounced rotation.
+- Repository key: ship the new public key/key ID to schools through a trusted core release, then use the multi-signature overlap window so clients trusting either key verify the same canonical payload. See [repository-key-custody-and-rotation.md](../operations/repository-key-custody-and-rotation.md).
 - Compromised plugin: withdraw the release in the database through an audited operator procedure, publish an advisory immediately, then publish a fixed higher version. Never replace bytes at an existing SHA-256 URL.
 - Compromised repository key: stop publication, rotate the key out of band, preserve the database/artifact volume for investigation, and require schools to update their pinned trust anchor. TLS alone is not an acceptable recovery shortcut.
 
@@ -159,4 +159,4 @@ Core update:
 - School update-client tests cover signed discovery, compatibility blockers, local advisory matching, verified download/install, and checksum mismatch rejection.
 - Frontend production build includes repository state, advisories, plugin updates, and core compatibility warnings.
 
-PostgreSQL migration application, artifact-volume restart, and the repository-to-school signed download were verified in the 2026-08-27 foundation drill. Production key custody, deployment, disaster recovery, release promotion, advisory, and failed-update recovery remain Gate D requirements in the [master execution plan](../platform-master-execution-plan.md).
+PostgreSQL migration application, artifact-volume restart/restore, immutable repository-to-school download, live old/new repository-key overlap, release promotion without rebuilding, advisory withdrawal/emergency disable, and failed-update recovery are recorded in [Gate D implementation evidence](../acceptance/gate-d-official-repository-2026-08-28.md).
