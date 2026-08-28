@@ -72,6 +72,7 @@ This proves the reference topology and smoke path, not the remaining Gate B auto
 | INS-002 | Expose safe installation status | verified | Ready, installed, and legacy-lock unit tests pass |
 | INS-003 | Create first owner transactionally | verified | Simultaneous setup requests produced exactly one installation and one `SUPER_ADMIN`; subsequent setup returns HTTP 409 |
 | INS-004 | Build browser setup wizard | in progress | Production build passes; browser-to-PostgreSQL end-to-end test remains |
+| INS-005 | Provide guarded unattended fresh installation | verified | CLI shares DTO/service transaction, requires non-interactive and exact-slug guards, supports sealed password files and optional checked-in migration deploy; Railway PostgreSQL 18 drill installed once and rejected the repeat without exposing owner credentials |
 | SEC-003 | Authenticate Socket.IO connections and restrict origins | verified | Socket authentication tests and backend build pass |
 | OPS-001 | Define supported Docker environment | in progress | PostgreSQL 16 and current release containers are validated; exact Node/Linux/Docker/browser versions and support windows require Gate A approval |
 | OPS-002 | Create Docker Compose deployment | verified | Isolated release stack built and started PostgreSQL/API/web/gateway healthy on a clean named volume set |
@@ -97,7 +98,7 @@ Phase A records: [technical ownership inventory](./architecture/technical-invent
 | SEC-001 | A-009 and cross-cutting Security/CI gates |
 | DB-001 | A-002, A-007 and Data Privacy/Lifecycle |
 | DB-002 | B-001–003 |
-| INS-004 | B-004 and B-011 |
+| INS-004 | B-004 |
 | OPS-001 | A-005, B-005 and B-013 |
 | PLG-002 | C-003, C-006 and C-008 |
 | PLG-004 | C-004–005 |
