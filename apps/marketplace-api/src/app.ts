@@ -6,6 +6,7 @@ import { createReadStream } from 'node:fs';
 import multer from 'multer';
 import { ZodError } from 'zod';
 import { MarketplaceConfig } from './config';
+import { CommerceService } from './commerce.service';
 import { HttpError } from './http-error';
 import { RepositoryService } from './repository.service';
 
@@ -22,6 +23,7 @@ function adminGuard(expected: string) {
 export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   const app = express();
   const repository = new RepositoryService(prisma, config);
+  const commerce = new CommerceService(prisma, config);
   const upload = multer({ storage: multer.memoryStorage(), limits: { files: 1, fileSize: config.maxArtifactBytes, fields: 10 } });
   app.disable('x-powered-by');
   app.use(helmet());
@@ -64,6 +66,12 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   });
   app.post('/admin/v1/advisories', requireAdmin, async (request, response, next) => {
     try { response.status(201).json(await repository.publishAdvisory(request.body)); } catch (error) { next(error); }
+  });
+  app.post('/admin/v1/orders', requireAdmin, async (request, response, next) => {
+    try { response.status(201).json(await commerce.createOrder(request.body)); } catch (error) { next(error); }
+  });
+  app.post('/admin/v1/orders/:orderId/manual-settlement', requireAdmin, async (request, response, next) => {
+    try { response.json(await commerce.settleManualPayment({ ...request.body, orderId: request.params.orderId })); } catch (error) { next(error); }
   });
 
   app.use((_request, _response, next) => next(new HttpError(404, 'Not found')));

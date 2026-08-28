@@ -18,11 +18,13 @@ CREATE TABLE "ProductPrice" (
     "validFrom" TIMESTAMP(3) NOT NULL,
     "validUntil" TIMESTAMP(3),
     "updatesDays" INTEGER NOT NULL DEFAULT 365,
+    "licenseDays" INTEGER NOT NULL DEFAULT 3650,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "ProductPrice_pkey" PRIMARY KEY ("id"),
     CONSTRAINT "ProductPrice_amountMinor_check" CHECK ("amountMinor" >= 0),
     CONSTRAINT "ProductPrice_licensedMajor_check" CHECK ("licensedMajor" >= 0),
     CONSTRAINT "ProductPrice_updatesDays_check" CHECK ("updatesDays" BETWEEN 0 AND 3650),
+    CONSTRAINT "ProductPrice_licenseDays_check" CHECK ("licenseDays" BETWEEN 1 AND 3650),
     CONSTRAINT "ProductPrice_validity_check" CHECK ("validUntil" IS NULL OR "validUntil" > "validFrom")
 );
 
