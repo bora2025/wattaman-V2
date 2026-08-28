@@ -41,7 +41,7 @@ WITH public_tables AS (
   SELECT table_name FROM information_schema.tables
   WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
 ), public_columns AS (
-  SELECT table_name, column_name, data_type, is_nullable, COALESCE(column_default, '') AS column_default
+  SELECT table_name, column_name, data_type, is_nullable, ordinal_position, COALESCE(column_default, '') AS column_default
   FROM information_schema.columns WHERE table_schema = 'public'
 ), public_constraints AS (
   SELECT table_name || ':' || constraint_name || ':' || constraint_type AS value
