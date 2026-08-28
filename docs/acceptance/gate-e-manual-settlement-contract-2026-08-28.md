@@ -35,4 +35,15 @@ DATABASE_URL=<syntactically valid PostgreSQL URL> npm.cmd run db:validate
 The schema at prisma/schema.prisma is valid
 ```
 
-The local Docker daemon was unavailable, so the forward migration has schema validation but not yet a clean PostgreSQL apply/rollback drill. That runtime evidence remains open and is not implied by this note.
+## PostgreSQL 18 migration drill
+
+Both checked-in migrations were applied in order to a clean disposable Railway PostgreSQL 18 service. The catalog then reported the following non-null columns:
+
+```text
+InstallationEntitlement.signedToken:jsonb:NO
+MarketplaceOrder.installationId:text:NO
+MarketplaceOrderLine.priceId:text:NO
+ProductPrice.licenseDays:integer:NO
+```
+
+Catalog inspection also confirmed `MarketplaceOrder_installationId_fkey`, `MarketplaceOrderLine_priceId_fkey`, `ProductPrice_pluginId_fkey`, and all amount, major-version, update-days, license-days, and validity check constraints. The disposable `Postgres-NEIe` service (`c75a560a-a081-477c-88d8-aee68432ce3f`) was then requested for deletion and verified offline; Railway may retain its zero-byte volume during the provider soft-deletion window.
