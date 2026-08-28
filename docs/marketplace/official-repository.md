@@ -51,6 +51,15 @@ The initial online adapter accepts `POST /v1/payments/webhooks/online-hmac-v1`. 
 
 The container runs `prisma migrate deploy` before starting. Never point `DATABASE_URL` at a school database.
 
+## Refunds, disputes, and entitlement revocation
+
+A paid order can leave the `PAID` state only through this reversal machinery. Nothing deletes an order, payment, or entitlement row; every reversal is a status transition on existing records plus an immutable `MarketplaceRefund` audit entry.
+
+- `POST /admin/v1/orders/:orderId/refund` with `{"reason": "..."}` refunds a `PAID` order: its successful payment and the order move to `REFUNDED`, and every currently `ACTIVE` entitlement from that order moves to `REFUNDED`. Retrying against an already-refunded order returns the original refund record instead of refunding twice.
+- The online adapter also accepts `payment.dispute_opened` and `payment.dispute_closed` events at the same `POST /v1/payments/webhooks/online-hmac-v1` endpoint, signed and replay-protected exactly like `payment.succeeded`/`payment.failed`. `dispute_opened` only records the claim (`providerReference`, `disputeReference`, optional `reason`) for operator visibility; it never changes order, payment, or entitlement state on its own. `dispute_closed` requires `outcome: "won"` or `"lost"`. A lost dispute forces the same reversal as an admin refund, except affected entitlements move to `REVOKED` rather than `REFUNDED`, distinguishing a forced chargeback claw-back from a customer-initiated refund. A won dispute only marks the dispute record resolved.
+- `POST /admin/v1/entitlements/:entitlementId/revoke` with `{"reason": "..."}` revokes one `ACTIVE` entitlement independently of any order or payment, for cause such as a policy violation or fraud finding. It fails closed (`409`) against an entitlement already in a terminal state, so it can never downgrade a more specific existing outcome.
+- `POST /admin/v1/entitlements/expire-overdue` sweeps every `ACTIVE` entitlement whose stored `expiresAt` has passed to `EXPIRED`. There is no background scheduler yet; call it from an operator cron or manually. Local offline verification in `entitlement.ts` already rejects an expired signed token regardless of this sweep — the sweep only keeps the marketplace's own records honest for reporting and support.
+
 ## Bootstrap an official publisher
 
 Register the reviewed public publisher key once:

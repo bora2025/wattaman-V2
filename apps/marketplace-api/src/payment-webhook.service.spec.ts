@@ -110,3 +110,87 @@ describe('authenticated payment webhooks', () => {
     expect(tx.marketplaceOrder.update).toHaveBeenCalledWith({ where: { id: event.data.orderId }, data: { status: 'PAID' } });
   });
 });
+
+describe('authenticated payment dispute webhooks', () => {
+  const disputeOpened = {
+    id: 'evt-2026-dispute-001', type: 'payment.dispute_opened', createdAt: now.toISOString(),
+    data: { providerReference: 'pay-001', disputeReference: 'dispute-001', reason: 'fraudulent' },
+  };
+  const disputeClosed = (outcome: 'won' | 'lost') => ({
+    id: 'evt-2026-dispute-002', type: 'payment.dispute_closed', createdAt: now.toISOString(),
+    data: { providerReference: 'pay-001', disputeReference: 'dispute-001', outcome },
+  });
+
+  it('records a newly opened dispute without changing order, payment, or entitlement state', async () => {
+    const raw = body(disputeOpened);
+    const tx = {
+      paymentWebhookEvent: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'evidence-3' }), update: jest.fn().mockResolvedValue({}) },
+      marketplacePayment: { findUnique: jest.fn().mockResolvedValue({ id: 'payment-1', orderId: event.data.orderId }) },
+      marketplacePaymentDispute: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'dispute-row-1', status: 'OPEN' }) },
+    };
+    const { instance } = service(tx);
+    await expect(instance.process(raw, signature(raw), now)).resolves.toMatchObject({ result: { disputeId: 'dispute-row-1', status: 'OPEN' } });
+    expect(tx.marketplacePaymentDispute.create.mock.calls[0][0].data).toMatchObject({ paymentId: 'payment-1', providerDisputeRef: 'dispute-001', reason: 'fraudulent' });
+    expect(tx.paymentWebhookEvent.create.mock.calls[0][0].data.orderId).toBe(event.data.orderId);
+  });
+
+  it('does not duplicate a dispute record when the same dispute is reported again', async () => {
+    const raw = body(disputeOpened);
+    const tx = {
+      paymentWebhookEvent: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'evidence-4' }), update: jest.fn().mockResolvedValue({}) },
+      marketplacePayment: { findUnique: jest.fn().mockResolvedValue({ id: 'payment-1', orderId: event.data.orderId }) },
+      marketplacePaymentDispute: { findUnique: jest.fn().mockResolvedValue({ id: 'dispute-row-1', status: 'OPEN' }), create: jest.fn() },
+    };
+    const { instance } = service(tx);
+    await expect(instance.process(raw, signature(raw), now)).resolves.toMatchObject({ result: { alreadyRecorded: true } });
+    expect(tx.marketplacePaymentDispute.create).not.toHaveBeenCalled();
+  });
+
+  it('closes a won dispute without reversing the payment, order, or entitlement', async () => {
+    const raw = body(disputeClosed('won'));
+    const tx = {
+      paymentWebhookEvent: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'evidence-5' }), update: jest.fn().mockResolvedValue({}) },
+      marketplacePayment: { findUnique: jest.fn().mockResolvedValue({ id: 'payment-1', orderId: event.data.orderId }), update: jest.fn() },
+      marketplacePaymentDispute: { findUnique: jest.fn().mockResolvedValue({ id: 'dispute-row-1', status: 'OPEN' }), update: jest.fn().mockResolvedValue({}) },
+      marketplaceOrder: { findUnique: jest.fn(), update: jest.fn() },
+    };
+    const { instance } = service(tx);
+    await expect(instance.process(raw, signature(raw), now)).resolves.toMatchObject({ result: { status: 'WON' } });
+    expect(tx.marketplacePaymentDispute.update).toHaveBeenCalledWith({ where: { id: 'dispute-row-1' }, data: { status: 'WON', resolvedAt: now } });
+    expect(tx.marketplacePayment.update).not.toHaveBeenCalled();
+    expect(tx.marketplaceOrder.update).not.toHaveBeenCalled();
+  });
+
+  it('closing a lost dispute forces the same order reversal a refund would and revokes the entitlement', async () => {
+    const raw = body(disputeClosed('lost'));
+    const paidOrder = {
+      id: event.data.orderId, status: 'PAID', refunds: [],
+      payments: [{ id: 'payment-1', status: 'SUCCEEDED', amountMinor: 2500 }],
+      lines: [{ id: 'line-1', entitlement: { id: 'entitlement-1', status: 'ACTIVE' } }],
+    };
+    const tx = {
+      paymentWebhookEvent: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'evidence-6' }), update: jest.fn().mockResolvedValue({}) },
+      marketplacePayment: { findUnique: jest.fn().mockResolvedValue({ id: 'payment-1', orderId: event.data.orderId }), update: jest.fn().mockResolvedValue({}) },
+      marketplacePaymentDispute: { findUnique: jest.fn().mockResolvedValue({ id: 'dispute-row-1', status: 'OPEN' }), update: jest.fn().mockResolvedValue({}) },
+      marketplaceOrder: { findUnique: jest.fn().mockResolvedValue(paidOrder), update: jest.fn().mockResolvedValue({}) },
+      marketplaceRefund: { create: jest.fn().mockResolvedValue({ id: 'refund-from-dispute' }) },
+      installationEntitlement: { update: jest.fn().mockResolvedValue({}) },
+    };
+    const { instance } = service(tx);
+    const result = await instance.process(raw, signature(raw), now);
+    expect(result).toMatchObject({ result: { status: 'LOST', reversal: { orderId: event.data.orderId, status: 'REFUNDED', entitlementIds: ['entitlement-1'] } } });
+    expect(tx.installationEntitlement.update.mock.calls[0][0].data.status).toBe('REVOKED');
+    expect(tx.marketplaceRefund.create.mock.calls[0][0].data.initiatedBy).toBe('dispute');
+  });
+
+  it('rejects closing a dispute that was never opened', async () => {
+    const raw = body(disputeClosed('lost'));
+    const tx = {
+      paymentWebhookEvent: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'evidence-7' }), update: jest.fn() },
+      marketplacePayment: { findUnique: jest.fn().mockResolvedValue({ id: 'payment-1', orderId: event.data.orderId }) },
+      marketplacePaymentDispute: { findUnique: jest.fn().mockResolvedValue(null) },
+    };
+    const { instance } = service(tx);
+    await expect(instance.process(raw, signature(raw), now)).rejects.toThrow('must be opened before it can be closed');
+  });
+});

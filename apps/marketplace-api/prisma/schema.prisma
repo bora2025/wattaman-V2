@@ -54,6 +54,12 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum DisputeStatus {
+  OPEN
+  WON
+  LOST
+}
+
 model Publisher {
   id          String              @id @default(uuid())
   slug        String              @unique
@@ -185,8 +191,11 @@ model InstallationEntitlement {
   installationId String
   pluginId       String
   status         EntitlementStatus        @default(ACTIVE)
+  expiresAt      DateTime?
   updatesThrough DateTime?
   offlineUntil   DateTime?
+  revokedAt      DateTime?
+  revokedReason  String?
   tokenId        String                   @unique
   signedToken    Json
   createdAt      DateTime                 @default(now())
@@ -197,6 +206,7 @@ model InstallationEntitlement {
   orderLine      MarketplaceOrderLine?    @relation(fields: [orderLineId], references: [id])
 
   @@unique([installationId, pluginId])
+  @@index([status, expiresAt])
 }
 
 model DownloadEvent {
@@ -225,6 +235,7 @@ model MarketplaceOrder {
   installation   InstallationRegistration @relation(fields: [installationId], references: [id])
   lines          MarketplaceOrderLine[]
   payments       MarketplacePayment[]
+  refunds        MarketplaceRefund[]
 
   @@index([installationId, createdAt])
 }
@@ -243,17 +254,46 @@ model MarketplaceOrderLine {
 }
 
 model MarketplacePayment {
-  id          String           @id @default(uuid())
+  id          String                      @id @default(uuid())
   orderId     String
   provider    String
   providerRef String
-  status      PaymentStatus    @default(PENDING)
+  status      PaymentStatus               @default(PENDING)
   amountMinor Int
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  order       MarketplaceOrder @relation(fields: [orderId], references: [id])
+  createdAt   DateTime                    @default(now())
+  updatedAt   DateTime                    @updatedAt
+  order       MarketplaceOrder            @relation(fields: [orderId], references: [id])
+  refund      MarketplaceRefund?
+  disputes    MarketplacePaymentDispute[]
 
   @@unique([provider, providerRef])
+}
+
+model MarketplaceRefund {
+  id          String             @id @default(uuid())
+  orderId     String
+  paymentId   String             @unique
+  amountMinor Int
+  reason      String
+  initiatedBy String
+  createdAt   DateTime           @default(now())
+  order       MarketplaceOrder   @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  payment     MarketplacePayment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+}
+
+model MarketplacePaymentDispute {
+  id                 String             @id @default(uuid())
+  paymentId          String
+  providerDisputeRef String
+  status             DisputeStatus      @default(OPEN)
+  reason             String?
+  openedAt           DateTime           @default(now())
+  resolvedAt         DateTime?
+  payment            MarketplacePayment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@unique([paymentId, providerDisputeRef])
 }
 
 model PaymentWebhookEvent {

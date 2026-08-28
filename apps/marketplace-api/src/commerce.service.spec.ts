@@ -86,3 +86,107 @@ describe('marketplace commerce invariants', () => {
     expect(tx.marketplaceOrder.update).not.toHaveBeenCalled();
   });
 });
+
+describe('marketplace refund, revocation, and expiry policy', () => {
+  function paidOrder(overrides: Partial<{ status: string; entitlementStatus: string; paymentStatus: string; refunds: unknown[] }> = {}) {
+    return {
+      id: ids.order, status: overrides.status ?? 'PAID', refunds: overrides.refunds ?? [],
+      payments: [{ id: 'payment-1', status: overrides.paymentStatus ?? 'SUCCEEDED', amountMinor: 2500 }],
+      lines: [{ id: 'line-1', entitlement: { id: 'entitlement-1', status: overrides.entitlementStatus ?? 'ACTIVE' } }],
+    };
+  }
+
+  it('refunds a paid order, downgrades payment and order, and refunds the active entitlement', async () => {
+    const tx = {
+      marketplaceOrder: { findUnique: jest.fn().mockResolvedValue(paidOrder()), update: jest.fn().mockResolvedValue({}) },
+      marketplaceRefund: { create: jest.fn().mockResolvedValue({ id: 'refund-1' }) },
+      marketplacePayment: { update: jest.fn().mockResolvedValue({}) },
+      installationEntitlement: { update: jest.fn().mockResolvedValue({}) },
+    };
+    const service = new CommerceService(prismaWith(tx), config());
+    const now = new Date('2026-09-01Z');
+    await expect(service.refundOrder({ orderId: ids.order, reason: 'customer requested cancellation' }, now))
+      .resolves.toEqual({ orderId: ids.order, status: 'REFUNDED', refundId: 'refund-1', entitlementIds: ['entitlement-1'] });
+    expect(tx.marketplaceRefund.create.mock.calls[0][0].data).toMatchObject({ orderId: ids.order, paymentId: 'payment-1', amountMinor: 2500, initiatedBy: 'admin' });
+    expect(tx.marketplacePayment.update).toHaveBeenCalledWith({ where: { id: 'payment-1' }, data: { status: 'REFUNDED' } });
+    expect(tx.marketplaceOrder.update).toHaveBeenCalledWith({ where: { id: ids.order }, data: { status: 'REFUNDED' } });
+    expect(tx.installationEntitlement.update).toHaveBeenCalledWith({
+      where: { id: 'entitlement-1' }, data: { status: 'REFUNDED', revokedAt: now, revokedReason: 'customer requested cancellation' },
+    });
+  });
+
+  it('returns the recorded refund without reprocessing an already-refunded order', async () => {
+    const tx = {
+      marketplaceOrder: { findUnique: jest.fn().mockResolvedValue(paidOrder({ status: 'REFUNDED', refunds: [{ id: 'refund-1' }] })), update: jest.fn() },
+      marketplaceRefund: { create: jest.fn() },
+      marketplacePayment: { update: jest.fn() },
+      installationEntitlement: { update: jest.fn() },
+    };
+    const service = new CommerceService(prismaWith(tx), config());
+    await expect(service.refundOrder({ orderId: ids.order, reason: 'retry' }))
+      .resolves.toEqual({ orderId: ids.order, status: 'REFUNDED', refundId: 'refund-1', entitlementIds: ['entitlement-1'] });
+    expect(tx.marketplaceRefund.create).not.toHaveBeenCalled();
+    expect(tx.marketplacePayment.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects refunding an order that was never paid', async () => {
+    const tx = { marketplaceOrder: { findUnique: jest.fn().mockResolvedValue(paidOrder({ status: 'PENDING' })) } };
+    const service = new CommerceService(prismaWith(tx), config());
+    await expect(service.refundOrder({ orderId: ids.order, reason: 'mistaken order' })).rejects.toThrow('cannot be refunded from PENDING');
+  });
+
+  it('leaves an already-terminal entitlement untouched when refunding its order', async () => {
+    const tx = {
+      marketplaceOrder: { findUnique: jest.fn().mockResolvedValue(paidOrder({ entitlementStatus: 'EXPIRED' })), update: jest.fn().mockResolvedValue({}) },
+      marketplaceRefund: { create: jest.fn().mockResolvedValue({ id: 'refund-1' }) },
+      marketplacePayment: { update: jest.fn().mockResolvedValue({}) },
+      installationEntitlement: { update: jest.fn() },
+    };
+    const service = new CommerceService(prismaWith(tx), config());
+    await expect(service.refundOrder({ orderId: ids.order, reason: 'late refund' })).resolves.toMatchObject({ entitlementIds: [] });
+    expect(tx.installationEntitlement.update).not.toHaveBeenCalled();
+  });
+
+  it('marks entitlements revoked instead of refunded when a dispute forces the reversal', async () => {
+    const tx = {
+      marketplaceOrder: { findUnique: jest.fn().mockResolvedValue(paidOrder()), update: jest.fn().mockResolvedValue({}) },
+      marketplaceRefund: { create: jest.fn().mockResolvedValue({ id: 'refund-1' }) },
+      marketplacePayment: { update: jest.fn().mockResolvedValue({}) },
+      installationEntitlement: { update: jest.fn().mockResolvedValue({}) },
+    };
+    const service = new CommerceService(prismaWith(tx), config());
+    await service.reverseOrder(tx as any, { orderId: ids.order, reason: 'chargeback: dispute-1', initiatedBy: 'dispute' });
+    expect(tx.installationEntitlement.update.mock.calls[0][0].data.status).toBe('REVOKED');
+  });
+
+  it('revokes an active entitlement for cause', async () => {
+    const entitlementId = '00000000-0000-4000-8000-000000000005';
+    const tx = {
+      installationEntitlement: {
+        findUnique: jest.fn().mockResolvedValue({ id: entitlementId, status: 'ACTIVE' }),
+        update: jest.fn().mockResolvedValue({ id: entitlementId, status: 'REVOKED' }),
+      },
+    };
+    const service = new CommerceService(prismaWith(tx), config());
+    await expect(service.revokeEntitlement({ entitlementId, reason: 'policy violation' }))
+      .resolves.toEqual({ entitlementId, status: 'REVOKED' });
+    expect(tx.installationEntitlement.update.mock.calls[0][0].data).toMatchObject({ status: 'REVOKED', revokedReason: 'policy violation' });
+  });
+
+  it('refuses to revoke an entitlement that already reached a terminal state', async () => {
+    const entitlementId = '00000000-0000-4000-8000-000000000005';
+    const tx = { installationEntitlement: { findUnique: jest.fn().mockResolvedValue({ id: entitlementId, status: 'REFUNDED' }) } };
+    const service = new CommerceService(prismaWith(tx), config());
+    await expect(service.revokeEntitlement({ entitlementId, reason: 'duplicate revoke' })).rejects.toThrow('cannot be revoked from REFUNDED');
+  });
+
+  it('expires only active entitlements whose license window has passed', async () => {
+    const prisma = { installationEntitlement: { updateMany: jest.fn().mockResolvedValue({ count: 3 }) } } as any;
+    const service = new CommerceService(prisma, config());
+    const now = new Date('2027-01-01Z');
+    await expect(service.expireOverdueEntitlements(now)).resolves.toEqual({ expiredCount: 3 });
+    expect(prisma.installationEntitlement.updateMany).toHaveBeenCalledWith({
+      where: { status: 'ACTIVE', expiresAt: { lt: now } }, data: { status: 'EXPIRED' },
+    });
+  });
+});

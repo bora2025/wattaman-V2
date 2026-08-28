@@ -85,6 +85,15 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   app.post('/admin/v1/orders/:orderId/manual-settlement', requireAdmin, async (request, response, next) => {
     try { response.json(await commerce.settleManualPayment({ ...request.body, orderId: request.params.orderId })); } catch (error) { next(error); }
   });
+  app.post('/admin/v1/orders/:orderId/refund', requireAdmin, async (request, response, next) => {
+    try { response.json(await commerce.refundOrder({ ...request.body, orderId: request.params.orderId })); } catch (error) { next(error); }
+  });
+  app.post('/admin/v1/entitlements/:entitlementId/revoke', requireAdmin, async (request, response, next) => {
+    try { response.json(await commerce.revokeEntitlement({ ...request.body, entitlementId: request.params.entitlementId })); } catch (error) { next(error); }
+  });
+  app.post('/admin/v1/entitlements/expire-overdue', requireAdmin, async (_request, response, next) => {
+    try { response.json(await commerce.expireOverdueEntitlements()); } catch (error) { next(error); }
+  });
 
   app.use((_request, _response, next) => next(new HttpError(404, 'Not found')));
   app.use((error: unknown, _request: Request, response: Response, _next: NextFunction) => {

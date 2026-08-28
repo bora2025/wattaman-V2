@@ -15,6 +15,14 @@ const settlementInput = z.object({
   orderId: z.string().uuid(), providerReference: z.string().trim().min(1).max(200),
 }).strict();
 
+const refundInput = z.object({
+  orderId: z.string().uuid(), reason: z.string().trim().min(1).max(500),
+}).strict();
+
+const revokeInput = z.object({
+  entitlementId: z.string().uuid(), reason: z.string().trim().min(1).max(500),
+}).strict();
+
 export class CommerceService {
   constructor(private readonly prisma: PrismaClient, private readonly config: MarketplaceConfig) {}
 
@@ -89,13 +97,83 @@ export class CommerceService {
         }, this.config.entitlementPrivateKey, this.config.entitlementKeyId, now);
         const entitlement = await tx.installationEntitlement.upsert({
           where: { installationId_pluginId: { installationId: order.installationId, pluginId: line.pluginId } },
-          create: { installationId: order.installationId, pluginId: line.pluginId, orderLineId: line.id, tokenId: token.payload.tokenId, updatesThrough, offlineUntil: offlineRecheckAfter, signedToken: token as unknown as Prisma.InputJsonValue },
-          update: { status: 'ACTIVE', orderLineId: line.id, tokenId: token.payload.tokenId, updatesThrough, offlineUntil: offlineRecheckAfter, signedToken: token as unknown as Prisma.InputJsonValue },
+          create: {
+            installationId: order.installationId, pluginId: line.pluginId, orderLineId: line.id, tokenId: token.payload.tokenId,
+            expiresAt, updatesThrough, offlineUntil: offlineRecheckAfter, signedToken: token as unknown as Prisma.InputJsonValue,
+          },
+          update: {
+            status: 'ACTIVE', orderLineId: line.id, tokenId: token.payload.tokenId, revokedAt: null, revokedReason: null,
+            expiresAt, updatesThrough, offlineUntil: offlineRecheckAfter, signedToken: token as unknown as Prisma.InputJsonValue,
+          },
         });
         entitlementIds.push(entitlement.id);
       }
       await tx.marketplaceOrder.update({ where: { id: order.id }, data: { status: 'PAID' } });
       return { orderId: order.id, status: 'PAID' as const, paymentId: payment.id, entitlementIds };
+  }
+
+  async refundOrder(value: unknown, now = new Date()) {
+    const input = refundInput.parse(value);
+    return this.prisma.$transaction(
+      (tx) => this.reverseOrder(tx, { orderId: input.orderId, reason: input.reason, initiatedBy: 'admin' }, now),
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+  }
+
+  async reverseOrder(
+    tx: Prisma.TransactionClient,
+    input: { orderId: string; reason: string; initiatedBy: 'admin' | 'dispute' },
+    now = new Date(),
+  ) {
+    const order = await tx.marketplaceOrder.findUnique({
+      where: { id: input.orderId },
+      include: { lines: { include: { entitlement: true } }, payments: true, refunds: true },
+    });
+    if (!order) throw new HttpError(404, 'Order not found');
+    if (order.status === 'REFUNDED') {
+      const existing = order.refunds[0];
+      if (!existing) throw new HttpError(409, 'Order was refunded without a refund record');
+      return { orderId: order.id, status: 'REFUNDED' as const, refundId: existing.id, entitlementIds: order.lines.filter((line) => line.entitlement).map((line) => line.entitlement!.id) };
+    }
+    if (order.status !== 'PAID') throw new HttpError(409, `Order cannot be refunded from ${order.status}`);
+    const payment = order.payments.find((candidate) => candidate.status === 'SUCCEEDED');
+    if (!payment) throw new HttpError(409, 'Order has no successful payment to refund');
+    const refund = await tx.marketplaceRefund.create({
+      data: { orderId: order.id, paymentId: payment.id, amountMinor: payment.amountMinor, reason: input.reason, initiatedBy: input.initiatedBy },
+    });
+    await tx.marketplacePayment.update({ where: { id: payment.id }, data: { status: 'REFUNDED' } });
+    await tx.marketplaceOrder.update({ where: { id: order.id }, data: { status: 'REFUNDED' } });
+    const revokedStatus = input.initiatedBy === 'dispute' ? 'REVOKED' : 'REFUNDED';
+    const entitlementIds: string[] = [];
+    for (const line of order.lines) {
+      if (!line.entitlement || line.entitlement.status !== 'ACTIVE') continue;
+      await tx.installationEntitlement.update({
+        where: { id: line.entitlement.id }, data: { status: revokedStatus, revokedAt: now, revokedReason: input.reason },
+      });
+      entitlementIds.push(line.entitlement.id);
+    }
+    return { orderId: order.id, status: 'REFUNDED' as const, refundId: refund.id, entitlementIds };
+  }
+
+  async revokeEntitlement(value: unknown, now = new Date()) {
+    const input = revokeInput.parse(value);
+    return this.prisma.$transaction(async (tx) => {
+      const entitlement = await tx.installationEntitlement.findUnique({ where: { id: input.entitlementId } });
+      if (!entitlement) throw new HttpError(404, 'Entitlement not found');
+      if (entitlement.status !== 'ACTIVE') throw new HttpError(409, `Entitlement cannot be revoked from ${entitlement.status}`);
+      const updated = await tx.installationEntitlement.update({
+        where: { id: entitlement.id }, data: { status: 'REVOKED', revokedAt: now, revokedReason: input.reason },
+      });
+      return { entitlementId: updated.id, status: updated.status };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
+  async expireOverdueEntitlements(now = new Date()) {
+    const result = await this.prisma.installationEntitlement.updateMany({
+      where: { status: 'ACTIVE', expiresAt: { lt: now } },
+      data: { status: 'EXPIRED' },
+    });
+    return { expiredCount: result.count };
   }
 }
 

@@ -41,7 +41,7 @@ No plugin may write a core-owned model. Plugin tables must use the enforced `plu
 | Publisher governance | Publisher, PublisherKey |
 | Catalog/review | MarketplacePlugin, PluginVersion, VersionReview |
 | Repository/security | PackageArtifact, CoreRelease, SecurityAdvisory, DownloadEvent |
-| Commerce | MarketplaceOrder, MarketplaceOrderLine, MarketplacePayment, PaymentWebhookEvent |
+| Commerce | MarketplaceOrder, MarketplaceOrderLine, MarketplacePayment, PaymentWebhookEvent, MarketplaceRefund, MarketplacePaymentDispute |
 | Licensing | InstallationEntitlement |
 
 ## Persistent files
