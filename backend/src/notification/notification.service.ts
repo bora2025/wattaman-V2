@@ -2,20 +2,22 @@ import { Injectable } from '@nestjs/common';
 import sgMail from '@sendgrid/mail';
 import twilio from 'twilio';
 import { PrismaService } from '../database/prisma.service';
+import { NotificationProviderConfig, readNotificationProviderConfig } from './notification-config';
 
 @Injectable()
 export class NotificationService {
   private twilioClient: twilio.Twilio | null = null;
+  private readonly config: NotificationProviderConfig;
 
   constructor(private prisma: PrismaService) {
-    const apiKey = process.env.SENDGRID_API_KEY;
-    if (apiKey) {
-      sgMail.setApiKey(apiKey);
+    this.config = readNotificationProviderConfig();
+    if (this.config.email.apiKey) {
+      sgMail.setApiKey(this.config.email.apiKey);
     }
-    if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+    if (this.config.sms.accountSid && this.config.sms.authToken) {
       this.twilioClient = twilio(
-        process.env.TWILIO_ACCOUNT_SID,
-        process.env.TWILIO_AUTH_TOKEN,
+        this.config.sms.accountSid,
+        this.config.sms.authToken,
       );
     }
   }
@@ -35,11 +37,11 @@ export class NotificationService {
     const message = `Your child ${student.user.name} was marked absent today.`;
 
     // Send email (skip if no API key configured)
-    if (parent.email && process.env.SENDGRID_API_KEY) {
+    if (parent.email && this.config.email.enabled) {
       try {
         await sgMail.send({
           to: parent.email,
-          from: 'noreply@attendancesystem.com',
+          from: this.config.email.from,
           subject: 'Student Absence Notification',
           text: message,
         });
@@ -49,11 +51,11 @@ export class NotificationService {
     }
 
     // Send SMS (skip if no credentials configured)
-    if (parent.phone && this.twilioClient && process.env.TWILIO_PHONE_NUMBER) {
+    if (parent.phone && this.twilioClient && this.config.sms.from) {
       try {
         await this.twilioClient.messages.create({
           body: message,
-          from: process.env.TWILIO_PHONE_NUMBER,
+          from: this.config.sms.from,
           to: parent.phone,
         });
       } catch (err) {
@@ -77,10 +79,10 @@ export class NotificationService {
 
   /** Generic email dispatcher used by announcements and future notifications. */
   async sendEmail(to: string, subject: string, text: string) {
-    if (!process.env.SENDGRID_API_KEY) return { skipped: true, reason: 'no-api-key' };
+    if (!this.config.email.enabled) return { skipped: true, reason: 'no-api-key' };
     await sgMail.send({
       to,
-      from: process.env.SENDGRID_FROM || 'noreply@attendancesystem.com',
+      from: this.config.email.from,
       subject,
       text,
     });
@@ -89,12 +91,12 @@ export class NotificationService {
 
   /** Generic SMS dispatcher used by announcements and future notifications. */
   async sendSms(to: string, body: string) {
-    if (!this.twilioClient || !process.env.TWILIO_PHONE_NUMBER) {
+    if (!this.twilioClient || !this.config.sms.from) {
       return { skipped: true, reason: 'no-twilio' };
     }
     await this.twilioClient.messages.create({
       body,
-      from: process.env.TWILIO_PHONE_NUMBER,
+      from: this.config.sms.from,
       to,
     });
     return { sent: true };

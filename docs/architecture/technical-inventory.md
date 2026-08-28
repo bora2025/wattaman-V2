@@ -74,7 +74,7 @@ Publisher and repository private signing keys are secret-manager inputs, never s
 | Gateway | API_UPSTREAM, WEB_UPSTREAM | SRE | private Railway/Docker endpoints only |
 | Marketplace | DATABASE_URL, PUBLIC_BASE_URL, MARKETPLACE_ADMIN_TOKEN, METADATA_SIGNING_PRIVATE_KEY_FILE, METADATA_SIGNING_PRIVATE_KEY, METADATA_SIGNING_KEY_ID, ARTIFACT_STORAGE_PATH, MAX_ARTIFACT_BYTES | Marketplace/Security | validated at startup; HTTPS and managed signing custody in production |
 
-Known gap: optional core variables are still read directly by feature modules. A-008 centralizes schemas, bounds, secrecy labels, and redaction tests before Gate A1.
+Core operational and notification-provider variables now have centralized startup validation. A-008 still requires production custody/rotation records for each secret, plus schemas and redaction coverage for any provider added later.
 
 ## External providers
 

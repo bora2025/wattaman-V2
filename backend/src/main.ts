@@ -7,11 +7,15 @@ import helmet from 'helmet';
 import express from 'express';
 import { readRuntimeConfig } from './config/environment';
 import { readUpdateRepositoryConfig } from './updates/update-config';
+import { readNotificationProviderConfig } from './notification/notification-config';
 
 async function bootstrap() {
   const config = readRuntimeConfig();
   // Validate optional repository trust configuration before opening a network port.
   readUpdateRepositoryConfig();
+  // Optional providers do not block core operation when absent, but partial or
+  // malformed credential sets fail before the server opens a network port.
+  readNotificationProviderConfig();
   const app = await NestFactory.create(AppModule, {
     logger: config.nodeEnv === 'production'
       ? ['error', 'warn']
