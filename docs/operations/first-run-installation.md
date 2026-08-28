@@ -52,6 +52,28 @@ The transaction:
 
 Concurrent attempts cannot create multiple owners. A unique or serialization conflict returns an installation conflict instead of overwriting the first installation.
 
+## Unattended Fresh Installation
+
+The CLI uses the same DTO, timezone check, password hashing, serializable transaction, and singleton lock as the HTTP installer. Build the backend, provide variables through the deployment secret mechanism, then run:
+
+```bash
+INSTALL_NON_INTERACTIVE=true \
+INSTALL_SCHOOL_NAME='Angkor International School' \
+INSTALL_SCHOOL_SLUG='angkor-international-school' \
+INSTALL_CONFIRM_SLUG='angkor-international-school' \
+INSTALL_LOCALE='en-KH' \
+INSTALL_TIMEZONE='Asia/Phnom_Penh' \
+INSTALL_CURRENCY='KHR' \
+INSTALL_OWNER_NAME='School Owner' \
+INSTALL_OWNER_EMAIL='owner@school.example' \
+INSTALL_OWNER_PASSWORD_FILE='/run/secrets/owner-password' \
+npm run install:unattended
+```
+
+`INSTALL_CONFIRM_SLUG` must exactly match the requested slug. In production, the password-file path must be absolute. `INSTALL_OWNER_PASSWORD` is supported for secret-injected one-shot environments, but never place it in shell history, source control, logs, or reusable templates. The command refuses ambiguous file-plus-variable password sources and prints only installation identity, slug, version, timestamp, and final state.
+
+For an isolated certification database inside an existing operations container, leave production `DATABASE_URL` unchanged, set `INSTALL_DATABASE_URL` to the disposable database, and add `--use-install-database-url`. Remove the reference immediately after the drill.
+
 ## Security Properties
 
 - No default administrator email or password is used.
