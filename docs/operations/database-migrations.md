@@ -96,13 +96,26 @@ Expected result: no schema difference. If differences exist, review and reconcil
 
 ### 4. Mark the Baseline Applied
 
-Only after the comparison succeeds, point `DATABASE_URL` at the intended database and run:
+Only after the comparison succeeds, use the guarded adoption command rather than calling `migrate resolve` directly. Record the approved preflight fingerprint and identify an existing `SUPER_ADMIN`:
 
 ```bash
-npm run db:baseline:existing
+ADOPT_NON_INTERACTIVE=true \
+ADOPT_SCHOOL_NAME='Existing School' \
+ADOPT_SCHOOL_SLUG='existing-school' \
+ADOPT_CONFIRM_SLUG='existing-school' \
+ADOPT_OWNER_EMAIL='existing-owner@school.example' \
+ADOPT_APPROVED_SCHEMA_FINGERPRINT='<64-character preflight fingerprint>' \
+ADOPT_LOCALE='en-KH' \
+ADOPT_TIMEZONE='Asia/Phnom_Penh' \
+ADOPT_CURRENCY='KHR' \
+npm run db:legacy:adopt
 ```
 
-This records `20260827000000_baseline` as applied without executing its SQL.
+The command refuses a fingerprint mismatch, missing owner, partial schema, or already initialized installation. Before mutation it creates a native backup plus a `legacy-adoption-<slug>.json` recovery journal. It records `20260827000000_baseline` without executing its SQL, deploys later migrations, creates installation identity and site settings transactionally, and appends a `LEGACY_ADOPTION` audit record.
+
+If the process stops after creating its journal, inspect the backup, journal, database state, and logs. Rerun the same inputs with `--resume`; the journal binds the school slug, approved source fingerprint, backup filename, and checksum. Never delete or edit the journal to bypass a refusal.
+
+For a disposable certification database referenced from a live operations container, set `ADOPT_DATABASE_URL` and add `--use-adopt-database-url`. Never point that variable at another customer installation.
 
 ### 5. Verify Migration State
 

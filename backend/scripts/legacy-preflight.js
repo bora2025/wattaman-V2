@@ -106,4 +106,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { BASELINE, LEGACY_ANCHORS, buildReport, classify, fingerprint };
+module.exports = { BASELINE, LEGACY_ANCHORS, buildReport, classify, fingerprint, querySnapshot };

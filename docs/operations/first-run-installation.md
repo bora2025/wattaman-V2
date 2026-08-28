@@ -100,12 +100,12 @@ For an isolated certification database inside an existing operations container, 
 
 ## Legacy Installations
 
-Do not use the fresh installer for an existing school. If status is `legacy_unadopted`, first follow the database baseline process in [database-migrations.md](./database-migrations.md). A separate authenticated or command-line legacy-adoption operation must be implemented before such an installation receives platform identity metadata.
+Do not use the fresh installer for an existing school. If status is `legacy_unadopted`, follow the fingerprint, backup, comparison, and guarded command-line adoption process in [database-migrations.md](./database-migrations.md). Adoption reuses an existing `SUPER_ADMIN`; it never creates or resets a legacy credential.
 
 ## Remaining Work
 
 - Terms/license acceptance fields if required by the commercial model.
 - Storage and email preflight checks.
 - Initial plugin selection.
-- Legacy adoption command.
+- Two sanitized real legacy snapshots and their adoption comparison reports.
 - Browser-to-PostgreSQL end-to-end automation. PostgreSQL concurrency was verified in the 2026-08-27 foundation acceptance drill.
