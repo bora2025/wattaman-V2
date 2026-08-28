@@ -3,6 +3,7 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { readFileSync } from 'fs';
 import path from 'path';
+import { spawnSync } from 'child_process';
 import { InstallationModule } from './installation.module';
 import { InstallationService } from './installation.service';
 import { InstallDto } from './dto/install.dto';
@@ -65,11 +66,25 @@ export function selectInstallDatabaseUrl(env: NodeJS.ProcessEnv, useIsolatedTarg
   return isolated;
 }
 
+function migrateDatabase() {
+  const executable = path.join(process.cwd(), 'node_modules', '.bin', process.platform === 'win32' ? 'prisma.cmd' : 'prisma');
+  const result = spawnSync(executable, ['migrate', 'deploy', '--schema=prisma/schema.prisma'], {
+    env: process.env,
+    stdio: 'inherit',
+  });
+  if (result.error) throw new Error(`Prisma migration command could not start: ${result.error.message}`);
+  if (result.status !== 0) throw new Error(`Prisma migration command exited with status ${result.status}`);
+}
+
 async function main() {
   const useIsolatedTarget = process.argv.includes('--use-install-database-url');
   process.env.DATABASE_URL = selectInstallDatabaseUrl(process.env, useIsolatedTarget);
   const dto = readUnattendedInstallInput();
   await validateUnattendedInstallInput(dto);
+  if (process.argv.includes('--migrate')) {
+    process.stderr.write('Applying checked-in database migrations...\n');
+    migrateDatabase();
+  }
   const app = await NestFactory.createApplicationContext(InstallationModule, { logger: ['error', 'warn'] });
   try {
     const result = await app.get(InstallationService).install(dto);

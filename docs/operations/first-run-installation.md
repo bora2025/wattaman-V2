@@ -67,10 +67,10 @@ INSTALL_CURRENCY='KHR' \
 INSTALL_OWNER_NAME='School Owner' \
 INSTALL_OWNER_EMAIL='owner@school.example' \
 INSTALL_OWNER_PASSWORD_FILE='/run/secrets/owner-password' \
-npm run install:unattended
+npm run install:unattended -- --migrate
 ```
 
-`INSTALL_CONFIRM_SLUG` must exactly match the requested slug. In production, the password-file path must be absolute. `INSTALL_OWNER_PASSWORD` is supported for secret-injected one-shot environments, but never place it in shell history, source control, logs, or reusable templates. The command refuses ambiguous file-plus-variable password sources and prints only installation identity, slug, version, timestamp, and final state.
+`--migrate` applies only checked-in migrations before installation and is appropriate for a fresh database. Omit it when the deployment release step already ran migrations. `INSTALL_CONFIRM_SLUG` must exactly match the requested slug. In production, the password-file path must be absolute. `INSTALL_OWNER_PASSWORD` is supported for secret-injected one-shot environments, but never place it in shell history, source control, logs, or reusable templates. The command refuses ambiguous file-plus-variable password sources and prints only installation identity, slug, version, timestamp, and final state.
 
 For an isolated certification database inside an existing operations container, leave production `DATABASE_URL` unchanged, set `INSTALL_DATABASE_URL` to the disposable database, and add `--use-install-database-url`. Remove the reference immediately after the drill.
 
