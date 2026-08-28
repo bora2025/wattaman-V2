@@ -35,6 +35,18 @@ Applied migrations were the baseline, installation, plugin registry, and plugin 
 
 Service-local Railway configurations contained repository-root watch patterns, causing valid CLI service-root uploads to be skipped. Custom watch patterns were removed from API and web; the subsequent API upload built and deployed successfully. Root-directory selection remains a Railway service setting.
 
-## Compatibility finding
+## Compatibility finding and backup verification
 
-Railway provisioned PostgreSQL 18 rather than the PostgreSQL 16 Compose baseline. The API image previously contained PostgreSQL client 16, which cannot dump a newer PostgreSQL 18 server. The image now installs client 18; a real PostgreSQL 18 backup is required before this finding is closed.
+Railway provisioned PostgreSQL 18 rather than the PostgreSQL 16 Compose baseline. The API image previously contained PostgreSQL client 16, which cannot dump a newer PostgreSQL 18 server. The image now installs client 18.
+
+The production-shaped backup command completed against Railway PostgreSQL 18.6 and wrote a custom archive to the API persistent volume:
+
+```text
+file: wattanam-20260828T024323Z.dump
+size: 176725 bytes
+sha256: e175e03dc284401b325d056302384e4f9fb19939628a36b0310ec334d990d0c2
+installation: angkor-school
+pg_dump: 18.6
+```
+
+The manifest contains no credentials. A clean PostgreSQL 18 restore and application comparison remain required before the PostgreSQL 18 recovery matrix is complete.

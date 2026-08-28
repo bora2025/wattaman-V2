@@ -65,7 +65,7 @@ Acceptance evidence dated 2026-08-27 proves:
 
 Evidence: [foundation-runtime-2026-08-27.md](./acceptance/foundation-runtime-2026-08-27.md). Open work is never inferred as complete from this baseline.
 
-Deployment evidence dated 2026-08-28 additionally proves that the reference Railway Core project contains isolated PostgreSQL, API, web, and gateway services; only the gateway is public; the API uses a persistent `/data` volume; exact-origin CORS is configured; and the public gateway health, API health/readiness/version/installation-status, and browser setup routes all return HTTP 200. The installation remains intentionally unclaimed until the product owner enters the first owner credentials through `/setup`.
+Deployment evidence dated 2026-08-28 additionally proves that the reference Railway Core project contains isolated PostgreSQL, API, web, and gateway services; only the gateway is public; the API uses a persistent `/data` volume; exact-origin CORS is configured; and the public gateway health, API health/readiness/version/installation-status, and browser setup routes all return HTTP 200. The owner subsequently completed setup for the `Angkor School` reference installation; automated browser submission evidence remains a separate Gate B requirement.
 
 ## 5. Ownership model
 

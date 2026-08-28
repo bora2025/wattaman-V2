@@ -40,7 +40,7 @@ Verified on 2026-08-28 in Railway project `Wattanam V2 - Core`:
 | Private routing | verified | Gateway reaches `api.railway.internal:3001` and `web.railway.internal:3000` |
 | Exact-origin CORS | verified | API configured for the generated gateway HTTPS origin |
 | Public smoke test | verified | Health, readiness, version, installation status, and `/setup` return HTTP 200 |
-| First-run claim | awaiting owner action | Installation reports `ready`; owner credentials must be entered interactively |
+| First-run claim | verified manual journey | Reference installation reports `installed` for `Angkor School`; automated browser submission remains INS-004 |
 
 This proves the reference topology and smoke path, not the remaining Gate B automation, custom-domain lifecycle, complete recovery-set drill, or browser setup submission journey.
 
@@ -75,7 +75,7 @@ This proves the reference topology and smoke path, not the remaining Gate B auto
 | SEC-003 | Authenticate Socket.IO connections and restrict origins | verified | Socket authentication tests and backend build pass |
 | OPS-001 | Define supported Docker environment | in progress | PostgreSQL 16 and current release containers are validated; exact Node/Linux/Docker/browser versions and support windows require Gate A approval |
 | OPS-002 | Create Docker Compose deployment | verified | Isolated release stack built and started PostgreSQL/API/web/gateway healthy on a clean named volume set |
-| OPS-003 | Implement backup and restore | verified | PostgreSQL 16 custom archive, SHA-256 manifest, and empty-database restore reproduced identity, owner, and four migrations |
+| OPS-003 | Implement backup and restore | verified | PostgreSQL 16 custom archive/restore reproduced identity, owner, and four migrations; Railway PostgreSQL 18 produced a 176,725-byte custom archive and SHA-256 manifest with client 18; PostgreSQL 18 clean restore remains Gate B matrix evidence |
 | OPS-004 | Remove destructive online JSON restore | verified | Only authenticated status endpoint remains; frontend contains no restore upload |
 | PLG-001 | Define plugin manifest schema | verified | Manifest tests and announcements example pass |
 | PLG-002 | Define plugin SDK contracts | in progress | SDK 1.0 events, authenticated routes, persisted jobs, scoped settings/storage, permissions/navigation, declarative pages, health, and cleanup have contract tests; audit/notification adapters and granular permission evaluation remain |

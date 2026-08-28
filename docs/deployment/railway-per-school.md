@@ -139,7 +139,7 @@ HTTP and Socket.IO use this same exact-origin list. Wildcard Railway, Vercel, an
 
 ## Verified Core Reference
 
-The `Wattanam V2 - Core` Railway project was smoke-tested on 2026-08-28 using this topology. PostgreSQL, API, web, and gateway deployments succeeded. The generated gateway origin returned HTTP 200 for `/gateway-health`, `/api/health`, `/api/health/ready`, `/api/version`, `/api/installation/status`, and `/setup`. This reference remains in the `ready` installation state until the owner completes the setup wizard.
+The `Wattanam V2 - Core` Railway project was smoke-tested on 2026-08-28 using this topology. PostgreSQL, API, web, and gateway deployments succeeded. The generated gateway origin returned HTTP 200 for `/gateway-health`, `/api/health`, `/api/health/ready`, `/api/version`, `/api/installation/status`, and `/setup`. The owner completed setup for the `Angkor School` reference installation. PostgreSQL 18 backup creation is verified; its clean restore drill remains required.
 
 ## Deployment Gate
 
