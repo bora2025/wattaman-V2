@@ -2,7 +2,7 @@
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
     "builder": "DOCKERFILE",
-    "watchPatterns": ["frontend/**"]
+    "watchPatterns": ["/**"]
   },
   "deploy": {
     "startCommand": "node server.js",
