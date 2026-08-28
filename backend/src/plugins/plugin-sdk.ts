@@ -41,6 +41,7 @@ export interface PluginRuntimeContext {
   notifications: {
     sendEmail(to: string, subject: string, text: string): Promise<{ sent: boolean } | { skipped: boolean; reason: string }>;
     sendSms(to: string, body: string): Promise<{ sent: boolean } | { skipped: boolean; reason: string }>;
+    notifyInApp(userId: string, message: string, type: string): Promise<{ id: string }>;
   };
   database: {
     query<T = unknown>(sql: string, params?: unknown[]): Promise<T[]>;
@@ -48,6 +49,9 @@ export interface PluginRuntimeContext {
   };
   directory: {
     resolveAudience(input: DirectoryAudienceQuery): Promise<DirectoryRecipient[]>;
+    lookupUsers(ids: string[]): Promise<Array<{ id: string; name: string; role: string }>>;
+    lookupClasses(ids: string[]): Promise<Array<{ id: string; name: string }>>;
+    classesForUser(userId: string, role: string): Promise<string[]>;
   };
   realtime: {
     notifyUser(userId: string, event: string, payload: unknown): void;

@@ -3,7 +3,8 @@ import { DirectoryService } from './directory.service';
 function prismaWith(overrides: any) {
   return {
     user: { findMany: jest.fn().mockResolvedValue([]) },
-    class: { findUnique: jest.fn().mockResolvedValue(null) },
+    class: { findUnique: jest.fn().mockResolvedValue(null), findMany: jest.fn().mockResolvedValue([]) },
+    student: { findUnique: jest.fn().mockResolvedValue(null), findMany: jest.fn().mockResolvedValue([]) },
     notificationPreference: { findMany: jest.fn().mockResolvedValue([]) },
     ...overrides,
   } as any;
@@ -59,5 +60,32 @@ describe('DirectoryService', () => {
     const service = new DirectoryService(prismaWith({}));
     await expect(service.resolveAudience({ audience: 'CLASS' })).resolves.toEqual([]);
     await expect(service.resolveAudience({ audience: 'CLASS', classId: 'missing' })).resolves.toEqual([]);
+  });
+
+  it('lookupUsers/lookupClasses look up display names by id, deduplicated, and short-circuit on an empty list', async () => {
+    const userFindMany = jest.fn().mockResolvedValue([{ id: 'u1', name: 'Ada', role: 'TEACHER' }]);
+    const classFindMany = jest.fn().mockResolvedValue([{ id: 'c1', name: 'Grade 1' }]);
+    const service = new DirectoryService(prismaWith({ user: { findMany: userFindMany }, class: { findMany: classFindMany } }));
+
+    await expect(service.lookupUsers(['u1', 'u1'])).resolves.toEqual([{ id: 'u1', name: 'Ada', role: 'TEACHER' }]);
+    expect(userFindMany).toHaveBeenCalledWith({ where: { id: { in: ['u1'] } }, select: { id: true, name: true, role: true } });
+    await expect(service.lookupUsers([])).resolves.toEqual([]);
+
+    await expect(service.lookupClasses(['c1'])).resolves.toEqual([{ id: 'c1', name: 'Grade 1' }]);
+    await expect(service.lookupClasses([])).resolves.toEqual([]);
+  });
+
+  it('classesForUser unions taught classes with the student/parent class, deduplicated', async () => {
+    const classFindMany = jest.fn().mockResolvedValue([{ id: 'taught-1' }]);
+    const studentFindUnique = jest.fn().mockResolvedValue({ classId: 'taught-1' });
+    const service = new DirectoryService(prismaWith({ class: { findMany: classFindMany }, student: { findUnique: studentFindUnique } }));
+    await expect(service.classesForUser('u1', 'STUDENT')).resolves.toEqual(['taught-1']);
+  });
+
+  it('classesForUser resolves a PARENT to every one of their children\'s classes', async () => {
+    const classFindMany = jest.fn().mockResolvedValue([]);
+    const studentFindMany = jest.fn().mockResolvedValue([{ classId: 'c1' }, { classId: 'c2' }, { classId: null }]);
+    const service = new DirectoryService(prismaWith({ class: { findMany: classFindMany }, student: { findMany: studentFindMany } }));
+    await expect(service.classesForUser('parent-1', 'PARENT')).resolves.toEqual(['c1', 'c2']);
   });
 });

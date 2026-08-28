@@ -1,74 +1,56 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Patch,
-  Post,
-  Query,
-  Request,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/roles.guard';
-import { Roles } from '../auth/roles.decorator';
-import {
-  AnnouncementsService,
-  CreateAnnouncementDto,
-} from './announcements.service';
+import { PluginExtensionsService } from '../plugins/plugin-extensions.service';
 
+const PLUGIN_ID = 'wattanam.announcements';
+
+/**
+ * Thin, Prisma-free proxy: announcements business data and logic live
+ * entirely in the wattanam.announcements plugin (plugins/announcements/).
+ * These routes keep the URLs the frontend already calls, translating each
+ * into a dispatch() call against the plugin's own routes. No @Roles() here
+ * -- the plugin's own permission grants (PluginPermissionsService) are the
+ * only authorization check, same as PluginApiController.
+ */
+@UseGuards(JwtAuthGuard)
 @Controller('announcements')
-@UseGuards(JwtAuthGuard, RolesGuard)
 export class AnnouncementsController {
-  constructor(private svc: AnnouncementsService) {}
+  constructor(private readonly extensions: PluginExtensionsService) {}
 
-  // Admin sees all (for moderation / audit)
-  @Roles('ADMIN')
   @Get('all')
-  listAll() {
-    return this.svc.listAll();
+  listAll(@Request() req: any) {
+    return this.dispatch('GET', 'all', req, {});
   }
 
-  // Personal feed for any authenticated user
-  @Roles('ADMIN', 'TEACHER', 'STUDENT', 'PARENT')
   @Get('feed')
-  feed(
-    @Request() req: any,
-    @Query('take') take?: string,
-    @Query('skip') skip?: string,
-  ) {
-    const takeNum = take ? parseInt(take, 10) : 100;
-    const skipNum = skip ? parseInt(skip, 10) : 0;
-    return this.svc.listForUser(req.user.userId, isNaN(takeNum) ? 100 : takeNum, isNaN(skipNum) ? 0 : skipNum);
+  feed(@Request() req: any, @Query() query: Record<string, string>) {
+    return this.dispatch('GET', 'feed', req, {}, query);
   }
 
-  @Roles('ADMIN', 'TEACHER', 'STUDENT', 'PARENT')
   @Get('unread-count')
   unread(@Request() req: any) {
-    return this.svc.unreadCount(req.user.userId);
+    return this.dispatch('GET', 'unread-count', req, {});
   }
 
-  @Roles('ADMIN', 'TEACHER', 'STUDENT', 'PARENT')
   @Patch(':id/read')
   markRead(@Param('id') id: string, @Request() req: any) {
-    return this.svc.markRead(id, req.user.userId);
+    return this.dispatch('PATCH', 'read', req, { id });
   }
 
-  // Admin and Teacher can broadcast; teacher restricted to CLASS audience in service guard below
-  @Roles('ADMIN', 'TEACHER')
   @Post()
-  create(@Body() body: CreateAnnouncementDto, @Request() req: any) {
-    // Teachers can only post CLASS announcements
-    if (req.user.role === 'TEACHER' && body.audience !== 'CLASS') {
-      body.audience = 'CLASS';
-    }
-    return this.svc.create(req.user.userId, body);
+  create(@Body() body: unknown, @Request() req: any) {
+    return this.dispatch('POST', 'create', req, body);
   }
 
-  @Roles('ADMIN')
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.svc.remove(id);
+  remove(@Param('id') id: string, @Request() req: any) {
+    return this.dispatch('DELETE', 'remove', req, { id });
+  }
+
+  private dispatch(method: 'GET' | 'POST' | 'PATCH' | 'DELETE', path: string, req: any, body: unknown, query: Record<string, string> = {}) {
+    return this.extensions.dispatch(PLUGIN_ID, {
+      method, path, params: {}, query, body,
+      principal: { userId: req.user?.userId, role: req.user?.role, email: req.user?.email },
+    });
   }
 }

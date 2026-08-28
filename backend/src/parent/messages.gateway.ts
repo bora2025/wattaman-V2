@@ -73,8 +73,4 @@ export class MessagesGateway implements OnGatewayConnection {
   notifyRead(senderId: string, readerId: string) {
     this.server.to(`user-${senderId}`).emit('message:read', { by: readerId });
   }
-
-  notifyAnnouncement(userId: string, announcement: any) {
-    this.server.to(`user-${userId}`).emit('announcement:new', announcement);
-  }
 }

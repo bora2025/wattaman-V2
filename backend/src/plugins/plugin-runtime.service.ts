@@ -110,6 +110,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnApplicati
       notifications: {
         sendEmail: (to, subject, text) => { requireCapability('notifications.send'); return this.notifications.sendEmail(to, subject, text); },
         sendSms: (to, body) => { requireCapability('notifications.send'); return this.notifications.sendSms(to, body); },
+        notifyInApp: (userId, message, type) => { requireCapability('notifications.send'); return this.notifications.notifyInApp(userId, message, type); },
       },
       database: {
         query: (sql, params = []) => {
@@ -134,6 +135,9 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnApplicati
       },
       directory: {
         resolveAudience: (query) => { requireCapability('directory.read'); return this.directory.resolveAudience(query); },
+        lookupUsers: (ids) => { requireCapability('directory.read'); return this.directory.lookupUsers(ids); },
+        lookupClasses: (ids) => { requireCapability('directory.read'); return this.directory.lookupClasses(ids); },
+        classesForUser: (userId, role) => { requireCapability('directory.read'); return this.directory.classesForUser(userId, role); },
       },
       realtime: {
         notifyUser: (userId, event, payload) => { requireCapability('realtime.notify'); this.realtime.notifyUser(id, userId, event, payload); },

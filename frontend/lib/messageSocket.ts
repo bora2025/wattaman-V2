@@ -68,7 +68,7 @@ export function useMessageSocket(
     socket.on('message:new', onMessage);
     socket.on('message:sent', onSent);
     socket.on('message:read', onRead);
-    socket.on('announcement:new', onAnnouncement);
+    socket.on('plugin:wattanam.announcements:announcement:new', onAnnouncement);
     socket.on('typing', onTyping);
 
     return () => {
@@ -76,7 +76,7 @@ export function useMessageSocket(
       socket.off('message:new', onMessage);
       socket.off('message:sent', onSent);
       socket.off('message:read', onRead);
-      socket.off('announcement:new', onAnnouncement);
+      socket.off('plugin:wattanam.announcements:announcement:new', onAnnouncement);
       socket.off('typing', onTyping);
       socket.emit('leaveUser', userId);
     };

@@ -12,8 +12,8 @@ describe('PluginRuntimeService', () => {
     { register: jest.fn(), clear: jest.fn() },
     { get: jest.fn(), set: jest.fn(), delete: jest.fn() },
     { readText: jest.fn(), writeText: jest.fn(), delete: jest.fn(), list: jest.fn() },
-    { sendEmail: jest.fn().mockResolvedValue({ sent: true }), sendSms: jest.fn().mockResolvedValue({ sent: true }) },
-    { resolveAudience: jest.fn().mockResolvedValue([]) },
+    { sendEmail: jest.fn().mockResolvedValue({ sent: true }), sendSms: jest.fn().mockResolvedValue({ sent: true }), notifyInApp: jest.fn().mockResolvedValue({ id: 'notif-1' }) },
+    { resolveAudience: jest.fn().mockResolvedValue([]), lookupUsers: jest.fn().mockResolvedValue([]), lookupClasses: jest.fn().mockResolvedValue([]), classesForUser: jest.fn().mockResolvedValue([]) },
     { notifyUser: jest.fn() },
   ] as const;
 
@@ -176,5 +176,35 @@ describe('PluginRuntimeService', () => {
     const runtime = new PluginRuntimeService(prisma, verifier, new PluginEventBus(), extensions as any, jobs as any, settings as any, storage as any, notifications as any, directoryService as any, realtime as any);
     await expect(runtime.load('wattanam.test')).rejects.toThrow('did not declare database.write');
     expect(prisma.$executeRawUnsafe).not.toHaveBeenCalled();
+  });
+
+  it('delegates notifyInApp, lookupUsers, lookupClasses, and classesForUser -- the extra capability surface the announcements cutover needs', async () => {
+    const installedPath = path.join(directory, 'wattanam.test', '1.0.0');
+    await fs.mkdir(path.join(installedPath, 'backend'), { recursive: true });
+    await fs.writeFile(path.join(installedPath, 'backend', 'index.js'), `
+      module.exports = {
+        id: 'wattanam.test',
+        async activate(context) {
+          await context.notifications.notifyInApp('user-1', 'hello', 'announcement');
+          await context.directory.lookupUsers(['user-1']);
+          await context.directory.lookupClasses(['class-1']);
+          await context.directory.classesForUser('user-1', 'TEACHER');
+        }
+      };
+    `);
+    const manifest = {
+      id: 'wattanam.test', version: '1.0.0', backendEntry: 'backend/index.js',
+      capabilities: ['notifications.send', 'directory.read'], permissions: [], dependencies: {},
+    };
+    const prisma = { pluginInstallation: { findUnique: jest.fn().mockResolvedValue({ id: 'wattanam.test', version: '1.0.0', installedPath }) } } as any;
+    const verifier = { verifyInstalledDirectory: jest.fn().mockResolvedValue({ manifest }) } as any;
+    const [extensions, jobs, settings, storage, notifications, directoryService, realtime] = dependencies();
+    const runtime = new PluginRuntimeService(prisma, verifier, new PluginEventBus(), extensions as any, jobs as any, settings as any, storage as any, notifications as any, directoryService as any, realtime as any);
+
+    await runtime.load('wattanam.test');
+    expect(notifications.notifyInApp).toHaveBeenCalledWith('user-1', 'hello', 'announcement');
+    expect(directoryService.lookupUsers).toHaveBeenCalledWith(['user-1']);
+    expect(directoryService.lookupClasses).toHaveBeenCalledWith(['class-1']);
+    expect(directoryService.classesForUser).toHaveBeenCalledWith('user-1', 'TEACHER');
   });
 });

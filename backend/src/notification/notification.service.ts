@@ -101,4 +101,10 @@ export class NotificationService {
     });
     return { sent: true };
   }
+
+  /** Logs a row in the shared in-app Notification inbox -- the same table assignments, courses, messages, etc. already write to. */
+  async notifyInApp(userId: string, message: string, type: string) {
+    const notification = await this.prisma.notification.create({ data: { userId, message, type } });
+    return { id: notification.id };
+  }
 }

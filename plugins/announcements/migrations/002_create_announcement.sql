@@ -1,0 +1,2 @@
+-- wattanam-plugin-migration: 002_create_announcement
+CREATE TABLE "plugin_wattanam_announcements_announcement" ("id" TEXT PRIMARY KEY, "authorId" TEXT NOT NULL, "title" TEXT NOT NULL, "body" TEXT NOT NULL, "audience" TEXT NOT NULL, "targetRole" TEXT, "classId" TEXT, "channels" TEXT NOT NULL DEFAULT 'IN_APP', "pinned" BOOLEAN NOT NULL DEFAULT false, "scheduledAt" TIMESTAMP(3), "sentAt" TIMESTAMP(3), "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP);

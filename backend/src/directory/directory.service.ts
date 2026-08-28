@@ -48,6 +48,31 @@ export class DirectoryService {
     });
   }
 
+  /** Names/roles for display -- resolved at read time so a later rename is reflected immediately, same as the live Prisma joins this replaces. */
+  async lookupUsers(ids: string[]): Promise<Array<{ id: string; name: string; role: string }>> {
+    if (!ids.length) return [];
+    return this.prisma.user.findMany({ where: { id: { in: [...new Set(ids)] } }, select: { id: true, name: true, role: true } });
+  }
+
+  async lookupClasses(ids: string[]): Promise<Array<{ id: string; name: string }>> {
+    if (!ids.length) return [];
+    return this.prisma.class.findMany({ where: { id: { in: [...new Set(ids)] } }, select: { id: true, name: true } });
+  }
+
+  /** The reverse of resolveAudience: which classes is this user a teacher, student, or parent-of-student in. */
+  async classesForUser(userId: string, role: string): Promise<string[]> {
+    const teacherClassIds = (await this.prisma.class.findMany({ where: { teacherId: userId }, select: { id: true } })).map((c) => c.id);
+    let studentClassIds: string[] = [];
+    if (role === 'STUDENT') {
+      const record = await this.prisma.student.findUnique({ where: { userId }, select: { classId: true } });
+      if (record?.classId) studentClassIds.push(record.classId);
+    } else if (role === 'PARENT') {
+      const kids = await this.prisma.student.findMany({ where: { parentId: userId }, select: { classId: true } });
+      studentClassIds = kids.map((kid) => kid.classId).filter((id): id is string => !!id);
+    }
+    return [...new Set([...teacherClassIds, ...studentClassIds])];
+  }
+
   private async resolveUsers(input: DirectoryAudienceQuery): Promise<CoreUser[]> {
     if (input.audience === 'SCHOOL') {
       return this.prisma.user.findMany({ select: { id: true, email: true, phone: true, role: true } });
