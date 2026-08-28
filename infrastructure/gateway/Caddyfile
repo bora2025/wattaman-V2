@@ -6,7 +6,10 @@
 :8080 {
   encode zstd gzip
 
-  respond /gateway-health 200
+  @gateway_health path /gateway-health
+  handle @gateway_health {
+    respond "ok" 200
+  }
 
   @socket path /socket.io/*
   handle @socket {
@@ -23,4 +26,3 @@
     reverse_proxy {$WEB_UPSTREAM:web:3000}
   }
 }
-
