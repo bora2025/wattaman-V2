@@ -27,9 +27,13 @@ function parseInput(env = process.env) {
   if (!/^[A-Z]{3}$/.test(currency)) throw new Error('ADOPT_CURRENCY must be a three-letter code');
   const locale = env.ADOPT_LOCALE?.trim() || 'en-KH';
   if (!/^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/.test(locale)) throw new Error('ADOPT_LOCALE is invalid');
+  const schoolName = required(env, 'ADOPT_SCHOOL_NAME');
+  if (schoolName.length < 2 || schoolName.length > 150) throw new Error('ADOPT_SCHOOL_NAME must be between 2 and 150 characters');
+  const ownerEmail = required(env, 'ADOPT_OWNER_EMAIL').toLowerCase();
+  if (ownerEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerEmail)) throw new Error('ADOPT_OWNER_EMAIL must be a valid email address');
   return {
-    schoolName: required(env, 'ADOPT_SCHOOL_NAME'), schoolSlug, locale, timezone, currency,
-    ownerEmail: required(env, 'ADOPT_OWNER_EMAIL').toLowerCase(), fingerprint,
+    schoolName, schoolSlug, locale, timezone, currency,
+    ownerEmail, fingerprint,
     coreVersion: env.APP_VERSION?.trim() || '0.1.0-dev',
   };
 }
@@ -45,10 +49,17 @@ function readJournal(file, input) {
   const journal = JSON.parse(fs.readFileSync(file, 'utf8'));
   if (journal.format !== 'wattanam-legacy-adoption-v1') throw new Error('legacy adoption journal has an unsupported format');
   if (journal.schoolSlug !== input.schoolSlug || journal.sourceFingerprint !== input.fingerprint) throw new Error('legacy adoption journal does not match the confirmed school and fingerprint');
+  if (typeof journal.backup?.file !== 'string' || path.basename(journal.backup.file) !== journal.backup.file || !/^wattanam-\d{8}T\d{6}Z\.dump$/.test(journal.backup.file)) {
+    throw new Error('legacy adoption journal contains an invalid backup filename');
+  }
   const archive = path.join(path.dirname(file), journal.backup.file);
   const manifestFile = archive.replace(/\.dump$/, '.manifest.json');
   if (!fs.existsSync(archive) || !fs.existsSync(manifestFile)) throw new Error('legacy adoption recovery backup is missing');
   if (sha256(archive) !== journal.backup.sha256) throw new Error('legacy adoption recovery backup checksum mismatch');
+  const manifest = JSON.parse(fs.readFileSync(manifestFile, 'utf8'));
+  if (manifest.format !== 'pg_dump-custom-v1' || manifest.file !== journal.backup.file || manifest.sha256 !== journal.backup.sha256) {
+    throw new Error('legacy adoption recovery manifest does not match the journal');
+  }
   return journal;
 }
 
