@@ -27,8 +27,6 @@
     "backup:create": "node scripts/backup-database.js",
     "backup:restore": "node scripts/restore-database.js",
     "install:unattended": "node dist/installation/install-cli.js",
-    "plugin:pack": "node scripts/plugin-package.js",
-    "plugin:keygen": "node scripts/generate-plugin-key.js",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",

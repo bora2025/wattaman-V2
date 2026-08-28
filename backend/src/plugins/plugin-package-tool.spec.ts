@@ -4,7 +4,11 @@ import os from 'os';
 import path from 'path';
 import { PluginPackageVerifier } from './plugin-package';
 
-const { packPlugin } = require('../../scripts/plugin-package');
+// The public @wattanam/plugin-cli's packer (C-008) -- retired the internal
+// backend/scripts/plugin-package.js in its favor. This test is the
+// permanent proof that the CLI's pack output stays byte-compatible with the
+// real backend verifier, not just internally self-consistent.
+const { packPlugin } = require('../../../packages/plugin-cli/src/commands/pack');
 
 describe('plugin packaging tool', () => {
   let directory: string;

@@ -8,6 +8,11 @@ import { PLUGIN_CAPABILITIES, PLUGIN_SDK_VERSION, PLUGIN_RUNTIME_VERSION } from 
  * docs/plugins/package-and-runtime.md's changelog in the same change; a
  * removal or renamed capability is a breaking change and requires bumping
  * PLUGIN_SDK_VERSION to 2.0.0, per the compatibility policy in that doc.
+ *
+ * Twin: packages/plugin-sdk/src/manifest.spec.ts pins the identical literal
+ * list independently (C-008) -- that package has no runtime dependency on
+ * this backend, so the two are kept in sync by review convention, not by
+ * import. Change one, change both.
  */
 describe('SDK 1.0 frozen contract surface', () => {
   it('pins the exact set of capabilities shipped in the 1.0.0 freeze', () => {

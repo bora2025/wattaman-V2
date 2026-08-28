@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "id": "settings",
+  "title": "{{displayName}} settings",
+  "routePath": "settings",
+  "kind": "json-settings"
+}

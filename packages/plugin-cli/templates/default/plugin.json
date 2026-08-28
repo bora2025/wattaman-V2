@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "{{publisher}}.{{name}}",
+  "name": "{{displayName}}",
+  "description": "Describe what this plugin does.",
+  "version": "0.1.0",
+  "requiresCore": ">=0.1.0-0 <1.0.0",
+  "publisher": "{{publisher}}",
+  "license": "MIT",
+  "backendEntry": "backend/index.js",
+  "frontendEntry": "frontend/page.json",
+  "sdkVersion": "1.0.0",
+  "runtimeVersion": "1.0.0",
+  "capabilities": ["api.routes", "navigation.register", "permissions.register", "settings.read", "settings.write", "ui.pages"],
+  "permissions": ["{{publisher}}.{{name}}.manage"],
+  "dependencies": {},
+  "migrations": [],
+  "navigation": [
+    { "id": "settings", "label": "{{displayName}} settings", "href": "/plugins/{{publisher}}.{{name}}/settings", "permission": "{{publisher}}.{{name}}.manage" }
+  ],
+  "supportedLanguages": ["en"]
+}

@@ -25,16 +25,15 @@ CHANGELOG.md
 
 `checksums.json` lists every payload file with SHA-256. `signature.json` contains the publisher's Ed25519 signature over the exact checksum document. The verifier rejects missing/extra files, malformed checksums, tampering, unknown publisher keys, invalid signatures, unsafe or duplicate paths, symlinks, archive bombs, incompatible versions, missing entry points, and migration checksum mismatches.
 
-Generate an external signing pair and build deterministically:
+Generate an external signing pair and build deterministically, using the public `wattanam-plugin` CLI (`packages/plugin-cli` — see [C-008's developer tooling](#developer-tooling)):
 
 ```bash
-cd backend
-npm run plugin:keygen -- /secure/signing/wattanam-2026
-npm run plugin:pack -- \
-  --source ../plugins/announcements \
+npx wattanam-plugin keygen /secure/signing/wattanam-2026
+npx wattanam-plugin pack \
+  --source plugins/announcements \
   --private-key /secure/signing/wattanam-2026/plugin-signing-private.pem \
   --key-id official-2026 \
-  --out ../artifacts/wattanam-announcements-0.1.0.wtp
+  --out artifacts/wattanam-announcements-0.1.0.wtp
 ```
 
 Configure only the public key through `PLUGIN_TRUSTED_KEYS_FILE`, using publisher then key ID as the JSON hierarchy.
