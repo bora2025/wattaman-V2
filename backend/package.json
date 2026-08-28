@@ -21,6 +21,7 @@
     "test:legacy:preflight": "node --test scripts/legacy-preflight.test.js",
     "test:legacy:adopt": "node --test scripts/legacy-adopt.test.js",
     "test:legacy:fixture": "node --test scripts/create-synthetic-legacy-fixture.test.js",
+    "test:legacy:status": "node --test scripts/legacy-adoption-status.test.js",
     "db:push:development": "prisma db push --schema=prisma/schema.prisma",
     "db:seed": "ts-node prisma/seed.ts",
     "backup:create": "node scripts/backup-database.js",
