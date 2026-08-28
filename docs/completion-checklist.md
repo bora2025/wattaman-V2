@@ -4,7 +4,7 @@
 
 Legend: `[x]` verified · `[~]` in progress (remainder noted) · `[ ]` not started.
 
-Last reconciled: 2026-08-28, against commits through `ae342de` plus the uncommitted C-006 SDK 1.0 freeze increment.
+Last reconciled: 2026-08-28, against commits through `224bd90` plus the uncommitted C-007 plugin security review increment.
 
 ## 0. Business decisions (Product Owner) — block their listed freeze gate
 
@@ -65,7 +65,7 @@ Manual proof exists that the Railway Core reference topology (private PostgreSQL
 - [x] **C-004** (BE) Move announcements business data/API to the official plugin — `plugins/announcements/` now owns the full feature: two new namespaced migrations, all six routes, the teacher-forced-CLASS rule, and multi-channel fan-out; core's controller is a ~40-line Prisma-free proxy (`AnnouncementsService` deleted, no `@Roles()` left — authorization is entirely plugin permission grants). `announcements-cutover.js` (backup/copy/verify/grant, journaled like `legacy-adopt.js`) ran live as a real subprocess against real legacy data, then every route was exercised end-to-end (15/15 checks). Core's original tables/rows are kept, untouched, as the rollback path — dropping them is a deliberately deferred follow-up, not part of this box ([gate-c-announcements-cutover-2026-08-28.md](./acceptance/gate-c-announcements-cutover-2026-08-28.md))
 - [x] **C-005** (QA) Install/update/disable/remove/reinstall/core-upgrade certification matrix — full lifecycle certified end-to-end on both supported PostgreSQL versions (16.x, 18.x) using the real service classes: 15/15 checks pass identically on each, including data/migration-history survival across update→remove→reinstall and a genuine core-upgrade compatibility-gate test (blocks then un-blocks reactivation as APP_VERSION moves in/out of the plugin's declared range). Also surfaced and documented a real Postgres operational finding for plugin authors (`SELECT *` vs. explicit columns across a live schema change) ([gate-c-plugin-lifecycle-certification-2026-08-28.md](./acceptance/gate-c-plugin-lifecycle-certification-2026-08-28.md))
 - [x] **C-006** (PL) Freeze SDK 1.0 + compatibility/deprecation policy — [package-and-runtime.md](./plugins/package-and-runtime.md) is the frozen contract reference (all 12 capabilities, exact signatures, manifest/migration/permission/lifecycle rules) with an explicit additive-vs-breaking compatibility policy and changelog; `plugin-sdk-contract.spec.ts` pins the exact capability list and version constants in CI. Commercial support-window length is correctly left open pending DEC-011 ([gate-c-sdk-1.0-freeze-2026-08-28.md](./acceptance/gate-c-sdk-1.0-freeze-2026-08-28.md))
-- [ ] **C-007** (SEC) Plugin review checklist + malicious-fixture suite (traversal/bombs/tampering/capability abuse/SSRF/secret access)
+- [x] **C-007** (SEC) Plugin review checklist + malicious-fixture suite (traversal/bombs/tampering/capability abuse/migration abuse/SSRF/secret access) — all 7 categories proven in `plugin-security-fixtures.spec.ts` (new coverage for bombs/duplicate-entries/SSRF/secret-access; tampering/capability/migration abuse cross-referenced to existing suites); [security-review-checklist.md](./plugins/security-review-checklist.md) is the paired human process, honest that a plugin is trusted in-process code with no sandbox so review-before-signing covers what no test can ([gate-c-plugin-security-review-2026-08-28.md](./acceptance/gate-c-plugin-security-review-2026-08-28.md))
 - [ ] **C-008** (PL) Plugin CLI, typed SDK package, local harness, templates, sign/publish tooling — informal `plugin:keygen`/`plugin:pack` scripts exist under `backend`; the full public developer-tooling package does not yet
 
 ## Phase D — official repository & release operations · Gate D0/D1/D2
@@ -111,7 +111,7 @@ Manual proof exists that the Railway Core reference topology (private PostgreSQL
 |---|---|
 | A0/A1 (architecture baseline) | not reached — 0/13 decisions accepted |
 | B0/B1/B2 (installable core) | not reached — manual Railway Core proof exists; automated provisioning/legacy/domain/recovery gates open |
-| C0–C3 (plugin-capable core) | not reached — no third-party access is correctly still closed; migration-failure rollback (C1), announcements' single data owner (C2/C4), the certified lifecycle matrix (C5), and the SDK 1.0 freeze (C6) are all done; the security review/malicious-fixture suite (C-007) and public CLI/tooling (C-008) remain |
+| C0–C3 (plugin-capable core) | not reached — no third-party access is correctly still closed (and correctly so: no third-party publisher exists yet); C-001 through C-007 are all done; public CLI/tooling (C-008) is the one remaining item before Gate C3 (SDK 1.0 frozen for the published support window) can close |
 | D0–D2 (official repository) | not reached — production key custody and outage drills open |
 | E0–E3 (paid official plugins) | **furthest along** — E-003/004/007/008/009 done; E0 decisions, E-001/002/005/006/010/011, and E3 finance reconciliation remain |
 | F0–F2 (controlled marketplace) | correctly untouched by design |
