@@ -3,6 +3,7 @@
 const path = require('path');
 const { spawnSync } = require('child_process');
 const bcrypt = require('bcryptjs');
+const { PrismaClient } = require('@prisma/client');
 const { buildReport, querySnapshot } = require('./legacy-preflight');
 const { postgresEnvironment } = require('./db-toolkit');
 
@@ -22,13 +23,20 @@ async function main() {
   assertFixtureTarget();
   const environment = postgresEnvironment(process.env.ADOPT_DATABASE_URL);
   const before = buildReport(querySnapshot(environment));
-  if (before.state !== 'empty') throw new Error(`synthetic fixture target must be empty; found ${before.state}`);
-  run('psql', ['--no-psqlrc', '--quiet', '--single-transaction', '--set', 'ON_ERROR_STOP=1', '--file', path.join(process.cwd(), 'prisma/migrations/20260827000000_baseline/migration.sql')], environment);
+  if (before.state === 'empty') {
+    run('psql', ['--no-psqlrc', '--quiet', '--single-transaction', '--set', 'ON_ERROR_STOP=1', '--file', path.join(process.cwd(), 'prisma/migrations/20260827000000_baseline/migration.sql')], environment);
+  } else if (before.state !== 'legacy_unadopted') {
+    throw new Error(`synthetic fixture target must be empty or resumable legacy_unadopted; found ${before.state}`);
+  }
   const passwordHash = await bcrypt.hash(`fixture-${Date.now()}-Password1`, 12);
-  run('psql', [
-    '--no-psqlrc', '--set', 'ON_ERROR_STOP=1', '--set', 'owner_hash=' + passwordHash,
-    '--command', `INSERT INTO "User" ("id","email","password","name","role","createdAt","updatedAt") VALUES ('legacy-owner-fixture','legacy-owner@example.invalid', :'owner_hash','Legacy Fixture Owner','SUPER_ADMIN',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`,
-  ], environment);
+  const prisma = new PrismaClient({ datasources: { db: { url: process.env.ADOPT_DATABASE_URL } } });
+  try {
+    await prisma.user.upsert({
+      where: { id: 'legacy-owner-fixture' },
+      create: { id: 'legacy-owner-fixture', email: 'legacy-owner@example.invalid', password: passwordHash, name: 'Legacy Fixture Owner', role: 'SUPER_ADMIN' },
+      update: { email: 'legacy-owner@example.invalid', password: passwordHash, name: 'Legacy Fixture Owner', role: 'SUPER_ADMIN' },
+    });
+  } finally { await prisma.$disconnect(); }
   const after = buildReport(querySnapshot(environment));
   if (after.state !== 'legacy_unadopted') throw new Error(`fixture did not produce legacy_unadopted state; found ${after.state}`);
   process.stdout.write(`${JSON.stringify(after, null, 2)}\n`);
