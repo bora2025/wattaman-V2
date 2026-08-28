@@ -38,6 +38,10 @@ export interface PluginRuntimeContext {
   storage: { readText(name: string): Promise<string | null>; writeText(name: string, value: string): Promise<void>; delete(name: string): Promise<void>; list(prefix?: string): Promise<string[]> };
   permissions: { register(definitions: Array<{ id: string; label: string; description?: string }>): () => void };
   navigation: { register(entries: Array<{ id: string; label: string; href: string; permission?: string }>): () => void };
+  notifications: {
+    sendEmail(to: string, subject: string, text: string): Promise<{ sent: boolean } | { skipped: boolean; reason: string }>;
+    sendSms(to: string, body: string): Promise<{ sent: boolean } | { skipped: boolean; reason: string }>;
+  };
 }
 
 export interface RuntimePluginModule {

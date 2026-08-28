@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../database/database.module';
+import { NotificationModule } from '../notification/notification.module';
 import { PluginPackageVerifier } from './plugin-package';
 import { PluginsController } from './plugins.controller';
 import { PluginsService } from './plugins.service';
@@ -14,7 +15,7 @@ import { PluginMigrationsService } from './plugin-migrations.service';
 import { PluginPermissionsService } from './plugin-permissions.service';
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, NotificationModule],
   controllers: [PluginsController, PluginApiController],
   providers: [PluginPackageVerifier, PluginEventBus, PluginPermissionsService, PluginExtensionsService, PluginJobsService, PluginSettingsService, PluginStorageService, PluginMigrationsService, PluginRuntimeService, PluginsService],
   exports: [PluginsService, PluginEventBus, PluginExtensionsService, PluginPermissionsService],

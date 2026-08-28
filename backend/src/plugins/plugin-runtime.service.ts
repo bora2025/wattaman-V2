@@ -9,6 +9,7 @@ import { PluginExtensionsService } from './plugin-extensions.service';
 import { PluginJobsService } from './plugin-jobs.service';
 import { PluginSettingsService } from './plugin-settings.service';
 import { PluginStorageService } from './plugin-storage.service';
+import { NotificationService } from '../notification/notification.service';
 import { PluginRuntimeContext, RuntimePluginModule } from './plugin-sdk';
 
 @Injectable()
@@ -24,6 +25,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnApplicati
     private readonly jobs: PluginJobsService,
     private readonly settings: PluginSettingsService,
     private readonly storage: PluginStorageService,
+    private readonly notifications: NotificationService,
   ) {}
 
   async onApplicationBootstrap() {
@@ -100,6 +102,10 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnApplicati
       },
       permissions: { register: (definitions) => { requireCapability('permissions.register'); const dispose = this.extensions.registerPermissions(id, declaredPermissions, definitions.map((definition) => ({ ...definition, pluginId: id }))); disposers.push(dispose); return dispose; } },
       navigation: { register: (entries) => { requireCapability('navigation.register'); const dispose = this.extensions.registerNavigation(id, declaredPermissions, entries.map((entry) => ({ ...entry, pluginId: id }))); disposers.push(dispose); return dispose; } },
+      notifications: {
+        sendEmail: (to, subject, text) => { requireCapability('notifications.send'); return this.notifications.sendEmail(to, subject, text); },
+        sendSms: (to, body) => { requireCapability('notifications.send'); return this.notifications.sendSms(to, body); },
+      },
     };
     try {
       if (verified.manifest.frontendEntry) {

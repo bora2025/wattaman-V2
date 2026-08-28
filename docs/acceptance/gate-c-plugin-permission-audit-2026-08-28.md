@@ -30,5 +30,5 @@ New coverage: dispatch audits a granted call, denies and audits an ungranted cal
 
 - The new migration has not been applied to a live PostgreSQL instance in this environment (no database access this session).
 - No plugin has yet called `context.permissions.register(...)` in a way that's been exercised against a real granted role end-to-end through an HTTP request; coverage here is at the service layer (`PluginExtensionsService`/`PluginPermissionsService`), not a full Nest e2e HTTP test.
-- A plugin-facing notification-sending SDK capability (the other half of C-003's "audit and notification adapters") is not implemented.
+- A plugin-facing notification-sending SDK capability (the other half of C-003's "audit and notification adapters") is not implemented in this evidence — see [gate-c-plugin-notification-adapter-2026-08-28.md](./gate-c-plugin-notification-adapter-2026-08-28.md), which closes it the same day.
 - Frontend navigation/page rendering does not yet consult a user's granted plugin permissions to hide entries they cannot use — today a denied user would see a navigation link that then 403s on click.

@@ -7,6 +7,7 @@ export const PLUGIN_CAPABILITIES = [
   'events.subscribe',
   'jobs.schedule',
   'navigation.register',
+  'notifications.send',
   'permissions.register',
   'settings.read',
   'settings.write',
