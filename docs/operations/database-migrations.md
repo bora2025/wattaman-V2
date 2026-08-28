@@ -57,6 +57,24 @@ Record:
 - Database size.
 - Backup identifier and timestamp.
 
+Run the read-only classifier before choosing a migration path:
+
+```bash
+cd backend
+npm run db:legacy:preflight > legacy-preflight.json
+```
+
+The report contains PostgreSQL/schema metadata and a deterministic schema fingerprint, but no customer rows. Interpret `state` as follows:
+
+| State | Meaning | Permitted next action |
+|---|---|---|
+| `empty` | No public tables | Normal `migrate deploy` |
+| `managed` | Baseline migration has completed | Normal `migrate deploy` |
+| `legacy_unadopted` | Legacy anchor tables exist without Prisma history | Backup, restore drill, exact schema diff, then adoption |
+| `unsupported_partial` | Partial or contradictory schema | Stop for engineering review; exit code 2 |
+
+`safeToMutate: false` is mandatory for legacy and unsupported states. The preflight never marks a legacy schema adopted.
+
 ### 2. Create and Verify a Backup
 
 Create both a Railway volume backup and a logical dump when possible. Restore the logical dump into a temporary PostgreSQL instance and verify that the application can read it.
