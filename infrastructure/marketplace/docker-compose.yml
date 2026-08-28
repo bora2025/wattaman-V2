@@ -31,10 +31,14 @@ services:
       METADATA_SIGNING_PRIVATE_KEY_FILE: /run/repository-key/plugin-signing-private.pem
       METADATA_SIGNING_PRIVATE_KEY: ${METADATA_SIGNING_PRIVATE_KEY:-}
       METADATA_SIGNING_KEY_ID: ${METADATA_SIGNING_KEY_ID:?METADATA_SIGNING_KEY_ID is required}
+      ENTITLEMENT_SIGNING_PRIVATE_KEY_FILE: /run/entitlement-key/entitlement-signing-private.pem
+      ENTITLEMENT_SIGNING_PRIVATE_KEY: ${ENTITLEMENT_SIGNING_PRIVATE_KEY:-}
+      ENTITLEMENT_SIGNING_KEY_ID: ${ENTITLEMENT_SIGNING_KEY_ID:?ENTITLEMENT_SIGNING_KEY_ID is required}
       ARTIFACT_STORAGE_PATH: /data/artifacts
     volumes:
       - marketplace_artifacts:/data/artifacts
       - ../../secrets/repository-signing:/run/repository-key:ro
+      - ../../secrets/entitlement-signing:/run/entitlement-key:ro
     ports: ["${MARKETPLACE_PORT:-3010}:3010"]
 
 volumes:

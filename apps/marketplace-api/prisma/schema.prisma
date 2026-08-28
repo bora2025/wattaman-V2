@@ -55,22 +55,22 @@ enum PaymentStatus {
 }
 
 model Publisher {
-  id          String          @id @default(uuid())
-  slug        String          @unique
+  id          String              @id @default(uuid())
+  slug        String              @unique
   displayName String
-  status      PublisherStatus @default(PENDING)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  status      PublisherStatus     @default(PENDING)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
   keys        PublisherKey[]
   plugins     MarketplacePlugin[]
 }
 
 model MarketplaceAccount {
-  id          String   @id @default(uuid())
-  email       String   @unique
+  id          String             @id @default(uuid())
+  email       String             @unique
   displayName String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
   orders      MarketplaceOrder[]
 }
 
@@ -87,52 +87,69 @@ model PublisherKey {
 }
 
 model MarketplacePlugin {
-  id          String          @id
-  publisherId String
-  name        String
-  description String
-  license     String
-  isPaid      Boolean         @default(false)
-  status      ReviewStatus    @default(DRAFT)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  publisher   Publisher       @relation(fields: [publisherId], references: [id])
-  versions    PluginVersion[]
-  advisories  SecurityAdvisory[]
+  id           String                    @id
+  publisherId  String
+  name         String
+  description  String
+  license      String
+  isPaid       Boolean                   @default(false)
+  status       ReviewStatus              @default(DRAFT)
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+  publisher    Publisher                 @relation(fields: [publisherId], references: [id])
+  versions     PluginVersion[]
+  advisories   SecurityAdvisory[]
   entitlements InstallationEntitlement[]
   orderLines   MarketplaceOrderLine[]
+  prices       ProductPrice[]
+}
+
+model ProductPrice {
+  id            String                 @id @default(uuid())
+  pluginId      String
+  currency      String
+  amountMinor   Int
+  licensedMajor Int
+  validFrom     DateTime
+  validUntil    DateTime?
+  updatesDays   Int                    @default(365)
+  createdAt     DateTime               @default(now())
+  plugin        MarketplacePlugin      @relation(fields: [pluginId], references: [id], onDelete: Restrict)
+  orderLines    MarketplaceOrderLine[]
+
+  @@index([pluginId, currency, validFrom])
 }
 
 model PluginVersion {
-  id                 String         @id @default(uuid())
-  pluginId           String
-  version            String
-  requiresCore       String
-  channel            ReleaseChannel @default(STABLE)
-  reviewStatus       ReviewStatus   @default(DRAFT)
-  manifestJson       Json
-  changelog          String?
-  publishedAt        DateTime?
-  withdrawnAt        DateTime?
-  createdAt          DateTime       @default(now())
-  plugin             MarketplacePlugin @relation(fields: [pluginId], references: [id])
-  artifact           PackageArtifact?
-  downloads          DownloadEvent[]
-  reviews            VersionReview[]
+  id           String            @id @default(uuid())
+  pluginId     String
+  version      String
+  requiresCore String
+  channel      ReleaseChannel    @default(STABLE)
+  reviewStatus ReviewStatus      @default(DRAFT)
+  manifestJson Json
+  changelog    String?
+  publishedAt  DateTime?
+  withdrawnAt  DateTime?
+  createdAt    DateTime          @default(now())
+  plugin       MarketplacePlugin @relation(fields: [pluginId], references: [id])
+  artifact     PackageArtifact?
+  downloads    DownloadEvent[]
+  reviews      VersionReview[]
 
   @@unique([pluginId, version, channel])
   @@index([reviewStatus, channel, publishedAt])
 }
 
 model PackageArtifact {
-  id            String        @id @default(uuid())
-  pluginVersionId String      @unique
-  sha256        String        @unique
-  sizeBytes     Int
-  storageKey    String        @unique
-  publisherKeyId String
-  createdAt     DateTime      @default(now())
-  pluginVersion PluginVersion @relation(fields: [pluginVersionId], references: [id], onDelete: Restrict)
+  id              String        @id @default(uuid())
+  pluginVersionId String        @unique
+  sha256          String        @unique
+  sizeBytes       Int
+  storageKey      String        @unique
+  publisherKeyId  String
+  createdAt       DateTime      @default(now())
+  pluginVersion   PluginVersion @relation(fields: [pluginVersionId], references: [id], onDelete: Restrict)
 }
 
 model SecurityAdvisory {
@@ -143,7 +160,7 @@ model SecurityAdvisory {
   affectedVersions String
   fixedVersion     String?
   description      String
-  publishedAt      DateTime           @default(now())
+  publishedAt      DateTime          @default(now())
   withdrawnAt      DateTime?
   plugin           MarketplacePlugin @relation(fields: [pluginId], references: [id])
 
@@ -151,80 +168,88 @@ model SecurityAdvisory {
 }
 
 model InstallationRegistration {
-  id             String    @id @default(uuid())
-  installationId String    @unique
+  id             String                    @id @default(uuid())
+  installationId String                    @unique
   label          String?
   publicKeyPem   String
   lastSeenAt     DateTime?
-  createdAt      DateTime  @default(now())
+  createdAt      DateTime                  @default(now())
   entitlements   InstallationEntitlement[]
   downloads      DownloadEvent[]
+  orders         MarketplaceOrder[]
 }
 
 model InstallationEntitlement {
-  id             String             @id @default(uuid())
+  id             String                   @id @default(uuid())
   installationId String
   pluginId       String
-  status         EntitlementStatus  @default(ACTIVE)
+  status         EntitlementStatus        @default(ACTIVE)
   updatesThrough DateTime?
   offlineUntil   DateTime?
-  tokenId        String             @unique
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
+  tokenId        String                   @unique
+  signedToken    Json
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
   installation   InstallationRegistration @relation(fields: [installationId], references: [id])
-  plugin         MarketplacePlugin @relation(fields: [pluginId], references: [id])
-  orderLineId    String?            @unique
-  orderLine      MarketplaceOrderLine? @relation(fields: [orderLineId], references: [id])
+  plugin         MarketplacePlugin        @relation(fields: [pluginId], references: [id])
+  orderLineId    String?                  @unique
+  orderLine      MarketplaceOrderLine?    @relation(fields: [orderLineId], references: [id])
 
   @@unique([installationId, pluginId])
 }
 
 model DownloadEvent {
-  id             String    @id @default(uuid())
-  installationId String?
+  id              String                    @id @default(uuid())
+  installationId  String?
   pluginVersionId String
-  artifactSha256 String
-  downloadedAt   DateTime  @default(now())
-  installation   InstallationRegistration? @relation(fields: [installationId], references: [id])
-  pluginVersion  PluginVersion @relation(fields: [pluginVersionId], references: [id])
+  artifactSha256  String
+  downloadedAt    DateTime                  @default(now())
+  installation    InstallationRegistration? @relation(fields: [installationId], references: [id])
+  pluginVersion   PluginVersion             @relation(fields: [pluginVersionId], references: [id])
 
   @@index([pluginVersionId, downloadedAt])
 }
 
 model MarketplaceOrder {
-  id             String      @id @default(uuid())
+  id             String                   @id @default(uuid())
   accountId      String
-  status         OrderStatus @default(PENDING)
+  installationId String
+  status         OrderStatus              @default(PENDING)
   currency       String
   totalMinor     Int
-  idempotencyKey String      @unique
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-  account        MarketplaceAccount @relation(fields: [accountId], references: [id])
+  idempotencyKey String                   @unique
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  account        MarketplaceAccount       @relation(fields: [accountId], references: [id])
+  installation   InstallationRegistration @relation(fields: [installationId], references: [id])
   lines          MarketplaceOrderLine[]
   payments       MarketplacePayment[]
+
+  @@index([installationId, createdAt])
 }
 
 model MarketplaceOrderLine {
-  id             String   @id @default(uuid())
+  id             String                   @id @default(uuid())
   orderId        String
   pluginId       String
+  priceId        String
   unitPriceMinor Int
   updatesThrough DateTime?
-  order          MarketplaceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  plugin         MarketplacePlugin @relation(fields: [pluginId], references: [id])
+  order          MarketplaceOrder         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  plugin         MarketplacePlugin        @relation(fields: [pluginId], references: [id])
+  price          ProductPrice             @relation(fields: [priceId], references: [id], onDelete: Restrict)
   entitlement    InstallationEntitlement?
 }
 
 model MarketplacePayment {
-  id          String        @id @default(uuid())
+  id          String           @id @default(uuid())
   orderId     String
   provider    String
   providerRef String
-  status      PaymentStatus @default(PENDING)
+  status      PaymentStatus    @default(PENDING)
   amountMinor Int
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
   order       MarketplaceOrder @relation(fields: [orderId], references: [id])
 
   @@unique([provider, providerRef])
@@ -242,12 +267,12 @@ model PaymentWebhookEvent {
 }
 
 model VersionReview {
-  id              String       @id @default(uuid())
+  id              String        @id @default(uuid())
   pluginVersionId String
-  status          ReviewStatus @default(IN_REVIEW)
+  status          ReviewStatus  @default(IN_REVIEW)
   reviewer        String?
   notes           String?
-  submittedAt     DateTime     @default(now())
+  submittedAt     DateTime      @default(now())
   reviewedAt      DateTime?
   pluginVersion   PluginVersion @relation(fields: [pluginVersionId], references: [id])
 
@@ -255,18 +280,18 @@ model VersionReview {
 }
 
 model CoreRelease {
-  id            String         @id @default(uuid())
-  version       String
-  channel       ReleaseChannel @default(STABLE)
-  nodeRange     String
-  postgresRange String
-  apiImage      String
-  webImage      String
-  gatewayImage  String
-  releaseNotes  String
+  id             String         @id @default(uuid())
+  version        String
+  channel        ReleaseChannel @default(STABLE)
+  nodeRange      String
+  postgresRange  String
+  apiImage       String
+  webImage       String
+  gatewayImage   String
+  releaseNotes   String
   migrationNotes String?
-  publishedAt   DateTime       @default(now())
-  withdrawnAt   DateTime?
+  publishedAt    DateTime       @default(now())
+  withdrawnAt    DateTime?
 
   @@unique([version, channel])
   @@index([channel, publishedAt])
