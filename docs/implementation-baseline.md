@@ -1,6 +1,6 @@
 # Wattanam V2 Implementation Baseline
 
-> Delivery status ledger for the [Platform Master Execution Plan](./platform-master-execution-plan.md). Architecture targets remain in the A-to-Z plan; this file records implementation evidence only.
+> Delivery status ledger for the [Platform Master Execution Plan](./platform-master-execution-plan.md). Architecture targets remain in the A-to-Z plan; this file records implementation evidence only. For a work-package-by-work-package view of what remains, see the [completion checklist](./completion-checklist.md).
 
 ## Purpose
 

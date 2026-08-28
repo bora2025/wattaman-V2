@@ -463,7 +463,7 @@ Every planned capability has an accountable role and release gate. Changes after
 
 ## 22. Planning-to-delivery handoff
 
-Planning completion authorizes execution in dependency order; it does not waive acceptance gates. The delivery source of truth is [implementation-baseline.md](./implementation-baseline.md), and test/runtime proof belongs in `docs/acceptance/`.
+Planning completion authorizes execution in dependency order; it does not waive acceptance gates. The delivery source of truth is [implementation-baseline.md](./implementation-baseline.md), and test/runtime proof belongs in `docs/acceptance/`. The [completion checklist](./completion-checklist.md) tracks every work package in this section against that evidence and should be reconciled whenever either document changes.
 
 Immediate handoff state:
 
