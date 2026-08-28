@@ -23,7 +23,7 @@ async function main() {
   const environment = postgresEnvironment(process.env.ADOPT_DATABASE_URL);
   const before = buildReport(querySnapshot(environment));
   if (before.state !== 'empty') throw new Error(`synthetic fixture target must be empty; found ${before.state}`);
-  run('psql', ['--no-psqlrc', '--set', 'ON_ERROR_STOP=1', '--file', path.join(process.cwd(), 'prisma/migrations/20260827000000_baseline/migration.sql')], environment);
+  run('psql', ['--no-psqlrc', '--quiet', '--single-transaction', '--set', 'ON_ERROR_STOP=1', '--file', path.join(process.cwd(), 'prisma/migrations/20260827000000_baseline/migration.sql')], environment);
   const passwordHash = await bcrypt.hash(`fixture-${Date.now()}-Password1`, 12);
   run('psql', [
     '--no-psqlrc', '--set', 'ON_ERROR_STOP=1', '--set', 'owner_hash=' + passwordHash,
