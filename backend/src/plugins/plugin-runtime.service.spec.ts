@@ -15,6 +15,8 @@ describe('PluginRuntimeService', () => {
     { sendEmail: jest.fn().mockResolvedValue({ sent: true }), sendSms: jest.fn().mockResolvedValue({ sent: true }), notifyInApp: jest.fn().mockResolvedValue({ id: 'notif-1' }) },
     { resolveAudience: jest.fn().mockResolvedValue([]), lookupUsers: jest.fn().mockResolvedValue([]), lookupClasses: jest.fn().mockResolvedValue([]), classesForUser: jest.fn().mockResolvedValue([]) },
     { notifyUser: jest.fn() },
+    { recordAndCheck: jest.fn().mockResolvedValue({ allowed: true, count: 1, limit: 200 }) },
+    { log: jest.fn().mockResolvedValue(undefined) },
   ] as const;
 
   beforeEach(async () => {
@@ -58,8 +60,8 @@ describe('PluginRuntimeService', () => {
       },
     } as any;
     const verifier = { verifyInstalledDirectory: jest.fn().mockResolvedValue({ manifest }) } as any;
-    const [extensions, jobs, settings, storage, notifications, directoryService, realtime] = dependencies();
-    const runtime = new PluginRuntimeService(prisma, verifier, new PluginEventBus(), extensions as any, jobs as any, settings as any, storage as any, notifications as any, directoryService as any, realtime as any);
+    const [extensions, jobs, settings, storage, notifications, directoryService, realtime, notificationQuota, audit] = dependencies();
+    const runtime = new PluginRuntimeService(prisma, verifier, new PluginEventBus(), extensions as any, jobs as any, settings as any, storage as any, notifications as any, directoryService as any, realtime as any, notificationQuota as any, audit as any);
 
     await runtime.load('wattanam.test');
     expect((global as any).__wattanamPluginActivated).toBe('wattanam.test');
@@ -69,8 +71,8 @@ describe('PluginRuntimeService', () => {
 
   it('rejects a registry path outside the configured plugin directory', async () => {
     const prisma = { pluginInstallation: { findUnique: jest.fn().mockResolvedValue({ id: 'wattanam.test', installedPath: os.tmpdir() }) } } as any;
-    const [extensions, jobs, settings, storage, notifications, directoryService, realtime] = dependencies();
-    const runtime = new PluginRuntimeService(prisma, {} as any, new PluginEventBus(), extensions as any, jobs as any, settings as any, storage as any, notifications as any, directoryService as any, realtime as any);
+    const [extensions, jobs, settings, storage, notifications, directoryService, realtime, notificationQuota, audit] = dependencies();
+    const runtime = new PluginRuntimeService(prisma, {} as any, new PluginEventBus(), extensions as any, jobs as any, settings as any, storage as any, notifications as any, directoryService as any, realtime as any, notificationQuota as any, audit as any);
     await expect(runtime.load('wattanam.test')).rejects.toThrow('outside PLUGIN_DIR');
   });
 
@@ -91,8 +93,8 @@ describe('PluginRuntimeService', () => {
     };
     const prisma = { pluginInstallation: { findUnique: jest.fn().mockResolvedValue({ id: 'wattanam.test', version: '1.0.0', installedPath }) } } as any;
     const verifier = { verifyInstalledDirectory: jest.fn().mockResolvedValue({ manifest }) } as any;
-    const [extensions, jobs, settings, storage, notifications, directoryService, realtime] = dependencies();
-    const runtime = new PluginRuntimeService(prisma, verifier, new PluginEventBus(), extensions as any, jobs as any, settings as any, storage as any, notifications as any, directoryService as any, realtime as any);
+    const [extensions, jobs, settings, storage, notifications, directoryService, realtime, notificationQuota, audit] = dependencies();
+    const runtime = new PluginRuntimeService(prisma, verifier, new PluginEventBus(), extensions as any, jobs as any, settings as any, storage as any, notifications as any, directoryService as any, realtime as any, notificationQuota as any, audit as any);
 
     await runtime.load('wattanam.test');
     expect(notifications.sendEmail).toHaveBeenCalledWith('parent@example.com', 'Reminder', 'Body');
@@ -112,8 +114,8 @@ describe('PluginRuntimeService', () => {
     const manifest = { id: 'wattanam.test', version: '1.0.0', backendEntry: 'backend/index.js', capabilities: [], permissions: [], dependencies: {} };
     const prisma = { pluginInstallation: { findUnique: jest.fn().mockResolvedValue({ id: 'wattanam.test', version: '1.0.0', installedPath }) } } as any;
     const verifier = { verifyInstalledDirectory: jest.fn().mockResolvedValue({ manifest }) } as any;
-    const [extensions, jobs, settings, storage, notifications, directoryService, realtime] = dependencies();
-    const runtime = new PluginRuntimeService(prisma, verifier, new PluginEventBus(), extensions as any, jobs as any, settings as any, storage as any, notifications as any, directoryService as any, realtime as any);
+    const [extensions, jobs, settings, storage, notifications, directoryService, realtime, notificationQuota, audit] = dependencies();
+    const runtime = new PluginRuntimeService(prisma, verifier, new PluginEventBus(), extensions as any, jobs as any, settings as any, storage as any, notifications as any, directoryService as any, realtime as any, notificationQuota as any, audit as any);
     await expect(runtime.load('wattanam.test')).rejects.toThrow('did not declare notifications.send');
     expect(notifications.sendEmail).not.toHaveBeenCalled();
   });
@@ -143,8 +145,8 @@ describe('PluginRuntimeService', () => {
       $executeRawUnsafe: jest.fn().mockResolvedValue(1),
     } as any;
     const verifier = { verifyInstalledDirectory: jest.fn().mockResolvedValue({ manifest }) } as any;
-    const [extensions, jobs, settings, storage, notifications, directoryService, realtime] = dependencies();
-    const runtime = new PluginRuntimeService(prisma, verifier, new PluginEventBus(), extensions as any, jobs as any, settings as any, storage as any, notifications as any, directoryService as any, realtime as any);
+    const [extensions, jobs, settings, storage, notifications, directoryService, realtime, notificationQuota, audit] = dependencies();
+    const runtime = new PluginRuntimeService(prisma, verifier, new PluginEventBus(), extensions as any, jobs as any, settings as any, storage as any, notifications as any, directoryService as any, realtime as any, notificationQuota as any, audit as any);
 
     await runtime.load('wattanam.test');
     expect(prisma.$queryRawUnsafe).toHaveBeenCalledWith('SELECT * FROM plugin_wattanam_test_notes WHERE id = $1', 'n1');
@@ -172,8 +174,8 @@ describe('PluginRuntimeService', () => {
     const manifest = { id: 'wattanam.test', version: '1.0.0', backendEntry: 'backend/index.js', capabilities: ['database.read'], permissions: [], dependencies: {} };
     const prisma = { pluginInstallation: { findUnique: jest.fn().mockResolvedValue({ id: 'wattanam.test', version: '1.0.0', installedPath }) }, $executeRawUnsafe: jest.fn() } as any;
     const verifier = { verifyInstalledDirectory: jest.fn().mockResolvedValue({ manifest }) } as any;
-    const [extensions, jobs, settings, storage, notifications, directoryService, realtime] = dependencies();
-    const runtime = new PluginRuntimeService(prisma, verifier, new PluginEventBus(), extensions as any, jobs as any, settings as any, storage as any, notifications as any, directoryService as any, realtime as any);
+    const [extensions, jobs, settings, storage, notifications, directoryService, realtime, notificationQuota, audit] = dependencies();
+    const runtime = new PluginRuntimeService(prisma, verifier, new PluginEventBus(), extensions as any, jobs as any, settings as any, storage as any, notifications as any, directoryService as any, realtime as any, notificationQuota as any, audit as any);
     await expect(runtime.load('wattanam.test')).rejects.toThrow('did not declare database.write');
     expect(prisma.$executeRawUnsafe).not.toHaveBeenCalled();
   });
@@ -198,13 +200,67 @@ describe('PluginRuntimeService', () => {
     };
     const prisma = { pluginInstallation: { findUnique: jest.fn().mockResolvedValue({ id: 'wattanam.test', version: '1.0.0', installedPath }) } } as any;
     const verifier = { verifyInstalledDirectory: jest.fn().mockResolvedValue({ manifest }) } as any;
-    const [extensions, jobs, settings, storage, notifications, directoryService, realtime] = dependencies();
-    const runtime = new PluginRuntimeService(prisma, verifier, new PluginEventBus(), extensions as any, jobs as any, settings as any, storage as any, notifications as any, directoryService as any, realtime as any);
+    const [extensions, jobs, settings, storage, notifications, directoryService, realtime, notificationQuota, audit] = dependencies();
+    const runtime = new PluginRuntimeService(prisma, verifier, new PluginEventBus(), extensions as any, jobs as any, settings as any, storage as any, notifications as any, directoryService as any, realtime as any, notificationQuota as any, audit as any);
 
     await runtime.load('wattanam.test');
     expect(notifications.notifyInApp).toHaveBeenCalledWith('user-1', 'hello', 'announcement');
     expect(directoryService.lookupUsers).toHaveBeenCalledWith(['user-1']);
     expect(directoryService.lookupClasses).toHaveBeenCalledWith(['class-1']);
     expect(directoryService.classesForUser).toHaveBeenCalledWith('user-1', 'TEACHER');
+  });
+
+  it('every notification send is checked against the daily quota and audit-logged, and a denied send never reaches the provider', async () => {
+    const installedPath = path.join(directory, 'wattanam.test', '1.0.0');
+    await fs.mkdir(path.join(installedPath, 'backend'), { recursive: true });
+    await fs.writeFile(path.join(installedPath, 'backend', 'index.js'), `
+      module.exports = {
+        id: 'wattanam.test',
+        async activate(context) {
+          global.__wattanamQuotaError = null;
+          try { await context.notifications.sendEmail('a@example.com', 'Subject', 'Text'); }
+          catch (error) { global.__wattanamQuotaError = error.message; }
+        }
+      };
+    `);
+    const manifest = { id: 'wattanam.test', version: '1.0.0', backendEntry: 'backend/index.js', capabilities: ['notifications.send'], permissions: [], dependencies: {} };
+    const prisma = { pluginInstallation: { findUnique: jest.fn().mockResolvedValue({ id: 'wattanam.test', version: '1.0.0', installedPath }) } } as any;
+    const verifier = { verifyInstalledDirectory: jest.fn().mockResolvedValue({ manifest }) } as any;
+    const [extensions, jobs, settings, storage, notifications, directoryService, realtime, , audit] = dependencies();
+    const notificationQuota = { recordAndCheck: jest.fn().mockResolvedValue({ allowed: false, count: 201, limit: 200 }) };
+    const runtime = new PluginRuntimeService(prisma, verifier, new PluginEventBus(), extensions as any, jobs as any, settings as any, storage as any, notifications as any, directoryService as any, realtime as any, notificationQuota as any, audit as any);
+
+    await runtime.load('wattanam.test');
+    expect(notificationQuota.recordAndCheck).toHaveBeenCalledWith('wattanam.test');
+    expect(notifications.sendEmail).not.toHaveBeenCalled();
+    expect((global as any).__wattanamQuotaError).toMatch(/exceeded its daily notification quota/);
+    expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'PLUGIN_NOTIFICATION_SEND', resourceId: 'wattanam.test', success: false,
+      errorMessage: expect.stringContaining('quota exceeded'),
+    }));
+    delete (global as any).__wattanamQuotaError;
+  });
+
+  it('a successful notification send is audit-logged with the channel and recipient metadata', async () => {
+    const installedPath = path.join(directory, 'wattanam.test', '1.0.0');
+    await fs.mkdir(path.join(installedPath, 'backend'), { recursive: true });
+    await fs.writeFile(path.join(installedPath, 'backend', 'index.js'), `
+      module.exports = {
+        id: 'wattanam.test',
+        async activate(context) { await context.notifications.sendSms('+85512345678', 'Body'); }
+      };
+    `);
+    const manifest = { id: 'wattanam.test', version: '1.0.0', backendEntry: 'backend/index.js', capabilities: ['notifications.send'], permissions: [], dependencies: {} };
+    const prisma = { pluginInstallation: { findUnique: jest.fn().mockResolvedValue({ id: 'wattanam.test', version: '1.0.0', installedPath }) } } as any;
+    const verifier = { verifyInstalledDirectory: jest.fn().mockResolvedValue({ manifest }) } as any;
+    const [extensions, jobs, settings, storage, notifications, directoryService, realtime, notificationQuota, audit] = dependencies();
+    const runtime = new PluginRuntimeService(prisma, verifier, new PluginEventBus(), extensions as any, jobs as any, settings as any, storage as any, notifications as any, directoryService as any, realtime as any, notificationQuota as any, audit as any);
+
+    await runtime.load('wattanam.test');
+    expect(notifications.sendSms).toHaveBeenCalledWith('+85512345678', 'Body');
+    expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'PLUGIN_NOTIFICATION_SEND', resourceId: 'wattanam.test', success: true,
+      metadata: expect.objectContaining({ channel: 'sms', to: '+85512345678' }),
+    }));
   });
 });

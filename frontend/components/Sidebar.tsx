@@ -184,6 +184,32 @@ export default function Sidebar({ title, subtitle, navItems, accentColor = 'indi
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [needMessages, needAnnouncements, needClassRegistrations]);
 
+  // Plugin nav: fetched once per session, filtered server-side to what this
+  // user's role is actually granted (PluginExtensionsService.listForPrincipal).
+  // Any role can have plugin nav now, not just admins -- merged into the
+  // scrollable nav list and "More" drawer only, never into the curated
+  // bottom-tab picks.
+  const [pluginNav, setPluginNav] = useState<NavItem[]>([]);
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const apiBase = process.env.NEXT_PUBLIC_API_URL ?? '';
+        const res = await fetch(`${apiBase}/api/plugin-api/my-extensions`, { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+        const entries = Array.isArray(data?.navigation) ? data.navigation : [];
+        if (!active) return;
+        setPluginNav(entries.map((entry: any, index: number) => ({
+          label: entry.label, href: entry.href, icon: '🧩',
+          section: index === 0 ? 'Plugins' : undefined,
+        })));
+      } catch { /* plugin nav is optional; a fetch failure just means none shown */ }
+    })();
+    return () => { active = false; };
+  }, []);
+  const effectiveNavItems = pluginNav.length ? [...navItems, ...pluginNav] : navItems;
+
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
@@ -278,13 +304,13 @@ export default function Sidebar({ title, subtitle, navItems, accentColor = 'indi
               >✕</button>
             </div>
             <nav className="px-3 py-3">
-              {navItems.filter(item => !tabs.some(t => t.href === item.href)).map((item) => {
+              {effectiveNavItems.filter(item => !tabs.some(t => t.href === item.href)).map((item) => {
                 const isExact = pathname === item.href;
                 const isParent = !isExact && item.href !== '/' && item.href.length > 1
-                  && navItems.some(n => n.href !== item.href && n.href.startsWith(item.href + '/'))
+                  && effectiveNavItems.some(n => n.href !== item.href && n.href.startsWith(item.href + '/'))
                   && pathname.startsWith(item.href + '/');
                 const isActive = isExact || isParent;
-                const isChild = navItems.some(n => n.href !== item.href && n.href.length > 1 && item.href.startsWith(n.href + '/'));
+                const isChild = effectiveNavItems.some(n => n.href !== item.href && n.href.length > 1 && item.href.startsWith(n.href + '/'));
                 return (
                   <div key={item.href}>
                     {item.section && (
@@ -384,7 +410,7 @@ export default function Sidebar({ title, subtitle, navItems, accentColor = 'indi
             {sidebarOpen && <span className="truncate text-white/70">{t('common.backToHome')}</span>}
           </Link>
           <div className={`border-t border-white/10 mb-2 ${sidebarOpen ? 'mx-1' : 'mx-0'}`} />
-          {navItems.map((item, idx) => {
+          {effectiveNavItems.map((item, idx) => {
             // ── Active state detection ──────────────────────────────────
             // isExact: user is on exactly this page
             const isExact = pathname === item.href;
@@ -392,12 +418,12 @@ export default function Sidebar({ title, subtitle, navItems, accentColor = 'indi
             const isParent = !isExact
               && item.href !== '/'
               && item.href.length > 1
-              && navItems.some(n => n.href !== item.href && n.href.startsWith(item.href + '/'))
+              && effectiveNavItems.some(n => n.href !== item.href && n.href.startsWith(item.href + '/'))
               && pathname.startsWith(item.href + '/');
             const isActive = isExact || isParent;
 
             // isChild: this item lives under a parent that exists in navItems
-            const parentHref = navItems.find(
+            const parentHref = effectiveNavItems.find(
               n => n.href !== item.href && n.href.length > 1 && item.href.startsWith(n.href + '/')
             )?.href;
             const isChild = !!parentHref;

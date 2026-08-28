@@ -1393,6 +1393,17 @@ model PluginPermissionGrant {
   @@index([pluginId, permissionId])
 }
 
+/// One row per plugin per UTC day, atomically incremented to enforce a daily notification-send quota.
+model PluginNotificationUsage {
+  id          String   @id @default(uuid())
+  pluginId    String
+  windowStart DateTime
+  count       Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  @@unique([pluginId, windowStart])
+}
+
 model PluginMigration {
   id          String   @id @default(uuid())
   pluginId    String

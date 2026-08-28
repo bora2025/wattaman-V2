@@ -12,6 +12,8 @@ import { PluginStorageService } from './plugin-storage.service';
 import { NotificationService } from '../notification/notification.service';
 import { DirectoryService } from '../directory/directory.service';
 import { PluginRealtimeService } from './plugin-realtime.service';
+import { PluginNotificationQuotaService } from './plugin-notification-quota.service';
+import { AuditService } from '../audit/audit.service';
 import { assertNoForbiddenSql, assertPluginNamespace } from './plugin-sql-guard';
 import { PluginRuntimeContext, RuntimePluginModule } from './plugin-sdk';
 
@@ -31,6 +33,8 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnApplicati
     private readonly notifications: NotificationService,
     private readonly directory: DirectoryService,
     private readonly realtime: PluginRealtimeService,
+    private readonly notificationQuota: PluginNotificationQuotaService,
+    private readonly audit: AuditService,
   ) {}
 
   async onApplicationBootstrap() {
@@ -108,9 +112,9 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnApplicati
       permissions: { register: (definitions) => { requireCapability('permissions.register'); const dispose = this.extensions.registerPermissions(id, declaredPermissions, definitions.map((definition) => ({ ...definition, pluginId: id }))); disposers.push(dispose); return dispose; } },
       navigation: { register: (entries) => { requireCapability('navigation.register'); const dispose = this.extensions.registerNavigation(id, declaredPermissions, entries.map((entry) => ({ ...entry, pluginId: id }))); disposers.push(dispose); return dispose; } },
       notifications: {
-        sendEmail: (to, subject, text) => { requireCapability('notifications.send'); return this.notifications.sendEmail(to, subject, text); },
-        sendSms: (to, body) => { requireCapability('notifications.send'); return this.notifications.sendSms(to, body); },
-        notifyInApp: (userId, message, type) => { requireCapability('notifications.send'); return this.notifications.notifyInApp(userId, message, type); },
+        sendEmail: (to, subject, text) => { requireCapability('notifications.send'); return this.sendNotification(id, 'email', { to, subject }, () => this.notifications.sendEmail(to, subject, text)); },
+        sendSms: (to, body) => { requireCapability('notifications.send'); return this.sendNotification(id, 'sms', { to }, () => this.notifications.sendSms(to, body)); },
+        notifyInApp: (userId, message, type) => { requireCapability('notifications.send'); return this.sendNotification(id, 'in_app', { to: userId, type }, () => this.notifications.notifyInApp(userId, message, type)); },
       },
       database: {
         query: (sql, params = []) => {
@@ -161,6 +165,30 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnApplicati
     } catch (error) {
       for (const dispose of disposers.reverse()) { try { dispose(); } catch { /* best effort */ } }
       this.extensions.clear(id); await this.jobs.clear(id);
+      throw error;
+    }
+  }
+
+  /**
+   * Every plugin notification send goes through here: checked against the
+   * plugin's daily quota (a single atomic upsert-increment, so concurrent
+   * sends from the same plugin can't race past the limit) and audit-logged
+   * (denied, failed, or succeeded), mirroring how PluginExtensionsService
+   * already audits every route dispatch.
+   */
+  private async sendNotification<T>(pluginId: string, channel: string, metadata: Record<string, unknown>, send: () => Promise<T>): Promise<T> {
+    const quota = await this.notificationQuota.recordAndCheck(pluginId);
+    const auditBase = { actorRole: 'PLUGIN', action: 'PLUGIN_NOTIFICATION_SEND', resource: 'PLUGIN', resourceId: pluginId, metadata: { ...metadata, channel } };
+    if (!quota.allowed) {
+      void this.audit.log({ ...auditBase, success: false, errorMessage: `Daily notification quota exceeded (${quota.count}/${quota.limit})` });
+      throw new Error(`${pluginId} exceeded its daily notification quota (${quota.limit}/day)`);
+    }
+    try {
+      const result = await send();
+      void this.audit.log({ ...auditBase, success: true });
+      return result;
+    } catch (error) {
+      void this.audit.log({ ...auditBase, success: false, errorMessage: error instanceof Error ? error.message : String(error) });
       throw error;
     }
   }

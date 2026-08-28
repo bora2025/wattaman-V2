@@ -20,7 +20,7 @@ export default function PluginPageHost() {
 
   async function load() {
     setError('');
-    const [response, extensionsResponse] = await Promise.all([apiFetch(endpoint), apiFetch('/api/plugin-api/extensions')]);
+    const [response, extensionsResponse] = await Promise.all([apiFetch(endpoint), apiFetch('/api/plugin-api/my-extensions')]);
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.message || `Plugin page failed (${response.status})`);
     if (extensionsResponse.ok) {
@@ -51,7 +51,7 @@ export default function PluginPageHost() {
   }
 
   return (
-    <AuthGuard allowedRoles={['SUPER_ADMIN']}>
+    <AuthGuard>
       <div className="page-shell">
         <Sidebar title="Admin Panel" subtitle="Wattanam" navItems={adminNav} accentColor="indigo" />
         <div className="page-content">

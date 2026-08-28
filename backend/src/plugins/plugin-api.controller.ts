@@ -14,6 +14,15 @@ export class PluginApiController {
   @Roles('SUPER_ADMIN')
   listExtensions() { return this.extensions.list(); }
 
+  // Any authenticated user's own filtered view: only nav entries their role
+  // is actually granted, so the frontend can surface plugin nav to any role,
+  // not just SUPER_ADMIN. Real authorization still happens in dispatch();
+  // this only controls what's *discoverable*.
+  @Get('my-extensions')
+  myExtensions(@Req() request: Request & { user?: any }) {
+    return this.extensions.listForPrincipal(request.user?.role);
+  }
+
   // No @Roles() here: any authenticated user may reach dispatch. Authorization
   // for the specific plugin route happens inside PluginExtensionsService.dispatch(),
   // which checks the route's declared permission against PluginPermissionsService grants.

@@ -43,6 +43,28 @@ describe('PluginExtensionsService', () => {
     expect(() => service.registerRoute('wattanam.test', permissions, { method: 'GET', path: 'settings', permission: 'wattanam.test.read', handler })).toThrow('already');
   });
 
+  it('listForPrincipal filters navigation to what the role is granted, always keeps unpermissioned entries, and leaves pages unfiltered', async () => {
+    service.registerNavigation('wattanam.test', permissions, [
+      { pluginId: 'wattanam.test', id: 'settings', label: 'Settings', href: '/plugins/wattanam.test/settings', permission: 'wattanam.test.manage' },
+      { pluginId: 'wattanam.test', id: 'open', label: 'Open', href: '/plugins/wattanam.test/open' },
+    ]);
+    service.registerPage('wattanam.test', { schemaVersion: 1, id: 'settings', title: 'Settings', routePath: 'settings', kind: 'json-settings' });
+
+    const granted = await service.listForPrincipal('TEACHER');
+    expect(granted.navigation.map((entry) => entry.id).sort()).toEqual(['open', 'settings']);
+    expect(deps_.grants.isGranted).toHaveBeenCalledWith('wattanam.test', 'wattanam.test.manage', 'TEACHER');
+    expect(granted.pages).toHaveLength(1);
+
+    const deniedDeps = deps(false);
+    const deniedService = new PluginExtensionsService(deniedDeps.grants, deniedDeps.audit);
+    deniedService.registerNavigation('wattanam.test', permissions, [
+      { pluginId: 'wattanam.test', id: 'settings', label: 'Settings', href: '/plugins/wattanam.test/settings', permission: 'wattanam.test.manage' },
+      { pluginId: 'wattanam.test', id: 'open', label: 'Open', href: '/plugins/wattanam.test/open' },
+    ]);
+    const filtered = await deniedService.listForPrincipal('STUDENT');
+    expect(filtered.navigation.map((entry) => entry.id)).toEqual(['open']);
+  });
+
   it('cleans permissions and navigation when a plugin unloads', () => {
     service.registerPermissions('wattanam.test', permissions, [{ pluginId: 'wattanam.test', id: 'wattanam.test.read', label: 'Read' }]);
     service.registerNavigation('wattanam.test', permissions, [{ pluginId: 'wattanam.test', id: 'settings', label: 'Settings', href: '/plugins/wattanam.test/settings', permission: 'wattanam.test.manage' }]);

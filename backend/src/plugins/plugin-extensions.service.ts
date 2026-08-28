@@ -105,6 +105,27 @@ export class PluginExtensionsService {
     };
   }
 
+  /**
+   * The non-admin counterpart to list(): navigation/pages filtered to what
+   * `role` actually has access to, so any authenticated user can discover
+   * their own plugin nav (list() itself stays SUPER_ADMIN-only, since it's
+   * an unfiltered admin overview). An entry with no declared `permission`
+   * is always visible; one with a permission requires a grant, same rule
+   * dispatch() itself enforces.
+   */
+  async listForPrincipal(role: string | undefined) {
+    const allowed = async (permission: string | undefined, pluginId: string) => !permission || this.grants.isGranted(pluginId, permission, role);
+    const navigation = await this.filterAsync([...this.navigation.values()], (entry) => allowed(entry.permission, entry.pluginId));
+    // Pages carry no permission field of their own -- the route(s) behind a page are what dispatch()
+    // actually gates, so page metadata (id/title/routePath) is not sensitive to list unfiltered.
+    return { navigation, pages: [...this.pages.values()] };
+  }
+
+  private async filterAsync<T>(items: T[], predicate: (item: T) => Promise<boolean>): Promise<T[]> {
+    const keep = await Promise.all(items.map(predicate));
+    return items.filter((_, index) => keep[index]);
+  }
+
   clear(pluginId: string) {
     for (const map of [this.routes, this.permissions, this.navigation, this.pages]) {
       for (const key of map.keys()) if (key.startsWith(`${pluginId}:`)) map.delete(key);
