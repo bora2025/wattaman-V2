@@ -1,5 +1,13 @@
 # Wattanam V2 Platform Master Execution Plan
 
+| Plan field | Value |
+|---|---|
+| Plan version | 1.0 |
+| Planning status | Complete |
+| Completion audit | 2026-08-28 |
+| Delivery status | Foundation verified; phased implementation continues |
+| Authority | This document, reconciled with the implementation evidence ledger |
+
 ## 1. Authority and purpose
 
 This is the authoritative execution plan for Wattanam V2. It translates the target architecture in [platform-architecture-plan-a-to-z.md](./platform-architecture-plan-a-to-z.md) into ordered, estimable work and reconciles it with the evidence ledger in [implementation-baseline.md](./implementation-baseline.md).
@@ -54,6 +62,8 @@ Acceptance evidence dated 2026-08-27 proves:
 - Backend tests/build/typecheck, marketplace tests/build/audit, and frontend production build.
 
 Evidence: [foundation-runtime-2026-08-27.md](./acceptance/foundation-runtime-2026-08-27.md). Open work is never inferred as complete from this baseline.
+
+Deployment evidence dated 2026-08-28 additionally proves that the reference Railway Core project contains isolated PostgreSQL, API, web, and gateway services; only the gateway is public; the API uses a persistent `/data` volume; exact-origin CORS is configured; and the public gateway health, API health/readiness/version/installation-status, and browser setup routes all return HTTP 200. The installation remains intentionally unclaimed until the product owner enters the first owner credentials through `/setup`.
 
 ## 5. Ownership model
 
@@ -425,3 +435,38 @@ Risks are reviewed at every gate. Each accepted residual risk records probabilit
 ## 20. Definition of complete planning
 
 Planning is complete when every target capability has a default decision, owner, dependency, estimate, implementation package, security/privacy consideration, failure behavior, acceptance evidence, and release gate; topic documents point to this authority; and unresolved approvals are explicit gate inputs rather than hidden ambiguity. Implementation status continues to be tracked separately in [implementation-baseline.md](./implementation-baseline.md).
+
+## 21. Planning completion audit
+
+Audit result: **complete as of 2026-08-28**. This result certifies the execution plan, not completion of all product implementation.
+
+| Completion requirement | Result | Evidence |
+|---|---|---|
+| Product scope and explicit non-goals | complete | Sections 2–3 and DEC-001–013 |
+| A-to-Z capability coverage | complete | Section 19 maps all 30 architecture sections |
+| Work decomposition | complete | 60 packages: A 10, B 15, C 8, D 7, E 11, F 9 |
+| Accountable ownership | complete | Section 5 and owner column on every package |
+| Dependencies and delivery order | complete | Sections 6–12 and dependency column on every package |
+| Estimates and priorities | complete | Phase estimates and Section 16 |
+| Security, privacy, reliability and support | complete | Section 13 and risk register |
+| Verification and failure evidence | complete | Acceptance-evidence columns and Sections 14–15 |
+| Release gates and prohibited early claims | complete | Gates A–F and release-claim matrix |
+| Current implementation separated from target state | complete | Section 4 and implementation baseline |
+| First executable work sequence | complete | Section 17 |
+| Railway customer deployment path | complete | B-005–015 and Railway deployment runbook |
+| Commercial, entitlement and publisher path | complete | Phases D–F |
+| Open approvals visible and gated | complete | Proposed decisions have explicit freeze gates |
+
+Every planned capability has an accountable role and release gate. Changes after this audit use normal change control: record the changed decision, affected packages, gate impact, approver, and date.
+
+## 22. Planning-to-delivery handoff
+
+Planning completion authorizes execution in dependency order; it does not waive acceptance gates. The delivery source of truth is [implementation-baseline.md](./implementation-baseline.md), and test/runtime proof belongs in `docs/acceptance/`.
+
+Immediate handoff state:
+
+1. The foundation runtime and a real Railway Core reference deployment are verified.
+2. The first owner must complete `/setup`; credentials are never created by the plan or stored in Git.
+3. Phase A approvals and inventories close next, followed by the remaining Gate B legacy, automation, domain, recovery, mobile, worker, and storage packages.
+4. Plugin, repository, commerce, and publisher claims advance only when Gates C, D, E, and F respectively have stored evidence.
+5. “Planning complete” must never be displayed to customers as “platform implementation complete.”

@@ -27,6 +27,23 @@ Status values are `not started`, `in progress`, `verified`, or `blocked`.
 | Packaging | Backend and frontend Dockerfiles exist | Useful baseline | Consolidate into supported Compose deployment later |
 | Plugin system | No runtime or SDK exists | Marketplace cannot safely begin | Complete core contracts and migration foundation first |
 
+## Railway Core Reference Deployment
+
+Verified on 2026-08-28 in Railway project `Wattanam V2 - Core`:
+
+| Resource | State | Verification |
+|---|---|---|
+| PostgreSQL | verified | Private service online with persistent database volume |
+| API | verified | Private service healthy; PostgreSQL readiness passes; persistent `/data` volume attached |
+| Web | verified | Private service healthy and setup UI served through the gateway |
+| Gateway | verified | Only public service; `/gateway-health` returns HTTP 200 |
+| Private routing | verified | Gateway reaches `api.railway.internal:3001` and `web.railway.internal:3000` |
+| Exact-origin CORS | verified | API configured for the generated gateway HTTPS origin |
+| Public smoke test | verified | Health, readiness, version, installation status, and `/setup` return HTTP 200 |
+| First-run claim | awaiting owner action | Installation reports `ready`; owner credentials must be entered interactively |
+
+This proves the reference topology and smoke path, not the remaining Gate B automation, custom-domain lifecycle, complete recovery-set drill, or browser setup submission journey.
+
 ## Corrections to the Architecture Plan
 
 1. **Versioned migrations are a prerequisite, not a plugin-runtime detail.** The current database has no checked-in Prisma migration history. A baseline migration and upgrade policy must be established before plugin migrations are designed.

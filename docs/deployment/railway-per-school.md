@@ -72,7 +72,7 @@ PLUGIN_TRUSTED_KEYS_FILE=/run/plugin-keys/trusted-keys.json
 
 Seal `JWT_SECRET` and external-provider credentials. Do not copy them between projects.
 
-Attach a persistent volume at `/data/plugins`. Mount or inject the trusted public-key JSON as a sealed secret. Never deploy publisher private signing keys to a school project.
+Attach one persistent volume at `/data`. Backups, installed plugin packages, and plugin-owned files use directories below this mount. Configure trusted public keys through the documented sealed variable or file mechanism. Never deploy publisher private signing keys to a school project.
 
 The API startup command runs:
 
@@ -136,6 +136,10 @@ HTTP and Socket.IO use this same exact-origin list. Wildcard Railway, Vercel, an
 12. Enable scheduled database backups.
 13. Create an encrypted logical backup and perform a restore drill.
 14. Record ownership, support contacts, core version, and domain details.
+
+## Verified Core Reference
+
+The `Wattanam V2 - Core` Railway project was smoke-tested on 2026-08-28 using this topology. PostgreSQL, API, web, and gateway deployments succeeded. The generated gateway origin returned HTTP 200 for `/gateway-health`, `/api/health`, `/api/health/ready`, `/api/version`, `/api/installation/status`, and `/setup`. This reference remains in the `ready` installation state until the owner completes the setup wizard.
 
 ## Deployment Gate
 
