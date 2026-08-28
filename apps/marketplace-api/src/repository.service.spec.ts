@@ -65,13 +65,13 @@ describe('repository channel promotion', () => {
       pluginVersion: { findMany: jest.fn().mockResolvedValue([
         version('compatible', '1.1.0', '>=1.0.0 <2.0.0', 'STABLE'),
         version('future-core', '2.0.0', '>=2.0.0', 'STABLE'),
-        version('beta-only', '1.2.0', '>=1.0.0', 'BETA'),
       ]) },
       coreRelease: { findMany: jest.fn().mockResolvedValue([]) },
       securityAdvisory: { findMany: jest.fn().mockResolvedValue([]) },
     } as any;
     const result: any = await new RepositoryService(prisma, repositoryConfig()).signedIndex('1.5.0', 'stable');
     expect(result.payload.pluginReleases.map((release: any) => release.pluginId)).toEqual(['compatible']);
+    expect(prisma.pluginVersion.findMany.mock.calls[0][0].where.channel.in).toEqual(['STABLE']);
     expect(result.signatures).toHaveLength(1);
   });
 });

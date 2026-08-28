@@ -33,4 +33,11 @@ describe('marketplace signing configuration', () => {
     (env as Record<string, string>).METADATA_SECONDARY_SIGNING_KEYS_JSON = JSON.stringify({ 'repository-old': privateKey() });
     expect(readConfig(env).signingKeys.map((key) => key.keyId)).toEqual(['repository-1', 'repository-old']);
   });
+
+  it('loads base64-transported secondary keys without multiline environment corruption', () => {
+    const env = environment(privateKey(), privateKey());
+    const json = JSON.stringify({ 'repository-old': privateKey() });
+    (env as Record<string, string>).METADATA_SECONDARY_SIGNING_KEYS_BASE64 = Buffer.from(json).toString('base64');
+    expect(readConfig(env).signingKeys.map((key) => key.keyId)).toEqual(['repository-1', 'repository-old']);
+  });
 });

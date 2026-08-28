@@ -13,6 +13,7 @@ const schema = z.object({
   METADATA_SIGNING_PRIVATE_KEY: z.string().min(1).optional(),
   METADATA_SIGNING_KEY_ID: z.string().regex(/^[a-zA-Z0-9._-]{1,100}$/),
   METADATA_SECONDARY_SIGNING_KEYS_JSON: z.string().optional(),
+  METADATA_SECONDARY_SIGNING_KEYS_BASE64: z.string().optional(),
   ENTITLEMENT_SIGNING_PRIVATE_KEY_FILE: z.string().min(1).optional(),
   ENTITLEMENT_SIGNING_PRIVATE_KEY: z.string().min(1).optional(),
   ENTITLEMENT_SIGNING_KEY_ID: z.string().regex(/^[a-zA-Z0-9._-]{1,100}$/),
@@ -47,7 +48,11 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): MarketplaceCon
   if (!entitlementPrivateKey) throw new Error('ENTITLEMENT_SIGNING_PRIVATE_KEY_FILE or ENTITLEMENT_SIGNING_PRIVATE_KEY is required');
   if (publicKey(signingPrivateKey) === publicKey(entitlementPrivateKey)) throw new Error('Repository and entitlement signing keys must be distinct');
   if (value.METADATA_SIGNING_KEY_ID === value.ENTITLEMENT_SIGNING_KEY_ID) throw new Error('Repository and entitlement key IDs must be distinct');
-  const secondaryKeys = parseSecondaryKeys(value.METADATA_SECONDARY_SIGNING_KEYS_JSON);
+  if (value.METADATA_SECONDARY_SIGNING_KEYS_JSON && value.METADATA_SECONDARY_SIGNING_KEYS_BASE64) throw new Error('Configure only one secondary repository key transport');
+  const secondaryJson = value.METADATA_SECONDARY_SIGNING_KEYS_BASE64
+    ? Buffer.from(value.METADATA_SECONDARY_SIGNING_KEYS_BASE64, 'base64').toString('utf8')
+    : value.METADATA_SECONDARY_SIGNING_KEYS_JSON;
+  const secondaryKeys = parseSecondaryKeys(secondaryJson);
   const signingKeys = [{ privateKey: signingPrivateKey, keyId: value.METADATA_SIGNING_KEY_ID }, ...secondaryKeys];
   if (new Set(signingKeys.map((key) => key.keyId)).size !== signingKeys.length) throw new Error('Repository signing key IDs must be unique');
   const publicKeys = signingKeys.map((key) => publicKey(key.privateKey));
