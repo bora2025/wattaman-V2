@@ -33,7 +33,7 @@ if (manifest.file !== path.basename(archive)) fail('manifest does not match arch
 if (manifest.sha256 !== sha256(archive)) fail('backup checksum verification failed');
 
 const environment = postgresEnvironment(useValidationTarget ? process.env.RESTORE_DATABASE_URL : process.env.DATABASE_URL);
-run('pg_restore', ['--list', archive], environment);
+run('pg_restore', ['--list', archive], environment, true);
 const targetSlug = installationSlug(environment) || 'EMPTY';
 if (confirmation !== targetSlug) fail(`target confirmation mismatch; expected ${targetSlug}`);
 

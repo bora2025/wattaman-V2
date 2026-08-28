@@ -91,7 +91,9 @@ function buildReport(snapshot) {
 }
 
 function main() {
-  const report = buildReport(querySnapshot(postgresEnvironment()));
+  const useValidationTarget = process.argv.includes('--use-restore-database-url');
+  if (useValidationTarget && !process.env.RESTORE_DATABASE_URL) throw new Error('RESTORE_DATABASE_URL is required with --use-restore-database-url');
+  const report = buildReport(querySnapshot(postgresEnvironment(useValidationTarget ? process.env.RESTORE_DATABASE_URL : process.env.DATABASE_URL)));
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
   if (report.state === 'unsupported_partial') process.exitCode = 2;
 }
