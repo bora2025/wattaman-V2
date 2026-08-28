@@ -15,6 +15,17 @@ export interface RuntimeConfig {
   corsOrigins: string[];
   appVersion: string;
   gitCommit: string | null;
+  cookieSecure: boolean;
+  jwtAccessExpiry: string;
+  jwtRefreshExpiryDays: number;
+  backupDir: string;
+  backupRetentionDays: number;
+  pluginDir: string;
+  pluginDataDir: string;
+  pluginSafeMode: boolean;
+  pluginMaxPackageBytes: number;
+  pluginMaxUnpackedBytes: number;
+  pluginStorageMaxFileBytes: number;
 }
 
 function required(env: NodeJS.ProcessEnv, name: string): string {
@@ -37,6 +48,36 @@ function parsePort(value: string | undefined): number {
     throw new Error('PORT must be an integer between 1 and 65535');
   }
   return port;
+}
+
+function integer(env: NodeJS.ProcessEnv, name: string, fallback: number, minimum: number, maximum: number): number {
+  const value = Number(env[name] ?? fallback);
+  if (!Number.isInteger(value) || value < minimum || value > maximum) {
+    throw new Error(`${name} must be an integer between ${minimum} and ${maximum}`);
+  }
+  return value;
+}
+
+function boolean(env: NodeJS.ProcessEnv, name: string, fallback: boolean): boolean {
+  const raw = env[name]?.trim().toLowerCase();
+  if (!raw) return fallback;
+  if (raw === 'true') return true;
+  if (raw === 'false') return false;
+  throw new Error(`${name} must be true or false`);
+}
+
+function productionPath(env: NodeJS.ProcessEnv, name: string, fallback: string, nodeEnv: NodeEnvironment): string {
+  const value = env[name]?.trim() || fallback;
+  if (nodeEnv === 'production' && !value.startsWith('/')) {
+    throw new Error(`${name} must be an absolute path in production`);
+  }
+  return value;
+}
+
+function duration(env: NodeJS.ProcessEnv, name: string, fallback: string): string {
+  const value = env[name]?.trim() || fallback;
+  if (!/^\d+(s|m|h|d)$/.test(value)) throw new Error(`${name} must be a duration such as 15m, 2h, or 7d`);
+  return value;
 }
 
 export function parseCorsOrigins(value: string | undefined): string[] {
@@ -85,6 +126,17 @@ export function readRuntimeConfig(env: NodeJS.ProcessEnv = process.env): Runtime
     corsOrigins,
     appVersion: env.APP_VERSION?.trim() || '0.1.0-dev',
     gitCommit: env.GIT_COMMIT?.trim() || env.RAILWAY_GIT_COMMIT_SHA?.trim() || null,
+    cookieSecure: boolean(env, 'COOKIE_SECURE', nodeEnv === 'production'),
+    jwtAccessExpiry: duration(env, 'JWT_ACCESS_EXPIRY', '2h'),
+    jwtRefreshExpiryDays: integer(env, 'JWT_REFRESH_EXPIRY', 7, 1, 365),
+    backupDir: productionPath(env, 'BACKUP_DIR', nodeEnv === 'production' ? '/data/backups' : './backups', nodeEnv),
+    backupRetentionDays: integer(env, 'BACKUP_RETENTION_DAYS', 30, 1, 3650),
+    pluginDir: productionPath(env, 'PLUGIN_DIR', nodeEnv === 'production' ? '/data/plugins' : './plugins-installed', nodeEnv),
+    pluginDataDir: productionPath(env, 'PLUGIN_DATA_DIR', nodeEnv === 'production' ? '/data/plugin-data' : './plugin-data', nodeEnv),
+    pluginSafeMode: boolean(env, 'PLUGIN_SAFE_MODE', false),
+    pluginMaxPackageBytes: integer(env, 'PLUGIN_MAX_PACKAGE_BYTES', 50 * 1024 * 1024, 1024, 250 * 1024 * 1024),
+    pluginMaxUnpackedBytes: integer(env, 'PLUGIN_MAX_UNPACKED_BYTES', 50 * 1024 * 1024, 1024, 500 * 1024 * 1024),
+    pluginStorageMaxFileBytes: integer(env, 'PLUGIN_STORAGE_MAX_FILE_BYTES', 1024 * 1024, 1, 100 * 1024 * 1024),
   };
 }
 

@@ -21,7 +21,7 @@ Status values are `not started`, `in progress`, `verified`, or `blocked`.
 | Authentication | A known JWT fallback secret was accepted | Critical production risk | Fail startup when production secret is missing or weak |
 | CORS | Railway and Vercel wildcard suffixes were trusted | Origin scope was broader than installation configuration | Require exact configured origins in production |
 | Health | Existing endpoint reported process metadata only | Could report healthy while database was unavailable | Separate liveness, readiness, and version endpoints |
-| Configuration | Environment reads are distributed across modules | Validation and documentation are incomplete | Centralize required runtime validation incrementally |
+| Configuration | Some feature modules still consume environment values directly | Required core plus bounded backup/plugin/auth settings validate centrally before startup; optional notification adapters remain to centralize | Complete provider schemas and redaction tests under A-008 |
 | Testing | No backend unit test files existed | Refactoring risk is high | Add tests with each platform foundation change |
 | Dependencies | Production dependency audit now reports 12 moderate findings and no high/critical findings; development tooling still reports 10 high findings requiring major toolchain upgrades | Production high-risk upload findings were removed without a forced framework migration | Plan and test Nest/toolchain major upgrades; do not expose development tooling in release images |
 | Packaging | Backend and frontend Dockerfiles exist | Useful baseline | Consolidate into supported Compose deployment later |
@@ -56,7 +56,7 @@ This proves the reference topology and smoke path, not the remaining Gate B auto
 
 | ID | Capability | Status | Verification |
 |---|---|---|---|
-| FND-001 | Validate required runtime configuration | verified | Configuration unit tests and successful backend build |
+| FND-001 | Validate required runtime configuration | verified | Core, authentication expiry, cookie, backup path/retention, and plugin path/size/safe-mode settings have startup validation; 8 configuration tests, 65-test backend suite, and build pass |
 | FND-002 | Reject insecure production JWT secrets | verified | Production configuration unit test |
 | FND-003 | Require exact production CORS origins | verified | Origin parser and production configuration unit tests |
 | FND-004 | Provide liveness endpoint | verified | Health service test and successful backend build |
