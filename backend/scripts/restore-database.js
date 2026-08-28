@@ -32,7 +32,13 @@ if (manifest.format !== 'pg_dump-custom-v1') fail('unsupported backup format');
 if (manifest.file !== path.basename(archive)) fail('manifest does not match archive filename');
 if (manifest.sha256 !== sha256(archive)) fail('backup checksum verification failed');
 
-const environment = postgresEnvironment(useValidationTarget ? process.env.RESTORE_DATABASE_URL : process.env.DATABASE_URL);
+const baseEnvironment = postgresEnvironment(useValidationTarget ? process.env.RESTORE_DATABASE_URL : process.env.DATABASE_URL);
+const environment = {
+  ...baseEnvironment,
+  PGCONNECT_TIMEOUT: process.env.PGCONNECT_TIMEOUT || '15',
+  PGOPTIONS: `${baseEnvironment.PGOPTIONS || ''} -c lock_timeout=30s -c statement_timeout=30min`.trim(),
+};
+process.stderr.write('Validating backup archive and target identity...\n');
 run('pg_restore', ['--list', archive], environment, true);
 const targetSlug = installationSlug(environment) || 'EMPTY';
 if (confirmation !== targetSlug) fail(`target confirmation mismatch; expected ${targetSlug}`);
@@ -45,7 +51,9 @@ if (targetSlug !== 'EMPTY') {
   if (preBackup.status !== 0) fail('pre-restore backup failed; restore cancelled');
 }
 
-run('pg_restore', ['--clean', '--if-exists', '--no-owner', '--no-acl', '--single-transaction', '--exit-on-error', '--dbname', environment.PGDATABASE, archive], environment);
+process.stderr.write(`Restoring into confirmed target ${targetSlug}...\n`);
+run('pg_restore', ['--verbose', '--clean', '--if-exists', '--no-owner', '--no-acl', '--single-transaction', '--exit-on-error', '--dbname', environment.PGDATABASE, archive], environment);
+process.stderr.write('Verifying restored installation identity...\n');
 const restoredSlug = installationSlug(environment);
 if (manifest.installationSlug && restoredSlug !== manifest.installationSlug) fail('restore completed but installation identity verification failed');
 process.stdout.write(`Restore verified for ${restoredSlug || 'legacy installation'} from ${path.basename(archive)}\n`);
