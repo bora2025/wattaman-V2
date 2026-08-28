@@ -88,7 +88,7 @@ This proves the reference topology and smoke path, not the remaining Gate B auto
 | PLG-007 | Require inspection and exact-package confirmation | verified | Admin flow previews publisher, compatibility, dependencies, capabilities, permissions, and migration risk; install requires matching SHA-256 |
 | PLG-008 | Execute recoverable plugin migrations | in progress | Backup-before-migration and transactionally coupled SQL/history/registry implemented with namespace/immutability tests; PostgreSQL rollback/restore integration remains |
 | MKT-001 | Official release repository | verified | Separate PostgreSQL service migrated, registered a verified publisher, persisted an immutable artifact across restart, signed its index, and supplied a checksum-verified package to a school API |
-| MKT-002 | Marketplace commerce foundations | in progress | Separate account/order/payment/idempotent-webhook/installation/entitlement records exist; product licensing decisions, offline token issuance, and payment integration remain |
+| MKT-002 | Marketplace commerce foundations | in progress | Separate account/order/payment/idempotent-webhook/installation/entitlement records exist; the distinct Ed25519 offline-token contract now enforces canonical signatures, audience, installation/product scope, key ID, validity/update/offline windows and local verification (11 marketplace tests/build pass); payment-committed issuance, customer identity, licensing decisions and provider integration remain |
 
 Phase A records: [technical ownership inventory](./architecture/technical-inventory.md), [support matrix](./architecture/support-matrix.md), and [ADR index](./architecture/adr/README.md).
 
