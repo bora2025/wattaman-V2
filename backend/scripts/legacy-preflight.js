@@ -91,9 +91,15 @@ function buildReport(snapshot) {
 }
 
 function main() {
-  const useValidationTarget = process.argv.includes('--use-restore-database-url');
-  if (useValidationTarget && !process.env.RESTORE_DATABASE_URL) throw new Error('RESTORE_DATABASE_URL is required with --use-restore-database-url');
-  const report = buildReport(querySnapshot(postgresEnvironment(useValidationTarget ? process.env.RESTORE_DATABASE_URL : process.env.DATABASE_URL)));
+  const selectors = [
+    ['--use-restore-database-url', 'RESTORE_DATABASE_URL'],
+    ['--use-install-database-url', 'INSTALL_DATABASE_URL'],
+    ['--use-adopt-database-url', 'ADOPT_DATABASE_URL'],
+  ].filter(([flag]) => process.argv.includes(flag));
+  if (selectors.length > 1) throw new Error('select only one alternate database URL');
+  const selected = selectors[0];
+  if (selected && !process.env[selected[1]]) throw new Error(`${selected[1]} is required with ${selected[0]}`);
+  const report = buildReport(querySnapshot(postgresEnvironment(selected ? process.env[selected[1]] : process.env.DATABASE_URL)));
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
   if (report.state === 'unsupported_partial') process.exitCode = 2;
 }
