@@ -1,15 +1,19 @@
-import { BadGatewayException, BadRequestException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
-import { createHash } from 'crypto';
+import { BadGatewayException, BadRequestException, ConflictException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import { createHash, randomUUID } from 'crypto';
+import { promises as fs } from 'fs';
+import path from 'path';
 import semver from 'semver';
 import { readRuntimeConfig } from '../config/environment';
 import { PrismaService } from '../database/prisma.service';
 import { PluginsService } from '../plugins/plugins.service';
+import { BackupService } from '../backup/backup.service';
+import { maintenanceFlagPath, updateStateDirectory } from './maintenance-mode.middleware';
 import { readUpdateRepositoryConfig } from './update-config';
 import { verifyRepositoryEnvelope } from './repository-signature';
 
 @Injectable()
 export class UpdatesService {
-  constructor(private readonly prisma: PrismaService, private readonly plugins: PluginsService) {}
+  constructor(private readonly prisma: PrismaService, private readonly plugins: PluginsService, private readonly backup: BackupService) {}
 
   async check() {
     const config = readUpdateRepositoryConfig();
@@ -56,7 +60,7 @@ export class UpdatesService {
     const download = new URL(release.downloadUrl);
     if (download.origin !== config.url || !download.pathname.startsWith('/v1/artifacts/')) throw new BadGatewayException('Repository returned an untrusted artifact URL');
     if (!/^[a-f0-9]{64}$/.test(release.sha256)) throw new BadGatewayException('Repository returned an invalid artifact checksum');
-    const response = await this.fetchWithTimeout(download, 30_000);
+    const response = await this.fetchWithTimeout(download, config.artifactTimeoutMs);
     if (!response.ok) throw new BadGatewayException(`Artifact download failed (${response.status})`);
     const declaredLength = Number(response.headers.get('content-length') || 0);
     if (declaredLength > config.maximumArtifactBytes) throw new BadGatewayException('Artifact exceeds the configured size limit');
@@ -75,16 +79,111 @@ export class UpdatesService {
     return this.plugins.install(buffer);
   }
 
+  async prepareCoreUpdate(version: string) {
+    if (!semver.valid(version)) throw new BadRequestException('version must be semantic versioning');
+    const config = readUpdateRepositoryConfig();
+    if (!config) throw new ServiceUnavailableException('Update repository is not configured');
+    const currentVersion = readRuntimeConfig().appVersion;
+    if (!semver.valid(currentVersion) || !semver.gt(version, currentVersion)) throw new BadRequestException('Target must be newer than the installed core version');
+    const payload = await this.index(config, currentVersion);
+    const release = payload.coreReleases.find((candidate: any) => candidate.version === version);
+    if (!release) throw new NotFoundException('Compatible core release not found');
+    const installed = await this.prisma.pluginInstallation.findMany();
+    const blockers = this.coreBlockers(installed, version);
+    if (blockers.length) throw new ConflictException({ message: 'Active plugins block this core update', blockers });
+    const backup = await this.backup.create();
+    const operation = {
+      schemaVersion: 1, id: randomUUID(), state: 'prepared', fromVersion: currentVersion, toVersion: version,
+      preparedAt: new Date().toISOString(), release, backup: { file: backup.file, sha256: backup.sha256, createdAt: backup.createdAt },
+      recovery: { procedure: 'docs/operations/core-update-and-recovery.md', restoreArchive: backup.file },
+    };
+    await fs.mkdir(updateStateDirectory(), { recursive: true });
+    await this.writeJsonAtomic(path.join(updateStateDirectory(), `${operation.id}.json`), operation);
+    await this.writeJsonAtomic(maintenanceFlagPath(), { operationId: operation.id, enteredAt: operation.preparedAt, targetVersion: version });
+    return operation;
+  }
+
+  async completeCoreUpdate(operationId: string, input: { outcome?: unknown; detail?: unknown }) {
+    if (!/^[a-f0-9-]{36}$/.test(operationId)) throw new BadRequestException('Invalid update operation id');
+    if (!['healthy', 'failed'].includes(String(input.outcome))) throw new BadRequestException('outcome must be healthy or failed');
+    const file = path.join(updateStateDirectory(), `${operationId}.json`);
+    let operation: any;
+    try { operation = JSON.parse(await fs.readFile(file, 'utf8')); } catch { throw new NotFoundException('Update operation not found'); }
+    if (operation.state !== 'prepared') throw new ConflictException('Update operation is already terminal');
+    operation.state = input.outcome === 'healthy' ? 'completed' : 'recovery_required';
+    operation.completedAt = new Date().toISOString();
+    operation.detail = typeof input.detail === 'string' ? input.detail.slice(0, 2000) : null;
+    await this.writeJsonAtomic(file, operation);
+    if (operation.state === 'completed') await fs.unlink(maintenanceFlagPath()).catch((error: any) => { if (error?.code !== 'ENOENT') throw error; });
+    return operation;
+  }
+
+  async maintenanceStatus() {
+    try { return { active: true, ...JSON.parse(await fs.readFile(maintenanceFlagPath(), 'utf8')) }; }
+    catch (error: any) { if (error?.code === 'ENOENT') return { active: false }; throw error; }
+  }
+
+  async applyEmergencyAdvisories() {
+    const config = readUpdateRepositoryConfig();
+    if (!config) throw new ServiceUnavailableException('Update repository is not configured');
+    const coreVersion = readRuntimeConfig().appVersion;
+    const payload = await this.index(config, coreVersion);
+    const installed = await this.prisma.pluginInstallation.findMany();
+    const applied: Array<{ pluginId: string; advisoryId: string; action: string }> = [];
+    for (const advisory of payload.advisories) {
+      if (!['disable', 'remove'].includes(advisory.recommendedAction)) continue;
+      const plugin = installed.find((candidate) => candidate.id === advisory.pluginId && candidate.status === 'active');
+      if (!plugin || !semver.valid(plugin.version) || !semver.validRange(advisory.affectedVersions) || !semver.satisfies(plugin.version, advisory.affectedVersions)) continue;
+      await this.plugins.deactivate(plugin.id);
+      applied.push({ pluginId: plugin.id, advisoryId: advisory.id, action: 'deactivated' });
+    }
+    return { applied, destructiveRemovalPerformed: false };
+  }
+
   private async index(config: NonNullable<ReturnType<typeof readUpdateRepositoryConfig>>, coreVersion: string) {
     const url = new URL('/v1/index', config.url);
     url.searchParams.set('coreVersion', coreVersion);
     url.searchParams.set('channel', config.channel);
-    const response = await this.fetchWithTimeout(url, 10_000);
+    const response = await this.fetchWithTimeout(url, config.indexTimeoutMs);
     if (!response.ok) throw new BadGatewayException(`Update repository check failed (${response.status})`);
     let body: unknown;
     try { body = await response.json(); } catch { throw new BadGatewayException('Update repository returned invalid JSON'); }
-    try { return verifyRepositoryEnvelope(body, config.publicKeys); }
+    try {
+      const payload = verifyRepositoryEnvelope(body, config.publicKeys);
+      await this.enforceRepositoryWatermark(payload.generatedAt);
+      return payload;
+    }
     catch (error) { throw new BadGatewayException(error instanceof Error ? error.message : 'Repository signature validation failed'); }
+  }
+
+  private coreBlockers(installed: any[], targetVersion: string) {
+    return installed.filter((plugin) => {
+      if (plugin.status !== 'active') return false;
+      try {
+        const manifest = JSON.parse(plugin.manifestJson);
+        return !semver.validRange(manifest.requiresCore) || !semver.satisfies(targetVersion, manifest.requiresCore);
+      } catch { return true; }
+    }).map((plugin) => plugin.id);
+  }
+
+  private async writeJsonAtomic(target: string, value: unknown) {
+    const temporary = `${target}.${process.pid}.${Date.now()}.partial`;
+    await fs.writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
+    await fs.rename(temporary, target);
+  }
+
+  private async enforceRepositoryWatermark(generatedAt: unknown) {
+    if (typeof generatedAt !== 'string' || !Number.isFinite(Date.parse(generatedAt))) throw new Error('Repository metadata generatedAt is invalid');
+    const timestamp = Date.parse(generatedAt);
+    if (timestamp > Date.now() + 5 * 60_000) throw new Error('Repository metadata is dated too far in the future');
+    const directory = updateStateDirectory();
+    const file = path.join(directory, 'repository-watermark.json');
+    await fs.mkdir(directory, { recursive: true });
+    let previous = 0;
+    try { previous = Date.parse(JSON.parse(await fs.readFile(file, 'utf8')).generatedAt) || 0; }
+    catch (error: any) { if (error?.code !== 'ENOENT') throw error; }
+    if (timestamp < previous) throw new Error('Repository metadata replay or downgrade detected');
+    if (timestamp > previous) await this.writeJsonAtomic(file, { generatedAt: new Date(timestamp).toISOString() });
   }
 
   private async fetchWithTimeout(url: URL, milliseconds: number) {

@@ -33,6 +33,12 @@ enum AdvisorySeverity {
   CRITICAL
 }
 
+enum AdvisoryAction {
+  WARN
+  DISABLE
+  REMOVE
+}
+
 enum EntitlementStatus {
   ACTIVE
   EXPIRED
@@ -160,16 +166,18 @@ model PackageArtifact {
 }
 
 model SecurityAdvisory {
-  id               String            @id
-  pluginId         String
-  title            String
-  severity         AdvisorySeverity
-  affectedVersions String
-  fixedVersion     String?
-  description      String
-  publishedAt      DateTime          @default(now())
-  withdrawnAt      DateTime?
-  plugin           MarketplacePlugin @relation(fields: [pluginId], references: [id])
+  id                String            @id
+  pluginId          String
+  title             String
+  severity          AdvisorySeverity
+  affectedVersions  String
+  fixedVersion      String?
+  description       String
+  recommendedAction AdvisoryAction    @default(WARN)
+  communicationUrl  String?
+  publishedAt       DateTime          @default(now())
+  withdrawnAt       DateTime?
+  plugin            MarketplacePlugin @relation(fields: [pluginId], references: [id])
 
   @@index([pluginId, publishedAt])
 }

@@ -8,6 +8,8 @@ export interface UpdateRepositoryConfig {
   publicKeys: Record<string, string>;
   channel: 'stable' | 'beta';
   maximumArtifactBytes: number;
+  indexTimeoutMs: number;
+  artifactTimeoutMs: number;
 }
 
 export function readUpdateRepositoryConfig(env: NodeJS.ProcessEnv = process.env): UpdateRepositoryConfig | null {
@@ -46,5 +48,13 @@ export function readUpdateRepositoryConfig(env: NodeJS.ProcessEnv = process.env)
     }
     publicKeys[id] = key.replace(/\\n/g, '\n');
   }
-  return { url: url.origin, publicKey, keyId, publicKeys, channel: channel as 'stable' | 'beta', maximumArtifactBytes };
+  const indexTimeoutMs = boundedInteger(env.UPDATE_INDEX_TIMEOUT_MS, 10_000, 100, 120_000, 'UPDATE_INDEX_TIMEOUT_MS');
+  const artifactTimeoutMs = boundedInteger(env.UPDATE_ARTIFACT_TIMEOUT_MS, 30_000, 100, 600_000, 'UPDATE_ARTIFACT_TIMEOUT_MS');
+  return { url: url.origin, publicKey, keyId, publicKeys, channel: channel as 'stable' | 'beta', maximumArtifactBytes, indexTimeoutMs, artifactTimeoutMs };
+}
+
+function boundedInteger(raw: string | undefined, fallback: number, minimum: number, maximum: number, name: string) {
+  const value = Number(raw || fallback);
+  if (!Number.isInteger(value) || value < minimum || value > maximum) throw new Error(`${name} must be between ${minimum} and ${maximum}`);
+  return value;
 }

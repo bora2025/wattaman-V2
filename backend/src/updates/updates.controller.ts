@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
@@ -17,4 +17,18 @@ export class UpdatesController {
   installPlugin(@Param('pluginId') pluginId: string, @Param('version') version: string) {
     return this.updates.installPlugin(pluginId, version);
   }
+
+  @Post('core/:version/prepare')
+  prepareCore(@Param('version') version: string) { return this.updates.prepareCoreUpdate(version); }
+
+  @Post('core/operations/:operationId/complete')
+  completeCore(@Param('operationId') operationId: string, @Body() body: { outcome?: unknown; detail?: unknown }) {
+    return this.updates.completeCoreUpdate(operationId, body || {});
+  }
+
+  @Get('maintenance')
+  maintenance() { return this.updates.maintenanceStatus(); }
+
+  @Post('advisories/apply-emergency')
+  applyEmergencyAdvisories() { return this.updates.applyEmergencyAdvisories(); }
 }

@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { promises as fs } from 'fs';
 import path from 'path';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+
+const execFileAsync = promisify(execFile);
 
 interface BackupManifest {
   format: string;
@@ -54,5 +58,18 @@ export class BackupService {
       throw error;
     }
   }
-}
 
+  async create() {
+    const script = path.resolve(process.cwd(), 'scripts/backup-database.js');
+    const { stdout } = await execFileAsync(process.execPath, [script], {
+      env: process.env,
+      timeout: 10 * 60_000,
+      maxBuffer: 1024 * 1024,
+      windowsHide: true,
+    });
+    const lines = stdout.trim().split(/\r?\n/);
+    const manifest = JSON.parse(lines[lines.length - 1]) as BackupManifest;
+    if (manifest.format !== 'pg_dump-custom-v1' || !manifest.file || !manifest.sha256) throw new Error('Backup command returned an invalid manifest');
+    return manifest;
+  }
+}

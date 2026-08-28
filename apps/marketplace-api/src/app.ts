@@ -85,6 +85,9 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   app.post('/admin/v1/core-releases/promote', requireAdmin, async (request, response, next) => {
     try { response.json(await repository.promoteCoreRelease(request.body)); } catch (error) { next(error); }
   });
+  app.post('/admin/v1/plugin-releases/withdraw', requireAdmin, async (request, response, next) => {
+    try { response.json(await repository.withdrawPluginRelease(request.body)); } catch (error) { next(error); }
+  });
   app.post('/admin/v1/orders', requireAdmin, async (request, response, next) => {
     try { response.status(201).json(await commerce.createOrder(request.body)); } catch (error) { next(error); }
   });

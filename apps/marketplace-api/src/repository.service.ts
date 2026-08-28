@@ -30,7 +30,15 @@ const advisoryInput = z.object({
   affectedVersions: z.string().refine((value) => semver.validRange(value) !== null),
   fixedVersion: z.string().refine((value) => semver.valid(value) !== null).optional(),
   description: z.string().trim().min(1).max(10_000),
+  recommendedAction: z.enum(['WARN', 'DISABLE', 'REMOVE']).default('WARN'),
+  communicationUrl: z.string().url().optional(),
 });
+
+const withdrawalInput = advisoryInput.extend({
+  version: z.string().refine((value) => semver.valid(value) !== null),
+  channel: z.enum(['STABLE', 'BETA']).default('STABLE'),
+  reason: z.string().trim().min(1).max(2000),
+}).strict();
 
 const coreReleaseInput = z.object({
   version: z.string().refine((value) => semver.valid(value) !== null),
@@ -145,6 +153,24 @@ export class RepositoryService {
     return this.prisma.securityAdvisory.create({ data: input });
   }
 
+  async withdrawPluginRelease(value: unknown) {
+    const input = withdrawalInput.parse(value);
+    return this.prisma.$transaction(async (tx) => {
+      const release = await tx.pluginVersion.findUnique({ where: { pluginId_version_channel: { pluginId: input.pluginId, version: input.version, channel: input.channel } } });
+      if (!release) throw new HttpError(404, 'Plugin release not found');
+      if (release.withdrawnAt) throw new HttpError(409, 'Plugin release is already withdrawn');
+      const withdrawnAt = new Date();
+      await tx.pluginVersion.update({ where: { id: release.id }, data: { withdrawnAt, reviewStatus: 'WITHDRAWN' } });
+      const advisory = await tx.securityAdvisory.create({ data: {
+        id: input.id, pluginId: input.pluginId, title: input.title, severity: input.severity,
+        affectedVersions: input.affectedVersions, fixedVersion: input.fixedVersion, description: input.description,
+        recommendedAction: input.recommendedAction, communicationUrl: input.communicationUrl,
+      } });
+      await tx.versionReview.create({ data: { pluginVersionId: release.id, status: 'WITHDRAWN', reviewer: 'security-incident', notes: input.reason, reviewedAt: withdrawnAt } });
+      return { pluginId: input.pluginId, version: input.version, channel: input.channel, withdrawnAt, advisory };
+    });
+  }
+
   async promotePluginRelease(value: unknown) {
     const input = pluginPromotionInput.parse(value);
     return this.prisma.$transaction(async (tx) => {
@@ -208,7 +234,8 @@ export class RepositoryService {
       advisories: advisories.map((item) => ({
         id: item.id, pluginId: item.pluginId, title: item.title, severity: item.severity.toLowerCase(),
         affectedVersions: item.affectedVersions, fixedVersion: item.fixedVersion,
-        description: item.description, publishedAt: item.publishedAt.toISOString(),
+        description: item.description, recommendedAction: item.recommendedAction.toLowerCase(),
+        communicationUrl: item.communicationUrl, publishedAt: item.publishedAt.toISOString(),
       })),
     };
     return signEnvelopeWithKeys(payload, this.config.signingKeys);
