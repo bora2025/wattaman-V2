@@ -76,6 +76,18 @@ npm run backup:restore -- \
   --yes-replace
 ```
 
+When the drill runs inside a live API operations container, keep its production `DATABASE_URL` unchanged. Set a temporary `RESTORE_DATABASE_URL` reference and require the explicit isolation flag:
+
+```bash
+npm run backup:restore -- \
+  --from /data/backups/wattanam-<timestamp>.dump \
+  --confirm-target EMPTY \
+  --yes-replace \
+  --use-restore-database-url
+```
+
+Remove `RESTORE_DATABASE_URL` and the disposable database immediately after recording evidence. The flag refuses to run when that variable is absent.
+
 4. Run `npm run db:migrate:status`.
 5. Start the matching application release.
 6. Verify `/health/ready`, installation identity, owner login, and critical module reads.

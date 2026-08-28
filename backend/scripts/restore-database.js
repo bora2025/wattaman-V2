@@ -52,7 +52,7 @@ if (targetSlug !== 'EMPTY') {
 }
 
 process.stderr.write(`Restoring into confirmed target ${targetSlug}...\n`);
-run('pg_restore', ['--verbose', '--clean', '--if-exists', '--no-owner', '--no-acl', '--single-transaction', '--exit-on-error', '--dbname', environment.PGDATABASE, archive], environment);
+run('pg_restore', ['--clean', '--if-exists', '--no-owner', '--no-acl', '--single-transaction', '--exit-on-error', '--dbname', environment.PGDATABASE, archive], environment);
 process.stderr.write('Verifying restored installation identity...\n');
 const restoredSlug = installationSlug(environment);
 if (manifest.installationSlug && restoredSlug !== manifest.installationSlug) fail('restore completed but installation identity verification failed');

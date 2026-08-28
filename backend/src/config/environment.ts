@@ -130,7 +130,7 @@ export function readRuntimeConfig(env: NodeJS.ProcessEnv = process.env): Runtime
     jwtAccessExpiry: duration(env, 'JWT_ACCESS_EXPIRY', '2h'),
     jwtRefreshExpiryDays: integer(env, 'JWT_REFRESH_EXPIRY', 7, 1, 365),
     backupDir: productionPath(env, 'BACKUP_DIR', nodeEnv === 'production' ? '/data/backups' : './backups', nodeEnv),
-    backupRetentionDays: integer(env, 'BACKUP_RETENTION_DAYS', 30, 1, 3650),
+    backupRetentionDays: integer(env, 'BACKUP_RETENTION_DAYS', 30, 0, 3650),
     pluginDir: productionPath(env, 'PLUGIN_DIR', nodeEnv === 'production' ? '/data/plugins' : './plugins-installed', nodeEnv),
     pluginDataDir: productionPath(env, 'PLUGIN_DATA_DIR', nodeEnv === 'production' ? '/data/plugin-data' : './plugin-data', nodeEnv),
     pluginSafeMode: boolean(env, 'PLUGIN_SAFE_MODE', false),

@@ -47,7 +47,7 @@ describe('runtime environment', () => {
 
   it('rejects malformed boolean and bounded integer settings', () => {
     expect(() => readRuntimeConfig({ ...baseEnvironment, PLUGIN_SAFE_MODE: 'yes' })).toThrow('PLUGIN_SAFE_MODE');
-    expect(() => readRuntimeConfig({ ...baseEnvironment, BACKUP_RETENTION_DAYS: '0' })).toThrow('BACKUP_RETENTION_DAYS');
+    expect(() => readRuntimeConfig({ ...baseEnvironment, BACKUP_RETENTION_DAYS: '-1' })).toThrow('BACKUP_RETENTION_DAYS');
     expect(() => readRuntimeConfig({ ...baseEnvironment, PLUGIN_MAX_PACKAGE_BYTES: '999999999' })).toThrow('PLUGIN_MAX_PACKAGE_BYTES');
   });
 

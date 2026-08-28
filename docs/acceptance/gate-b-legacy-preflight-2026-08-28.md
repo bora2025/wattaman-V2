@@ -49,4 +49,4 @@ installation: angkor-school
 pg_dump: 18.6
 ```
 
-The manifest contains no credentials. A clean PostgreSQL 18 restore and application comparison remain required before the PostgreSQL 18 recovery matrix is complete.
+The manifest contains no credentials. A clean restore then ran into a disposable Railway PostgreSQL 18.6 service using the isolated `RESTORE_DATABASE_URL` path. Restore verification returned `angkor-school`; the restored target had 75 tables, 773 columns, all four migrations, and the exact source fingerprint `9d05f932d8b4a8443a50da0658f56170a7349566224942677a96fd52e2f2065f`. The temporary variable and database service were removed after verification.

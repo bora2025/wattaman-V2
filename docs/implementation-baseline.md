@@ -75,7 +75,7 @@ This proves the reference topology and smoke path, not the remaining Gate B auto
 | SEC-003 | Authenticate Socket.IO connections and restrict origins | verified | Socket authentication tests and backend build pass |
 | OPS-001 | Define supported Docker environment | in progress | PostgreSQL 16 and current release containers are validated; exact Node/Linux/Docker/browser versions and support windows require Gate A approval |
 | OPS-002 | Create Docker Compose deployment | verified | Isolated release stack built and started PostgreSQL/API/web/gateway healthy on a clean named volume set |
-| OPS-003 | Implement backup and restore | verified | PostgreSQL 16 custom archive/restore reproduced identity, owner, and four migrations; Railway PostgreSQL 18 produced a 176,725-byte custom archive and SHA-256 manifest with client 18; PostgreSQL 18 clean restore remains Gate B matrix evidence |
+| OPS-003 | Implement backup and restore | verified | PostgreSQL 16 custom archive/restore reproduced identity, owner, and four migrations; Railway PostgreSQL 18 backup restored into a disposable clean service with matching `angkor-school` identity, 75 tables/773 columns, four migrations, and exact source schema fingerprint |
 | OPS-004 | Remove destructive online JSON restore | verified | Only authenticated status endpoint remains; frontend contains no restore upload |
 | PLG-001 | Define plugin manifest schema | verified | Manifest tests and announcements example pass |
 | PLG-002 | Define plugin SDK contracts | in progress | SDK 1.0 events, authenticated routes, persisted jobs, scoped settings/storage, permissions/navigation, declarative pages, health, and cleanup have contract tests; audit/notification adapters and granular permission evaluation remain |
