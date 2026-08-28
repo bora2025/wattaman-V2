@@ -4,7 +4,7 @@
 
 Legend: `[x]` verified · `[~]` in progress (remainder noted) · `[ ]` not started.
 
-Last reconciled: 2026-08-28, against commits through `67a6797` plus the uncommitted C-001/C-002 plugin migration-rollback and lifecycle-lock increment.
+Last reconciled: 2026-08-28, against commits through `f16b735` plus the uncommitted E-009 live-PostgreSQL verification increment.
 
 ## 0. Business decisions (Product Owner) — block their listed freeze gate
 
@@ -88,7 +88,7 @@ Manual proof exists that the Railway Core reference topology (private PostgreSQL
 - [ ] **E-006** (FE) Customer portal + school owner licensing UI
 - [x] **E-007** (BE) Payment-provider interface + manual invoice adapter — verified; shares the same ledger as online settlement
 - [x] **E-008** (BE/SEC) Online payment webhook adapter — verified 2026-08-28; authenticity/replay/duplicate/out-of-order/retry tests pass, raw events retained
-- [~] **E-009** (FL/BE) Refund, dispute, expiry, revocation — implemented and tested 2026-08-28 (see [gate-e-refund-dispute-revocation-2026-08-28.md](./acceptance/gate-e-refund-dispute-revocation-2026-08-28.md)); the new migration has not yet been applied to a live PostgreSQL instance, and FL policy sign-off (refund/dispute rules under DEC-002/DEC-009) has not happened
+- [~] **E-009** (FL/BE) Refund, dispute, expiry, revocation — implemented, tested, and live-verified on disposable PostgreSQL 16 (22/22 checks: admin refund + idempotent retry, dispute-forced reversal via the real webhook envelope, won-dispute no-op, manual revocation, overdue-expiry sweep — [gate-e-refund-dispute-revocation-postgres-2026-08-28.md](./acceptance/gate-e-refund-dispute-revocation-postgres-2026-08-28.md)); only FL policy sign-off (refund/dispute rules under DEC-002/DEC-009) remains, and that is a business decision, not engineering work
 - [ ] **E-010** (QA) Full commerce + offline certification (purchase → token → offline use → renewal/refund/outage matrix)
 - [ ] **E-011** (FE) Compatible-plugin catalog, checkout, entitlement-protected download UI
 
@@ -120,6 +120,7 @@ Manual proof exists that the Railway Core reference topology (private PostgreSQL
 
 1. **DEC-001–013 approval (PO).** Nothing in Gates A0, B0, C0, D0, E0/E1, or F0 can formally close without these, no matter how much engineering happens underneath them.
 2. **Two sanitized real legacy database snapshots (B-001/B-002/B-003).** Everything downstream of "adopt an existing school" is blocked on getting real (sanitized) data to rehearse against — this needs someone outside engineering to source it.
-3. **A live PostgreSQL run of migration `20260828070000_commerce_reversal_lifecycle`.** No Docker/Railway database access existed in this session; this is a same-day close-out once that access is available.
-4. **Browser-driven E2E (B-004, INS-004).** Repeatedly deferred across sessions for lack of a browser-automation runtime; needs that tooling enabled once, not new design work.
-5. **A-002/A-007 field-level classification and A-008 secret custody.** These block A1 and are referenced as prerequisites by Data Privacy/Lifecycle, E-001 identity, and part of SEC-001 — worth doing once, early, since several later phases cite them as dependencies.
+3. **Browser-driven E2E (B-004, INS-004).** Repeatedly deferred across sessions for lack of a browser-automation runtime; needs that tooling enabled once, not new design work.
+4. **A-002/A-007 field-level classification and A-008 secret custody.** These block A1 and are referenced as prerequisites by Data Privacy/Lifecycle, E-001 identity, and part of SEC-001 — worth doing once, early, since several later phases cite them as dependencies.
+
+Docker/database access became available mid-session on 2026-08-28 and was used to close the two items that used to top this list: the C-001/C-002 plugin migration-rollback/lifecycle-lock claims and the E-009 `20260828070000_commerce_reversal_lifecycle` migration are now both live-verified, not just tested against mocks.
