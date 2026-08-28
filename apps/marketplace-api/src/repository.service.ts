@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { MarketplaceConfig } from './config';
 import { HttpError } from './http-error';
 import { verifyPluginPackage } from './package-verifier';
-import { repositoryPublicKey, signEnvelope } from './signing';
+import { repositoryPublicKey, signEnvelopeWithKeys } from './signing';
 
 const publisherInput = z.object({
   slug: z.string().regex(/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/).max(100),
@@ -44,11 +44,21 @@ const coreReleaseInput = z.object({
   migrationNotes: z.string().max(50_000).optional(),
 });
 
+const pluginPromotionInput = z.object({
+  pluginId: z.string().min(1).max(100),
+  version: z.string().refine((value) => semver.valid(value) !== null),
+}).strict();
+
+const corePromotionInput = z.object({ version: z.string().refine((value) => semver.valid(value) !== null) }).strict();
+
 export class RepositoryService {
   constructor(private readonly prisma: PrismaClient, private readonly config: MarketplaceConfig) {}
 
   keyDocument() {
-    return { schemaVersion: 1, keyId: this.config.signingKeyId, algorithm: 'ed25519', publicKeyPem: repositoryPublicKey(this.config.signingPrivateKey) };
+    return {
+      schemaVersion: 1, activeKeyId: this.config.signingKeyId, algorithm: 'ed25519',
+      keys: this.config.signingKeys.map((key) => ({ keyId: key.keyId, publicKeyPem: repositoryPublicKey(key.privateKey) })),
+    };
   }
 
   async health() {
@@ -135,6 +145,33 @@ export class RepositoryService {
     return this.prisma.securityAdvisory.create({ data: input });
   }
 
+  async promotePluginRelease(value: unknown) {
+    const input = pluginPromotionInput.parse(value);
+    return this.prisma.$transaction(async (tx) => {
+      const beta = await tx.pluginVersion.findUnique({
+        where: { pluginId_version_channel: { pluginId: input.pluginId, version: input.version, channel: 'BETA' } },
+        include: { artifact: true },
+      });
+      if (!beta?.artifact || beta.reviewStatus !== 'APPROVED' || beta.withdrawnAt) throw new HttpError(404, 'Promotable beta plugin release not found');
+      const stable = await tx.pluginVersion.findUnique({ where: { pluginId_version_channel: { pluginId: input.pluginId, version: input.version, channel: 'STABLE' } } });
+      if (stable) throw new HttpError(409, 'Stable plugin release already exists');
+      const promoted = await tx.pluginVersion.update({ where: { id: beta.id }, data: { channel: 'STABLE' }, include: { artifact: true } });
+      return { pluginId: promoted.pluginId, version: promoted.version, channel: promoted.channel, sha256: promoted.artifact!.sha256, rebuilt: false };
+    });
+  }
+
+  async promoteCoreRelease(value: unknown) {
+    const input = corePromotionInput.parse(value);
+    return this.prisma.$transaction(async (tx) => {
+      const beta = await tx.coreRelease.findUnique({ where: { version_channel: { version: input.version, channel: 'BETA' } } });
+      if (!beta || beta.withdrawnAt) throw new HttpError(404, 'Promotable beta core release not found');
+      const stable = await tx.coreRelease.findUnique({ where: { version_channel: { version: input.version, channel: 'STABLE' } } });
+      if (stable) throw new HttpError(409, 'Stable core release already exists');
+      const promoted = await tx.coreRelease.update({ where: { id: beta.id }, data: { channel: 'STABLE' } });
+      return { version: promoted.version, channel: promoted.channel, images: { api: promoted.apiImage, web: promoted.webImage, gateway: promoted.gatewayImage }, rebuilt: false };
+    });
+  }
+
   async signedIndex(coreVersion: string, requestedChannel: string) {
     if (!semver.valid(coreVersion)) throw new HttpError(400, 'coreVersion must be semantic versioning');
     const channel = requestedChannel.toUpperCase();
@@ -174,7 +211,7 @@ export class RepositoryService {
         description: item.description, publishedAt: item.publishedAt.toISOString(),
       })),
     };
-    return signEnvelope(payload, this.config.signingPrivateKey, this.config.signingKeyId);
+    return signEnvelopeWithKeys(payload, this.config.signingKeys);
   }
 
   async artifact(sha256: string) {

@@ -27,4 +27,10 @@ describe('marketplace signing configuration', () => {
     const key = privateKey();
     expect(() => readConfig(environment(key, key))).toThrow('must be distinct');
   });
+
+  it('loads a distinct secondary repository key for rotation overlap', () => {
+    const env = environment(privateKey(), privateKey());
+    (env as Record<string, string>).METADATA_SECONDARY_SIGNING_KEYS_JSON = JSON.stringify({ 'repository-old': privateKey() });
+    expect(readConfig(env).signingKeys.map((key) => key.keyId)).toEqual(['repository-1', 'repository-old']);
+  });
 });

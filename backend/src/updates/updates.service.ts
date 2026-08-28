@@ -83,7 +83,7 @@ export class UpdatesService {
     if (!response.ok) throw new BadGatewayException(`Update repository check failed (${response.status})`);
     let body: unknown;
     try { body = await response.json(); } catch { throw new BadGatewayException('Update repository returned invalid JSON'); }
-    try { return verifyRepositoryEnvelope(body, config.publicKey, config.keyId); }
+    try { return verifyRepositoryEnvelope(body, config.publicKeys); }
     catch (error) { throw new BadGatewayException(error instanceof Error ? error.message : 'Repository signature validation failed'); }
   }
 

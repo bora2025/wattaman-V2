@@ -14,16 +14,21 @@ export function canonicalRepositoryJson(value: unknown) {
   return JSON.stringify(normalize(value));
 }
 
-export function verifyRepositoryEnvelope(value: unknown, publicKey: string, expectedKeyId: string): any {
+export function verifyRepositoryEnvelope(value: unknown, publicKeys: Record<string, string> | string, expectedKeyId?: string): any {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Repository response is not an envelope');
   const envelope = value as Record<string, any>;
-  if (!envelope.payload || !envelope.signature || envelope.signature.algorithm !== 'ed25519' || envelope.signature.keyId !== expectedKeyId) {
+  if (!envelope.payload || !envelope.signature) {
     throw new Error('Repository signature metadata is invalid');
   }
-  let valid = false;
-  try {
-    valid = verify(null, Buffer.from(canonicalRepositoryJson(envelope.payload)), publicKey, Buffer.from(envelope.signature.value, 'base64'));
-  } catch { valid = false; }
+  const trusted = typeof publicKeys === 'string' ? { [expectedKeyId || '']: publicKeys } : publicKeys;
+  const signatures = Array.isArray(envelope.signatures) ? envelope.signatures : [envelope.signature];
+  const bytes = Buffer.from(canonicalRepositoryJson(envelope.payload));
+  const valid = signatures.some((signature: any) => {
+    if (!signature || signature.algorithm !== 'ed25519' || typeof signature.keyId !== 'string' || typeof signature.value !== 'string') return false;
+    const key = trusted[signature.keyId];
+    if (!key) return false;
+    try { return verify(null, bytes, key, Buffer.from(signature.value, 'base64')); } catch { return false; }
+  });
   if (!valid) throw new Error('Repository metadata signature is invalid');
   if (envelope.payload.schemaVersion !== 1 || !Array.isArray(envelope.payload.pluginReleases) || !Array.isArray(envelope.payload.coreReleases) || !Array.isArray(envelope.payload.advisories)) {
     throw new Error('Repository metadata schema is unsupported');

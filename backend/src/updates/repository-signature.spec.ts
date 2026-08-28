@@ -22,6 +22,19 @@ describe('update repository signatures', () => {
   });
 
   it('rejects a valid signature carrying an unexpected key id', () => {
-    expect(() => verifyRepositoryEnvelope(envelope(payload, 'retired-key'), publicKey, 'official-2026')).toThrow('metadata is invalid');
+    expect(() => verifyRepositoryEnvelope(envelope(payload, 'retired-key'), publicKey, 'official-2026')).toThrow('signature is invalid');
+  });
+
+  it('accepts either trusted signature during an overlap rotation', () => {
+    const next = generateKeyPairSync('ed25519');
+    const nextPrivate = next.privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
+    const nextPublic = next.publicKey.export({ type: 'spki', format: 'pem' }).toString();
+    const rotated: any = envelope(payload, 'official-old');
+    rotated.signatures = [
+      { algorithm: 'ed25519', keyId: 'official-new', value: sign(null, Buffer.from(canonicalRepositoryJson(payload)), nextPrivate).toString('base64') },
+      rotated.signature,
+    ];
+    expect(verifyRepositoryEnvelope(rotated, { 'official-old': publicKey })).toEqual(payload);
+    expect(verifyRepositoryEnvelope(rotated, { 'official-new': nextPublic })).toEqual(payload);
   });
 });

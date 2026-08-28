@@ -22,4 +22,14 @@ describe('update repository configuration', () => {
       UPDATE_REPOSITORY_PUBLIC_KEY: publicKey, UPDATE_REPOSITORY_KEY_ID: 'official-2026', UPDATE_CHANNEL: 'beta',
     })).toMatchObject({ url: 'https://marketplace.example.com', keyId: 'official-2026', channel: 'beta' });
   });
+
+  it('loads old and new trusted keys for a rotation overlap', () => {
+    const second = generateKeyPairSync('ed25519').publicKey.export({ type: 'spki', format: 'pem' }).toString();
+    const config = readUpdateRepositoryConfig({
+      NODE_ENV: 'production', MARKETPLACE_URL: 'https://marketplace.example.com',
+      UPDATE_REPOSITORY_PUBLIC_KEY: publicKey, UPDATE_REPOSITORY_KEY_ID: 'repository-new',
+      UPDATE_REPOSITORY_PUBLIC_KEYS_JSON: JSON.stringify({ 'repository-old': second }),
+    });
+    expect(Object.keys(config!.publicKeys).sort()).toEqual(['repository-new', 'repository-old']);
+  });
 });

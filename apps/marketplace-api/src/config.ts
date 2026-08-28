@@ -12,6 +12,7 @@ const schema = z.object({
   METADATA_SIGNING_PRIVATE_KEY_FILE: z.string().min(1).optional(),
   METADATA_SIGNING_PRIVATE_KEY: z.string().min(1).optional(),
   METADATA_SIGNING_KEY_ID: z.string().regex(/^[a-zA-Z0-9._-]{1,100}$/),
+  METADATA_SECONDARY_SIGNING_KEYS_JSON: z.string().optional(),
   ENTITLEMENT_SIGNING_PRIVATE_KEY_FILE: z.string().min(1).optional(),
   ENTITLEMENT_SIGNING_PRIVATE_KEY: z.string().min(1).optional(),
   ENTITLEMENT_SIGNING_KEY_ID: z.string().regex(/^[a-zA-Z0-9._-]{1,100}$/),
@@ -28,6 +29,7 @@ export type MarketplaceConfig = {
   adminToken: string;
   signingPrivateKey: string;
   signingKeyId: string;
+  signingKeys: Array<{ privateKey: string; keyId: string }>;
   entitlementPrivateKey: string;
   entitlementKeyId: string;
   paymentWebhookSecret: string;
@@ -45,6 +47,12 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): MarketplaceCon
   if (!entitlementPrivateKey) throw new Error('ENTITLEMENT_SIGNING_PRIVATE_KEY_FILE or ENTITLEMENT_SIGNING_PRIVATE_KEY is required');
   if (publicKey(signingPrivateKey) === publicKey(entitlementPrivateKey)) throw new Error('Repository and entitlement signing keys must be distinct');
   if (value.METADATA_SIGNING_KEY_ID === value.ENTITLEMENT_SIGNING_KEY_ID) throw new Error('Repository and entitlement key IDs must be distinct');
+  const secondaryKeys = parseSecondaryKeys(value.METADATA_SECONDARY_SIGNING_KEYS_JSON);
+  const signingKeys = [{ privateKey: signingPrivateKey, keyId: value.METADATA_SIGNING_KEY_ID }, ...secondaryKeys];
+  if (new Set(signingKeys.map((key) => key.keyId)).size !== signingKeys.length) throw new Error('Repository signing key IDs must be unique');
+  const publicKeys = signingKeys.map((key) => publicKey(key.privateKey));
+  if (new Set(publicKeys).size !== publicKeys.length) throw new Error('Repository signing keys must be distinct');
+  if (publicKeys.includes(publicKey(entitlementPrivateKey))) throw new Error('Repository and entitlement signing keys must be distinct');
   if (value.NODE_ENV === 'production' && !value.PUBLIC_BASE_URL.startsWith('https://')) {
     throw new Error('PUBLIC_BASE_URL must use HTTPS in production');
   }
@@ -56,12 +64,21 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): MarketplaceCon
     adminToken: value.MARKETPLACE_ADMIN_TOKEN,
     signingPrivateKey,
     signingKeyId: value.METADATA_SIGNING_KEY_ID,
+    signingKeys,
     entitlementPrivateKey,
     entitlementKeyId: value.ENTITLEMENT_SIGNING_KEY_ID,
     paymentWebhookSecret: value.PAYMENT_WEBHOOK_SECRET,
     artifactPath,
     maxArtifactBytes: value.MAX_ARTIFACT_BYTES,
   };
+}
+
+function parseSecondaryKeys(raw: string | undefined) {
+  if (!raw?.trim()) return [];
+  let value: unknown;
+  try { value = JSON.parse(raw); } catch { throw new Error('METADATA_SECONDARY_SIGNING_KEYS_JSON must be valid JSON'); }
+  const parsed = z.record(z.string().regex(/^[a-zA-Z0-9._-]{1,100}$/), z.string().min(1)).parse(value);
+  return Object.entries(parsed).map(([keyId, privateKey]) => ({ keyId, privateKey: privateKey.replace(/\\n/g, '\n') }));
 }
 
 function readPrivateKey(file: string | undefined, inline: string | undefined) {

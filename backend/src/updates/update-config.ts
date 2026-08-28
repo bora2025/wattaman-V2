@@ -5,6 +5,7 @@ export interface UpdateRepositoryConfig {
   url: string;
   publicKey: string;
   keyId: string;
+  publicKeys: Record<string, string>;
   channel: 'stable' | 'beta';
   maximumArtifactBytes: number;
 }
@@ -32,5 +33,18 @@ export function readUpdateRepositoryConfig(env: NodeJS.ProcessEnv = process.env)
   if (!Number.isInteger(maximumArtifactBytes) || maximumArtifactBytes < 1 || maximumArtifactBytes > 250 * 1024 * 1024) {
     throw new Error('UPDATE_MAX_ARTIFACT_BYTES must be between 1 and 262144000');
   }
-  return { url: url.origin, publicKey, keyId, channel: channel as 'stable' | 'beta', maximumArtifactBytes };
+  let publicKeys: Record<string, string> = { [keyId]: publicKey };
+  if (env.UPDATE_REPOSITORY_PUBLIC_KEYS_JSON?.trim()) {
+    let parsed: unknown;
+    try { parsed = JSON.parse(env.UPDATE_REPOSITORY_PUBLIC_KEYS_JSON); } catch { throw new Error('UPDATE_REPOSITORY_PUBLIC_KEYS_JSON must be valid JSON'); }
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('UPDATE_REPOSITORY_PUBLIC_KEYS_JSON must be a key object');
+    publicKeys = { ...publicKeys, ...(parsed as Record<string, string>) };
+  }
+  for (const [id, key] of Object.entries(publicKeys)) {
+    if (!/^[a-zA-Z0-9._-]{1,100}$/.test(id) || typeof key !== 'string' || !key.replace(/\\n/g, '\n').includes('PUBLIC KEY')) {
+      throw new Error('Every update repository key must have a valid id and PEM public key');
+    }
+    publicKeys[id] = key.replace(/\\n/g, '\n');
+  }
+  return { url: url.origin, publicKey, keyId, publicKeys, channel: channel as 'stable' | 'beta', maximumArtifactBytes };
 }
