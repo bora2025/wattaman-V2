@@ -64,7 +64,7 @@ This proves the reference topology and smoke path, not the remaining Gate B auto
 | FND-006 | Provide stable version endpoint | verified | Build metadata test and successful backend build |
 | OBS-001 | Provide administrator operational diagnostics | verified | Authenticated owner received installation, migration, database, version, and backup state from the release container |
 | SEC-001 | Triage and remediate dependency vulnerabilities | in progress | Multer pinned to patched 2.2.0; production audit has 0 high/critical and full backend suite passes; 12 production moderate and development-tool findings require controlled major upgrades |
-| DB-001 | Inventory Prisma schema ownership | in progress | Master plan records the initial domain map; field-level sensitivity, retention, export, deletion, and plugin-access ownership remain Phase A |
+| DB-001 | Inventory Prisma schema ownership | in progress | Technical inventory assigns all current core and marketplace models, systems, persistent files, configuration classes, providers, and contract surfaces; field-level sensitivity, retention, export, deletion, and plugin-access classification remains Phase A |
 | DB-002 | Create migration baseline safely | in progress | Four migrations applied to fresh PostgreSQL 16 and survived restore; existing-schema adoption rehearsal remains |
 | DB-003 | Replace production `db push` | verified | Release container applied four checked-in migrations with `prisma migrate deploy` |
 | SEC-002 | Remove fixed production administrator seed | verified | Startup commands no longer invoke `seed-prod.js` |
@@ -87,6 +87,8 @@ This proves the reference topology and smoke path, not the remaining Gate B auto
 | PLG-008 | Execute recoverable plugin migrations | in progress | Backup-before-migration and transactionally coupled SQL/history/registry implemented with namespace/immutability tests; PostgreSQL rollback/restore integration remains |
 | MKT-001 | Official release repository | verified | Separate PostgreSQL service migrated, registered a verified publisher, persisted an immutable artifact across restart, signed its index, and supplied a checksum-verified package to a school API |
 | MKT-002 | Marketplace commerce foundations | in progress | Separate account/order/payment/idempotent-webhook/installation/entitlement records exist; product licensing decisions, offline token issuance, and payment integration remain |
+
+Phase A records: [technical ownership inventory](./architecture/technical-inventory.md), [support matrix](./architecture/support-matrix.md), and [ADR index](./architecture/adr/README.md).
 
 ### Open-item execution mapping
 

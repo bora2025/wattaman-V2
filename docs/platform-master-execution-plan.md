@@ -12,6 +12,8 @@
 
 This is the authoritative execution plan for Wattanam V2. It translates the target architecture in [platform-architecture-plan-a-to-z.md](./platform-architecture-plan-a-to-z.md) into ordered, estimable work and reconciles it with the evidence ledger in [implementation-baseline.md](./implementation-baseline.md).
 
+Phase A technical records are the [technical ownership inventory](./architecture/technical-inventory.md), [support matrix](./architecture/support-matrix.md), and [ADR index](./architecture/adr/README.md).
+
 When documents disagree:
 
 1. Released code and recorded acceptance evidence define current state.
