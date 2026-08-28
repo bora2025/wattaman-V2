@@ -43,7 +43,9 @@ Create a Railway project dedicated to the central marketplace. Do not place it i
 1. Add a managed PostgreSQL service.
 2. Add a service from this repository and set its config file to `apps/marketplace-api/railway.json` (or root directory `apps/marketplace-api` with the equivalent Dockerfile settings).
 3. Attach a persistent volume at `/data/artifacts`.
-4. Set `DATABASE_URL` from PostgreSQL, `PUBLIC_BASE_URL` to the final HTTPS marketplace domain, `MARKETPLACE_ADMIN_TOKEN` to at least 32 random characters, `METADATA_SIGNING_PRIVATE_KEY` and `ENTITLEMENT_SIGNING_PRIVATE_KEY` to independently generated multiline Ed25519 PKCS8 PEM secrets, distinct key IDs in `METADATA_SIGNING_KEY_ID` and `ENTITLEMENT_SIGNING_KEY_ID`, and `ARTIFACT_STORAGE_PATH=/data/artifacts`.
+4. Set `DATABASE_URL` from PostgreSQL, `PUBLIC_BASE_URL` to the final HTTPS marketplace domain, `MARKETPLACE_ADMIN_TOKEN` and `PAYMENT_WEBHOOK_SECRET` to separate random values of at least 32 characters, `METADATA_SIGNING_PRIVATE_KEY` and `ENTITLEMENT_SIGNING_PRIVATE_KEY` to independently generated multiline Ed25519 PKCS8 PEM secrets, distinct key IDs in `METADATA_SIGNING_KEY_ID` and `ENTITLEMENT_SIGNING_KEY_ID`, and `ARTIFACT_STORAGE_PATH=/data/artifacts`.
+
+The initial online adapter accepts `POST /v1/payments/webhooks/online-hmac-v1`. Providers sign the exact request bytes as HMAC-SHA256 over `<unix-seconds>.<raw-body>` and send `x-wattanam-signature: t=<unix-seconds>,v1=<lowercase-hex>`. Signatures outside five minutes are rejected. A browser return URL never settles an order.
 5. Generate a Railway domain, then add the official custom domain and update `PUBLIC_BASE_URL` if necessary.
 6. Confirm `/health/live`, `/health/ready`, and `/v1/repository-key` before publishing.
 

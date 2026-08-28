@@ -15,6 +15,7 @@ const schema = z.object({
   ENTITLEMENT_SIGNING_PRIVATE_KEY_FILE: z.string().min(1).optional(),
   ENTITLEMENT_SIGNING_PRIVATE_KEY: z.string().min(1).optional(),
   ENTITLEMENT_SIGNING_KEY_ID: z.string().regex(/^[a-zA-Z0-9._-]{1,100}$/),
+  PAYMENT_WEBHOOK_SECRET: z.string().min(32),
   ARTIFACT_STORAGE_PATH: z.string().min(1),
   MAX_ARTIFACT_BYTES: z.coerce.number().int().positive().max(250 * 1024 * 1024).default(50 * 1024 * 1024),
 });
@@ -29,6 +30,7 @@ export type MarketplaceConfig = {
   signingKeyId: string;
   entitlementPrivateKey: string;
   entitlementKeyId: string;
+  paymentWebhookSecret: string;
   artifactPath: string;
   maxArtifactBytes: number;
 };
@@ -56,6 +58,7 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): MarketplaceCon
     signingKeyId: value.METADATA_SIGNING_KEY_ID,
     entitlementPrivateKey,
     entitlementKeyId: value.ENTITLEMENT_SIGNING_KEY_ID,
+    paymentWebhookSecret: value.PAYMENT_WEBHOOK_SECRET,
     artifactPath,
     maxArtifactBytes: value.MAX_ARTIFACT_BYTES,
   };

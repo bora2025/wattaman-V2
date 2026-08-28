@@ -72,7 +72,7 @@ Publisher and repository private signing keys are secret-manager inputs, never s
 | Notifications | SENDGRID_API_KEY, SENDGRID_FROM, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER | Integrations | optional adapters; credentials sealed/redacted |
 | Web | API_URL, NEXT_PUBLIC_API_URL, PORT | Frontend/SRE | private server URL; browser URL empty for same-origin deployment |
 | Gateway | API_UPSTREAM, WEB_UPSTREAM | SRE | private Railway/Docker endpoints only |
-| Marketplace | DATABASE_URL, PUBLIC_BASE_URL, MARKETPLACE_ADMIN_TOKEN, METADATA_SIGNING_PRIVATE_KEY_FILE/KEY/ID, ENTITLEMENT_SIGNING_PRIVATE_KEY_FILE/KEY/ID, ARTIFACT_STORAGE_PATH, MAX_ARTIFACT_BYTES | Marketplace/Security | validated at startup; HTTPS in production; repository and entitlement keys/key IDs must be cryptographically distinct |
+| Marketplace | DATABASE_URL, PUBLIC_BASE_URL, MARKETPLACE_ADMIN_TOKEN, METADATA_SIGNING_PRIVATE_KEY_FILE/KEY/ID, ENTITLEMENT_SIGNING_PRIVATE_KEY_FILE/KEY/ID, PAYMENT_WEBHOOK_SECRET, ARTIFACT_STORAGE_PATH, MAX_ARTIFACT_BYTES | Marketplace/Security | validated at startup; HTTPS in production; repository and entitlement keys/key IDs must be distinct; webhook secret is provider-scoped and at least 32 characters |
 
 Core operational and notification-provider variables now have centralized startup validation. A-008 still requires production custody/rotation records for each secret, plus schemas and redaction coverage for any provider added later.
 

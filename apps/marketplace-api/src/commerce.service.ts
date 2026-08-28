@@ -49,8 +49,18 @@ export class CommerceService {
 
   async settleManualPayment(value: unknown, now = new Date()) {
     const input = settlementInput.parse(value);
-    return this.prisma.$transaction(async (tx) => {
-      const priorPayment = await tx.marketplacePayment.findUnique({ where: { provider_providerRef: { provider: 'manual', providerRef: input.providerReference } } });
+    return this.prisma.$transaction(
+      (tx) => this.settleProviderPayment(tx, { ...input, provider: 'manual' }, now),
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+  }
+
+  async settleProviderPayment(
+    tx: Prisma.TransactionClient,
+    input: { orderId: string; provider: string; providerReference: string; amountMinor?: number },
+    now = new Date(),
+  ) {
+      const priorPayment = await tx.marketplacePayment.findUnique({ where: { provider_providerRef: { provider: input.provider, providerRef: input.providerReference } } });
       if (priorPayment && priorPayment.orderId !== input.orderId) throw new HttpError(409, 'Payment reference belongs to another order');
       const order = await tx.marketplaceOrder.findUnique({
         where: { id: input.orderId }, include: { account: true, installation: true, lines: { include: { price: true, entitlement: true } } },
@@ -58,12 +68,13 @@ export class CommerceService {
       if (!order) throw new HttpError(404, 'Order not found');
       if (order.status === 'PAID') return fulfillmentResult(order, priorPayment?.id);
       if (order.status !== 'PENDING') throw new HttpError(409, `Order cannot be paid from ${order.status}`);
+      if (input.amountMinor !== undefined && input.amountMinor !== order.totalMinor) throw new HttpError(409, 'Provider amount does not settle the order total');
       const calculatedTotal = order.lines.reduce((sum, line) => safeMinorTotal(sum, line.unitPriceMinor), 0);
       if (calculatedTotal !== order.totalMinor) throw new HttpError(409, 'Order total does not match its immutable lines');
       for (const line of order.lines) if (line.unitPriceMinor !== line.price.amountMinor) throw new HttpError(409, 'Order line no longer matches its price snapshot');
-      const payment = priorPayment ?? await tx.marketplacePayment.create({
-        data: { orderId: order.id, provider: 'manual', providerRef: input.providerReference, status: 'SUCCEEDED', amountMinor: order.totalMinor },
-      });
+      const payment = priorPayment
+        ? await tx.marketplacePayment.update({ where: { id: priorPayment.id }, data: { status: 'SUCCEEDED', amountMinor: order.totalMinor } })
+        : await tx.marketplacePayment.create({ data: { orderId: order.id, provider: input.provider, providerRef: input.providerReference, status: 'SUCCEEDED', amountMinor: order.totalMinor } });
       if (payment.status !== 'SUCCEEDED' || payment.amountMinor !== order.totalMinor) throw new HttpError(409, 'Payment does not settle the order total');
       const entitlementIds: string[] = [];
       for (const line of order.lines) {
@@ -85,7 +96,6 @@ export class CommerceService {
       }
       await tx.marketplaceOrder.update({ where: { id: order.id }, data: { status: 'PAID' } });
       return { orderId: order.id, status: 'PAID' as const, paymentId: payment.id, entitlementIds };
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 }
 

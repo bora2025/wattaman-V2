@@ -13,6 +13,7 @@ function environment(repositoryKey: string, entitlementKey: string) {
     MARKETPLACE_ADMIN_TOKEN: 'a'.repeat(32), METADATA_SIGNING_PRIVATE_KEY: repositoryKey,
     METADATA_SIGNING_KEY_ID: 'repository-1', ENTITLEMENT_SIGNING_PRIVATE_KEY: entitlementKey,
     ENTITLEMENT_SIGNING_KEY_ID: 'entitlement-1', ARTIFACT_STORAGE_PATH: path.join(tmpdir(), 'wattanam-marketplace-config-test'),
+    PAYMENT_WEBHOOK_SECRET: 'w'.repeat(32),
   };
 }
 

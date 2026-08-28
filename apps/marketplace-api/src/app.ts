@@ -9,6 +9,7 @@ import { MarketplaceConfig } from './config';
 import { CommerceService } from './commerce.service';
 import { HttpError } from './http-error';
 import { RepositoryService } from './repository.service';
+import { PaymentWebhookService } from './payment-webhook.service';
 
 function adminGuard(expected: string) {
   const expectedBytes = Buffer.from(expected);
@@ -24,10 +25,14 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   const app = express();
   const repository = new RepositoryService(prisma, config);
   const commerce = new CommerceService(prisma, config);
+  const paymentWebhooks = new PaymentWebhookService(prisma, config);
   const upload = multer({ storage: multer.memoryStorage(), limits: { files: 1, fileSize: config.maxArtifactBytes, fields: 10 } });
   app.disable('x-powered-by');
   app.use(helmet());
-  app.use(express.json({ limit: '256kb' }));
+  app.use(express.json({
+    limit: '256kb',
+    verify: (request, _response, buffer) => { (request as Request & { rawBody?: Buffer }).rawBody = Buffer.from(buffer); },
+  }));
 
   app.get('/health/live', (_request, response) => response.json({ status: 'alive' }));
   app.get('/health/ready', async (_request, response, next) => { try { response.json(await repository.health()); } catch (error) { next(error); } });
@@ -48,6 +53,13 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
         ETag: `"sha256-${result.artifact.sha256}"`,
       });
       createReadStream(result.path).on('error', next).pipe(response);
+    } catch (error) { next(error); }
+  });
+  app.post('/v1/payments/webhooks/online-hmac-v1', async (request, response, next) => {
+    try {
+      const rawBody = (request as Request & { rawBody?: Buffer }).rawBody;
+      if (!rawBody) throw new HttpError(400, 'Raw webhook body is required');
+      response.json(await paymentWebhooks.process(rawBody, request.header('x-wattanam-signature')));
     } catch (error) { next(error); }
   });
 
@@ -78,6 +90,7 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   app.use((error: unknown, _request: Request, response: Response, _next: NextFunction) => {
     if (error instanceof HttpError) return response.status(error.status).json({ error: error.message });
     if (error instanceof ZodError) return response.status(400).json({ error: 'Invalid request', details: error.issues.map((issue) => ({ path: issue.path.join('.'), message: issue.message })) });
+    if (error instanceof SyntaxError) return response.status(400).json({ error: 'Invalid JSON' });
     if (error instanceof multer.MulterError) return response.status(400).json({ error: error.message });
     const code = (error as { code?: string }).code;
     if (code === 'P2002') return response.status(409).json({ error: 'Record already exists' });
