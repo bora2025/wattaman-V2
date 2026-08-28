@@ -82,7 +82,7 @@ Core operational and notification-provider variables now have centralized startu
 |---|---|---|---|
 | Email | SendGrid | recipient, configured message | operation skips/fails visibly; core remains available |
 | SMS | Twilio | recipient phone, configured message | operation skips/fails visibly; core remains available |
-| Railway | project/services/private DNS/domain | operational metadata | installed school continues locally except hosting outage |
+| Railway | project/services/private DNS/domain, managed PostgreSQL 18 | operational metadata | installed school continues locally except hosting outage |
 | Payment | not selected | none yet | no paid fulfillment until E gates |
 | Object storage | local/Railway volume | plugin/artifact files | S3 adapter remains B-015 |
 

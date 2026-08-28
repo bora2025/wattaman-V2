@@ -5,8 +5,8 @@ Status: technical baseline. Commercial support windows require Product Owner app
 | Component | Supported baseline | Verification |
 |---|---|---|
 | Node.js | 20.x LTS runtime images | API, web, and marketplace Dockerfiles |
-| PostgreSQL | 16.x for school installations | Compose, migrations, backup/restore acceptance |
-| PostgreSQL client | 16.x in school API image | backup/restore tool compatibility |
+| PostgreSQL | 16.x (Compose) and 18.x (Railway) for school installations | PostgreSQL 16 full backup/restore acceptance; PostgreSQL 18 migrations/preflight verified and backup certification tracked in Gate B |
+| PostgreSQL client | 18.x in school API image | can dump supported PostgreSQL 16 and 18 servers; release restore drills remain version-matrix gates |
 | NestJS | 10.x | backend build and tests |
 | Prisma | 5.22.x | both schema migrations and generated clients |
 | Next.js | 14.x | standalone production build |

@@ -20,7 +20,7 @@ RUN npm run build
 # --- Production stage ---
 FROM node:20-slim AS runner
 
-ARG POSTGRES_CLIENT_MAJOR=16
+ARG POSTGRES_CLIENT_MAJOR=18
 RUN apt-get update -qq \
     && apt-get install -y --no-install-recommends ca-certificates curl gnupg openssl \
     && install -d -m 0755 /usr/share/postgresql-common/pgdg \

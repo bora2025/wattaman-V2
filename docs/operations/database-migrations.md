@@ -10,7 +10,7 @@ The first migration is:
 20260827000000_baseline
 ```
 
-It represents all 68 models in the schema at the time migration history was introduced.
+It represents the core models in the schema at the time migration history was introduced. The current ownership inventory, rather than this historical count, is authoritative as later migrations add platform models.
 
 ## Non-Negotiable Rules
 
