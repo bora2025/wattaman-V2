@@ -4,9 +4,10 @@ import { AnnouncementsService } from './announcements.service';
 import { DatabaseModule } from '../database/database.module';
 import { NotificationModule } from '../notification/notification.module';
 import { ParentModule } from '../parent/parent.module';
+import { DirectoryModule } from '../directory/directory.module';
 
 @Module({
-  imports: [DatabaseModule, NotificationModule, ParentModule],
+  imports: [DatabaseModule, NotificationModule, ParentModule, DirectoryModule],
   controllers: [AnnouncementsController],
   providers: [AnnouncementsService],
 })

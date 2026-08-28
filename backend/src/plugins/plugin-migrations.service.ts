@@ -6,6 +6,7 @@ import { promisify } from 'util';
 import { Prisma } from '@prisma/client';
 import { VerifiedPluginPackage } from './plugin-package';
 import { PluginManifest } from './plugin-manifest';
+import { assertNoForbiddenSql, assertPluginNamespace } from './plugin-sql-guard';
 
 const execFileAsync = promisify(execFile);
 
@@ -40,16 +41,10 @@ export class PluginMigrationsService {
 
   validateSql(manifest: PluginManifest, migrationId: string, sql: string, destructive = false) {
     if (!sql.trim().startsWith(`-- wattanam-plugin-migration: ${migrationId}`)) throw new BadRequestException(`Migration ${migrationId} is missing its identity header`);
-    if (/\b(BEGIN|COMMIT|ROLLBACK|SAVEPOINT|CREATE\s+(?:ROLE|USER|EXTENSION)|ALTER\s+(?:ROLE|USER|SYSTEM)|COPY\b|PROGRAM\b|DO\s*\$|SET\s+ROLE|GRANT\b|REVOKE\b)\b/i.test(sql)) {
-      throw new BadRequestException(`Migration ${migrationId} contains a forbidden database operation`);
-    }
+    assertNoForbiddenSql(sql, `Migration ${migrationId}`);
     if (!destructive && /\b(DROP\s+TABLE|TRUNCATE\b|ALTER\s+TABLE[\s\S]*?DROP\b)/i.test(sql)) throw new BadRequestException(`Migration ${migrationId} contains an undeclared destructive operation`);
     if ((sql.match(/;/g) || []).length > 1) throw new BadRequestException(`Migration ${migrationId} must contain exactly one SQL statement`);
-    const namespace = `plugin_${manifest.id.replace(/[^a-z0-9]/g, '_')}_`;
-    const tableReferences = [...sql.matchAll(/\b(?:TABLE|INTO|UPDATE|FROM|JOIN|REFERENCES)\s+(?:IF\s+(?:NOT\s+)?EXISTS\s+)?"?([a-zA-Z0-9_]+)"?/gi)].map((match) => match[1].toLowerCase());
-    if (!tableReferences.length || tableReferences.some((table) => !table.startsWith(namespace))) {
-      throw new BadRequestException(`Migration ${migrationId} may only access tables beginning with ${namespace}`);
-    }
+    assertPluginNamespace(manifest.id, sql, `Migration ${migrationId}`);
     if (Buffer.byteLength(sql) > 1024 * 1024) throw new BadRequestException(`Migration ${migrationId} exceeds 1 MiB`);
   }
 }

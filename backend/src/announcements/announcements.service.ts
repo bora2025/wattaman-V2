@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../database/prisma.service';
 import { NotificationService } from '../notification/notification.service';
 import { MessagesGateway } from '../parent/messages.gateway';
+import { DirectoryService } from '../directory/directory.service';
 
 export type AnnouncementAudience = 'SCHOOL' | 'ROLE' | 'CLASS';
 export type AnnouncementChannel = 'IN_APP' | 'EMAIL' | 'SMS';
@@ -23,6 +24,7 @@ export class AnnouncementsService {
     private prisma: PrismaService,
     private notifications: NotificationService,
     private gateway: MessagesGateway,
+    private directory: DirectoryService,
   ) {}
 
   /** Admin: list all announcements with author + read stats. */
@@ -198,27 +200,16 @@ export class AnnouncementsService {
     });
     if (!a) return;
 
-    const recipients = await this.resolveRecipients(a);
-    const channels = a.channels.split(',').map((c) => c.trim());
-
-    // Preload preferences for all recipients (single query).
-    const prefs = await this.prisma.notificationPreference.findMany({
-      where: { userId: { in: recipients.map((r) => r.id) } },
+    const recipients = await this.directory.resolveAudience({
+      audience: a.audience as 'SCHOOL' | 'ROLE' | 'CLASS',
+      targetRole: a.targetRole ?? undefined,
+      classId: a.classId ?? undefined,
     });
-    const prefByUser = new Map(prefs.map((p) => [p.userId, p]));
-    const isAllowed = (userId: string, channel: 'IN_APP' | 'EMAIL' | 'SMS') => {
-      const p = prefByUser.get(userId);
-      if (!p) return true; // default: opted in
-      if (!p.announcementsEnabled) return false;
-      if (channel === 'IN_APP') return p.inAppEnabled;
-      if (channel === 'EMAIL') return p.emailEnabled;
-      if (channel === 'SMS') return p.smsEnabled;
-      return true;
-    };
+    const channels = a.channels.split(',').map((c) => c.trim());
 
     for (const user of recipients) {
       // IN_APP always logs a Notification row so unread badges work.
-      if (channels.includes('IN_APP') && isAllowed(user.id, 'IN_APP')) {
+      if (channels.includes('IN_APP') && user.channels.inApp) {
         await this.prisma.notification.create({
           data: {
             userId: user.id,
@@ -228,62 +219,16 @@ export class AnnouncementsService {
         });
         try { this.gateway.notifyAnnouncement(user.id, { id: a.id, title: a.title }); } catch {}
       }
-      if (channels.includes('EMAIL') && user.email && isAllowed(user.id, 'EMAIL')) {
+      if (channels.includes('EMAIL') && user.email && user.channels.email) {
         await this.notifications
           .sendEmail(user.email, a.title, a.body)
           .catch((e) => console.error('email fail', e?.message || e));
       }
-      if (channels.includes('SMS') && user.phone && isAllowed(user.id, 'SMS')) {
+      if (channels.includes('SMS') && user.phone && user.channels.sms) {
         await this.notifications
           .sendSms(user.phone, `${a.title}: ${a.body}`)
           .catch((e) => console.error('sms fail', e?.message || e));
       }
     }
-  }
-
-  private async resolveRecipients(a: {
-    audience: string;
-    targetRole: string | null;
-    classId: string | null;
-  }) {
-    if (a.audience === 'SCHOOL') {
-      return this.prisma.user.findMany({
-        select: { id: true, email: true, phone: true, role: true },
-      });
-    }
-    if (a.audience === 'ROLE') {
-      if (a.targetRole === 'ALL') {
-        return this.prisma.user.findMany({
-          select: { id: true, email: true, phone: true, role: true },
-        });
-      }
-      return this.prisma.user.findMany({
-        where: { role: a.targetRole ?? '' },
-        select: { id: true, email: true, phone: true, role: true },
-      });
-    }
-    if (a.audience === 'CLASS' && a.classId) {
-      const cls = await this.prisma.class.findUnique({
-        where: { id: a.classId },
-        include: {
-          teacher: { select: { id: true, email: true, phone: true, role: true } },
-          students: {
-            include: {
-              user: { select: { id: true, email: true, phone: true, role: true } },
-              parent: { select: { id: true, email: true, phone: true, role: true } },
-            },
-          },
-        },
-      });
-      if (!cls) return [];
-      const set = new Map<string, { id: string; email: string | null; phone: string | null; role: string }>();
-      if (cls.teacher) set.set(cls.teacher.id, cls.teacher);
-      for (const s of cls.students) {
-        set.set(s.user.id, s.user);
-        if (s.parent) set.set(s.parent.id, s.parent);
-      }
-      return Array.from(set.values());
-    }
-    return [];
   }
 }

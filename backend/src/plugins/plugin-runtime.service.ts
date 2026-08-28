@@ -10,6 +10,9 @@ import { PluginJobsService } from './plugin-jobs.service';
 import { PluginSettingsService } from './plugin-settings.service';
 import { PluginStorageService } from './plugin-storage.service';
 import { NotificationService } from '../notification/notification.service';
+import { DirectoryService } from '../directory/directory.service';
+import { PluginRealtimeService } from './plugin-realtime.service';
+import { assertNoForbiddenSql, assertPluginNamespace } from './plugin-sql-guard';
 import { PluginRuntimeContext, RuntimePluginModule } from './plugin-sdk';
 
 @Injectable()
@@ -26,6 +29,8 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnApplicati
     private readonly settings: PluginSettingsService,
     private readonly storage: PluginStorageService,
     private readonly notifications: NotificationService,
+    private readonly directory: DirectoryService,
+    private readonly realtime: PluginRealtimeService,
   ) {}
 
   async onApplicationBootstrap() {
@@ -105,6 +110,33 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnApplicati
       notifications: {
         sendEmail: (to, subject, text) => { requireCapability('notifications.send'); return this.notifications.sendEmail(to, subject, text); },
         sendSms: (to, body) => { requireCapability('notifications.send'); return this.notifications.sendSms(to, body); },
+      },
+      database: {
+        query: (sql, params = []) => {
+          requireCapability('database.read');
+          const label = `Plugin ${id} query`;
+          if (!/^\s*SELECT\b/i.test(sql)) throw new Error(`${label} must be a SELECT statement`);
+          if ((sql.match(/;/g) || []).length > 1) throw new Error(`${label} must contain exactly one SQL statement`);
+          assertNoForbiddenSql(sql, label);
+          assertPluginNamespace(id, sql, label);
+          return this.prisma.$queryRawUnsafe(sql, ...params);
+        },
+        execute: async (sql, params = []) => {
+          requireCapability('database.write');
+          const label = `Plugin ${id} execute`;
+          if (!/^\s*(INSERT|UPDATE|DELETE)\b/i.test(sql)) throw new Error(`${label} must be an INSERT, UPDATE, or DELETE statement`);
+          if ((sql.match(/;/g) || []).length > 1) throw new Error(`${label} must contain exactly one SQL statement`);
+          assertNoForbiddenSql(sql, label);
+          assertPluginNamespace(id, sql, label);
+          const count = await this.prisma.$executeRawUnsafe(sql, ...params);
+          return { count };
+        },
+      },
+      directory: {
+        resolveAudience: (query) => { requireCapability('directory.read'); return this.directory.resolveAudience(query); },
+      },
+      realtime: {
+        notifyUser: (userId, event, payload) => { requireCapability('realtime.notify'); this.realtime.notifyUser(id, userId, event, payload); },
       },
     };
     try {

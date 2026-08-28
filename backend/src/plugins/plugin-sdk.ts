@@ -42,6 +42,30 @@ export interface PluginRuntimeContext {
     sendEmail(to: string, subject: string, text: string): Promise<{ sent: boolean } | { skipped: boolean; reason: string }>;
     sendSms(to: string, body: string): Promise<{ sent: boolean } | { skipped: boolean; reason: string }>;
   };
+  database: {
+    query<T = unknown>(sql: string, params?: unknown[]): Promise<T[]>;
+    execute(sql: string, params?: unknown[]): Promise<{ count: number }>;
+  };
+  directory: {
+    resolveAudience(input: DirectoryAudienceQuery): Promise<DirectoryRecipient[]>;
+  };
+  realtime: {
+    notifyUser(userId: string, event: string, payload: unknown): void;
+  };
+}
+
+export interface DirectoryAudienceQuery {
+  audience: 'SCHOOL' | 'ROLE' | 'CLASS';
+  targetRole?: string;
+  classId?: string;
+}
+
+export interface DirectoryRecipient {
+  id: string;
+  email: string | null;
+  phone: string | null;
+  role: string;
+  channels: { inApp: boolean; email: boolean; sms: boolean };
 }
 
 export interface RuntimePluginModule {

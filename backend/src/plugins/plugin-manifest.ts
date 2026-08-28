@@ -3,12 +3,16 @@ import semver from 'semver';
 
 export const PLUGIN_CAPABILITIES = [
   'api.routes',
+  'database.read',
+  'database.write',
+  'directory.read',
   'events.publish',
   'events.subscribe',
   'jobs.schedule',
   'navigation.register',
   'notifications.send',
   'permissions.register',
+  'realtime.notify',
   'settings.read',
   'settings.write',
   'storage.read',
