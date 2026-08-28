@@ -1,0 +1,243 @@
+import { promises as fs } from 'fs';
+import os from 'os';
+import path from 'path';
+import { ConflictException } from '@nestjs/common';
+import { PluginsService } from './plugins.service';
+
+function manifest(overrides: Partial<{ id: string; version: string; migrations: any[]; dependencies: Record<string, string>; backendEntry: string }> = {}) {
+  const base: Record<string, unknown> = {
+    id: overrides.id ?? 'wattanam.test', name: 'Test', description: 'Test plugin', version: overrides.version ?? '1.0.0',
+    requiresCore: '>=1.0.0', publisher: 'wattanam', license: 'MIT',
+    capabilities: [], permissions: [], dependencies: overrides.dependencies ?? {}, migrations: overrides.migrations ?? [],
+    navigation: [], supportedLanguages: [],
+  };
+  if (overrides.backendEntry) base.backendEntry = overrides.backendEntry;
+  return base;
+}
+
+function verifiedPackage(overrides: Parameters<typeof manifest>[0] = {}) {
+  return {
+    manifest: manifest(overrides),
+    packageSha256: 'a'.repeat(64),
+    files: new Map<string, Buffer>([['plugin.json', Buffer.from('{}')]]),
+  } as any;
+}
+
+function harness() {
+  const tx = {
+    $executeRaw: jest.fn().mockResolvedValue(0),
+    pluginInstallation: { findUnique: jest.fn(), upsert: jest.fn(), update: jest.fn(), delete: jest.fn() },
+  };
+  const prisma = {
+    pluginInstallation: { findUnique: jest.fn(), update: jest.fn().mockResolvedValue({}), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+    $transaction: jest.fn((work: (tx: any) => unknown, _options?: unknown) => work(tx)),
+  } as any;
+  const verifier = { verify: jest.fn() } as any;
+  const runtime = { load: jest.fn().mockResolvedValue(undefined), unload: jest.fn().mockResolvedValue(undefined) } as any;
+  const migrations = { apply: jest.fn().mockResolvedValue(undefined), createRecoveryPoint: jest.fn().mockResolvedValue(undefined) } as any;
+  const service = new PluginsService(prisma, verifier, runtime, migrations);
+  return { service, prisma, tx, verifier, runtime, migrations };
+}
+
+describe('PluginsService lifecycle locking, timeout, progress, and crash recovery', () => {
+  const originalEnv = process.env;
+  let pluginDir: string;
+
+  beforeEach(async () => {
+    pluginDir = await fs.mkdtemp(path.join(os.tmpdir(), 'wattanam-plugins-service-'));
+    process.env = { ...originalEnv, NODE_ENV: 'test', DATABASE_URL: 'postgresql://localhost/test', APP_VERSION: '0.1.0', PLUGIN_DIR: pluginDir, PLUGIN_TRUSTED_KEYS: '{}' };
+  });
+
+  afterEach(async () => {
+    process.env = originalEnv;
+    await fs.rm(pluginDir, { recursive: true, force: true });
+  });
+
+  describe('withPluginLock (used by every lifecycle mutation)', () => {
+    it('takes a transaction-scoped advisory lock keyed by the plugin id before running the work, with an explicit timeout', async () => {
+      const { service, prisma, tx } = harness();
+      tx.pluginInstallation.update.mockResolvedValue({ id: 'wattanam.test' });
+      await (service as any).withPluginLock('wattanam.test', (t: any) => t.pluginInstallation.update({ where: { id: 'wattanam.test' }, data: {} }));
+      expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), { timeout: 30_000, maxWait: 10_000 });
+      expect(tx.$executeRaw).toHaveBeenCalledTimes(1);
+      const sql = tx.$executeRaw.mock.calls[0][0];
+      expect(sql.strings.join('')).toContain('pg_advisory_xact_lock(hashtext(');
+      expect(sql.values).toEqual(['wattanam.test']);
+    });
+  });
+
+  describe('reconcileOrphanDestination (deterministic restart recovery)', () => {
+    it('does nothing when no destination directory exists yet', async () => {
+      const { service, prisma } = harness();
+      const destination = path.join(pluginDir, 'wattanam.test', '1.0.0');
+      await expect((service as any).reconcileOrphanDestination(destination, verifiedPackage())).resolves.toBeUndefined();
+      expect(prisma.pluginInstallation.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('rejects as a genuine duplicate when the registry already committed this exact id/version/package', async () => {
+      const { service, prisma } = harness();
+      const destination = path.join(pluginDir, 'wattanam.test', '1.0.0');
+      await fs.mkdir(destination, { recursive: true });
+      prisma.pluginInstallation.findUnique.mockResolvedValue({ version: '1.0.0', packageSha256: 'a'.repeat(64) });
+      await expect((service as any).reconcileOrphanDestination(destination, verifiedPackage())).rejects.toThrow(ConflictException);
+      await expect(fs.access(destination)).resolves.toBeUndefined();
+    });
+
+    it('silently removes an orphaned destination left by a crash between the file move and the DB commit', async () => {
+      const { service, prisma } = harness();
+      const destination = path.join(pluginDir, 'wattanam.test', '1.0.0');
+      await fs.mkdir(destination, { recursive: true });
+      await fs.writeFile(path.join(destination, 'leftover.txt'), 'orphan');
+      prisma.pluginInstallation.findUnique.mockResolvedValue(null); // no committed row at all — this is the crash case
+      await expect((service as any).reconcileOrphanDestination(destination, verifiedPackage())).resolves.toBeUndefined();
+      await expect(fs.access(destination)).rejects.toThrow();
+    });
+
+    it('removes an orphan even when a registry row exists for a different version (e.g. a crashed upgrade attempt)', async () => {
+      const { service, prisma } = harness();
+      const destination = path.join(pluginDir, 'wattanam.test', '2.0.0');
+      await fs.mkdir(destination, { recursive: true });
+      prisma.pluginInstallation.findUnique.mockResolvedValue({ version: '1.0.0', packageSha256: 'b'.repeat(64) });
+      await expect((service as any).reconcileOrphanDestination(destination, verifiedPackage({ version: '2.0.0' }))).resolves.toBeUndefined();
+      await expect(fs.access(destination)).rejects.toThrow();
+    });
+  });
+
+  describe('install', () => {
+    it('stages, locks, migrates, and registers a new plugin', async () => {
+      const { service, verifier, tx, prisma } = harness();
+      const verified = verifiedPackage();
+      verifier.verify.mockResolvedValue(verified);
+      prisma.pluginInstallation.findUnique.mockResolvedValue(null);
+      tx.pluginInstallation.upsert.mockResolvedValue({ id: 'wattanam.test', name: 'Test', manifestJson: JSON.stringify(verified.manifest), version: '1.0.0', publisher: 'wattanam', status: 'installed', packageSha256: verified.packageSha256, installedAt: new Date(), activatedAt: null, deactivatedAt: null, lastError: null });
+
+      const result = await service.install(Buffer.from('package'));
+      expect(result).toMatchObject({ id: 'wattanam.test', status: 'installed' });
+      const destination = path.join(pluginDir, 'wattanam.test', '1.0.0');
+      await expect(fs.access(path.join(destination, 'plugin.json'))).resolves.toBeUndefined();
+      expect(tx.pluginInstallation.upsert).toHaveBeenCalled();
+    });
+
+    it('rejects installing over an active plugin before touching the filesystem', async () => {
+      const { service, verifier, prisma } = harness();
+      verifier.verify.mockResolvedValue(verifiedPackage());
+      prisma.pluginInstallation.findUnique.mockResolvedValue({ status: 'active' });
+      await expect(service.install(Buffer.from('package'))).rejects.toThrow('Deactivate');
+      await expect(fs.readdir(pluginDir)).resolves.toEqual([]);
+    });
+
+    it('marks the registry failed and removes both staged and destination directories when migration application fails', async () => {
+      const { service, verifier, prisma, migrations } = harness();
+      const verified = verifiedPackage({ migrations: [{ id: '001', path: 'migrations/001.sql', checksum: 'x', destructive: false }] });
+      verifier.verify.mockResolvedValue(verified);
+      prisma.pluginInstallation.findUnique.mockResolvedValue(null);
+      migrations.apply.mockRejectedValue(new Error('migration exploded'));
+
+      await expect(service.install(Buffer.from('package'))).rejects.toThrow('migration exploded');
+      const destination = path.join(pluginDir, 'wattanam.test', '1.0.0');
+      await expect(fs.access(destination)).rejects.toThrow();
+      await expect(fs.readdir(path.join(pluginDir, '.staging')).catch(() => [])).resolves.toEqual([]);
+      expect(prisma.pluginInstallation.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'wattanam.test' }, data: expect.objectContaining({ status: 'failed', lastError: 'migration exploded' }) }));
+    });
+
+    it('self-heals a crash orphan left at the destination from a previous failed attempt, then installs cleanly', async () => {
+      const { service, verifier, prisma, tx } = harness();
+      const verified = verifiedPackage();
+      verifier.verify.mockResolvedValue(verified);
+      prisma.pluginInstallation.findUnique.mockResolvedValue(null); // no committed row — the destination below is a pure orphan
+      const destination = path.join(pluginDir, 'wattanam.test', '1.0.0');
+      await fs.mkdir(destination, { recursive: true });
+      await fs.writeFile(path.join(destination, 'stale.txt'), 'from a crashed attempt');
+      tx.pluginInstallation.upsert.mockResolvedValue({ id: 'wattanam.test', status: 'installed' });
+
+      const result = await service.install(Buffer.from('package'));
+      expect(result).toMatchObject({ status: 'installed' });
+      await expect(fs.access(path.join(destination, 'stale.txt'))).rejects.toThrow();
+      await expect(fs.access(path.join(destination, 'plugin.json'))).resolves.toBeUndefined();
+    });
+
+    it('sets a visible "migrating" progress status before running an update with migrations', async () => {
+      const { service, verifier, prisma, tx } = harness();
+      const verified = verifiedPackage({ migrations: [{ id: '001', path: 'migrations/001.sql', checksum: 'x', destructive: false }] });
+      verifier.verify.mockResolvedValue(verified);
+      prisma.pluginInstallation.findUnique.mockResolvedValue({ status: 'installed', version: '0.9.0' });
+      tx.pluginInstallation.upsert.mockResolvedValue({ id: 'wattanam.test', status: 'installed' });
+
+      await service.install(Buffer.from('package'));
+      expect(prisma.pluginInstallation.update).toHaveBeenCalledWith({ where: { id: 'wattanam.test' }, data: { status: 'migrating' } });
+    });
+  });
+
+  describe('activate', () => {
+    it('locks, verifies entry files exist, activates, then loads the runtime', async () => {
+      const { service, tx, runtime } = harness();
+      const installedPath = path.join(pluginDir, 'wattanam.test', '1.0.0');
+      await fs.mkdir(installedPath, { recursive: true });
+      await fs.writeFile(path.join(installedPath, 'index.js'), 'module.exports = {};');
+      tx.pluginInstallation.findUnique.mockResolvedValue({ id: 'wattanam.test', installedPath, manifestJson: JSON.stringify(manifest({ backendEntry: 'index.js' })) });
+      tx.pluginInstallation.update.mockResolvedValue({ id: 'wattanam.test', status: 'active' });
+
+      const result = await service.activate('wattanam.test');
+      expect(result).toMatchObject({ status: 'active' });
+      expect(runtime.load).toHaveBeenCalledWith('wattanam.test');
+      expect(tx.$executeRaw).toHaveBeenCalled();
+    });
+
+    it('marks the plugin failed without ever committing an active status when its entry file is missing', async () => {
+      const { service, tx, prisma, runtime } = harness();
+      const installedPath = path.join(pluginDir, 'wattanam.test', '1.0.0');
+      await fs.mkdir(installedPath, { recursive: true });
+      tx.pluginInstallation.findUnique.mockResolvedValue({ id: 'wattanam.test', installedPath, manifestJson: JSON.stringify(manifest({ backendEntry: 'missing.js' })) });
+
+      await expect(service.activate('wattanam.test')).rejects.toThrow();
+      expect(tx.pluginInstallation.update).not.toHaveBeenCalled();
+      expect(runtime.load).not.toHaveBeenCalled();
+      expect(prisma.pluginInstallation.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'wattanam.test' }, data: expect.objectContaining({ status: 'failed' }) }));
+    });
+
+    it('marks the plugin failed when the runtime fails to load after activation commits', async () => {
+      const { service, tx, prisma, runtime } = harness();
+      const installedPath = path.join(pluginDir, 'wattanam.test', '1.0.0');
+      await fs.mkdir(installedPath, { recursive: true });
+      tx.pluginInstallation.findUnique.mockResolvedValue({ id: 'wattanam.test', installedPath, manifestJson: JSON.stringify(manifest()) });
+      tx.pluginInstallation.update.mockResolvedValue({ id: 'wattanam.test', status: 'active' });
+      runtime.load.mockRejectedValue(new Error('runtime exploded'));
+
+      await expect(service.activate('wattanam.test')).rejects.toThrow('runtime exploded');
+      expect(prisma.pluginInstallation.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'wattanam.test' }, data: expect.objectContaining({ status: 'failed', lastError: 'runtime exploded' }) }));
+    });
+  });
+
+  describe('deactivate and remove', () => {
+    it('unloads the runtime before taking the lock to flip status to inactive', async () => {
+      const { service, prisma, tx, runtime } = harness();
+      prisma.pluginInstallation.findUnique.mockResolvedValue({ id: 'wattanam.test' });
+      const order: string[] = [];
+      runtime.unload.mockImplementation(async () => { order.push('unload'); });
+      tx.pluginInstallation.update.mockImplementation(async () => { order.push('update'); return { id: 'wattanam.test', status: 'inactive' }; });
+
+      await service.deactivate('wattanam.test');
+      expect(order).toEqual(['unload', 'update']);
+    });
+
+    it('refuses to remove an active plugin', async () => {
+      const { service, tx } = harness();
+      tx.pluginInstallation.findUnique.mockResolvedValue({ id: 'wattanam.test', status: 'active' });
+      await expect(service.remove('wattanam.test')).rejects.toThrow('Deactivate');
+      expect(tx.pluginInstallation.delete).not.toHaveBeenCalled();
+    });
+
+    it('deletes the registry row inside the lock, then unloads and clears the plugin directory', async () => {
+      const { service, tx, runtime } = harness();
+      const pluginRoot = path.join(pluginDir, 'wattanam.test');
+      await fs.mkdir(pluginRoot, { recursive: true });
+      tx.pluginInstallation.findUnique.mockResolvedValue({ id: 'wattanam.test', status: 'inactive' });
+
+      const result = await service.remove('wattanam.test');
+      expect(result).toEqual({ id: 'wattanam.test', status: 'removed', dataPreserved: true });
+      expect(tx.pluginInstallation.delete).toHaveBeenCalledWith({ where: { id: 'wattanam.test' } });
+      expect(runtime.unload).toHaveBeenCalledWith('wattanam.test');
+      await expect(fs.access(pluginRoot)).rejects.toThrow();
+    });
+  });
+});

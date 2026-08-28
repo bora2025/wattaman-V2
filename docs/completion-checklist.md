@@ -4,7 +4,7 @@
 
 Legend: `[x]` verified · `[~]` in progress (remainder noted) · `[ ]` not started.
 
-Last reconciled: 2026-08-28, against commits through `e5987de` plus the uncommitted C-003 notification-adapter increment.
+Last reconciled: 2026-08-28, against commits through `67a6797` plus the uncommitted C-001/C-002 plugin migration-rollback and lifecycle-lock increment.
 
 ## 0. Business decisions (Product Owner) — block their listed freeze gate
 
@@ -59,8 +59,8 @@ Manual proof exists that the Railway Core reference topology (private PostgreSQL
 
 ## Phase C — stable plugin core & announcements cutover · Gate C0/C1/C2/C3
 
-- [ ] **C-001** (BE) Deliberately-failing plugin migrations roll back on PostgreSQL
-- [ ] **C-002** (BE) Migration policy/lock/timeout/progress/failure state
+- [x] **C-001** (BE) Deliberately-failing plugin migrations roll back on PostgreSQL — verified live on disposable PostgreSQL 16: SQL and migration history roll back together, staged files are removed, a failed update visibly marks the existing row `failed` without touching the plugin's working version ([gate-c-plugin-migration-lock-2026-08-28.md](./acceptance/gate-c-plugin-migration-lock-2026-08-28.md))
+- [x] **C-002** (BE) Migration policy/lock/timeout/progress/failure state — every lifecycle mutation takes a transaction-scoped advisory lock (concurrent same-plugin requests verified to serialize live; different plugins don't block each other), has an explicit 30s timeout, and self-heals a crash-orphaned install directory on retry (verified live); progress/failure states write back to the registry
 - [~] **C-003** (PL) Audit + notification adapters + granular permission evaluation — SDK 1.0 events/routes/jobs/settings/storage/permissions/navigation/pages/health/cleanup have contract tests; dispatch now enforces per-route permission grants (was SUPER_ADMIN-only) and audits every attempt with actor/plugin/outcome ([gate-c-plugin-permission-audit-2026-08-28.md](./acceptance/gate-c-plugin-permission-audit-2026-08-28.md)); plugins can now send email/SMS through the core notification service via a capability-gated adapter ([gate-c-plugin-notification-adapter-2026-08-28.md](./acceptance/gate-c-plugin-notification-adapter-2026-08-28.md)); frontend page/nav permission enforcement, notification-send auditing, and a per-plugin sending quota remain
 - [~] **C-004** (BE) Move announcements business data/API to the official plugin — reference plugin proves the full lifecycle; the actual legacy announcement business-data cutover is pending PostgreSQL validation
 - [ ] **C-005** (QA) Install/update/disable/remove/reinstall/core-upgrade certification matrix
@@ -111,7 +111,7 @@ Manual proof exists that the Railway Core reference topology (private PostgreSQL
 |---|---|
 | A0/A1 (architecture baseline) | not reached — 0/13 decisions accepted |
 | B0/B1/B2 (installable core) | not reached — manual Railway Core proof exists; automated provisioning/legacy/domain/recovery gates open |
-| C0–C3 (plugin-capable core) | not reached — no third-party access is correctly still closed; migration-failure rollback and SDK freeze open |
+| C0–C3 (plugin-capable core) | not reached — no third-party access is correctly still closed; migration-failure rollback (C1) is now live-verified; SDK freeze (C6) and the review/tooling packages (C-005–008) remain |
 | D0–D2 (official repository) | not reached — production key custody and outage drills open |
 | E0–E3 (paid official plugins) | **furthest along** — E-003/004/007/008/009 done; E0 decisions, E-001/002/005/006/010/011, and E3 finance reconciliation remain |
 | F0–F2 (controlled marketplace) | correctly untouched by design |
