@@ -1,5 +1,7 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { AuditService } from '../audit/audit.service';
 import { PluginRouteDefinition, PluginRouteRequest } from './plugin-sdk';
+import { PluginPermissionsService } from './plugin-permissions.service';
 
 export interface PermissionExtension { pluginId: string; id: string; label: string; description?: string }
 export interface NavigationExtension { pluginId: string; id: string; label: string; href: string; permission?: string }
@@ -11,6 +13,11 @@ export class PluginExtensionsService {
   private readonly permissions = new Map<string, PermissionExtension>();
   private readonly navigation = new Map<string, NavigationExtension>();
   private readonly pages = new Map<string, PageExtension>();
+
+  constructor(
+    private readonly grants: PluginPermissionsService,
+    private readonly audit: AuditService,
+  ) {}
 
   registerRoute(pluginId: string, declaredPermissions: Set<string>, definition: PluginRouteDefinition) {
     const method = definition.method?.toUpperCase();
@@ -27,12 +34,28 @@ export class PluginExtensionsService {
   async dispatch(pluginId: string, request: PluginRouteRequest) {
     const definition = this.routes.get(`${pluginId}:${request.method}:${request.path}`);
     if (!definition) throw new NotFoundException('Plugin route not found');
+    const auditBase = {
+      actorId: request.principal.userId, actorRole: request.principal.role, actorEmail: request.principal.email,
+      action: 'PLUGIN_ROUTE', resource: 'PLUGIN', resourceId: pluginId,
+      method: request.method, path: `${pluginId}/${request.path}`,
+      metadata: { permission: definition.permission },
+    };
+    const granted = await this.grants.isGranted(pluginId, definition.permission, request.principal.role);
+    if (!granted) {
+      void this.audit.log({ ...auditBase, success: false, errorMessage: `Permission denied: ${definition.permission}` });
+      throw new ForbiddenException(`Missing plugin permission: ${definition.permission}`);
+    }
     let timer: NodeJS.Timeout | undefined;
     try {
-      return await Promise.race([
+      const result = await Promise.race([
         Promise.resolve(definition.handler(request)),
         new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('Plugin route timed out')), 10_000); timer.unref(); }),
       ]);
+      void this.audit.log({ ...auditBase, success: true });
+      return result;
+    } catch (error) {
+      void this.audit.log({ ...auditBase, success: false, errorMessage: error instanceof Error ? error.message : String(error) });
+      throw error;
     } finally { if (timer) clearTimeout(timer); }
   }
 

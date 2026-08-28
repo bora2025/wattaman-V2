@@ -1,13 +1,38 @@
 import { PluginExtensionsService } from './plugin-extensions.service';
 
+function deps(granted = true) {
+  const grants = { isGranted: jest.fn().mockResolvedValue(granted) } as any;
+  const audit = { log: jest.fn().mockResolvedValue(undefined) } as any;
+  return { grants, audit };
+}
+
 describe('PluginExtensionsService', () => {
   const permissions = new Set(['wattanam.test.read', 'wattanam.test.manage']);
   let service: PluginExtensionsService;
-  beforeEach(() => { service = new PluginExtensionsService(); });
+  let deps_: ReturnType<typeof deps>;
+  beforeEach(() => { deps_ = deps(); service = new PluginExtensionsService(deps_.grants, deps_.audit); });
 
   it('registers and dispatches a namespaced route without exposing the application container', async () => {
     service.registerRoute('wattanam.test', permissions, { method: 'GET', path: 'settings', permission: 'wattanam.test.read', handler: ({ principal }) => ({ owner: principal.userId }) });
     await expect(service.dispatch('wattanam.test', { method: 'GET', path: 'settings', params: {}, query: {}, body: null, principal: { userId: 'owner', role: 'SUPER_ADMIN' } })).resolves.toEqual({ owner: 'owner' });
+    expect(deps_.grants.isGranted).toHaveBeenCalledWith('wattanam.test', 'wattanam.test.read', 'SUPER_ADMIN');
+    expect(deps_.audit.log).toHaveBeenCalledWith(expect.objectContaining({ success: true, actorId: 'owner', resourceId: 'wattanam.test' }));
+  });
+
+  it('denies dispatch and audits the denial when the caller has no granted permission', async () => {
+    const denied = deps(false);
+    const denyingService = new PluginExtensionsService(denied.grants, denied.audit);
+    denyingService.registerRoute('wattanam.test', permissions, { method: 'GET', path: 'settings', permission: 'wattanam.test.read', handler: () => ({}) });
+    await expect(denyingService.dispatch('wattanam.test', { method: 'GET', path: 'settings', params: {}, query: {}, body: null, principal: { userId: 'teacher-1', role: 'CLASS_ADMIN' } }))
+      .rejects.toThrow('Missing plugin permission');
+    expect(denied.audit.log).toHaveBeenCalledWith(expect.objectContaining({ success: false, actorId: 'teacher-1', errorMessage: expect.stringContaining('wattanam.test.read') }));
+  });
+
+  it('audits a failed handler without swallowing the original error', async () => {
+    service.registerRoute('wattanam.test', permissions, { method: 'GET', path: 'settings', permission: 'wattanam.test.read', handler: () => { throw new Error('handler exploded'); } });
+    await expect(service.dispatch('wattanam.test', { method: 'GET', path: 'settings', params: {}, query: {}, body: null, principal: { userId: 'owner', role: 'SUPER_ADMIN' } }))
+      .rejects.toThrow('handler exploded');
+    expect(deps_.audit.log).toHaveBeenCalledWith(expect.objectContaining({ success: false, errorMessage: 'handler exploded' }));
   });
 
   it('rejects traversal, undeclared permissions, and duplicate routes', () => {

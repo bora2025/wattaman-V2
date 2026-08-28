@@ -1382,6 +1382,17 @@ model PluginInstallation {
   @@index([publisher])
 }
 
+model PluginPermissionGrant {
+  id           String   @id @default(uuid())
+  pluginId     String
+  permissionId String
+  role         String
+  createdAt    DateTime @default(now())
+
+  @@unique([pluginId, permissionId, role])
+  @@index([pluginId, permissionId])
+}
+
 model PluginMigration {
   id          String   @id @default(uuid())
   pluginId    String

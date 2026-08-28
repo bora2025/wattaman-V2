@@ -4,7 +4,7 @@
 
 Legend: `[x]` verified · `[~]` in progress (remainder noted) · `[ ]` not started.
 
-Last reconciled: 2026-08-28, against commits through `ee936c6`.
+Last reconciled: 2026-08-28, against commits through `ff6a927` plus the uncommitted C-003 permission/audit increment.
 
 ## 0. Business decisions (Product Owner) — block their listed freeze gate
 
@@ -61,7 +61,7 @@ Manual proof exists that the Railway Core reference topology (private PostgreSQL
 
 - [ ] **C-001** (BE) Deliberately-failing plugin migrations roll back on PostgreSQL
 - [ ] **C-002** (BE) Migration policy/lock/timeout/progress/failure state
-- [~] **C-003** (PL) Audit + notification adapters + granular permission evaluation — SDK 1.0 events/routes/jobs/settings/storage/permissions/navigation/pages/health/cleanup have contract tests; audit trail and notification adapters for plugins, plus granular per-route/page permission evaluation, remain
+- [~] **C-003** (PL) Audit + notification adapters + granular permission evaluation — SDK 1.0 events/routes/jobs/settings/storage/permissions/navigation/pages/health/cleanup have contract tests; dispatch now enforces per-route permission grants (was SUPER_ADMIN-only) and audits every attempt with actor/plugin/outcome (see [gate-c-plugin-permission-audit-2026-08-28.md](./acceptance/gate-c-plugin-permission-audit-2026-08-28.md)); a plugin notification-sending adapter and frontend page/nav permission enforcement remain
 - [~] **C-004** (BE) Move announcements business data/API to the official plugin — reference plugin proves the full lifecycle; the actual legacy announcement business-data cutover is pending PostgreSQL validation
 - [ ] **C-005** (QA) Install/update/disable/remove/reinstall/core-upgrade certification matrix
 - [ ] **C-006** (PL) Freeze SDK 1.0 + compatibility/deprecation policy

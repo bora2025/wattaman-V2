@@ -20,11 +20,24 @@ import { ROLES_KEY } from './roles.decorator';
  *
  * This avoids having to list every higher-tier role on every endpoint.
  */
-const ROLE_INHERITS: Record<string, string[]> = {
+export const ROLE_INHERITS: Record<string, string[]> = {
   SUPER_ADMIN: ['ADMIN', 'SCHOOL_ADMIN', 'WATTAMAN', 'WATTAMAN_REPORTER', 'CLASS_ADMIN', 'ACCOUNTER'],
   SCHOOL_ADMIN: ['ADMIN', 'WATTAMAN', 'WATTAMAN_REPORTER', 'CLASS_ADMIN', 'ACCOUNTER'],
   ADMIN: ['WATTAMAN', 'WATTAMAN_REPORTER', 'CLASS_ADMIN', 'ACCOUNTER'],
 };
+
+/**
+ * True if `userRole` satisfies at least one of `requiredRoles`, either by
+ * direct match or because `userRole` inherits a required role per
+ * `ROLE_INHERITS`. Shared by `RolesGuard` and any other authorization check
+ * (e.g. plugin permission grants) that needs the same role hierarchy.
+ */
+export function roleSatisfies(userRole: string | undefined, requiredRoles: string[]): boolean {
+  if (!userRole || requiredRoles.length === 0) return false;
+  if (requiredRoles.includes(userRole)) return true;
+  const inherited = ROLE_INHERITS[userRole] || [];
+  return inherited.some((r) => requiredRoles.includes(r));
+}
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -39,14 +52,6 @@ export class RolesGuard implements CanActivate {
       return true; // No @Roles() decorator → allow all authenticated users
     }
     const { user } = context.switchToHttp().getRequest();
-    const userRole: string | undefined = user?.role;
-    if (!userRole) return false;
-
-    // Direct match
-    if (requiredRoles.includes(userRole)) return true;
-
-    // Hierarchical match — does this user's role inherit any required role?
-    const inherited = ROLE_INHERITS[userRole] || [];
-    return inherited.some((r) => requiredRoles.includes(r));
+    return roleSatisfies(user?.role, requiredRoles);
   }
 }

@@ -4,12 +4,16 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { PluginsService } from './plugins.service';
+import { PluginPermissionsService } from './plugin-permissions.service';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('SUPER_ADMIN')
 @Controller('plugins')
 export class PluginsController {
-  constructor(private readonly plugins: PluginsService) {}
+  constructor(
+    private readonly plugins: PluginsService,
+    private readonly grants: PluginPermissionsService,
+  ) {}
 
   @Get()
   list() {
@@ -49,4 +53,18 @@ export class PluginsController {
 
   @Delete(':id')
   remove(@Param('id') id: string) { return this.plugins.remove(id); }
+
+  @Get(':id/permission-grants')
+  listPermissionGrants(@Param('id') id: string) { return this.grants.list(id); }
+
+  @Post(':id/permission-grants')
+  grantPermission(@Param('id') id: string, @Body('permissionId') permissionId: string, @Body('role') role: string) {
+    if (!permissionId || !role) throw new BadRequestException('permissionId and role are required');
+    return this.grants.grant(id, permissionId, role);
+  }
+
+  @Delete(':id/permission-grants/:permissionId/:role')
+  revokePermission(@Param('id') id: string, @Param('permissionId') permissionId: string, @Param('role') role: string) {
+    return this.grants.revoke(id, permissionId, role);
+  }
 }

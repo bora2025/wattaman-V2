@@ -11,11 +11,12 @@ import { PluginJobsService } from './plugin-jobs.service';
 import { PluginSettingsService } from './plugin-settings.service';
 import { PluginStorageService } from './plugin-storage.service';
 import { PluginMigrationsService } from './plugin-migrations.service';
+import { PluginPermissionsService } from './plugin-permissions.service';
 
 @Module({
   imports: [DatabaseModule],
   controllers: [PluginsController, PluginApiController],
-  providers: [PluginPackageVerifier, PluginEventBus, PluginExtensionsService, PluginJobsService, PluginSettingsService, PluginStorageService, PluginMigrationsService, PluginRuntimeService, PluginsService],
-  exports: [PluginsService, PluginEventBus, PluginExtensionsService],
+  providers: [PluginPackageVerifier, PluginEventBus, PluginPermissionsService, PluginExtensionsService, PluginJobsService, PluginSettingsService, PluginStorageService, PluginMigrationsService, PluginRuntimeService, PluginsService],
+  exports: [PluginsService, PluginEventBus, PluginExtensionsService, PluginPermissionsService],
 })
 export class PluginsModule {}

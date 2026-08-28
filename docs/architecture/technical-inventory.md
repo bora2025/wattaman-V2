@@ -29,7 +29,7 @@ The school installation and marketplace never share a database, secret, volume, 
 | Learning/assessment | ScoreSheet, ScoreSheetClass, ScoreSubject, ScoreExamTab, ScoreEntry, Exam, ExamQuestion, ExamAttempt, Assignment, AssignmentSubmission, QuizQuestion, QuizAnswer, Course, CourseLesson, LessonPage, CourseEnrollment, LessonAttempt, PageResponse, CourseSession, CourseAttendance, LessonView |
 | Communication/content | Notification, NotificationPreference, Message, Announcement, AnnouncementRead, Post |
 | Installation/core settings | Installation, SiteSetting |
-| Plugin platform | PluginInstallation, PluginMigration, PluginSetting, PluginJobDefinition, PluginJobRun |
+| Plugin platform | PluginInstallation, PluginMigration, PluginSetting, PluginJobDefinition, PluginJobRun, PluginPermissionGrant |
 
 No plugin may write a core-owned model. Plugin tables must use the enforced `plugin_<plugin-id>_*` namespace. Announcements remain core-owned until C-004 records a single-writer cutover and comparison report.
 
