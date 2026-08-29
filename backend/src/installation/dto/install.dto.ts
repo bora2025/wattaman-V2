@@ -1,4 +1,4 @@
-import { IsEmail, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { IsEmail, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
 export class InstallDto {
   @IsString()
@@ -44,5 +44,11 @@ export class InstallDto {
     message: 'ownerPassword must contain at least one letter and one number',
   })
   ownerPassword: string;
+
+  /** Informational only -- DEC-001 (core license) is still `proposed`; recorded when provided, never required. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  acceptedLicenseVersion?: string;
 }
 

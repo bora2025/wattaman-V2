@@ -6,6 +6,7 @@ import path from 'path';
 import { spawnSync } from 'child_process';
 import { InstallationModule } from './installation.module';
 import { InstallationService } from './installation.service';
+import { InstallationPreflightService } from './installation-preflight.service';
 import { InstallDto } from './dto/install.dto';
 
 type FileReader = (file: string) => string;
@@ -87,6 +88,14 @@ async function main() {
   }
   const app = await NestFactory.createApplicationContext(InstallationModule, { logger: ['error', 'warn'] });
   try {
+    if (process.argv.includes('--dry-run')) {
+      const report = await app.get(InstallationPreflightService).run({
+        locale: dto.locale, timezone: dto.timezone, currency: dto.currency, acceptedLicenseVersion: dto.acceptedLicenseVersion,
+      });
+      process.stdout.write(`${JSON.stringify(report)}\n`);
+      if (!report.ok) process.exitCode = 1;
+      return;
+    }
     const result = await app.get(InstallationService).install(dto);
     process.stdout.write(`${JSON.stringify({
       state: result.state,

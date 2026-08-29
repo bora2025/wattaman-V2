@@ -1350,17 +1350,19 @@ model SiteSetting {
 }
 
 model Installation {
-  id             String   @id @default("singleton")
-  installationId String   @unique @default(uuid())
-  status         String   @default("installed")
-  schoolName     String
-  schoolSlug     String   @unique
-  locale         String   @default("en")
-  timezone       String   @default("UTC")
-  currency       String   @default("USD")
-  coreVersion    String
-  installedAt    DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                     String    @id @default("singleton")
+  installationId         String    @unique @default(uuid())
+  status                 String    @default("installed")
+  schoolName             String
+  schoolSlug             String    @unique
+  locale                 String    @default("en")
+  timezone               String    @default("UTC")
+  currency               String    @default("USD")
+  coreVersion            String
+  acceptedLicenseVersion String?
+  acceptedLicenseAt      DateTime?
+  installedAt            DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 }
 
 model PluginInstallation {

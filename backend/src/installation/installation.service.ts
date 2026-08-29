@@ -79,6 +79,8 @@ export class InstallationService {
             timezone: dto.timezone,
             currency: dto.currency,
             coreVersion: config.appVersion,
+            acceptedLicenseVersion: dto.acceptedLicenseVersion || null,
+            acceptedLicenseAt: dto.acceptedLicenseVersion ? new Date() : null,
           },
           select: {
             installationId: true,
