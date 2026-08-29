@@ -126,7 +126,7 @@ Manual proof exists that the Railway Core reference topology (private PostgreSQL
 
 ## What actually blocks the most forward progress right now
 
-1. **DEC-001–013 approval (PO).** Nothing in Gates A0, B0, C0, D0, E0/E1, or F0 can formally close without these, no matter how much engineering happens underneath them.
+1. **DEC-001–013 approval (PO).** Nothing in Gates A0, B0, C0, D0, E0/E1, or F0 can formally close without these, no matter how much engineering happens underneath them. [product-owner-decision-brief-2026-08-29.md](./decisions/product-owner-decision-brief-2026-08-29.md) found that 10 of the 13 already match shipped code exactly (accepting costs nothing), DEC-012 (telemetry) is a genuine blank slate, and DEC-004 (base scope) has actually been *outgrown* by the real module list — a real conversation, not a rubber stamp.
 2. **Two sanitized real legacy database snapshots (B-001/B-002/B-003).** Everything downstream of "adopt an existing school" is blocked on getting real (sanitized) data to rehearse against — this needs someone outside engineering to source it.
 3. **Browser-driven E2E (B-004, INS-004).** Repeatedly deferred across sessions for lack of a browser-automation runtime; needs that tooling enabled once, not new design work.
 4. ~~A-002/A-007 field-level classification and A-008 secret custody.~~ **Done 2026-08-29** — [data-classification.md](./architecture/data-classification.md), [module-boundaries.md](./architecture/module-boundaries.md), and [secrets-inventory.md](./operations/secrets-inventory.md) now exist and close this item.
