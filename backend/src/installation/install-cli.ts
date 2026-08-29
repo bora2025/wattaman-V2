@@ -10,6 +10,7 @@ import { InstallationPreflightService } from './installation-preflight.service';
 import { InstallDto } from './dto/install.dto';
 
 type FileReader = (file: string) => string;
+type BinaryFileReader = (file: string) => Buffer;
 
 function required(env: NodeJS.ProcessEnv, name: string): string {
   const value = env[name]?.trim();
@@ -20,6 +21,7 @@ function required(env: NodeJS.ProcessEnv, name: string): string {
 export function readUnattendedInstallInput(
   env: NodeJS.ProcessEnv = process.env,
   readFile: FileReader = (file) => readFileSync(file, 'utf8'),
+  readBinaryFile: BinaryFileReader = (file) => readFileSync(file),
 ): InstallDto {
   if (env.INSTALL_NON_INTERACTIVE !== 'true') {
     throw new Error('INSTALL_NON_INTERACTIVE=true is required');
@@ -40,6 +42,11 @@ export function readUnattendedInstallInput(
     ? readFile(path.resolve(passwordFile)).replace(/\r?\n$/, '')
     : required(env, 'INSTALL_OWNER_PASSWORD');
 
+  const pluginFiles = env.INSTALL_INITIAL_PLUGIN_FILES?.trim();
+  const initialPlugins = pluginFiles
+    ? pluginFiles.split(',').map((file) => readBinaryFile(path.resolve(file.trim())).toString('base64'))
+    : undefined;
+
   return plainToInstance(InstallDto, {
     schoolName: required(env, 'INSTALL_SCHOOL_NAME'),
     schoolSlug,
@@ -49,6 +56,7 @@ export function readUnattendedInstallInput(
     ownerName: required(env, 'INSTALL_OWNER_NAME'),
     ownerEmail: required(env, 'INSTALL_OWNER_EMAIL'),
     ownerPassword,
+    initialPlugins,
   });
 }
 
@@ -90,7 +98,8 @@ async function main() {
   try {
     if (process.argv.includes('--dry-run')) {
       const report = await app.get(InstallationPreflightService).run({
-        locale: dto.locale, timezone: dto.timezone, currency: dto.currency, acceptedLicenseVersion: dto.acceptedLicenseVersion,
+        locale: dto.locale, timezone: dto.timezone, currency: dto.currency,
+        acceptedLicenseVersion: dto.acceptedLicenseVersion, initialPlugins: dto.initialPlugins,
       });
       process.stdout.write(`${JSON.stringify(report)}\n`);
       if (!report.ok) process.exitCode = 1;

@@ -43,6 +43,22 @@ describe('unattended installation input', () => {
     await expect(validateUnattendedInstallInput(dto)).rejects.toThrow('lowercase letters');
   });
 
+  it('omits initialPlugins entirely when no plugin files are configured', () => {
+    expect(readUnattendedInstallInput(valid).initialPlugins).toBeUndefined();
+  });
+
+  it('reads initial plugin files as raw binary, base64-encoding each one for the shared DTO', async () => {
+    const env = { ...valid, INSTALL_INITIAL_PLUGIN_FILES: 'plugin-a.zip, plugin-b.zip' };
+    const binaries = { 'plugin-a.zip': Buffer.from([0x50, 0x4b, 0x03, 0x04, 0xff]), 'plugin-b.zip': Buffer.from([0x50, 0x4b, 0x05, 0x06]) };
+    const readBinaryFile = (file: string) => binaries[file.split(/[\\/]/).pop() as keyof typeof binaries];
+    const dto = readUnattendedInstallInput(env, undefined, readBinaryFile);
+    expect(dto.initialPlugins).toEqual([
+      binaries['plugin-a.zip'].toString('base64'),
+      binaries['plugin-b.zip'].toString('base64'),
+    ]);
+    await expect(validateUnattendedInstallInput(dto)).resolves.toBeUndefined();
+  });
+
   it('requires a distinct database reference for isolated validation', () => {
     expect(selectInstallDatabaseUrl({ DATABASE_URL: 'postgresql://production' }, false)).toBe('postgresql://production');
     expect(() => selectInstallDatabaseUrl({}, true)).toThrow('INSTALL_DATABASE_URL');

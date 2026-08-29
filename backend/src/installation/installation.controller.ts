@@ -25,6 +25,7 @@ export class InstallationController {
       timezone: dto.timezone,
       currency: dto.currency,
       acceptedLicenseVersion: dto.acceptedLicenseVersion,
+      initialPlugins: dto.initialPlugins,
     });
   }
 
