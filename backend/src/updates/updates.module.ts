@@ -13,5 +13,5 @@ import { MaintenanceModeMiddleware } from './maintenance-mode.middleware';
   exports: [UpdatesService],
 })
 export class UpdatesModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) { consumer.apply(MaintenanceModeMiddleware).forRoutes('*'); }
+  configure(consumer: MiddlewareConsumer) { consumer.apply(MaintenanceModeMiddleware).forRoutes('{*splat}'); }
 }

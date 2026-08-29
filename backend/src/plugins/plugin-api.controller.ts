@@ -26,11 +26,12 @@ export class PluginApiController {
   // No @Roles() here: any authenticated user may reach dispatch. Authorization
   // for the specific plugin route happens inside PluginExtensionsService.dispatch(),
   // which checks the route's declared permission against PluginPermissionsService grants.
-  @All(':pluginId/*')
+  @All(':pluginId/*splat')
   dispatch(@Param('pluginId') pluginId: string, @Req() request: Request & { user?: any }) {
+    const splat = (request.params as Record<string, unknown>).splat;
     return this.extensions.dispatch(pluginId, {
       method: request.method as any,
-      path: String(request.params[0] || ''),
+      path: Array.isArray(splat) ? splat.join('/') : String(splat || ''),
       params: {},
       query: request.query as any,
       body: request.body,

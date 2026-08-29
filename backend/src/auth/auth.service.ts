@@ -1,5 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import type { StringValue } from 'ms';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { PrismaService } from '../database/prisma.service';
@@ -37,7 +38,7 @@ export class AuthService {
   signAccessToken(user: any): string {
     const payload = { email: user.email, sub: user.id, role: user.role };
     return this.jwtService.sign(payload, {
-      expiresIn: process.env.JWT_ACCESS_EXPIRY || '2h',
+      expiresIn: (process.env.JWT_ACCESS_EXPIRY || '2h') as StringValue,
     });
   }
 
