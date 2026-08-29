@@ -1,7 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import express, { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
-import { timingSafeEqual } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import multer from 'multer';
 import { ZodError } from 'zod';
@@ -18,14 +17,14 @@ import { PublisherGovernanceService } from './publisher-governance.service';
 import { CustomerMarketplaceService } from './customer-marketplace.service';
 import { createMetricsRegistry } from './observability/metrics';
 import { requestLoggingMiddleware } from './observability/request-logging';
-import { readMetricsToken } from './observability/metrics-config';
+import { matchesAnyToken, readMetricsTokens } from './observability/metrics-config';
 
-function adminGuard(expected: string) {
-  const expectedBytes = Buffer.from(expected);
+/** Accepts any currently-valid admin token (the active one plus any still-trusted retiring ones
+ * from MARKETPLACE_SECONDARY_ADMIN_TOKENS_JSON), so rotating doesn't instantly 401 every caller
+ * (CI secrets, operator .env files, scripts) the moment the new value goes live. */
+export function adminGuard(validTokens: string[]) {
   return (request: Request, _response: Response, next: NextFunction) => {
-    const header = request.header('authorization') || '';
-    const supplied = header.startsWith('Bearer ') ? Buffer.from(header.slice(7)) : Buffer.alloc(0);
-    if (supplied.length !== expectedBytes.length || !timingSafeEqual(supplied, expectedBytes)) return next(new HttpError(401, 'Unauthorized'));
+    if (!matchesAnyToken(request.header('authorization') || '', validTokens)) return next(new HttpError(401, 'Unauthorized'));
     next();
   };
 }
@@ -63,12 +62,9 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   }));
 
   app.get('/metrics', async (request, response) => {
-    const token = readMetricsToken();
-    if (!token) return response.status(401).json({ error: 'METRICS_TOKEN is not configured; /metrics is disabled by default' });
-    const header = request.header('authorization') || '';
-    const supplied = header.startsWith('Bearer ') ? Buffer.from(header.slice(7)) : Buffer.alloc(0);
-    const expected = Buffer.from(token);
-    if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) return response.status(401).json({ error: 'Invalid metrics token' });
+    const tokens = readMetricsTokens();
+    if (!tokens.length) return response.status(401).json({ error: 'METRICS_TOKEN is not configured; /metrics is disabled by default' });
+    if (!matchesAnyToken(request.header('authorization') || '', tokens)) return response.status(401).json({ error: 'Invalid metrics token' });
     response.set('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
     response.send(await metrics.registry.metrics());
   });
@@ -205,7 +201,7 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
     } catch (error) { next(error); }
   });
 
-  const requireAdmin = adminGuard(config.adminToken);
+  const requireAdmin = adminGuard(config.adminTokens);
   app.post('/admin/v1/publishers', requireAdmin, async (request, response, next) => {
     try { response.status(201).json(await repository.createOfficialPublisher(request.body)); } catch (error) { next(error); }
   });

@@ -100,6 +100,54 @@ this mechanism itself needs no special handling.
 5. Once no unexpired token could still be signed under the old secret, remove
    `JWT_SECONDARY_SECRETS_JSON` entirely and redeploy again.
 
+### `MARKETPLACE_ADMIN_TOKEN`
+
+Previously a hard cutover requiring every caller (CI secrets, operator `.env` files, scripts
+under `apps/marketplace-api/scripts/`) to be updated *before* redeploying, to avoid a
+self-inflicted lockout. Now overlap-capable: `adminGuard()` (`apps/marketplace-api/src/app.ts`)
+accepts any token in a trusted set, not just one.
+
+1. Add the current token to `MARKETPLACE_SECONDARY_ADMIN_TOKENS_JSON` (a plain JSON array of
+   strings — an admin bearer token has no natural "key id" the way a signing key does, so this
+   is checked by membership, not lookup) and set `MARKETPLACE_ADMIN_TOKEN` to a new value.
+   Redeploy. Every caller still using the old token keeps working.
+2. Update callers (CI secrets, `.env` files, scripts) on your own schedule — there is no rush,
+   and no ordering constraint, since both values are valid at once.
+3. Once nothing uses the old token, remove it from `MARKETPLACE_SECONDARY_ADMIN_TOKENS_JSON` and
+   redeploy again.
+
+### `METRICS_TOKEN` (both `backend` and `apps/marketplace-api`, independently)
+
+Previously a hard cutover ("the least disruptive secret to rotate in this whole list," since a
+scrape gap of one interval was the worst case) — now overlap-capable too, using the identical
+shape in both apps (`METRICS_SECONDARY_TOKENS_JSON`, a JSON array of strings, same reasoning as
+the admin token above): each app's own `/metrics` handler accepts any currently-trusted token.
+
+1. Add the current `METRICS_TOKEN` value to `METRICS_SECONDARY_TOKENS_JSON` and set
+   `METRICS_TOKEN` to a new value. Redeploy. Prometheus's scrape config can still be using the
+   old `bearer_token` at this point with zero scrape gap.
+2. Update the Prometheus scrape config's `bearer_token` to the new value whenever convenient.
+3. Once Prometheus has picked up the new token, remove the old one from
+   `METRICS_SECONDARY_TOKENS_JSON` and redeploy again. This must be done independently for
+   `backend` and `apps/marketplace-api` — they don't share configuration.
+
+### `PAYMENT_WEBHOOK_SECRET` (marketplace) — app-side overlap exists, but real verification doesn't yet
+
+Unlike the secrets above, this one is not simply "no code exists yet," and unlike the secrets in
+the hard-cutover table below, it's not structurally incapable of overlap either — it sits in
+between. `verifyWebhookSignature()` now accepts a signature produced by any secret in
+`PAYMENT_WEBHOOK_SECONDARY_SECRETS_JSON` (same shape as the tokens above: a plain JSON array,
+checked by membership), unit-tested (`payment-webhook.service.spec.ts`) including a rotation
+scenario and a rejected-once-retired scenario. What's honestly still missing: both sides of this
+HMAC are separate parties, and the app's `online-hmac-v1` adapter is a deliberately
+provider-agnostic placeholder (ADR-0007) pending a real Stripe-compatible integration — there is
+no real payment provider account to live-drill this against yet, so "does a real provider's
+dashboard actually support handing us two valid secrets during its own rotation" remains
+unverified. The procedure once a real provider exists: add the current secret to
+`PAYMENT_WEBHOOK_SECONDARY_SECRETS_JSON`, rotate the provider's dashboard secret and
+`PAYMENT_WEBHOOK_SECRET` together, then remove the retired one from the secondary list once no
+in-flight delivery could still be signed with it.
+
 ## Secrets with no overlap mechanism (rotation is a hard cutover)
 
 These all share the same shape: change the environment variable, redeploy, and every existing
@@ -109,9 +157,6 @@ procedure existed), not technical.
 
 | Secret | Real impact of rotating | Procedure |
 |---|---|---|
-| `MARKETPLACE_ADMIN_TOKEN` | Every admin script/tool using the old token starts getting 401s the instant the new value is live | Update every caller (CI secrets, any operator's local `.env`, scripts under `apps/marketplace-api/scripts/`) *before* redeploying with the new value, not after — there is no dual-token grace period, so sequence this the other way around from a normal secret to avoid a self-inflicted lockout |
-| `PAYMENT_WEBHOOK_SECRET` (marketplace) | The payment provider's webhook signature stops verifying the instant the values disagree; in-flight webhooks fail until both sides match | Coordinate the change with the payment provider's dashboard update in the same window — whichever side changes first will reject the other's requests/signatures until both are updated |
-| `METRICS_TOKEN` (both apps) | Prometheus's scrape starts returning 401 immediately (this is the newest secret in the inventory, added with the observability work) | Update the token in both the app's env and the Prometheus scrape config's `bearer_token` in the same change; a scrape gap of one interval is the expected, low-stakes impact — this is the least disruptive secret to rotate in this whole list |
 | `DATABASE_URL` (both apps) | Requires the database user's password to actually change, which is a platform-level operation (Railway) or manual `ALTER ROLE` (Compose/self-hosted) | Change the DB user's password at the platform/database level first, confirm the *old* connections drop (or let them drain), then update the env var and redeploy; there is no way to have both old and new credentials valid simultaneously for the same DB user, so a brief connection gap during redeploy is expected |
 | `SENDGRID_API_KEY` | Provider-side; app fails closed (`notification-config.ts`'s shape validation just stops matching, so the notification path reports "not configured" rather than silently failing) | Revoke and regenerate in the SendGrid dashboard, update the env var, redeploy |
 | `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` | Same shape as SendGrid | Regenerate in the Twilio console, update both env vars together (they're a pair), redeploy |
@@ -150,6 +195,23 @@ confirm an unknown key id is rejected and that standard JWT signature tampering 
 (this feature didn't weaken it). This closes a real, previously-true gap — `JWT_SECRET` had no
 overlap primitive at all before this change, unlike the repository/entitlement keys, which
 already had one but simply hadn't been drilled.
+
+### `MARKETPLACE_ADMIN_TOKEN` and `METRICS_TOKEN` overlap rotation
+
+Live-drilled end to end using the real, unmodified `createApp()`/`adminGuard()` (marketplace-api)
+and the real `dist/main.js` entrypoint (backend), as real listening HTTP servers against a real
+disposable PostgreSQL 16:
+[`apps/marketplace-api/scripts/admin-and-metrics-token-rotation-live-drill.js`](../../apps/marketplace-api/scripts/admin-and-metrics-token-rotation-live-drill.js)
+(12/12 checks: admin-token baseline/overlap/rotated states against a real admin endpoint,
+`GET /admin/v1/pilot/metrics`, plus the same three states for marketplace-api's own
+`/metrics`) and
+[`backend/scripts/metrics-token-rotation-live-drill.js`](../../backend/scripts/metrics-token-rotation-live-drill.js)
+(6/6 checks, same three states for backend's `/metrics`, using three real process
+restarts rather than one server with mutated env, since the token is read once per request but
+the drill still wanted to prove a real redeploy sequence). In every case: the old credential
+keeps working once the new one becomes active and the old one is merely added as trusted; both
+work simultaneously during the overlap; and the old one fails closed once removed, proving
+rotation actually completes rather than just accumulating trusted values forever.
 
 ### Entitlement signing key rotation
 

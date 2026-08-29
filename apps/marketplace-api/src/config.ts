@@ -10,6 +10,7 @@ const schema = z.object({
   DATABASE_URL: z.string().min(1),
   PUBLIC_BASE_URL: z.string().url().refine((value) => !value.endsWith('/'), 'must not end with /'),
   MARKETPLACE_ADMIN_TOKEN: z.string().min(32),
+  MARKETPLACE_SECONDARY_ADMIN_TOKENS_JSON: z.string().optional(),
   METADATA_SIGNING_PRIVATE_KEY_FILE: z.string().min(1).optional(),
   METADATA_SIGNING_PRIVATE_KEY: z.string().min(1).optional(),
   METADATA_SIGNING_KEY_ID: z.string().regex(/^[a-zA-Z0-9._-]{1,100}$/),
@@ -19,6 +20,7 @@ const schema = z.object({
   ENTITLEMENT_SIGNING_PRIVATE_KEY: z.string().min(1).optional(),
   ENTITLEMENT_SIGNING_KEY_ID: z.string().regex(/^[a-zA-Z0-9._-]{1,100}$/),
   PAYMENT_WEBHOOK_SECRET: z.string().min(32),
+  PAYMENT_WEBHOOK_SECONDARY_SECRETS_JSON: z.string().optional(),
   ARTIFACT_STORAGE_PATH: z.string().min(1),
   MAX_ARTIFACT_BYTES: z.coerce.number().int().positive().max(250 * 1024 * 1024).default(50 * 1024 * 1024),
   IDENTITY_ENCRYPTION_KEYS_JSON: z.string().optional(),
@@ -33,13 +35,21 @@ export type MarketplaceConfig = {
   port: number;
   databaseUrl: string;
   publicBaseUrl: string;
-  adminToken: string;
+  /** Every currently-valid admin bearer token -- the active one plus any still-trusted retiring
+   * ones from MARKETPLACE_SECONDARY_ADMIN_TOKENS_JSON, so rotating doesn't instantly 401 every
+   * caller (CI secrets, operator .env files, scripts) the moment the new value goes live. */
+  adminTokens: string[];
   signingPrivateKey: string;
   signingKeyId: string;
   signingKeys: Array<{ privateKey: string; keyId: string }>;
   entitlementPrivateKey: string;
   entitlementKeyId: string;
-  paymentWebhookSecret: string;
+  /** Every currently-valid webhook signing secret -- the active one plus any still-trusted
+   * retiring ones from PAYMENT_WEBHOOK_SECONDARY_SECRETS_JSON. Real overlap value here depends
+   * on whatever rotation model the eventual real payment provider's dashboard supports (this
+   * adapter, online-hmac-v1, is a deliberate placeholder per ADR-0007) -- but accepting several
+   * trusted secrets app-side costs nothing and is ready whenever that provider is chosen. */
+  paymentWebhookSecrets: string[];
   artifactPath: string;
   maxArtifactBytes: number;
   identityEncryptionKeys: SecretEncryptionKey[];
@@ -84,18 +94,27 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): MarketplaceCon
     port: value.PORT,
     databaseUrl: value.DATABASE_URL,
     publicBaseUrl: value.PUBLIC_BASE_URL,
-    adminToken: value.MARKETPLACE_ADMIN_TOKEN,
+    adminTokens: [value.MARKETPLACE_ADMIN_TOKEN, ...parseSecondaryTokens(value.MARKETPLACE_SECONDARY_ADMIN_TOKENS_JSON, 'MARKETPLACE_SECONDARY_ADMIN_TOKENS_JSON')],
     signingPrivateKey,
     signingKeyId: value.METADATA_SIGNING_KEY_ID,
     signingKeys,
     entitlementPrivateKey,
     entitlementKeyId: value.ENTITLEMENT_SIGNING_KEY_ID,
-    paymentWebhookSecret: value.PAYMENT_WEBHOOK_SECRET,
+    paymentWebhookSecrets: [value.PAYMENT_WEBHOOK_SECRET, ...parseSecondaryTokens(value.PAYMENT_WEBHOOK_SECONDARY_SECRETS_JSON, 'PAYMENT_WEBHOOK_SECONDARY_SECRETS_JSON')],
     artifactPath,
     maxArtifactBytes: value.MAX_ARTIFACT_BYTES,
     identityEncryptionKeys,
     transactionalEmail: { provider: value.TRANSACTIONAL_EMAIL_PROVIDER, apiKey: value.SENDGRID_API_KEY, from: value.TRANSACTIONAL_EMAIL_FROM },
   };
+}
+
+/** Shared shape for a "still-trusted retiring bearer tokens" rotation list -- no key id needed
+ * (unlike signing keys), since a bearer token is checked by membership, not by picking one). */
+export function parseSecondaryTokens(raw: string | undefined, envVarName: string): string[] {
+  if (!raw?.trim()) return [];
+  let value: unknown;
+  try { value = JSON.parse(raw); } catch { throw new Error(`${envVarName} must be valid JSON`); }
+  return z.array(z.string().min(32)).parse(value);
 }
 
 function parseSecondaryKeys(raw: string | undefined) {

@@ -12,13 +12,39 @@ function body(value: unknown = event) { return Buffer.from(JSON.stringify(value)
 function signature(value: Buffer, at = now) { return paymentWebhookSignature(value, Math.floor(at.getTime() / 1000), secret); }
 function service(tx: any) {
   const prisma = { $transaction: jest.fn((work: (value: any) => unknown) => work(tx)) } as any;
-  return { instance: new PaymentWebhookService(prisma, { paymentWebhookSecret: secret } as any), prisma };
+  return { instance: new PaymentWebhookService(prisma, { paymentWebhookSecrets: [secret] } as any), prisma };
 }
 
 describe('authenticated payment webhooks', () => {
   it('rejects an invalid signature before opening a transaction', async () => {
     const { instance, prisma } = service({});
     await expect(instance.process(body(), `t=${Math.floor(now.getTime() / 1000)},v1=${'0'.repeat(64)}`, now)).rejects.toThrow('Invalid payment webhook signature');
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('accepts a signature produced by a still-trusted secondary secret during a rotation overlap window', async () => {
+    const retiringSecret = 'retiring-webhook-secret-at-least-32-chars';
+    const raw = body();
+    const tx = {
+      paymentWebhookEvent: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'evidence-1' }), update: jest.fn().mockResolvedValue({}) },
+      marketplaceOrder: { findUnique: jest.fn().mockResolvedValue({ id: event.data.orderId, status: 'PAID', currency: 'USD', totalMinor: 2500 }) },
+      marketplacePayment: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'payment-1', orderId: event.data.orderId, status: 'SUCCEEDED' }),
+        create: jest.fn(), update: jest.fn(),
+      },
+    };
+    const prisma = { $transaction: jest.fn((work: (value: any) => unknown) => work(tx)) } as any;
+    const instance = new PaymentWebhookService(prisma, { paymentWebhookSecrets: [secret, retiringSecret] } as any);
+    const retiringSignature = paymentWebhookSignature(raw, Math.floor(now.getTime() / 1000), retiringSecret);
+    await expect(instance.process(raw, retiringSignature, now)).resolves.toMatchObject({ eventId: event.id, duplicate: false });
+  });
+
+  it('rejects a signature from a secret that was never in the trusted list -- proving rotation fails closed, not open', async () => {
+    const untrustedSecret = 'untrusted-webhook-secret-at-least-32-chars';
+    const raw = body();
+    const { instance, prisma } = service({});
+    const untrustedSignature = paymentWebhookSignature(raw, Math.floor(now.getTime() / 1000), untrustedSecret);
+    await expect(instance.process(raw, untrustedSignature, now)).rejects.toThrow('Invalid payment webhook signature');
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
@@ -44,7 +70,7 @@ describe('authenticated payment webhooks', () => {
       $transaction: jest.fn().mockRejectedValue(collision),
       paymentWebhookEvent: { findUnique: jest.fn().mockResolvedValue({ payloadHash: createHash('sha256').update(raw).digest('hex'), processedAt: now }) },
     } as any;
-    const instance = new PaymentWebhookService(prisma, { paymentWebhookSecret: secret } as any);
+    const instance = new PaymentWebhookService(prisma, { paymentWebhookSecrets: [secret] } as any);
     await expect(instance.process(raw, signature(raw), now)).resolves.toEqual({ eventId: event.id, duplicate: true, processed: true });
   });
 
@@ -102,7 +128,7 @@ describe('authenticated payment webhooks', () => {
     const key = pair.privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
     const prisma = { $transaction: jest.fn((work: (value: any) => unknown) => work(tx)) } as any;
     const instance = new PaymentWebhookService(prisma, {
-      paymentWebhookSecret: secret, entitlementPrivateKey: key, entitlementKeyId: 'entitlement-1', publicBaseUrl: 'https://marketplace.example',
+      paymentWebhookSecrets: [secret], entitlementPrivateKey: key, entitlementKeyId: 'entitlement-1', publicBaseUrl: 'https://marketplace.example',
     } as any);
     const result = await instance.process(raw, signature(raw), now);
     expect(result).toMatchObject({ duplicate: false, processed: true, result: { status: 'PAID', entitlementIds: ['entitlement-1'] } });

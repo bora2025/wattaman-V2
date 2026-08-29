@@ -41,7 +41,7 @@ export class PaymentWebhookService {
   }
 
   async process(rawBody: Buffer, signatureHeader: string | undefined, now = new Date()) {
-    const signature = verifyWebhookSignature(rawBody, signatureHeader, this.config.paymentWebhookSecret, now);
+    const signature = verifyWebhookSignature(rawBody, signatureHeader, this.config.paymentWebhookSecrets, now);
     const event = eventSchema.parse(JSON.parse(rawBody.toString('utf8')));
     const payloadHash = createHash('sha256').update(rawBody).digest('hex');
     try {
@@ -143,13 +143,19 @@ export function paymentWebhookSignature(rawBody: Buffer, timestampSeconds: numbe
   return `t=${timestampSeconds},v1=${digest}`;
 }
 
-function verifyWebhookSignature(rawBody: Buffer, header: string | undefined, secret: string, now: Date) {
+/** Accepts a signature produced by any currently-trusted secret (the active one plus any
+ * still-trusted retiring ones), so rotating PAYMENT_WEBHOOK_SECRET doesn't reject in-flight
+ * deliveries signed with the value the provider's dashboard hasn't been updated to yet. */
+function verifyWebhookSignature(rawBody: Buffer, header: string | undefined, secrets: string[], now: Date) {
   const match = /^t=(\d{10}),v1=([a-f0-9]{64})$/.exec(header ?? '');
   if (!match) throw new HttpError(401, 'Invalid payment webhook signature');
   const timestamp = Number(match[1]);
   if (Math.abs(Math.floor(now.getTime() / 1000) - timestamp) > 300) throw new HttpError(401, 'Payment webhook timestamp is outside tolerance');
-  const expected = paymentWebhookSignature(rawBody, timestamp, secret).slice(-64);
-  const supplied = match[2];
-  if (!timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(supplied, 'hex'))) throw new HttpError(401, 'Invalid payment webhook signature');
+  const supplied = Buffer.from(match[2], 'hex');
+  const matches = secrets.some((secret) => {
+    const expected = Buffer.from(paymentWebhookSignature(rawBody, timestamp, secret).slice(-64), 'hex');
+    return supplied.length === expected.length && timingSafeEqual(supplied, expected);
+  });
+  if (!matches) throw new HttpError(401, 'Invalid payment webhook signature');
   return header!;
 }
