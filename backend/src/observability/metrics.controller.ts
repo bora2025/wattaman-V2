@@ -1,5 +1,5 @@
-import { Controller, Get, Header, Req, Res, UnauthorizedException } from '@nestjs/common';
-import { Request, Response } from 'express';
+import { Controller, Get, Header, Req, UnauthorizedException } from '@nestjs/common';
+import { Request } from 'express';
 import { timingSafeEqual } from 'node:crypto';
 import { MetricsService } from './metrics.service';
 import { readMetricsToken } from './metrics-config';
@@ -10,7 +10,7 @@ export class MetricsController {
 
   @Get()
   @Header('Content-Type', 'text/plain; version=0.0.4; charset=utf-8')
-  async scrape(@Req() request: Request, @Res({ passthrough: true }) response: Response) {
+  async scrape(@Req() request: Request) {
     const token = readMetricsToken();
     if (!token) throw new UnauthorizedException('METRICS_TOKEN is not configured; /metrics is disabled by default');
     const header = request.header('authorization') || '';

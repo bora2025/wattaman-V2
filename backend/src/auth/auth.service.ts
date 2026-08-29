@@ -142,7 +142,7 @@ export class AuthService {
   }
 
   async getUsers(role?: string, roles?: string[]) {
-    let where: any = {};
+    const where: any = {};
     if (roles && roles.length > 0) {
       where.role = { in: roles };
     } else if (role) {

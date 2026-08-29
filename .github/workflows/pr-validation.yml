@@ -1,0 +1,129 @@
+name: PR validation
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wattanam
+          POSTGRES_PASSWORD: pr-validation-password
+          POSTGRES_DB: wattanam_backend
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U wattanam -d wattanam_backend"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgresql://wattanam:pr-validation-password@localhost:5432/wattanam_backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: backend/package-lock.json }
+      - name: Install
+        working-directory: backend
+        run: npm ci
+      - name: Validate schema and apply every migration (the "migration checks" gate)
+        working-directory: backend
+        run: npm run db:validate && npx prisma generate --schema=prisma/schema.prisma && npm run db:migrate:deploy
+      - name: Typecheck
+        working-directory: backend
+        run: npm run typecheck
+      - name: Lint
+        working-directory: backend
+        run: npm run lint:ci
+      - name: Unit tests
+        working-directory: backend
+        run: npm test -- --runInBand
+      - name: Build
+        working-directory: backend
+        run: npm run build
+      - name: Production dependency audit (fails only on high/critical, matching the A-009 baseline)
+        working-directory: backend
+        run: npm audit --omit=dev --audit-level=high
+
+  marketplace-api:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wattanam
+          POSTGRES_PASSWORD: pr-validation-password
+          POSTGRES_DB: wattanam_marketplace
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U wattanam -d wattanam_marketplace"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgresql://wattanam:pr-validation-password@localhost:5432/wattanam_marketplace
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: apps/marketplace-api/package-lock.json }
+      - name: Install
+        working-directory: apps/marketplace-api
+        run: npm ci
+      - name: Validate schema and apply every migration
+        working-directory: apps/marketplace-api
+        run: npm run db:validate && npm run db:generate && npm run db:migrate:deploy
+      - name: Unit tests
+        working-directory: apps/marketplace-api
+        run: npm test
+      - name: Build (tsc -- this is also the typecheck gate for this app)
+        working-directory: apps/marketplace-api
+        run: npm run build
+      - name: Production dependency audit
+        working-directory: apps/marketplace-api
+        run: npm audit --omit=dev --audit-level=high
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: frontend/package-lock.json }
+      - name: Install
+        working-directory: frontend
+        run: npm ci
+      - name: Build (Next.js type-checks during build; this is the typecheck gate for this app)
+        working-directory: frontend
+        run: npm run build
+      - name: Production dependency audit
+        working-directory: frontend
+        run: npm audit --omit=dev --audit-level=high
+      # `next lint` is broken under Next 16 (the command was removed) -- a known, documented
+      # gap from A-009, not something this workflow silently papers over. Fixing it means an
+      # ESLint flat-config migration, tracked as separate follow-up work.
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Scan the PR diff for secrets
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dockerfile-lint:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dockerfile:
+          - Dockerfile
+          - frontend/Dockerfile
+          - backend/Dockerfile
+          - apps/marketplace-api/Dockerfile
+          - infrastructure/gateway/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+      - name: hadolint (fails only on error-level findings; style warnings are pre-existing and tracked separately)
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: ${{ matrix.dockerfile }}
+          failure-threshold: error
