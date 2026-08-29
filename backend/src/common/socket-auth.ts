@@ -1,6 +1,7 @@
 import { JwtService } from '@nestjs/jwt';
 import { Socket } from 'socket.io';
 import { WsException } from '@nestjs/websockets';
+import { verifyJwtWithRotationSupport } from '../auth/jwt-verification';
 
 export interface SocketUser {
   userId: string;
@@ -32,7 +33,7 @@ export async function authenticateSocket(jwt: JwtService, client: Socket): Promi
   if (!token) throw new WsException('Authentication required');
 
   try {
-    const payload = await jwt.verifyAsync(token);
+    const payload = await verifyJwtWithRotationSupport(jwt, token);
     if (!payload?.sub || !payload?.role) throw new Error('Invalid token payload');
     const user = { userId: payload.sub, email: payload.email, role: payload.role };
     client.data.user = user;

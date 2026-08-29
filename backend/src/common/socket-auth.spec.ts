@@ -27,7 +27,10 @@ describe('socket authentication', () => {
 
   it('verifies and stores the minimum socket identity', async () => {
     const client = socket({ handshake: { auth: { token: 'token' }, headers: {} } });
-    const jwt = { verifyAsync: jest.fn().mockResolvedValue({ sub: 'user-1', email: 'a@example.com', role: 'ADMIN' }) } as any;
+    const jwt = {
+      decode: jest.fn().mockReturnValue(null),
+      verifyAsync: jest.fn().mockResolvedValue({ sub: 'user-1', email: 'a@example.com', role: 'ADMIN' }),
+    } as any;
 
     await expect(authenticateSocket(jwt, client)).resolves.toEqual({
       userId: 'user-1', email: 'a@example.com', role: 'ADMIN',
@@ -38,7 +41,7 @@ describe('socket authentication', () => {
   it('rejects missing or invalid authentication', async () => {
     await expect(authenticateSocket({} as any, socket())).rejects.toBeInstanceOf(WsException);
     const client = socket({ handshake: { auth: { token: 'bad' }, headers: {} } });
-    const jwt = { verifyAsync: jest.fn().mockRejectedValue(new Error('bad token')) } as any;
+    const jwt = { decode: jest.fn().mockReturnValue(null), verifyAsync: jest.fn().mockRejectedValue(new Error('bad token')) } as any;
     await expect(authenticateSocket(jwt, client)).rejects.toBeInstanceOf(WsException);
   });
 });

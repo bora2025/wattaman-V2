@@ -1,4 +1,4 @@
-import { getProcessRole, parseCorsOrigins, readRuntimeConfig, runsBackgroundJobs } from './environment';
+import { getProcessRole, parseCorsOrigins, parseJwtSecondarySecrets, readRuntimeConfig, runsBackgroundJobs } from './environment';
 
 describe('runtime environment', () => {
   const baseEnvironment: NodeJS.ProcessEnv = {
@@ -66,6 +66,24 @@ describe('runtime environment', () => {
   it('validates authentication expiry formats', () => {
     expect(() => readRuntimeConfig({ ...baseEnvironment, JWT_ACCESS_EXPIRY: 'two hours' })).toThrow('JWT_ACCESS_EXPIRY');
     expect(() => readRuntimeConfig({ ...baseEnvironment, JWT_REFRESH_EXPIRY: '0' })).toThrow('JWT_REFRESH_EXPIRY');
+  });
+
+  it('defaults JWT rotation config to a stable key id and no secondary secrets', () => {
+    const config = readRuntimeConfig(baseEnvironment);
+    expect(config.jwtKeyId).toBe('jwt-v1');
+    expect(config.jwtSecondarySecrets.size).toBe(0);
+  });
+
+  it('parses secondary JWT secrets for overlap-capable rotation', () => {
+    const map = parseJwtSecondarySecrets(JSON.stringify({ 'jwt-v1': 'old-secret-value' }));
+    expect(map.get('jwt-v1')).toBe('old-secret-value');
+  });
+
+  it('rejects malformed or wrongly-shaped JWT_SECONDARY_SECRETS_JSON', () => {
+    expect(() => parseJwtSecondarySecrets('not json')).toThrow('JWT_SECONDARY_SECRETS_JSON must be valid JSON');
+    expect(() => parseJwtSecondarySecrets('["not", "an", "object"]')).toThrow('must be a JSON object');
+    expect(() => parseJwtSecondarySecrets(JSON.stringify({ 'bad id!': 'secret' }))).toThrow('key id is invalid');
+    expect(() => parseJwtSecondarySecrets(JSON.stringify({ 'jwt-v1': '' }))).toThrow('must be a non-empty string');
   });
 
   it('validates process roles and background-job ownership', () => {

@@ -75,6 +75,31 @@ bulk-migration script needed.
 6. Once confirmed (e.g. `SELECT COUNT(*) FROM "MarketplaceAccount" WHERE "mfaSecret" LIKE 'enc:v1:<old-key-id>:%'` returns 0), remove the old key from
    `IDENTITY_ENCRYPTION_KEYS_JSON` entirely and redeploy again.
 
+### `JWT_SECRET` (backend)
+
+Previously a hard cutover — rotating it signed out every logged-in user instantly, since the
+token carried no key id a verifier could use to tell an old secret from a new one. That's now
+fixed: every issued token's header is tagged with the id of the secret that signed it
+(`JWT_KEY_ID`, default `jwt-v1`), and the verifier (`src/auth/jwt-verification.ts`, wired into
+both the HTTP `JwtStrategy` and the WebSocket gateways' `socket-auth.ts`) trusts the active
+secret plus anything listed in `JWT_SECONDARY_SECRETS_JSON` — an id-keyed JSON object, the same
+shape already used for the repository and entitlement secondary keys. A token with no `kid` at
+all (issued by a pre-rotation binary) still verifies against the active secret, so upgrading to
+this mechanism itself needs no special handling.
+
+1. Generate a new secret (≥32 random characters) and choose a new key id, e.g. `jwt-v2`.
+2. Set `JWT_SECONDARY_SECRETS_JSON={"jwt-v1":"<the current JWT_SECRET value>"}` **before**
+   changing anything else, so the old secret is already trusted once the switch happens.
+3. Set `JWT_KEY_ID=jwt-v2` and `JWT_SECRET=<the new secret>`. Redeploy. Every newly issued token
+   now signs with the new secret and carries `kid: jwt-v2`; every token issued before the
+   redeploy (`kid: jwt-v1` or no `kid` at all) keeps verifying, since `jwt-v1` is still trusted.
+4. Wait out the longest-lived token issued under the old secret — the refresh token's lifetime
+   (`JWT_REFRESH_EXPIRY`, default 7 days), not just the shorter access-token lifetime, since a
+   refresh exchange still needs the old access token's session context to remain valid until the
+   refresh itself is exchanged for a new pair signed under the new key.
+5. Once no unexpired token could still be signed under the old secret, remove
+   `JWT_SECONDARY_SECRETS_JSON` entirely and redeploy again.
+
 ## Secrets with no overlap mechanism (rotation is a hard cutover)
 
 These all share the same shape: change the environment variable, redeploy, and every existing
@@ -84,7 +109,6 @@ procedure existed), not technical.
 
 | Secret | Real impact of rotating | Procedure |
 |---|---|---|
-| `JWT_SECRET` (backend) | Every issued access/refresh token becomes invalid immediately — every logged-in user is signed out with no warning | Schedule a maintenance window; notify support ahead of time (school staff will see this as "everyone got logged out"); change the env var; redeploy; no other coordination possible since the token itself carries no key ID to support overlap |
 | `MARKETPLACE_ADMIN_TOKEN` | Every admin script/tool using the old token starts getting 401s the instant the new value is live | Update every caller (CI secrets, any operator's local `.env`, scripts under `apps/marketplace-api/scripts/`) *before* redeploying with the new value, not after — there is no dual-token grace period, so sequence this the other way around from a normal secret to avoid a self-inflicted lockout |
 | `PAYMENT_WEBHOOK_SECRET` (marketplace) | The payment provider's webhook signature stops verifying the instant the values disagree; in-flight webhooks fail until both sides match | Coordinate the change with the payment provider's dashboard update in the same window — whichever side changes first will reject the other's requests/signatures until both are updated |
 | `METRICS_TOKEN` (both apps) | Prometheus's scrape starts returning 401 immediately (this is the newest secret in the inventory, added with the observability work) | Update the token in both the app's env and the Prometheus scrape config's `bearer_token` in the same change; a scrape gap of one interval is the expected, low-stakes impact — this is the least disruptive secret to rotate in this whole list |
@@ -110,6 +134,22 @@ procedure existed), not technical.
   document's scope.
 
 ## Verification
+
+### `JWT_SECRET` overlap rotation
+
+Live-drilled end to end using the real, unmodified `JwtService` (`@nestjs/jwt`, the same class
+`AuthModule` wires up) and the real `resolveJwtVerificationSecret`/`verifyJwtWithRotationSupport`
+functions:
+[`backend/scripts/jwt-secret-rotation-live-drill.js`](../../backend/scripts/jwt-secret-rotation-live-drill.js),
+8/8 checks pass — a pre-rotation token with no `kid` at all still verifies against the active
+secret; a token signed under `jwt-v1` keeps verifying once `jwt-v2` becomes active and `jwt-v1`
+is only a trusted secondary (the actual overlap); a fresh `jwt-v2` token verifies at the same
+time; once `jwt-v1` is dropped from the secondary set the old token fails closed
+(`JWT signing key is not trusted`) while the new one keeps working; and two negative controls
+confirm an unknown key id is rejected and that standard JWT signature tampering is still caught
+(this feature didn't weaken it). This closes a real, previously-true gap — `JWT_SECRET` had no
+overlap primitive at all before this change, unlike the repository/entitlement keys, which
+already had one but simply hadn't been drilled.
 
 ### Entitlement signing key rotation
 

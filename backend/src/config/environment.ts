@@ -19,6 +19,8 @@ export interface RuntimeConfig {
   cookieSecure: boolean;
   jwtAccessExpiry: string;
   jwtRefreshExpiryDays: number;
+  jwtKeyId: string;
+  jwtSecondarySecrets: ReadonlyMap<string, string>;
   backupDir: string;
   backupRetentionDays: number;
   pluginDir: string;
@@ -142,6 +144,8 @@ export function readRuntimeConfig(env: NodeJS.ProcessEnv = process.env): Runtime
     cookieSecure: boolean(env, 'COOKIE_SECURE', nodeEnv === 'production'),
     jwtAccessExpiry: duration(env, 'JWT_ACCESS_EXPIRY', '2h'),
     jwtRefreshExpiryDays: integer(env, 'JWT_REFRESH_EXPIRY', 7, 1, 365),
+    jwtKeyId: env.JWT_KEY_ID?.trim() || 'jwt-v1',
+    jwtSecondarySecrets: parseJwtSecondarySecrets(env.JWT_SECONDARY_SECRETS_JSON),
     backupDir: productionPath(env, 'BACKUP_DIR', nodeEnv === 'production' ? '/data/backups' : './backups', nodeEnv),
     backupRetentionDays: integer(env, 'BACKUP_RETENTION_DAYS', 30, 0, 3650),
     pluginDir: productionPath(env, 'PLUGIN_DIR', nodeEnv === 'production' ? '/data/plugins' : './plugins-installed', nodeEnv),
@@ -157,4 +161,35 @@ export function readRuntimeConfig(env: NodeJS.ProcessEnv = process.env): Runtime
 
 export function getJwtSecret(): string {
   return resolveJwtSecret(process.env, parseNodeEnvironment(process.env.NODE_ENV));
+}
+
+/**
+ * Overlap-capable rotation for JWT_SECRET (docs/operations/secret-rotation-runbooks.md): the
+ * active secret always signs new tokens, tagged with its key id in the JWT header (`kid`), so a
+ * verifier can trust an old secret for tokens still in flight without accepting new tokens
+ * signed by it. Mirrors the shape already used for the repository/entitlement signing keys
+ * (an id-keyed JSON map of secondary trusted material), not something new invented for JWTs.
+ */
+export function getJwtKeyId(): string {
+  return process.env.JWT_KEY_ID?.trim() || 'jwt-v1';
+}
+
+export function parseJwtSecondarySecrets(raw: string | undefined): ReadonlyMap<string, string> {
+  if (!raw?.trim()) return new Map();
+  let value: unknown;
+  try { value = JSON.parse(raw); } catch { throw new Error('JWT_SECONDARY_SECRETS_JSON must be valid JSON'); }
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new Error('JWT_SECONDARY_SECRETS_JSON must be a JSON object mapping key id to secret');
+  }
+  const map = new Map<string, string>();
+  for (const [keyId, secret] of Object.entries(value as Record<string, unknown>)) {
+    if (!/^[a-zA-Z0-9._-]{1,100}$/.test(keyId)) throw new Error(`JWT_SECONDARY_SECRETS_JSON key id is invalid: ${keyId}`);
+    if (typeof secret !== 'string' || !secret.trim()) throw new Error(`JWT_SECONDARY_SECRETS_JSON secret for "${keyId}" must be a non-empty string`);
+    map.set(keyId, secret);
+  }
+  return map;
+}
+
+export function getJwtSecondarySecrets(): ReadonlyMap<string, string> {
+  return parseJwtSecondarySecrets(process.env.JWT_SECONDARY_SECRETS_JSON);
 }

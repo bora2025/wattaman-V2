@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
-import { ExtractJwt, Strategy } from 'passport-jwt';
+import { JwtService } from '@nestjs/jwt';
+import { Strategy } from 'passport-jwt';
 import { Request } from 'express';
-import { getJwtSecret } from '../config/environment';
+import { resolveJwtVerificationSecret } from './jwt-verification';
 
 function extractJwtFromCookieOrHeader(req: Request): string | null {
   // 1) Try HttpOnly cookie first (web)
@@ -19,11 +20,17 @@ function extractJwtFromCookieOrHeader(req: Request): string | null {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor() {
+  constructor(jwtService: JwtService) {
     super({
       jwtFromRequest: extractJwtFromCookieOrHeader,
       ignoreExpiration: false,
-      secretOrKey: getJwtSecret(),
+      // secretOrKeyProvider (rather than a static secretOrKey) lets an in-flight token signed
+      // under a previous JWT_SECRET keep verifying during a rotation's overlap window -- see
+      // src/auth/jwt-verification.ts and docs/operations/secret-rotation-runbooks.md.
+      secretOrKeyProvider: (_request: Request, rawJwtToken: string, done: (err: unknown, secret?: string) => void) => {
+        try { done(null, resolveJwtVerificationSecret(jwtService, rawJwtToken)); }
+        catch (error) { done(error); }
+      },
     });
   }
 
