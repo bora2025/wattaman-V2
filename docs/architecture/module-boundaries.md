@@ -45,6 +45,10 @@ Moving a PLUGIN-ELIGIBLE module to `plugins/<id>/` now has a working precedent, 
 | `scoring` | PLUGIN-ELIGIBLE | Grade/scoresheet management — assessment feature, not core roster/attendance |
 | `timetable` | PLUGIN-ELIGIBLE | Scheduling subsystem (subjects/classrooms/teacher timetables) |
 | `parent` (messaging feature, distinct from the gateway noted above) | PLUGIN-ELIGIBLE | Parent-teacher direct messaging is a feature built *on* the shared realtime infrastructure, not the infrastructure itself |
+| `announcements` | CORE | Not a feature module anymore — this is the ~40-line Prisma-free proxy controller C-004 left behind to preserve old URLs after moving the real feature to `plugins/announcements/`. It's the post-extraction remnant, not something further extractable |
+| `observability` | CORE | Structured request logging and the `/metrics` endpoint — infrastructure every module (core or plugin-supporting) runs under, same tier as `database`/`config`/`common`/`health` |
+| `storage` | SHARED | The `StorageBackend` interface (local/S3/dual-write) backing `PluginStorageService` — own core caller (plugin file storage today) plus the same SDK-exposed-capability shape as `directory`, extended to cover binary data |
+| `updates` | CORE | Core/plugin update orchestration (preflight, backup, maintenance mode, health gate) — the platform's own upgrade mechanism, which by definition can't be a plugin without a way to update itself |
 | — | DEPRECATED | None identified in this pass |
 
 ## Target workspace boundaries
