@@ -68,5 +68,71 @@ function timestamp() {
   return new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
 }
 
-module.exports = { backupDirectory, fail, installationSlug, postgresEnvironment, run, sha256, timestamp };
+// Same relative-path safety rule as backend/src/plugins/plugin-package.ts's safePackagePath.
+function safeRelativePath(name) {
+  return !!name && !name.startsWith('/') && !name.includes('\\') && !name.includes('\0') && !name.split('/').includes('..');
+}
+
+function namedDirectory(envVar, fallback) {
+  const directory = path.resolve(process.env[envVar] || fallback);
+  if (directory === path.parse(directory).root) fail(`${envVar} cannot be a filesystem root`);
+  fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
+  return directory;
+}
+
+function pluginDirectory() {
+  return namedDirectory('PLUGIN_DIR', '/data/plugins');
+}
+
+function pluginDataDirectory() {
+  return namedDirectory('PLUGIN_DATA_DIR', '/data/plugin-data');
+}
+
+// Walks `root` and returns a { algorithm: 'sha256', files: { relativePath: hex } }
+// manifest -- the same shape backend/src/plugins/plugin-package.ts's ChecksumsFile
+// uses for signed plugin packages. Rejects symlinks and unsafe paths the same way
+// verifyInstalledDirectory() does, since this walks the same class of directory.
+//
+// Throws plain Error (not fail()/process.exit) so it stays safely unit-testable --
+// callers running as a one-shot script let it propagate as an uncaught exception,
+// which still exits non-zero.
+function walkDirectoryChecksums(root) {
+  const files = {};
+  const visit = (current) => {
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const absolute = path.join(current, entry.name);
+      const stat = fs.lstatSync(absolute);
+      if (stat.isSymbolicLink()) throw new Error(`Recovery-set source contains a symlink: ${absolute}`);
+      if (entry.isDirectory()) { visit(absolute); continue; }
+      if (!entry.isFile()) continue;
+      const relative = path.relative(root, absolute).split(path.sep).join('/');
+      if (!safeRelativePath(relative)) throw new Error(`Recovery-set source has an unsafe path: ${relative}`);
+      files[relative] = sha256(absolute);
+    }
+  };
+  if (fs.existsSync(root)) visit(root);
+  return { algorithm: 'sha256', files };
+}
+
+function verifyDirectoryChecksums(root, manifest) {
+  if (manifest.algorithm !== 'sha256') throw new Error('Recovery-set manifest uses an unsupported checksum algorithm');
+  const actual = walkDirectoryChecksums(root);
+  const expectedNames = Object.keys(manifest.files).sort();
+  const actualNames = Object.keys(actual.files).sort();
+  if (JSON.stringify(expectedNames) !== JSON.stringify(actualNames)) throw new Error('Recovery-set restored files do not match the manifest file list');
+  for (const name of expectedNames) {
+    if (manifest.files[name] !== actual.files[name]) throw new Error(`Recovery-set checksum mismatch: ${name}`);
+  }
+}
+
+function tar(args) {
+  const result = spawnSync('tar', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  if (result.error) fail(`tar could not start: ${result.error.message}`);
+  if (result.status !== 0) fail(`tar exited with status ${result.status}: ${result.stderr || ''}`);
+}
+
+module.exports = {
+  backupDirectory, fail, installationSlug, postgresEnvironment, run, sha256, timestamp,
+  pluginDirectory, pluginDataDirectory, walkDirectoryChecksums, verifyDirectoryChecksums, tar, safeRelativePath,
+};
 
