@@ -1,6 +1,6 @@
 # Wattanam V2 Technical Ownership Inventory
 
-Status: reviewed baseline, 2026-08-28. This inventory is generated from the current repository and is the Phase A ownership source. Field-level privacy classification is tracked as remaining work until every schema field is classified.
+Status: reviewed baseline, 2026-08-28. This inventory is generated from the current repository and is the Phase A ownership source. Field-level privacy classification now lives in [data-classification.md](./data-classification.md) (A-002); core/plugin/shared/deprecated module classification now lives in [module-boundaries.md](./module-boundaries.md) (A-007).
 
 ## Deployable systems
 
@@ -29,7 +29,7 @@ The school installation and marketplace never share a database, secret, volume, 
 | Learning/assessment | ScoreSheet, ScoreSheetClass, ScoreSubject, ScoreExamTab, ScoreEntry, Exam, ExamQuestion, ExamAttempt, Assignment, AssignmentSubmission, QuizQuestion, QuizAnswer, Course, CourseLesson, LessonPage, CourseEnrollment, LessonAttempt, PageResponse, CourseSession, CourseAttendance, LessonView |
 | Communication/content | Notification, NotificationPreference, Message, Announcement, AnnouncementRead, Post |
 | Installation/core settings | Installation, SiteSetting |
-| Plugin platform | PluginInstallation, PluginMigration, PluginSetting, PluginJobDefinition, PluginJobRun, PluginPermissionGrant |
+| Plugin platform | PluginInstallation, PluginMigration, PluginSetting, PluginJobDefinition, PluginJobRun, PluginPermissionGrant, PluginNotificationUsage, PluginEntitlementCache |
 
 No plugin may write a core-owned model. Plugin tables must use the enforced `plugin_<plugin-id>_*` namespace. Announcements remain core-owned until C-004 records a single-writer cutover and comparison report.
 
@@ -37,12 +37,13 @@ No plugin may write a core-owned model. Plugin tables must use the enforced `plu
 
 | Domain owner | Models |
 |---|---|
-| Customer identity | MarketplaceAccount, InstallationRegistration |
-| Publisher governance | Publisher, PublisherKey |
-| Catalog/review | MarketplacePlugin, PluginVersion, VersionReview |
+| Customer identity | MarketplaceAccount, InstallationRegistration, MarketplaceSession, MarketplaceEmailVerification, MarketplacePasswordReset, MarketplaceMfaRecoveryCode, MarketplaceAuditEvent, InstallationRegistrationKey, InstallationRegistrationChallenge |
+| Publisher governance | Publisher, PublisherKey, PublisherMember, PublisherPolicy, PublisherPolicyAcceptance, PluginSubmission, SubmissionReview |
+| Catalog/review | MarketplacePlugin, PluginVersion, VersionReview, ProductPrice |
 | Repository/security | PackageArtifact, CoreRelease, SecurityAdvisory, DownloadEvent |
 | Commerce | MarketplaceOrder, MarketplaceOrderLine, MarketplacePayment, PaymentWebhookEvent, MarketplaceRefund, MarketplacePaymentDispute |
 | Licensing | InstallationEntitlement |
+| Publisher finance/payouts | PublisherRevenueEntry, PublisherStatement, PublisherStatementLine, PublisherPayout, PublisherPayoutLine |
 
 ## Persistent files
 
@@ -74,7 +75,7 @@ Publisher and repository private signing keys are secret-manager inputs, never s
 | Gateway | API_UPSTREAM, WEB_UPSTREAM | SRE | private Railway/Docker endpoints only |
 | Marketplace | DATABASE_URL, PUBLIC_BASE_URL, MARKETPLACE_ADMIN_TOKEN, METADATA_SIGNING_PRIVATE_KEY_FILE/KEY/ID, ENTITLEMENT_SIGNING_PRIVATE_KEY_FILE/KEY/ID, PAYMENT_WEBHOOK_SECRET, ARTIFACT_STORAGE_PATH, MAX_ARTIFACT_BYTES | Marketplace/Security | validated at startup; HTTPS in production; repository and entitlement keys/key IDs must be distinct; webhook secret is provider-scoped and at least 32 characters |
 
-Core operational and notification-provider variables now have centralized startup validation. A-008 still requires production custody/rotation records for each secret, plus schemas and redaction coverage for any provider added later.
+Core operational and notification-provider variables now have centralized startup validation. Full per-secret generation/custody/rotation/expiry/revocation/redaction records now exist in [secrets-inventory.md](../operations/secrets-inventory.md) (A-008) — it also distinguishes true secrets from public/integrity-sensitive material (like `PLUGIN_TRUSTED_KEYS`) that this table lists alongside real secrets without that distinction. Schemas and redaction coverage for any provider added later still need adding there in the same change.
 
 ## External providers
 
@@ -83,7 +84,7 @@ Core operational and notification-provider variables now have centralized startu
 | Email | SendGrid | recipient, configured message | operation skips/fails visibly; core remains available |
 | SMS | Twilio | recipient phone, configured message | operation skips/fails visibly; core remains available |
 | Railway | project/services/private DNS/domain, managed PostgreSQL 18 | operational metadata | installed school continues locally except hosting outage |
-| Payment | not selected | none yet | no paid fulfillment until E gates |
+| Payment | manual invoice + webhook adapter (E-007/E-008/E-009) | order/amount/provider reference, raw webhook payload | operation fails visibly; no silent fulfillment. A real card-network processor is still unselected — this adapter is the interim shape |
 | Object storage | local/Railway volume | plugin/artifact files | S3 adapter remains B-015 |
 
 ## Contract surfaces
