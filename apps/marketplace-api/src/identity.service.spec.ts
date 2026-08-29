@@ -36,6 +36,24 @@ describe('account registration and email verification', () => {
     expect(result.emailVerificationToken).toBeUndefined();
   });
 
+  it('delivers the verification token through the configured provider without returning it in production', async () => {
+    const tx = {
+      marketplaceAccount: { create: jest.fn().mockResolvedValue({ id: 'account-1', email: 'owner@school.example' }) },
+      marketplaceEmailVerification: { create: jest.fn().mockResolvedValue({}) },
+      marketplaceAuditEvent: { create: jest.fn().mockResolvedValue({}) },
+    };
+    const email = { send: jest.fn().mockResolvedValue(undefined) };
+    const configured = { ...config('production'), publicBaseUrl: 'https://marketplace.example', transactionalEmail: { provider: 'sendgrid' } };
+    const result = await new IdentityService(prismaWith(tx), configured, email).register({
+      email: 'owner@school.example', password: 'a-strong-password', displayName: 'Owner',
+    });
+    expect(result.emailVerificationToken).toBeUndefined();
+    expect(email.send).toHaveBeenCalledWith(expect.objectContaining({
+      to: 'owner@school.example',
+      text: expect.stringContaining('https://marketplace.example/marketplace/verify-email?token='),
+    }));
+  });
+
   it('rejects a duplicate email as a conflict', async () => {
     const tx = { marketplaceAccount: { create: jest.fn().mockRejectedValue(Object.assign(new Error('unique'), { code: 'P2002' })) } };
     const service = new IdentityService(prismaWith(tx), config());

@@ -17,9 +17,10 @@ import { PluginMigrationsService } from './plugin-migrations.service';
 import { PluginPermissionsService } from './plugin-permissions.service';
 import { PluginRealtimeService } from './plugin-realtime.service';
 import { PluginNotificationQuotaService } from './plugin-notification-quota.service';
+import { StorageModule } from '../storage/storage.module';
 
 @Module({
-  imports: [DatabaseModule, NotificationModule, ParentModule, DirectoryModule],
+  imports: [DatabaseModule, NotificationModule, ParentModule, DirectoryModule, StorageModule],
   controllers: [PluginsController, PluginApiController],
   providers: [PluginPackageVerifier, PluginEventBus, PluginPermissionsService, PluginExtensionsService, PluginJobsService, PluginSettingsService, PluginStorageService, PluginMigrationsService, PluginRealtimeService, PluginNotificationQuotaService, PluginRuntimeService, PluginsService],
   exports: [PluginsService, PluginEventBus, PluginExtensionsService, PluginPermissionsService],

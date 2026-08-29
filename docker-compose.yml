@@ -27,6 +27,7 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: ${APP_NODE_ENV:-production}
+      PROCESS_ROLE: ${PROCESS_ROLE:-combined}
       PORT: 3001
       APP_VERSION: ${APP_VERSION:-0.1.0}
       DATABASE_URL: postgresql://${POSTGRES_USER:-wattanam}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-wattanam}
@@ -38,6 +39,14 @@ services:
       PLUGIN_DIR: /data/plugins
       PLUGIN_DATA_DIR: /data/plugin-data
       PLUGIN_STORAGE_MAX_FILE_BYTES: ${PLUGIN_STORAGE_MAX_FILE_BYTES:-1048576}
+      PLUGIN_STORAGE_PROVIDER: ${PLUGIN_STORAGE_PROVIDER:-local}
+      PLUGIN_STORAGE_S3_ENDPOINT: ${PLUGIN_STORAGE_S3_ENDPOINT:-}
+      PLUGIN_STORAGE_S3_BUCKET: ${PLUGIN_STORAGE_S3_BUCKET:-}
+      PLUGIN_STORAGE_S3_REGION: ${PLUGIN_STORAGE_S3_REGION:-auto}
+      PLUGIN_STORAGE_S3_ACCESS_KEY_ID: ${PLUGIN_STORAGE_S3_ACCESS_KEY_ID:-}
+      PLUGIN_STORAGE_S3_SECRET_ACCESS_KEY: ${PLUGIN_STORAGE_S3_SECRET_ACCESS_KEY:-}
+      PLUGIN_STORAGE_S3_FORCE_PATH_STYLE: ${PLUGIN_STORAGE_S3_FORCE_PATH_STYLE:-true}
+      PLUGIN_STORAGE_S3_PREFIX: ${PLUGIN_STORAGE_S3_PREFIX:-plugin-data}
       PLUGIN_SAFE_MODE: ${PLUGIN_SAFE_MODE:-false}
       PLUGIN_TRUSTED_KEYS_FILE: /run/plugin-keys/trusted-keys.json
       PLUGIN_TRUSTED_KEYS: ${PLUGIN_TRUSTED_KEYS:-{}}
@@ -102,6 +111,48 @@ services:
       interval: 10s
       timeout: 5s
       retries: 8
+    networks: [wattanam_private]
+
+  worker:
+    profiles: ["split-worker"]
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${APP_NODE_ENV:-production}
+      PROCESS_ROLE: worker
+      WORKER_PORT: 3002
+      APP_VERSION: ${APP_VERSION:-0.1.0}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-wattanam}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-wattanam}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      CORS_ORIGINS: ${APP_URL:-http://localhost:3000}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      BACKUP_DIR: /data/backups
+      PLUGIN_DIR: /data/plugins
+      PLUGIN_DATA_DIR: /data/plugin-data
+      PLUGIN_STORAGE_PROVIDER: ${PLUGIN_STORAGE_PROVIDER:-local}
+      PLUGIN_STORAGE_S3_ENDPOINT: ${PLUGIN_STORAGE_S3_ENDPOINT:-}
+      PLUGIN_STORAGE_S3_BUCKET: ${PLUGIN_STORAGE_S3_BUCKET:-}
+      PLUGIN_STORAGE_S3_REGION: ${PLUGIN_STORAGE_S3_REGION:-auto}
+      PLUGIN_STORAGE_S3_ACCESS_KEY_ID: ${PLUGIN_STORAGE_S3_ACCESS_KEY_ID:-}
+      PLUGIN_STORAGE_S3_SECRET_ACCESS_KEY: ${PLUGIN_STORAGE_S3_SECRET_ACCESS_KEY:-}
+      PLUGIN_TRUSTED_KEYS: ${PLUGIN_TRUSTED_KEYS:-{}}
+      MARKETPLACE_URL: ${MARKETPLACE_URL:-}
+    command: ["node", "dist/worker"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3002/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    volumes:
+      - backups:/data/backups
+      - plugins:/data/plugins:ro
+      - plugin_data:/data/plugin-data
     networks: [wattanam_private]
 
   backup:

@@ -41,5 +41,21 @@ describe('BackupService', () => {
     const serialized = JSON.stringify(await new BackupService().status());
     expect(serialized).not.toContain(directory);
   });
+
+  it('scheduledBackup() logs and never throws when the underlying backup fails', async () => {
+    const service = new BackupService();
+    jest.spyOn(service, 'createRecoverySet').mockRejectedValue(new Error('pg_dump could not start'));
+    await expect(service.scheduledBackup()).resolves.toBeUndefined();
+  });
+
+  it('scheduledBackup() calls createRecoverySet() exactly once on success', async () => {
+    const service = new BackupService();
+    const spy = jest.spyOn(service, 'createRecoverySet').mockResolvedValue({
+      format: 'wattanam-recovery-set-v1', journalFile: 'wattanam-recovery-test.recovery-set.json', createdAt: new Date().toISOString(),
+      database: { file: 'test.dump', sha256: 'abc', sizeBytes: 1 },
+    });
+    await service.scheduledBackup();
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
 });
 

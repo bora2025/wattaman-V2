@@ -10,6 +10,7 @@
     "build:frontend": "cd frontend && npm run build",
     "build:marketplace": "cd apps/marketplace-api && npm run build",
     "test:marketplace": "cd apps/marketplace-api && npm test",
+    "provision:railway:school": "node tools/provision-railway-school.js",
     "install:all": "cd backend && npm install && cd ../frontend && npm install"
   },
   "keywords": [],

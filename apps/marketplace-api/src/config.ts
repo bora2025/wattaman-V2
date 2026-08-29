@@ -23,6 +23,9 @@ const schema = z.object({
   MAX_ARTIFACT_BYTES: z.coerce.number().int().positive().max(250 * 1024 * 1024).default(50 * 1024 * 1024),
   IDENTITY_ENCRYPTION_KEYS_JSON: z.string().optional(),
   IDENTITY_ENCRYPTION_ACTIVE_KEY_ID: z.string().regex(/^[a-zA-Z0-9._-]{1,100}$/).optional(),
+  TRANSACTIONAL_EMAIL_PROVIDER: z.enum(['disabled', 'sendgrid']).default('disabled'),
+  SENDGRID_API_KEY: z.string().min(20).optional(),
+  TRANSACTIONAL_EMAIL_FROM: z.string().email().optional(),
 });
 
 export type MarketplaceConfig = {
@@ -40,6 +43,7 @@ export type MarketplaceConfig = {
   artifactPath: string;
   maxArtifactBytes: number;
   identityEncryptionKeys: SecretEncryptionKey[];
+  transactionalEmail: { provider: 'disabled' | 'sendgrid'; apiKey?: string; from?: string };
 };
 
 export function readConfig(env: NodeJS.ProcessEnv = process.env): MarketplaceConfig {
@@ -47,6 +51,12 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): MarketplaceCon
   const identityEncryptionKeys = parseSecretEncryptionKeys(value.IDENTITY_ENCRYPTION_KEYS_JSON, value.IDENTITY_ENCRYPTION_ACTIVE_KEY_ID);
   if (value.NODE_ENV === 'production' && identityEncryptionKeys.length === 0) {
     throw new Error('IDENTITY_ENCRYPTION_KEYS_JSON is required in production');
+  }
+  if (value.TRANSACTIONAL_EMAIL_PROVIDER === 'sendgrid' && (!value.SENDGRID_API_KEY || !value.TRANSACTIONAL_EMAIL_FROM)) {
+    throw new Error('SENDGRID_API_KEY and TRANSACTIONAL_EMAIL_FROM are required for SendGrid transactional email');
+  }
+  if (value.NODE_ENV === 'production' && value.TRANSACTIONAL_EMAIL_PROVIDER === 'disabled') {
+    throw new Error('TRANSACTIONAL_EMAIL_PROVIDER must be configured in production');
   }
   const artifactPath = path.resolve(value.ARTIFACT_STORAGE_PATH);
   mkdirSync(artifactPath, { recursive: true });
@@ -84,6 +94,7 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): MarketplaceCon
     artifactPath,
     maxArtifactBytes: value.MAX_ARTIFACT_BYTES,
     identityEncryptionKeys,
+    transactionalEmail: { provider: value.TRANSACTIONAL_EMAIL_PROVIDER, apiKey: value.SENDGRID_API_KEY, from: value.TRANSACTIONAL_EMAIL_FROM },
   };
 }
 

@@ -2,6 +2,7 @@ import { promises as fs } from 'fs';
 import os from 'os';
 import path from 'path';
 import { PluginStorageService } from './plugin-storage.service';
+import { LocalVolumeStorageProvider } from '../storage/object-storage';
 
 describe('PluginStorageService', () => {
   const original = process.env;
@@ -10,7 +11,7 @@ describe('PluginStorageService', () => {
   afterEach(async () => { process.env = original; await fs.rm(directory, { recursive: true, force: true }); });
 
   it('reads, lists, and deletes files only inside a plugin namespace', async () => {
-    const service = new PluginStorageService();
+    const service = new PluginStorageService(new LocalVolumeStorageProvider(directory));
     await service.writeText('wattanam.test', 'jobs/state.txt', 'ready');
     await expect(service.readText('wattanam.test', 'jobs/state.txt')).resolves.toBe('ready');
     await expect(service.readText('wattanam.other', 'jobs/state.txt')).resolves.toBeNull();
@@ -20,7 +21,7 @@ describe('PluginStorageService', () => {
   });
 
   it('rejects traversal and oversized content', async () => {
-    const service = new PluginStorageService();
+    const service = new PluginStorageService(new LocalVolumeStorageProvider(directory));
     await expect(service.writeText('wattanam.test', '../escape', 'bad')).rejects.toThrow('invalid');
     process.env.PLUGIN_STORAGE_MAX_FILE_BYTES = '3';
     await expect(service.writeText('wattanam.test', 'large.txt', 'four')).rejects.toThrow('limit');

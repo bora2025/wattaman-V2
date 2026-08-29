@@ -40,4 +40,21 @@ describe('marketplace signing configuration', () => {
     (env as Record<string, string>).METADATA_SECONDARY_SIGNING_KEYS_BASE64 = Buffer.from(json).toString('base64');
     expect(readConfig(env).signingKeys.map((key) => key.keyId)).toEqual(['repository-1', 'repository-old']);
   });
+
+  it('requires both SendGrid credentials when transactional email is enabled', () => {
+    const env = environment(privateKey(), privateKey());
+    (env as Record<string, string>).TRANSACTIONAL_EMAIL_PROVIDER = 'sendgrid';
+    expect(() => readConfig(env)).toThrow('SENDGRID_API_KEY and TRANSACTIONAL_EMAIL_FROM');
+    (env as Record<string, string>).SENDGRID_API_KEY = 'SG.'.padEnd(24, 'x');
+    (env as Record<string, string>).TRANSACTIONAL_EMAIL_FROM = 'support@wattanam.example';
+    expect(readConfig(env).transactionalEmail.provider).toBe('sendgrid');
+  });
+
+  it('fails closed when transactional delivery is disabled in production', () => {
+    const env = environment(privateKey(), privateKey());
+    (env as Record<string, string>).NODE_ENV = 'production';
+    (env as Record<string, string>).IDENTITY_ENCRYPTION_KEYS_JSON = JSON.stringify({ active: Buffer.alloc(32, 1).toString('base64') });
+    (env as Record<string, string>).IDENTITY_ENCRYPTION_ACTIVE_KEY_ID = 'active';
+    expect(() => readConfig(env)).toThrow('TRANSACTIONAL_EMAIL_PROVIDER must be configured');
+  });
 });

@@ -44,40 +44,61 @@ export class AuthService {
 
   /** Create a secure random refresh token, store in DB, return the raw token */
   async createRefreshToken(userId: string): Promise<string> {
+    return this.createRefreshTokenWithClient(this.prisma, userId);
+  }
+
+  private tokenHash(raw: string): string {
+    return crypto.createHash('sha256').update(raw, 'utf8').digest('hex');
+  }
+
+  private async createRefreshTokenWithClient(client: any, userId: string): Promise<string> {
     const raw = crypto.randomBytes(40).toString('hex');
     const expiresAt = new Date();
     const days = parseInt(process.env.JWT_REFRESH_EXPIRY || '7', 10) || 7;
     expiresAt.setDate(expiresAt.getDate() + days);
 
-    await this.prisma.refreshToken.create({
-      data: { token: raw, userId, expiresAt },
+    await client.refreshToken.create({
+      data: { tokenHash: this.tokenHash(raw), userId, expiresAt },
     });
     return raw;
   }
 
   /** Validate a refresh token — returns the user or throws */
   async validateRefreshToken(token: string) {
-    const record = await this.prisma.refreshToken.findUnique({
-      where: { token },
+    const record = await this.prisma.refreshToken.findFirst({
+      where: { OR: [{ tokenHash: this.tokenHash(token) }, { token }] },
       include: { user: true },
     });
-    if (!record || record.expiresAt < new Date()) {
-      if (record) {
-        await this.prisma.refreshToken.delete({ where: { id: record.id } });
-      }
+    if (!record || record.revokedAt || record.expiresAt < new Date()) {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
     return record.user;
   }
 
-  /** Rotate: delete old refresh token, issue new pair */
+  /** Rotate atomically. Reuse of a consumed token revokes the whole token family. */
   async rotateRefreshToken(oldToken: string) {
-    const user = await this.validateRefreshToken(oldToken);
-    // Delete the old token (rotation)
-    await this.prisma.refreshToken.deleteMany({ where: { token: oldToken } });
-    const accessToken = this.signAccessToken(user);
-    const refreshToken = await this.createRefreshToken(user.id);
-    return { accessToken, refreshToken, user };
+    const now = new Date();
+    const result = await this.prisma.$transaction(async (tx) => {
+      const record = await tx.refreshToken.findFirst({
+        where: { OR: [{ tokenHash: this.tokenHash(oldToken) }, { token: oldToken }] }, include: { user: true },
+      });
+      if (!record) return { ok: false as const };
+      if (record.revokedAt || record.expiresAt < now) {
+        await tx.refreshToken.updateMany({ where: { userId: record.userId, revokedAt: null }, data: { revokedAt: now } });
+        return { ok: false as const };
+      }
+      const claimed = await tx.refreshToken.updateMany({
+        where: { id: record.id, revokedAt: null }, data: { revokedAt: now, token: null, tokenHash: record.tokenHash ?? this.tokenHash(oldToken) },
+      });
+      if (claimed.count !== 1) {
+        await tx.refreshToken.updateMany({ where: { userId: record.userId, revokedAt: null }, data: { revokedAt: now } });
+        return { ok: false as const };
+      }
+      const refreshToken = await this.createRefreshTokenWithClient(tx, record.userId);
+      return { ok: true as const, user: record.user, refreshToken };
+    }, { isolationLevel: 'Serializable' });
+    if (!result.ok) throw new UnauthorizedException('Invalid or expired refresh token');
+    return { accessToken: this.signAccessToken(result.user), refreshToken: result.refreshToken, user: result.user };
   }
 
   /** Revoke all refresh tokens for a user (logout everywhere) */

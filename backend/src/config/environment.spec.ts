@@ -1,4 +1,4 @@
-import { parseCorsOrigins, readRuntimeConfig } from './environment';
+import { getProcessRole, parseCorsOrigins, readRuntimeConfig, runsBackgroundJobs } from './environment';
 
 describe('runtime environment', () => {
   const baseEnvironment: NodeJS.ProcessEnv = {
@@ -15,6 +15,8 @@ describe('runtime environment', () => {
     expect(config.cookieSecure).toBe(false);
     expect(config.backupRetentionDays).toBe(30);
     expect(config.pluginMaxPackageBytes).toBe(50 * 1024 * 1024);
+    expect(config.processRole).toBe('combined');
+    expect(config.workerPort).toBe(3002);
   });
 
   it('rejects an insecure production JWT secret', () => {
@@ -64,5 +66,14 @@ describe('runtime environment', () => {
   it('validates authentication expiry formats', () => {
     expect(() => readRuntimeConfig({ ...baseEnvironment, JWT_ACCESS_EXPIRY: 'two hours' })).toThrow('JWT_ACCESS_EXPIRY');
     expect(() => readRuntimeConfig({ ...baseEnvironment, JWT_REFRESH_EXPIRY: '0' })).toThrow('JWT_REFRESH_EXPIRY');
+  });
+
+  it('validates process roles and background-job ownership', () => {
+    expect(getProcessRole({ PROCESS_ROLE: 'api' })).toBe('api');
+    expect(runsBackgroundJobs({ PROCESS_ROLE: 'api' })).toBe(false);
+    expect(runsBackgroundJobs({ PROCESS_ROLE: 'worker' })).toBe(true);
+    expect(runsBackgroundJobs({ PROCESS_ROLE: 'combined' })).toBe(true);
+    expect(() => getProcessRole({ PROCESS_ROLE: 'web' })).toThrow('PROCESS_ROLE');
+    expect(() => readRuntimeConfig({ ...baseEnvironment, WORKER_PORT: '70000' })).toThrow('PORT');
   });
 });

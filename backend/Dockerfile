@@ -44,8 +44,10 @@ COPY --chown=node:node --from=builder /app/node_modules ./node_modules
 RUN mkdir -p /data/backups /data/plugins /data/plugin-data && chown -R node:node /data
 
 ENV NODE_ENV=production
+ENV PROCESS_ROLE=combined
 
 EXPOSE 3001
+EXPOSE 3002
 
 USER node
 

@@ -361,14 +361,19 @@ model Department {
 
 model RefreshToken {
   id        String   @id @default(cuid())
-  token     String   @unique
+  /// Legacy plaintext value. New writes always leave this null; retained only so
+  /// pre-migration sessions can be rotated once without signing every user out.
+  token     String?  @unique
+  tokenHash String?  @unique
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
   createdAt DateTime @default(now())
+  revokedAt DateTime?
 
   @@index([userId])
   @@index([expiresAt])
+  @@index([userId, revokedAt])
 }
 
 /// Append-only audit trail of every privileged action in the system.

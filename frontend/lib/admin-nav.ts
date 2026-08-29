@@ -57,6 +57,7 @@ export const adminNav = [
   { label: 'nav.holidays', href: '/admin/holidays', icon: 'holiday' },
   { label: 'Backup & Restore', href: '/admin/backup', icon: 'briefcase' },
   { label: 'Plugin Manager', href: '/admin/plugins', icon: 'settings' },
+  { label: 'Licensing', href: '/admin/licensing', icon: 'certificate' },
   { label: 'Audit Logs', href: '/admin/audit', icon: 'clipboard' },
   { label: 'nav.settings', href: '/admin/settings', icon: 'settings' },
   { label: 'Appearance', href: '/admin/appearance', icon: 'paint', section: 'Appearance' },

@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
+import { Cron } from '@nestjs/schedule';
 
 const execFileAsync = promisify(execFile);
 
@@ -16,8 +17,16 @@ interface BackupManifest {
   appVersion?: string | null;
 }
 
+interface RecoverySetJournal {
+  format: string;
+  journalFile: string;
+  createdAt: string;
+  database: { file: string; sha256: string; sizeBytes: number };
+}
+
 @Injectable()
 export class BackupService {
+  private readonly logger = new Logger(BackupService.name);
   private backupDirectory() {
     return path.resolve(process.env.BACKUP_DIR || (process.env.NODE_ENV === 'production' ? '/data/backups' : './backups'));
   }
@@ -71,5 +80,38 @@ export class BackupService {
     const manifest = JSON.parse(lines[lines.length - 1]) as BackupManifest;
     if (manifest.format !== 'pg_dump-custom-v1' || !manifest.file || !manifest.sha256) throw new Error('Backup command returned an invalid manifest');
     return manifest;
+  }
+
+  /** Database + PLUGIN_DIR + PLUGIN_DATA_DIR as one recovery-set journal (B-012's format). */
+  async createRecoverySet(): Promise<RecoverySetJournal> {
+    const script = path.resolve(process.cwd(), 'scripts/backup-recovery-set.js');
+    const { stdout } = await execFileAsync(process.execPath, [script], {
+      env: process.env,
+      timeout: 10 * 60_000,
+      maxBuffer: 4 * 1024 * 1024,
+      windowsHide: true,
+    });
+    const lines = stdout.trim().split(/\r?\n/);
+    const journal = JSON.parse(lines[lines.length - 1]) as RecoverySetJournal;
+    if (journal.format !== 'wattanam-recovery-set-v1' || !journal.journalFile) throw new Error('Recovery-set backup command returned an invalid journal');
+    return journal;
+  }
+
+  /**
+   * Runs once daily -- matching the 24h RPO target in docs/operations/reliability-and-slos.md.
+   * Automatically skipped in API-only process role: ScheduleModule.forRoot() is configured
+   * with cronJobs gated on runsBackgroundJobs(), so this never needs its own role check.
+   * A failed scheduled backup is logged, not thrown -- it must never crash the process, and
+   * the next day's run (or an operator alerted by the backup_age_seconds/backup_count metrics
+   * this repo already exposes) is the recovery path, not a retry loop here.
+   */
+  @Cron('0 2 * * *')
+  async scheduledBackup(): Promise<void> {
+    try {
+      const journal = await this.createRecoverySet();
+      this.logger.log(`Scheduled recovery-set backup completed: ${journal.journalFile}`);
+    } catch (error) {
+      this.logger.error(`Scheduled recovery-set backup failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 }

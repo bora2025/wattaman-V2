@@ -3,6 +3,7 @@
 const path = require('path');
 const { spawnSync } = require('child_process');
 const bcrypt = require('bcryptjs');
+const fs = require('fs');
 const { PrismaClient } = require('@prisma/client');
 const { buildReport, querySnapshot } = require('./legacy-preflight');
 const { postgresEnvironment } = require('./db-toolkit');
@@ -28,7 +29,11 @@ async function main() {
   } else if (before.state !== 'legacy_unadopted') {
     throw new Error(`synthetic fixture target must be empty or resumable legacy_unadopted; found ${before.state}`);
   }
-  const passwordHash = await bcrypt.hash(`fixture-${Date.now()}-Password1`, 12);
+  const password = process.env.SYNTHETIC_LEGACY_OWNER_PASSWORD_FILE
+    ? fs.readFileSync(path.resolve(process.env.SYNTHETIC_LEGACY_OWNER_PASSWORD_FILE), 'utf8').replace(/\r?\n$/, '')
+    : `fixture-${Date.now()}-Password1`;
+  if (password.length < 12) throw new Error('synthetic legacy owner password must be at least 12 characters');
+  const passwordHash = await bcrypt.hash(password, 12);
   const prisma = new PrismaClient({ datasources: { db: { url: process.env.ADOPT_DATABASE_URL } } });
   try {
     await prisma.user.upsert({

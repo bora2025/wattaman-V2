@@ -11,6 +11,7 @@ import { readNotificationProviderConfig } from './notification/notification-conf
 
 async function bootstrap() {
   const config = readRuntimeConfig();
+  if (config.processRole === 'worker') throw new Error('PROCESS_ROLE=worker must start dist/worker instead of dist/main');
   // Validate optional repository trust configuration before opening a network port.
   readUpdateRepositoryConfig();
   // Optional providers do not block core operation when absent, but partial or
@@ -60,7 +61,7 @@ async function bootstrap() {
   app.enableShutdownHooks();
 
   await app.listen(config.port, '0.0.0.0');
-  console.log(`API server running on port ${config.port}`);
+  console.log(`API server running on port ${config.port} (${config.processRole} role)`);
 }
 bootstrap().catch((error) => {
   console.error('API startup failed:', error instanceof Error ? error.message : error);

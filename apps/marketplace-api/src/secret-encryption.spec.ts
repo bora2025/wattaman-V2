@@ -15,7 +15,7 @@ describe('identity secret encryption', () => {
     const keys = [{ keyId: 'identity-2026', key: key(2) }];
     const encrypted = encryptSecret('secret', keys);
     const parts = encrypted.split(':');
-    parts[5] = `${parts[5].slice(0, -1)}A`;
+    parts[5] = `${parts[5][0] === 'A' ? 'B' : 'A'}${parts[5].slice(1)}`;
     expect(() => decryptSecret(parts.join(':'), keys)).toThrow('authentication failed');
   });
 

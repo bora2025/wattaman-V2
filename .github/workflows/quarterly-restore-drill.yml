@@ -1,0 +1,78 @@
+name: Quarterly restore drill
+
+on:
+  schedule:
+    # 03:00 UTC on the 1st of January, April, July, October -- quarterly, matching B-008.
+    - cron: '0 3 1 1,4,7,10 *'
+  workflow_dispatch:
+
+jobs:
+  restore-drill:
+    runs-on: ubuntu-latest
+    services:
+      postgres-source:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wattanam
+          POSTGRES_PASSWORD: drill-password
+          POSTGRES_DB: wattanam_source
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U wattanam -d wattanam_source"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      postgres-target:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wattanam
+          POSTGRES_PASSWORD: drill-password
+          POSTGRES_DB: wattanam_target
+        ports: ['5433:5432']
+        options: >-
+          --health-cmd "pg_isready -U wattanam -d wattanam_target"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgresql://wattanam:drill-password@localhost:5432/wattanam_source
+      RESTORE_DATABASE_URL: postgresql://wattanam:drill-password@localhost:5433/wattanam_target
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: backend/package-lock.json }
+      - name: Install PostgreSQL 16 client tools (matching the production Dockerfile's exact source)
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          sudo sh -c 'echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-16
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Apply every migration to the source database
+        working-directory: backend
+        run: npx prisma generate --schema=prisma/schema.prisma && npm run db:migrate:deploy
+      - name: Seed the source with a realistic multi-table synthetic fixture
+        working-directory: backend
+        env:
+          PLUGIN_DIR: ${{ runner.temp }}/plugins
+          PLUGIN_DATA_DIR: ${{ runner.temp }}/plugin-data
+        run: |
+          node scripts/create-synthetic-legacy-fixture.js
+          mkdir -p "$PLUGIN_DIR/sample-plugin" "$PLUGIN_DATA_DIR/sample-plugin"
+          echo '{"id":"sample-plugin"}' > "$PLUGIN_DIR/sample-plugin/manifest.json"
+          echo 'drill-fixture-data' > "$PLUGIN_DATA_DIR/sample-plugin/note.txt"
+      - name: Run the restore drill (backs up the source, restores into the target, proves exact identity, measures RTO)
+        working-directory: backend
+        env:
+          BACKUP_DIR: ${{ runner.temp }}/backups
+          PLUGIN_DIR: ${{ runner.temp }}/plugins
+          PLUGIN_DATA_DIR: ${{ runner.temp }}/plugin-data
+        run: |
+          mkdir -p "$BACKUP_DIR"
+          node scripts/backup-restore-drill.js --out "${{ runner.temp }}/restore-drill-report.json"
+      - name: Upload the drill report as durable evidence (retained outside this ephemeral run)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: restore-drill-report-${{ github.run_id }}
+          path: ${{ runner.temp }}/restore-drill-report.json
+          retention-days: 400

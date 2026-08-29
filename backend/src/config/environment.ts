@@ -6,6 +6,7 @@ const INSECURE_JWT_SECRETS = new Set([
 ]);
 
 export type NodeEnvironment = 'development' | 'test' | 'production';
+export type ProcessRole = 'combined' | 'api' | 'worker';
 
 export interface RuntimeConfig {
   nodeEnv: NodeEnvironment;
@@ -26,6 +27,8 @@ export interface RuntimeConfig {
   pluginMaxPackageBytes: number;
   pluginMaxUnpackedBytes: number;
   pluginStorageMaxFileBytes: number;
+  processRole: ProcessRole;
+  workerPort: number;
 }
 
 function required(env: NodeJS.ProcessEnv, name: string): string {
@@ -78,6 +81,16 @@ function duration(env: NodeJS.ProcessEnv, name: string, fallback: string): strin
   const value = env[name]?.trim() || fallback;
   if (!/^\d+(s|m|h|d)$/.test(value)) throw new Error(`${name} must be a duration such as 15m, 2h, or 7d`);
   return value;
+}
+
+export function getProcessRole(env: NodeJS.ProcessEnv = process.env): ProcessRole {
+  const value = env.PROCESS_ROLE?.trim().toLowerCase() || 'combined';
+  if (!['combined', 'api', 'worker'].includes(value)) throw new Error('PROCESS_ROLE must be combined, api, or worker');
+  return value as ProcessRole;
+}
+
+export function runsBackgroundJobs(env: NodeJS.ProcessEnv = process.env): boolean {
+  return getProcessRole(env) !== 'api';
 }
 
 export function parseCorsOrigins(value: string | undefined): string[] {
@@ -137,6 +150,8 @@ export function readRuntimeConfig(env: NodeJS.ProcessEnv = process.env): Runtime
     pluginMaxPackageBytes: integer(env, 'PLUGIN_MAX_PACKAGE_BYTES', 50 * 1024 * 1024, 1024, 250 * 1024 * 1024),
     pluginMaxUnpackedBytes: integer(env, 'PLUGIN_MAX_UNPACKED_BYTES', 50 * 1024 * 1024, 1024, 500 * 1024 * 1024),
     pluginStorageMaxFileBytes: integer(env, 'PLUGIN_STORAGE_MAX_FILE_BYTES', 1024 * 1024, 1, 100 * 1024 * 1024),
+    processRole: getProcessRole(env),
+    workerPort: parsePort(env.WORKER_PORT || '3002'),
   };
 }
 

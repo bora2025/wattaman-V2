@@ -6,6 +6,7 @@ import {
 } from './identity-crypto';
 import { HttpError } from './http-error';
 import { decryptSecret, encryptSecret } from './secret-encryption';
+import { DisabledTransactionalEmailService, TransactionalEmailService } from './transactional-email.service';
 
 const DUMMY_PASSWORD_HASH = 'scrypt:16384:8:1:00000000000000000000000000000000:0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000';
 const SESSION_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
@@ -37,7 +38,11 @@ const confirmMfaInput = z.object({ code: z.string().regex(/^\d{6}$/) }).strict()
 const disableMfaInput = z.object({ password: z.string().min(1).max(200), code: z.string().min(6).max(20) }).strict();
 
 export class IdentityService {
-  constructor(private readonly prisma: PrismaClient, private readonly config: MarketplaceConfig) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly config: MarketplaceConfig,
+    private readonly email: TransactionalEmailService = new DisabledTransactionalEmailService(),
+  ) {}
 
   async register(value: unknown, now = new Date()) {
     const input = registerInput.parse(value);
@@ -55,6 +60,15 @@ export class IdentityService {
         await this.audit(tx, { accountId: created.id, action: 'account_registered', success: true });
         return created;
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+      if (this.config.transactionalEmail?.provider === 'sendgrid') {
+        const url = `${this.config.publicBaseUrl}/marketplace/verify-email?token=${encodeURIComponent(verification.raw)}`;
+        await this.email.send({
+          to: account.email,
+          subject: 'Verify your Wattanam Marketplace account',
+          text: `Verify your account: ${url}`,
+          html: `<p>Verify your Wattanam Marketplace account:</p><p><a href="${url}">Verify email</a></p>`,
+        });
+      }
       return { account, emailVerificationToken: this.config.nodeEnv === 'production' ? undefined : verification.raw };
     } catch (error) {
       if ((error as { code?: string }).code === 'P2002') throw new HttpError(409, 'An account with this email already exists');
@@ -159,16 +173,25 @@ export class IdentityService {
     const input = requestResetInput.parse(value);
     const token = newOpaqueToken();
     const rawToken = await this.prisma.$transaction(async (tx) => {
-      const account = await tx.marketplaceAccount.findUnique({ where: { email: input.email }, select: { id: true } });
+      const account = await tx.marketplaceAccount.findUnique({ where: { email: input.email }, select: { id: true, email: true } });
       if (!account) return undefined;
       await tx.marketplacePasswordReset.updateMany({ where: { accountId: account.id, consumedAt: null }, data: { consumedAt: now } });
       await tx.marketplacePasswordReset.create({
         data: { accountId: account.id, tokenHash: token.hash, expiresAt: new Date(now.getTime() + PASSWORD_RESET_LIFETIME_MS) },
       });
       await this.audit(tx, { accountId: account.id, action: 'password_reset_requested', success: true });
-      return token.raw;
+      return { raw: token.raw, email: account.email };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
-    return { requested: true, passwordResetToken: this.config.nodeEnv === 'production' ? undefined : rawToken };
+    if (rawToken && this.config.transactionalEmail?.provider === 'sendgrid') {
+      const url = `${this.config.publicBaseUrl}/marketplace/reset-password?token=${encodeURIComponent(rawToken.raw)}`;
+      await this.email.send({
+        to: rawToken.email,
+        subject: 'Reset your Wattanam Marketplace password',
+        text: `Reset your password: ${url}`,
+        html: `<p>A password reset was requested for your account.</p><p><a href="${url}">Reset password</a></p>`,
+      });
+    }
+    return { requested: true, passwordResetToken: this.config.nodeEnv === 'production' ? undefined : rawToken?.raw };
   }
 
   async confirmPasswordReset(value: unknown, now = new Date()) {

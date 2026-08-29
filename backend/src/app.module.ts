@@ -38,12 +38,17 @@ import { PluginsModule } from './plugins/plugins.module';
 import { UpdatesModule } from './updates/updates.module';
 import { MarketplaceModule } from './marketplace/marketplace.module';
 import { ObservabilityModule } from './observability/observability.module';
+import { runsBackgroundJobs } from './config/environment';
 
 @Module({
   imports: [
     // Rate limiting: max 300 requests per 60 seconds per IP
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 300 }]),
-    ScheduleModule.forRoot(),
+    ScheduleModule.forRoot({
+      cronJobs: runsBackgroundJobs(),
+      intervals: runsBackgroundJobs(),
+      timeouts: runsBackgroundJobs(),
+    }),
     AuditModule,
     AuthModule,
     AttendanceModule,
