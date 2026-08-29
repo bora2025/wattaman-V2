@@ -82,14 +82,14 @@ export class RepositoryService {
     });
   }
 
-  async publishPlugin(fields: unknown, packageBuffer: Buffer) {
+  async publishPlugin(fields: unknown, packageBuffer: Buffer, reviewStatus: 'APPROVED' | 'IN_REVIEW' = 'APPROVED') {
     const input = releaseInput.parse(fields);
     if (input.paid === 'true') throw new HttpError(501, 'Paid publication is disabled until entitlement enforcement is operational');
     const packageHash = createHash('sha256').update(packageBuffer).digest('hex');
     const duplicate = await this.prisma.packageArtifact.findUnique({ where: { sha256: packageHash } });
     if (duplicate) throw new HttpError(409, 'This immutable artifact is already published');
 
-    const publishers = await this.prisma.publisher.findMany({ where: { status: 'VERIFIED' }, include: { keys: { where: { revokedAt: null } } } });
+    const publishers = await this.prisma.publisher.findMany({ where: { status: 'VERIFIED' }, include: { keys: { where: { revokedAt: null, OR: [{ approvedAt: { not: null } }, { publisher: { slug: 'wattanam' } }] } } } });
     const trustedPublishers = new Map(publishers.map((publisher) => [
       publisher.slug,
       new Map(publisher.keys.map((key) => [key.keyId, key.publicKeyPem])),
@@ -118,24 +118,24 @@ export class RepositoryService {
           create: {
             id: verified.manifest.id, publisherId: publisher.id, name: verified.manifest.name,
             description: verified.manifest.description, license: verified.manifest.license,
-            isPaid: input.paid === 'true', status: 'APPROVED',
+            isPaid: input.paid === 'true', status: reviewStatus,
           },
           update: {
             name: verified.manifest.name, description: verified.manifest.description,
-            license: verified.manifest.license, isPaid: input.paid === 'true', status: 'APPROVED',
+            license: verified.manifest.license, isPaid: input.paid === 'true', status: reviewStatus,
           },
         });
         if (plugin.publisherId !== publisher.id) throw new HttpError(409, 'Plugin id belongs to another publisher');
         const version = await tx.pluginVersion.create({
           data: {
             pluginId: plugin.id, version: verified.manifest.version, requiresCore: verified.manifest.requiresCore,
-            channel: input.channel, reviewStatus: 'APPROVED', manifestJson: verified.manifest as Prisma.InputJsonValue,
-            changelog: input.changelog, publishedAt: new Date(),
+            channel: input.channel, reviewStatus, manifestJson: verified.manifest as Prisma.InputJsonValue,
+            changelog: input.changelog, publishedAt: reviewStatus === 'APPROVED' ? new Date() : null,
             artifact: { create: { sha256: verified.sha256, sizeBytes: verified.sizeBytes, storageKey, publisherKeyId: verified.publisherKeyId } },
           },
           include: { artifact: true },
         });
-        return { pluginId: plugin.id, version: version.version, channel: version.channel, sha256: version.artifact!.sha256 };
+        return { pluginId: plugin.id, pluginVersionId: version.id, version: version.version, channel: version.channel, sha256: version.artifact!.sha256, analysisSignals: verified.analysisSignals };
       });
     } catch (error) {
       await unlink(destination).catch(() => undefined);
@@ -250,7 +250,7 @@ export class RepositoryService {
     return { path: path.join(this.config.artifactPath, ...artifact.storageKey.split('/')), artifact };
   }
 
-  async recordDownload(pluginVersionId: string, artifactSha256: string) {
-    await this.prisma.downloadEvent.create({ data: { pluginVersionId, artifactSha256 } });
+  async recordDownload(pluginVersionId: string, artifactSha256: string, installationId?: string) {
+    await this.prisma.downloadEvent.create({ data: { pluginVersionId, artifactSha256, installationId } });
   }
 }

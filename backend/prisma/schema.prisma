@@ -1366,19 +1366,19 @@ model Installation {
 }
 
 model PluginInstallation {
-  id              String   @id
-  name            String
-  version         String
-  publisher       String
-  status          String   @default("installed")
-  manifestJson    String
-  packageSha256   String
-  installedPath   String
-  installedAt     DateTime @default(now())
-  activatedAt     DateTime?
-  deactivatedAt   DateTime?
-  updatedAt       DateTime @updatedAt
-  lastError       String?
+  id            String    @id
+  name          String
+  version       String
+  publisher     String
+  status        String    @default("installed")
+  manifestJson  String
+  packageSha256 String
+  installedPath String
+  installedAt   DateTime  @default(now())
+  activatedAt   DateTime?
+  deactivatedAt DateTime?
+  updatedAt     DateTime  @updatedAt
+  lastError     String?
 
   @@index([status])
   @@index([publisher])
@@ -1407,13 +1407,13 @@ model PluginNotificationUsage {
 }
 
 model PluginMigration {
-  id          String   @id @default(uuid())
-  pluginId    String
-  migrationId String
+  id            String   @id @default(uuid())
+  pluginId      String
+  migrationId   String
   pluginVersion String
-  checksum    String
-  destructive Boolean @default(false)
-  appliedAt   DateTime @default(now())
+  checksum      String
+  destructive   Boolean  @default(false)
+  appliedAt     DateTime @default(now())
 
   @@unique([pluginId, migrationId])
   @@index([pluginId, appliedAt])
@@ -1431,31 +1431,53 @@ model PluginSetting {
 }
 
 model PluginJobDefinition {
-  id             String   @id @default(uuid())
-  pluginId       String
-  jobId          String
+  id              String    @id @default(uuid())
+  pluginId        String
+  jobId           String
   intervalSeconds Int
-  enabled        Boolean  @default(true)
-  lastStartedAt  DateTime?
+  enabled         Boolean   @default(true)
+  lastStartedAt   DateTime?
   lastCompletedAt DateTime?
-  lastStatus     String?
-  lastError      String?
-  updatedAt      DateTime @updatedAt
+  lastStatus      String?
+  lastError       String?
+  updatedAt       DateTime  @updatedAt
 
   @@unique([pluginId, jobId])
   @@index([enabled, lastStartedAt])
 }
 
 model PluginJobRun {
-  id         String   @id @default(uuid())
+  id         String    @id @default(uuid())
   pluginId   String
   jobId      String
   status     String
-  startedAt  DateTime @default(now())
+  startedAt  DateTime  @default(now())
   finishedAt DateTime?
   error      String?
 
   @@index([pluginId, jobId, startedAt])
+}
+
+/// Locally cached, independently-verified copy of a plugin's marketplace entitlement.
+/// A marketplace outage must never disable installed plugin functionality, so this
+/// table is read-only reference state: it is never consulted to gate plugin
+/// install/activation, only to report license status and drive future update eligibility.
+model PluginEntitlementCache {
+  id                     String    @id @default(uuid())
+  pluginId               String    @unique
+  status                 String
+  tokenId                String?
+  signedTokenJson        String?
+  expiresAt              DateTime?
+  updatesThrough         DateTime?
+  offlineRecheckAfter    DateTime?
+  lastVerifiedAt         DateTime?
+  lastRefreshAttemptAt   DateTime?
+  lastRefreshSucceededAt DateTime?
+  consecutiveFailures    Int       @default(0)
+  lastError              String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 }
 
 model Post {

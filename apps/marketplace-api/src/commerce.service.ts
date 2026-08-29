@@ -33,10 +33,11 @@ export class CommerceService {
       if (existing) return existing;
       const [account, installation, prices] = await Promise.all([
         tx.marketplaceAccount.findUnique({ where: { id: input.accountId }, select: { id: true } }),
-        tx.installationRegistration.findUnique({ where: { id: input.installationId }, select: { id: true } }),
+        tx.installationRegistration.findUnique({ where: { id: input.installationId }, select: { id: true, accountId: true } }),
         tx.productPrice.findMany({ where: { id: { in: input.priceIds } }, include: { plugin: { select: { id: true, isPaid: true, status: true } } } }),
       ]);
       if (!account || !installation) throw new HttpError(404, 'Account or installation not found');
+      if (installation.accountId !== input.accountId) throw new HttpError(403, 'Installation is not registered to this account');
       if (prices.length !== input.priceIds.length) throw new HttpError(400, 'One or more prices do not exist');
       const byId = new Map(prices.map((price) => [price.id, price]));
       const ordered = input.priceIds.map((id) => byId.get(id)!);

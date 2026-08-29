@@ -39,7 +39,7 @@ function parseJson<T>(value: Buffer | undefined, name: string): T {
   catch { throw new HttpError(400, `${name} is invalid JSON`); }
 }
 
-export type VerifiedRelease = { manifest: Manifest; sha256: string; sizeBytes: number; publisherKeyId: string };
+export type VerifiedRelease = { manifest: Manifest; sha256: string; sizeBytes: number; publisherKeyId: string; analysisSignals: { embeddedSecret: boolean; commandExecution: boolean; files: string[] } };
 
 export async function verifyPluginPackage(buffer: Buffer, publisherKeys: Map<string, Map<string, string>>, maximum: number): Promise<VerifiedRelease> {
   if (!buffer.length || buffer.length > maximum) throw new HttpError(400, 'Package is empty or exceeds the artifact limit');
@@ -82,7 +82,15 @@ export async function verifyPluginPackage(buffer: Buffer, publisherKeys: Map<str
   let valid = false;
   try { valid = verifySignature(null, files.get('checksums.json')!, key, Buffer.from(signature.signature, 'base64')); } catch { valid = false; }
   if (!valid) throw new HttpError(403, 'Publisher signature is invalid');
-  return { manifest, sha256: sha256(buffer), sizeBytes: buffer.length, publisherKeyId: signature.keyId };
+  const sourceText = [...files.entries()].filter(([name]) => !['signature.json', 'checksums.json'].includes(name)).map(([, value]) => value.toString('utf8')).join('\n');
+  return {
+    manifest, sha256: sha256(buffer), sizeBytes: buffer.length, publisherKeyId: signature.keyId,
+    analysisSignals: {
+      embeddedSecret: /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|AKIA[0-9A-Z]{16}/.test(sourceText),
+      commandExecution: /child_process|powershell(?:\.exe)?|cmd\.exe|eval\s*\(/i.test(sourceText),
+      files: [...files.keys()].sort(),
+    },
+  };
 }
 
 function readZip(buffer: Buffer, maximum: number): Promise<Map<string, Buffer>> {

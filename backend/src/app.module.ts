@@ -36,6 +36,7 @@ import { HealthModule } from './health/health.module';
 import { InstallationModule } from './installation/installation.module';
 import { PluginsModule } from './plugins/plugins.module';
 import { UpdatesModule } from './updates/updates.module';
+import { MarketplaceModule } from './marketplace/marketplace.module';
 
 @Module({
   imports: [
@@ -74,6 +75,7 @@ import { UpdatesModule } from './updates/updates.module';
     InstallationModule,
     PluginsModule,
     UpdatesModule,
+    MarketplaceModule,
   ],
   controllers: [AppController],
   providers: [

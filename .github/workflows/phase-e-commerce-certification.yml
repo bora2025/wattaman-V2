@@ -1,0 +1,58 @@
+name: Phase E commerce and offline certification
+
+on:
+  pull_request:
+    paths:
+      - 'apps/marketplace-api/**'
+      - 'backend/src/marketplace/**'
+      - 'backend/prisma/**'
+      - 'frontend/app/marketplace/**'
+      - 'frontend/app/admin/licensing/**'
+      - 'frontend/app/api/marketplace/**'
+  workflow_dispatch:
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wattanam
+          POSTGRES_PASSWORD: certification-password
+          POSTGRES_DB: marketplace
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U wattanam -d marketplace"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgresql://wattanam:certification-password@localhost:5432/marketplace
+      MARKETPLACE_DATABASE_URL: postgresql://wattanam:certification-password@localhost:5432/marketplace
+      SCHOOL_DATABASE_URL: postgresql://wattanam:certification-password@localhost:5432/school
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: apps/marketplace-api/package-lock.json }
+      - name: Create the school database alongside the marketplace one
+        run: PGPASSWORD=certification-password psql -h localhost -U wattanam -d marketplace -c "CREATE DATABASE school;"
+      - name: Install marketplace dependencies
+        working-directory: apps/marketplace-api
+        run: npm ci
+      - name: Validate and apply every marketplace migration
+        working-directory: apps/marketplace-api
+        run: npm run db:validate && npm run db:generate && npm run db:migrate:deploy
+      - name: Marketplace contracts
+        working-directory: apps/marketplace-api
+        run: npm test && npm run build
+      - name: Cross-service purchase and offline-use matrix
+        working-directory: apps/marketplace-api
+        run: npm run certify:commerce-offline
+      - name: Install and test school entitlement boundary
+        working-directory: backend
+        run: npm ci && npm test -- --runInBand src/marketplace && npx prisma generate && DATABASE_URL=$SCHOOL_DATABASE_URL npx prisma migrate deploy && npm run build
+      - name: Live identity, installation-registration, and entitlement-cache drill (real PostgreSQL, real HTTP, no mocks)
+        working-directory: apps/marketplace-api
+        run: node scripts/identity-registration-entitlement-live-drill.js
+      - name: Build customer and school-owner journeys
+        working-directory: frontend
+        run: npm ci && npm run build

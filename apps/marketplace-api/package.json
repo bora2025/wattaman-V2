@@ -8,6 +8,7 @@
     "start": "node dist/main.js",
     "dev": "tsx watch src/main.ts",
     "test": "jest --runInBand",
+    "certify:commerce-offline": "tsx scripts/commerce-offline-certification.ts",
     "db:validate": "prisma validate",
     "db:generate": "prisma generate",
     "db:migrate:deploy": "prisma migrate deploy"

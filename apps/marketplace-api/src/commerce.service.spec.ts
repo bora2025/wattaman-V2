@@ -21,7 +21,7 @@ describe('marketplace commerce invariants', () => {
     const tx = {
       marketplaceOrder: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue(created) },
       marketplaceAccount: { findUnique: jest.fn().mockResolvedValue({ id: ids.account }) },
-      installationRegistration: { findUnique: jest.fn().mockResolvedValue({ id: ids.installation }) },
+      installationRegistration: { findUnique: jest.fn().mockResolvedValue({ id: ids.installation, accountId: ids.account }) },
       productPrice: { findMany: jest.fn().mockResolvedValue([{
         id: ids.price, pluginId: 'official.attendance', currency: 'USD', amountMinor: 2500,
         validFrom: new Date('2026-01-01Z'), validUntil: null, plugin: { id: 'official.attendance', isPaid: true, status: 'APPROVED' },
@@ -33,6 +33,19 @@ describe('marketplace commerce invariants', () => {
     }, new Date('2026-08-28Z'))).resolves.toEqual(created);
     expect(tx.marketplaceOrder.create.mock.calls[0][0].data.totalMinor).toBe(2500);
     expect(tx.marketplaceOrder.create.mock.calls[0][0].data.lines.create[0]).toMatchObject({ priceId: ids.price, unitPriceMinor: 2500 });
+  });
+
+  it('refuses to order against an installation registered to another account', async () => {
+    const tx = {
+      marketplaceOrder: { findUnique: jest.fn().mockResolvedValue(null) },
+      marketplaceAccount: { findUnique: jest.fn().mockResolvedValue({ id: ids.account }) },
+      installationRegistration: { findUnique: jest.fn().mockResolvedValue({ id: ids.installation, accountId: 'another-account' }) },
+      productPrice: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    const service = new CommerceService(prismaWith(tx), config());
+    await expect(service.createOrder({
+      accountId: ids.account, installationId: ids.installation, currency: 'USD', priceIds: [ids.price], idempotencyKey: 'checkout-request-0002',
+    }, new Date('2026-08-28Z'))).rejects.toThrow('not registered to this account');
   });
 
   it('commits payment, entitlement, and paid order in the same transaction', async () => {

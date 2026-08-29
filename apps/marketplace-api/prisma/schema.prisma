@@ -66,24 +66,152 @@ enum DisputeStatus {
   LOST
 }
 
+enum ChallengePurpose {
+  REGISTER
+  ROTATE
+}
+
+enum PublisherRole {
+  OWNER
+  ADMIN
+  RELEASE_MANAGER
+  FINANCE
+  SUPPORT
+  REVIEWER
+}
+
+enum SubmissionStatus {
+  ANALYZING
+  NEEDS_REVIEW
+  APPROVED
+  REJECTED
+  WITHDRAWN
+}
+
+enum ReviewDecisionType {
+  APPROVE
+  REJECT
+}
+
+enum RevenueEntryType {
+  SALE
+  REFUND
+  WITHHOLDING
+  CORRECTION
+  PAYOUT
+}
+
+enum PayoutStatus {
+  PENDING_APPROVAL
+  APPROVED
+  PAID
+  REJECTED
+}
+
 model Publisher {
-  id          String              @id @default(uuid())
-  slug        String              @unique
-  displayName String
-  status      PublisherStatus     @default(PENDING)
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
-  keys        PublisherKey[]
-  plugins     MarketplacePlugin[]
+  id             String                      @id @default(uuid())
+  slug           String                      @unique
+  displayName    String
+  status         PublisherStatus             @default(PENDING)
+  createdAt      DateTime                    @default(now())
+  updatedAt      DateTime                    @updatedAt
+  keys           PublisherKey[]
+  plugins        MarketplacePlugin[]
+  members        PublisherMember[]
+  acceptances    PublisherPolicyAcceptance[]
+  submissions    PluginSubmission[]
+  revenueEntries PublisherRevenueEntry[]
+  statements     PublisherStatement[]
+  payouts        PublisherPayout[]
 }
 
 model MarketplaceAccount {
-  id          String             @id @default(uuid())
-  email       String             @unique
-  displayName String
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-  orders      MarketplaceOrder[]
+  id                   String                         @id @default(uuid())
+  email                String                         @unique
+  displayName          String
+  passwordHash         String
+  emailVerifiedAt      DateTime?
+  mfaEnabled           Boolean                        @default(false)
+  mfaSecret            String?
+  failedLoginCount     Int                            @default(0)
+  lockedUntil          DateTime?
+  createdAt            DateTime                       @default(now())
+  updatedAt            DateTime                       @updatedAt
+  orders               MarketplaceOrder[]
+  installations        InstallationRegistration[]
+  sessions             MarketplaceSession[]
+  emailVerifications   MarketplaceEmailVerification[]
+  passwordResets       MarketplacePasswordReset[]
+  mfaRecoveryCodes     MarketplaceMfaRecoveryCode[]
+  auditEvents          MarketplaceAuditEvent[]
+  publisherMemberships PublisherMember[]
+  policyAcceptances    PublisherPolicyAcceptance[]
+  submissionReviews    SubmissionReview[]
+}
+
+model MarketplaceSession {
+  id                  String              @id @default(uuid())
+  accountId           String
+  tokenHash           String              @unique
+  createdAt           DateTime            @default(now())
+  expiresAt           DateTime
+  revokedAt           DateTime?
+  replacedBySessionId String?             @unique
+  account             MarketplaceAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  replacedBy          MarketplaceSession? @relation("SessionRotation", fields: [replacedBySessionId], references: [id])
+  rotatedFrom         MarketplaceSession? @relation("SessionRotation")
+
+  @@index([accountId, revokedAt])
+}
+
+model MarketplaceEmailVerification {
+  id         String             @id @default(uuid())
+  accountId  String
+  tokenHash  String             @unique
+  createdAt  DateTime           @default(now())
+  expiresAt  DateTime
+  consumedAt DateTime?
+  account    MarketplaceAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, consumedAt])
+}
+
+model MarketplacePasswordReset {
+  id         String             @id @default(uuid())
+  accountId  String
+  tokenHash  String             @unique
+  createdAt  DateTime           @default(now())
+  expiresAt  DateTime
+  consumedAt DateTime?
+  account    MarketplaceAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, consumedAt])
+}
+
+model MarketplaceMfaRecoveryCode {
+  id        String             @id @default(uuid())
+  accountId String
+  codeHash  String             @unique
+  createdAt DateTime           @default(now())
+  usedAt    DateTime?
+  account   MarketplaceAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, usedAt])
+}
+
+model MarketplaceAuditEvent {
+  id        String              @id @default(uuid())
+  accountId String?
+  action    String
+  success   Boolean             @default(true)
+  metadata  Json?
+  ip        String?
+  userAgent String?
+  createdAt DateTime            @default(now())
+  account   MarketplaceAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+
+  @@index([accountId, createdAt])
+  @@index([action, createdAt])
 }
 
 model PublisherKey {
@@ -93,9 +221,59 @@ model PublisherKey {
   publicKeyPem String
   revokedAt    DateTime?
   createdAt    DateTime  @default(now())
+  enrolledBy   String?
+  approvedBy   String?
+  revokedBy    String?
+  approvedAt   DateTime?
   publisher    Publisher @relation(fields: [publisherId], references: [id], onDelete: Cascade)
 
   @@unique([publisherId, keyId])
+}
+
+model PublisherMember {
+  id          String             @id @default(uuid())
+  publisherId String
+  accountId   String
+  role        PublisherRole
+  verifiedAt  DateTime?
+  suspendedAt DateTime?
+  createdAt   DateTime           @default(now())
+  publisher   Publisher          @relation(fields: [publisherId], references: [id], onDelete: Cascade)
+  account     MarketplaceAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([publisherId, accountId, role])
+  @@index([accountId, suspendedAt])
+}
+
+model PublisherPolicy {
+  id          String                      @id @default(uuid())
+  policyKey   String
+  version     String
+  title       String
+  bodySha256  String
+  effectiveAt DateTime
+  retiredAt   DateTime?
+  createdAt   DateTime                    @default(now())
+  acceptances PublisherPolicyAcceptance[]
+
+  @@unique([policyKey, version])
+  @@index([policyKey, effectiveAt])
+}
+
+model PublisherPolicyAcceptance {
+  id          String             @id @default(uuid())
+  policyId    String
+  publisherId String
+  accountId   String
+  acceptedAt  DateTime           @default(now())
+  ip          String?
+  userAgent   String?
+  policy      PublisherPolicy    @relation(fields: [policyId], references: [id], onDelete: Restrict)
+  publisher   Publisher          @relation(fields: [publisherId], references: [id], onDelete: Restrict)
+  account     MarketplaceAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@unique([policyId, publisherId, accountId])
+  @@index([publisherId, acceptedAt])
 }
 
 model MarketplacePlugin {
@@ -149,9 +327,43 @@ model PluginVersion {
   artifact     PackageArtifact?
   downloads    DownloadEvent[]
   reviews      VersionReview[]
+  submission   PluginSubmission?
 
   @@unique([pluginId, version, channel])
   @@index([reviewStatus, channel, publishedAt])
+}
+
+model PluginSubmission {
+  id              String             @id @default(uuid())
+  publisherId     String
+  pluginVersionId String             @unique
+  status          SubmissionStatus   @default(ANALYZING)
+  analysisReport  Json
+  riskLevel       String
+  submittedBy     String
+  submittedAt     DateTime           @default(now())
+  decidedAt       DateTime?
+  publisher       Publisher          @relation(fields: [publisherId], references: [id], onDelete: Restrict)
+  pluginVersion   PluginVersion      @relation(fields: [pluginVersionId], references: [id], onDelete: Restrict)
+  reviews         SubmissionReview[]
+
+  @@index([status, submittedAt])
+  @@index([publisherId, submittedAt])
+}
+
+model SubmissionReview {
+  id           String             @id @default(uuid())
+  submissionId String
+  reviewerId   String
+  decision     ReviewDecisionType
+  notes        String
+  evidence     Json
+  createdAt    DateTime           @default(now())
+  submission   PluginSubmission   @relation(fields: [submissionId], references: [id], onDelete: Restrict)
+  reviewer     MarketplaceAccount @relation(fields: [reviewerId], references: [id], onDelete: Restrict)
+
+  @@unique([submissionId, reviewerId])
+  @@index([submissionId, decision])
 }
 
 model PackageArtifact {
@@ -183,15 +395,42 @@ model SecurityAdvisory {
 }
 
 model InstallationRegistration {
-  id             String                    @id @default(uuid())
-  installationId String                    @unique
+  id             String                        @id @default(uuid())
+  installationId String                        @unique
+  accountId      String?
   label          String?
-  publicKeyPem   String
   lastSeenAt     DateTime?
-  createdAt      DateTime                  @default(now())
+  createdAt      DateTime                      @default(now())
+  account        MarketplaceAccount?           @relation(fields: [accountId], references: [id])
+  keys           InstallationRegistrationKey[]
   entitlements   InstallationEntitlement[]
   downloads      DownloadEvent[]
   orders         MarketplaceOrder[]
+}
+
+model InstallationRegistrationKey {
+  id                         String                   @id @default(uuid())
+  installationRegistrationId String
+  keyFingerprint             String
+  publicKeyPem               String
+  createdAt                  DateTime                 @default(now())
+  revokedAt                  DateTime?
+  installation               InstallationRegistration @relation(fields: [installationRegistrationId], references: [id], onDelete: Cascade)
+
+  @@unique([installationRegistrationId, keyFingerprint])
+  @@index([installationRegistrationId, revokedAt])
+}
+
+model InstallationRegistrationChallenge {
+  id             String           @id @default(uuid())
+  installationId String
+  nonce          String
+  purpose        ChallengePurpose
+  createdAt      DateTime         @default(now())
+  expiresAt      DateTime
+  consumedAt     DateTime?
+
+  @@index([installationId, purpose, consumedAt, expiresAt])
 }
 
 model InstallationEntitlement {
@@ -259,6 +498,7 @@ model MarketplaceOrderLine {
   plugin         MarketplacePlugin        @relation(fields: [pluginId], references: [id])
   price          ProductPrice             @relation(fields: [priceId], references: [id], onDelete: Restrict)
   entitlement    InstallationEntitlement?
+  revenueEntries PublisherRevenueEntry[]
 }
 
 model MarketplacePayment {
@@ -278,17 +518,104 @@ model MarketplacePayment {
 }
 
 model MarketplaceRefund {
-  id          String             @id @default(uuid())
-  orderId     String
-  paymentId   String             @unique
-  amountMinor Int
-  reason      String
-  initiatedBy String
-  createdAt   DateTime           @default(now())
-  order       MarketplaceOrder   @relation(fields: [orderId], references: [id], onDelete: Restrict)
-  payment     MarketplacePayment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  id             String                  @id @default(uuid())
+  orderId        String
+  paymentId      String                  @unique
+  amountMinor    Int
+  reason         String
+  initiatedBy    String
+  createdAt      DateTime                @default(now())
+  order          MarketplaceOrder        @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  payment        MarketplacePayment      @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  revenueEntries PublisherRevenueEntry[]
 
   @@index([orderId])
+}
+
+model PublisherRevenueEntry {
+  id             String                   @id @default(uuid())
+  publisherId    String
+  orderLineId    String?
+  refundId       String?
+  type           RevenueEntryType
+  currency       String
+  grossMinor     Int
+  feeMinor       Int
+  taxMinor       Int
+  netMinor       Int
+  description    String
+  correctionOfId String?
+  createdBy      String
+  approvedBy     String?
+  createdAt      DateTime                 @default(now())
+  approvedAt     DateTime?
+  publisher      Publisher                @relation(fields: [publisherId], references: [id], onDelete: Restrict)
+  orderLine      MarketplaceOrderLine?    @relation(fields: [orderLineId], references: [id], onDelete: Restrict)
+  refund         MarketplaceRefund?       @relation(fields: [refundId], references: [id], onDelete: Restrict)
+  correctionOf   PublisherRevenueEntry?   @relation("RevenueCorrection", fields: [correctionOfId], references: [id], onDelete: Restrict)
+  corrections    PublisherRevenueEntry[]  @relation("RevenueCorrection")
+  statementLines PublisherStatementLine[]
+  payoutLines    PublisherPayoutLine[]
+
+  @@unique([orderLineId, type])
+  @@index([publisherId, currency, createdAt])
+  @@index([orderLineId, type])
+}
+
+model PublisherStatement {
+  id          String                   @id @default(uuid())
+  publisherId String
+  currency    String
+  periodStart DateTime
+  periodEnd   DateTime
+  grossMinor  Int
+  feeMinor    Int
+  taxMinor    Int
+  netMinor    Int
+  generatedAt DateTime                 @default(now())
+  publisher   Publisher                @relation(fields: [publisherId], references: [id], onDelete: Restrict)
+  lines       PublisherStatementLine[]
+
+  @@unique([publisherId, currency, periodStart, periodEnd])
+}
+
+model PublisherStatementLine {
+  statementId String
+  entryId     String
+  statement   PublisherStatement    @relation(fields: [statementId], references: [id], onDelete: Restrict)
+  entry       PublisherRevenueEntry @relation(fields: [entryId], references: [id], onDelete: Restrict)
+
+  @@id([statementId, entryId])
+  @@unique([entryId])
+}
+
+model PublisherPayout {
+  id                String                @id @default(uuid())
+  publisherId       String
+  currency          String
+  amountMinor       Int
+  status            PayoutStatus          @default(PENDING_APPROVAL)
+  providerReference String?
+  requestedBy       String
+  approvedBy        String?
+  paidBy            String?
+  requestedAt       DateTime              @default(now())
+  approvedAt        DateTime?
+  paidAt            DateTime?
+  publisher         Publisher             @relation(fields: [publisherId], references: [id], onDelete: Restrict)
+  lines             PublisherPayoutLine[]
+
+  @@index([publisherId, status, requestedAt])
+}
+
+model PublisherPayoutLine {
+  payoutId String
+  entryId  String
+  payout   PublisherPayout       @relation(fields: [payoutId], references: [id], onDelete: Restrict)
+  entry    PublisherRevenueEntry @relation(fields: [entryId], references: [id], onDelete: Restrict)
+
+  @@id([payoutId, entryId])
+  @@unique([entryId])
 }
 
 model MarketplacePaymentDispute {

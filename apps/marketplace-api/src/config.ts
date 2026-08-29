@@ -2,6 +2,7 @@ import { createPublicKey } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
+import { parseSecretEncryptionKeys, SecretEncryptionKey } from './secret-encryption';
 
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -20,6 +21,8 @@ const schema = z.object({
   PAYMENT_WEBHOOK_SECRET: z.string().min(32),
   ARTIFACT_STORAGE_PATH: z.string().min(1),
   MAX_ARTIFACT_BYTES: z.coerce.number().int().positive().max(250 * 1024 * 1024).default(50 * 1024 * 1024),
+  IDENTITY_ENCRYPTION_KEYS_JSON: z.string().optional(),
+  IDENTITY_ENCRYPTION_ACTIVE_KEY_ID: z.string().regex(/^[a-zA-Z0-9._-]{1,100}$/).optional(),
 });
 
 export type MarketplaceConfig = {
@@ -36,10 +39,15 @@ export type MarketplaceConfig = {
   paymentWebhookSecret: string;
   artifactPath: string;
   maxArtifactBytes: number;
+  identityEncryptionKeys: SecretEncryptionKey[];
 };
 
 export function readConfig(env: NodeJS.ProcessEnv = process.env): MarketplaceConfig {
   const value = schema.parse(env);
+  const identityEncryptionKeys = parseSecretEncryptionKeys(value.IDENTITY_ENCRYPTION_KEYS_JSON, value.IDENTITY_ENCRYPTION_ACTIVE_KEY_ID);
+  if (value.NODE_ENV === 'production' && identityEncryptionKeys.length === 0) {
+    throw new Error('IDENTITY_ENCRYPTION_KEYS_JSON is required in production');
+  }
   const artifactPath = path.resolve(value.ARTIFACT_STORAGE_PATH);
   mkdirSync(artifactPath, { recursive: true });
   const signingPrivateKey = readPrivateKey(value.METADATA_SIGNING_PRIVATE_KEY_FILE, value.METADATA_SIGNING_PRIVATE_KEY);
@@ -75,6 +83,7 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): MarketplaceCon
     paymentWebhookSecret: value.PAYMENT_WEBHOOK_SECRET,
     artifactPath,
     maxArtifactBytes: value.MAX_ARTIFACT_BYTES,
+    identityEncryptionKeys,
   };
 }
 
