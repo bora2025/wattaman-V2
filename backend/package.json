@@ -22,6 +22,8 @@
     "test:legacy:adopt": "node --test scripts/legacy-adopt.test.js",
     "test:legacy:fixture": "node --test scripts/create-synthetic-legacy-fixture.test.js",
     "test:legacy:status": "node --test scripts/legacy-adoption-status.test.js",
+    "legacy:compare": "node scripts/legacy-compare.js",
+    "test:legacy:compare": "node --test scripts/legacy-compare.test.js",
     "test:db-toolkit": "node --test scripts/db-toolkit.test.js",
     "db:push:development": "prisma db push --schema=prisma/schema.prisma",
     "db:seed": "ts-node prisma/seed.ts",
