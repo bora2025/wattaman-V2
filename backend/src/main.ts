@@ -58,7 +58,11 @@ async function bootstrap() {
     credentials: true,
   });
 
-  app.enableShutdownHooks();
+  // Without useProcessExit, Nest re-delivers the same signal to itself after cleanup finishes
+  // (having removed its own listener first), so the process dies via the raw signal rather than
+  // a clean exit -- indistinguishable from a crash to anything watching the exit code. worker.ts
+  // avoids this by calling process.exit(0) itself; do the equivalent here for consistency.
+  app.enableShutdownHooks(undefined, { useProcessExit: true });
 
   await app.listen(config.port, '0.0.0.0');
   console.log(`API server running on port ${config.port} (${config.processRole} role)`);
