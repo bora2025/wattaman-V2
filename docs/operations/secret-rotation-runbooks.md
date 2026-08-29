@@ -46,10 +46,9 @@ exists. Procedure, using what's actually there today:
 6. Once no unexpired entitlement was signed by the old key, remove it from every school's
    `ENTITLEMENT_SECONDARY_PUBLIC_KEYS_JSON`.
 
-This procedure has not been live-drilled the way the repository key's has — a real drill
-(issue under the old key, rotate, issue under the new key, confirm both verify during overlap,
-confirm the old key alone stops working after removal) is the natural next step, mirroring the
-repository-key drill exactly. Not done in this pass; stated as a real gap, not implied done.
+Live-drilled below (see Verification) — issue under the old key, rotate, issue under the new
+key, confirm both verify during overlap, confirm the old key alone stops working after removal,
+mirroring the repository-key drill exactly.
 
 ### `IDENTITY_ENCRYPTION_KEYS_JSON` (marketplace, protects `mfaSecret` at rest)
 
@@ -112,8 +111,37 @@ procedure existed), not technical.
 
 ## Verification
 
-Live-verified the one rotation mechanism genuinely novel enough to be worth proving rather
-than just describing — `IDENTITY_ENCRYPTION_KEYS_JSON`'s self-healing rotation — against a real
+### Entitlement signing key rotation
+
+Live-drilled end to end using the real, unmodified production functions on both sides —
+`issueEntitlement()` (`apps/marketplace-api/src/entitlement.ts`, the marketplace's issuing side)
+and `verifyFetchedEntitlement()` (`backend/src/marketplace/entitlement-verification.ts`, the
+school's verification side). Both are pure functions with no database or NestJS dependency, so
+this needed neither a live server nor a live database — it proves the cryptographic rotation
+mechanics directly:
+[`apps/marketplace-api/scripts/entitlement-signing-key-rotation-live-drill.js`](../../apps/marketplace-api/scripts/entitlement-signing-key-rotation-live-drill.js),
+9/9 checks pass:
+
+1. A token issued and signed under `entitlement-v1` verifies against a trust map containing
+   only `entitlement-v1` (baseline, pre-rotation).
+2. Adding `entitlement-v2` to the trust map (runbook step 2, done *before* touching the
+   marketplace) doesn't break the still-active old token.
+3. After the marketplace swaps its one active signing key to `entitlement-v2` (step 4, confirming
+   the runbook's stated asymmetry — the issuing side really does only hold one key at a time,
+   unlike the repository key's array), a freshly issued token carries `keyId: entitlement-v2` and
+   verifies — and, the actual point of "overlap," the pre-rotation `entitlement-v1` token *also*
+   still verifies against that same two-key trust map at the same time.
+4. Once the overlap window closes and `entitlement-v1` is removed from the trust map (step 6),
+   the new token keeps verifying but the old token now fails closed with "Entitlement signing key
+   is not trusted" — demonstrating concretely why the runbook says to wait out the offline
+   window before this step, not do it early.
+5. Two negative controls: a token cannot claim a `keyId` other than the one that actually signed
+   it ("Entitlement key id mismatch" — blocks a key-confusion/downgrade attempt), and a
+   well-formed signature from a key the school was never told to trust is rejected outright.
+
+### `IDENTITY_ENCRYPTION_KEYS_JSON` self-healing rotation
+
+Live-verified against a real
 disposable PostgreSQL 16, using the real `IdentityService`:
 
 1. Registered an account, enrolled and confirmed MFA with only key `identity-v1` active. The
