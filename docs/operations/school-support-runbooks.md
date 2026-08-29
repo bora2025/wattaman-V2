@@ -70,6 +70,44 @@ Entitlements degrade gracefully by design (per [ADR-0006](../architecture/adr/00
 5. **After recovery**: run the same handoff health checks as §2 (steps 1–3) before telling the school they're back online — a "restored" installation that fails its own readiness check is not actually recovered.
 6. **Record the incident**: cause (if known), what was restored, from which backup, RPO actually achieved (how old was the restored data), and RTO actually achieved (how long recovery took) — compare both against the proposed targets in [support-matrix.md](../architecture/support-matrix.md) (RPO 24h, RTO 4h) and flag it to engineering if either was missed, since that's a signal the backup schedule (B-008, not yet automated) needs attention.
 
+## Rehearsal (2026-08-29)
+
+Per the master plan's §13.5 acceptance bar ("QA and Support execute the published runbook
+without unpublished engineering knowledge; unclear or missing steps fail the gate"), §2 and §3
+were literally executed end to end against a real backend and a real disposable PostgreSQL 16,
+using only the commands as written above (curl standing in for the admin-panel clicks a support
+person would actually make) — not the underlying service code directly:
+
+- **§2 Customer handoff**: ran the real `/setup` install flow, then followed steps 1–3 exactly as
+  written. `GET /health/ready` returned `{"status":"ready", ...}` verbatim; `GET /diagnostics`
+  really does show installation identity, migration state, database status, version, and backup
+  state, exactly as claimed, in one call, without needing separate admin-panel screens. No
+  unclear or missing steps. (Steps 4–5 need a real marketplace/portal connection and a support
+  ticketing system respectively — not locally rehearsable, and already covered on the licensing
+  side by E-002/E-005's own live drills.)
+- **§3 Ownership transfer**: created a second account, then had the *original* owner's token
+  call `PUT /auth/users/:id` with `{"role":"SUPER_ADMIN"}` exactly as documented — succeeded,
+  and (correctly, matching the runbook's own wording of "a school's designated owner sometimes
+  needs to change," not "must be swapped") this results in *two* SUPER_ADMINs, not a
+  demotion of the original. The newly promoted owner logged in and could reach all three named
+  SUPER_ADMIN-only pages (`/diagnostics`, `/plugins`, `/updates`). The `AuditLog` row for the
+  promotion carries `actorEmail: "owner@..."` and `resourceLabel: "Dara New IT (SUPER_ADMIN)"`
+  exactly as the runbook claims (one small nuance: `actorName` was `null` on this row even
+  though `actorEmail` was populated — the identifying information the runbook promises is
+  present, just not every field it lists is always populated on every row).
+- **§6 Disaster recovery**: the two script names this section cites,
+  `backend/scripts/backup-database.js` and `backend/scripts/restore-database.js`, both exist
+  exactly as named. The recovery *mechanism* itself is already live-drilled end to end by
+  B-008/B-012, not re-proven here — this pass only confirms the runbook's own text still points
+  at real, correctly-named artifacts.
+- **Not rehearsed this pass**: §1 (a table, not an executable procedure), §4 (needs a real
+  payment/portal cycle), and §5 (needs a real Railway project/domain) — none of these are
+  cheaply rehearsable locally, and none of their claims changed as a result.
+
+Zero discrepancies found in what was rehearsed — every documented command/endpoint worked
+exactly as written, closing a real gap named in the master plan (this runbook had never
+actually been executed literally end to end, only reasoned about against the underlying code).
+
 ## Change rule
 
 A new runbook-relevant capability (a new endpoint, script, or automated domain/backup feature from B-005–008) updates the relevant section above in the same change that ships it — a runbook describing capabilities that no longer match reality fails support faster than having no runbook at all.
