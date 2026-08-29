@@ -39,8 +39,12 @@ function runScript(scriptName, args) {
   const result = spawnSync(process.execPath, [path.join(__dirname, scriptName), ...args], { env: process.env, encoding: 'utf8' });
   if (result.error) fail(`${scriptName} could not start: ${result.error.message}`);
   if (result.status !== 0) fail(`${scriptName} failed:\n${result.stderr || result.stdout}`);
+  // Not every wrapped script emits JSON (restore-recovery-set.js prints a plain-text
+  // summary this drill doesn't need the return value from) -- only backup-recovery-set.js's
+  // journal is actually consumed by the caller, so a non-JSON last line is not an error here.
   const lines = String(result.stdout || '').trim().split(/\r?\n/).filter(Boolean);
-  return lines.length ? JSON.parse(lines[lines.length - 1]) : {};
+  if (!lines.length) return {};
+  try { return JSON.parse(lines[lines.length - 1]); } catch { return {}; }
 }
 
 const rtoTargetSeconds = Number(process.env.RTO_TARGET_SECONDS || 4 * 60 * 60);
