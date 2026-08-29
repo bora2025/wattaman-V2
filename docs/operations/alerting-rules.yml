@@ -1,0 +1,161 @@
+## Prometheus alerting rules for Wattanam V2, matching docs/platform-master-execution-plan.md
+## §13.2 (Reliability and observability). Load into Prometheus with `rule_files:`, alongside
+## a scrape config pointing at each service's `/metrics` (bearer_token: the service's
+## METRICS_TOKEN). See docs/operations/reliability-and-slos.md for owner, response target,
+## the runbook each alert links to, and the test schedule this file is verified against.
+groups:
+  - name: wattanam-backend
+    rules:
+      - alert: BackendDown
+        expr: up{job="wattanam-backend"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "The school API is not responding to scrapes"
+          description: "Prometheus has not been able to scrape wattanam-backend for 2 minutes."
+          owner: "SRE on-call"
+          response_target: "15 minutes"
+          runbook: "docs/operations/school-support-runbooks.md#disaster-recovery"
+
+      - alert: BackendDatabaseDown
+        expr: db_up{job="wattanam-backend"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "The school API cannot reach its database"
+          description: "db_up has reported 0 for 2 minutes -- SELECT 1 is failing on every scrape."
+          owner: "SRE on-call"
+          response_target: "15 minutes"
+          runbook: "docs/operations/school-support-runbooks.md#disaster-recovery"
+
+      - alert: BackendHighErrorRate
+        expr: |
+          sum(rate(http_requests_total{job="wattanam-backend", status_code=~"5.."}[5m]))
+          / sum(rate(http_requests_total{job="wattanam-backend"}[5m])) > 0.01
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "More than 1% of school API requests are failing with 5xx"
+          description: "This is the warning threshold ahead of the 99.9% monthly availability target (plan §13.2)."
+          owner: "SRE on-call"
+          response_target: "1 hour"
+          runbook: "docs/operations/school-support-runbooks.md#escalation"
+
+      - alert: BackendHighLatencyP95
+        expr: |
+          histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="wattanam-backend"}[5m])) by (le)) > 2
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "p95 school API request latency is above 2 seconds"
+          owner: "SRE on-call"
+          response_target: "1 hour"
+          runbook: "docs/operations/school-support-runbooks.md#escalation"
+
+      - alert: BackendPendingMigrations
+        expr: db_migrations_pending{job="wattanam-backend"} > 0
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: "A Prisma migration was recorded as started but never finished"
+          description: "Usually means a deploy crashed mid-migration; the schema may be half-applied."
+          owner: "SRE on-call"
+          response_target: "4 hours"
+          runbook: "docs/operations/core-update-and-recovery.md"
+
+      - alert: BackendBackupTooOld
+        expr: backup_age_seconds{job="wattanam-backend"} > 93600
+        for: 30m
+        labels: { severity: critical }
+        annotations:
+          summary: "The most recent backup is more than 26 hours old"
+          description: "Breaches the 24h backup RPO target (plan §13.2) with a 2-hour grace window for one missed nightly run."
+          owner: "SRE on-call"
+          response_target: "4 hours (matches the 4h backup RTO target)"
+          runbook: "docs/operations/school-support-runbooks.md#disaster-recovery"
+
+      - alert: BackendNoBackupEverTaken
+        expr: backup_age_seconds{job="wattanam-backend"} == +Inf
+        for: 1h
+        labels: { severity: critical }
+        annotations:
+          summary: "This installation has no backup manifest at all"
+          owner: "SRE on-call"
+          response_target: "4 hours"
+          runbook: "docs/operations/school-support-runbooks.md#disaster-recovery"
+
+      - alert: BackendPluginJobFailing
+        expr: plugin_job_last_run_success == 0
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: "Plugin job {{ $labels.plugin_id }}:{{ $labels.job_id }}'s last run failed"
+          owner: "Plugin support"
+          response_target: "1 business day"
+          runbook: "docs/operations/publisher-plugin-incidents.md"
+
+      - alert: BackendEntitlementRefreshFailing
+        expr: plugin_entitlement_consecutive_failures >= 4
+        for: 30m
+        labels: { severity: warning }
+        annotations:
+          summary: "Entitlement refresh for {{ $labels.plugin_id }} has failed through every backoff tier (1/5/15/60 min)"
+          description: "By design this never disables the plugin (fail-open), but sustained failure past an hour needs attention."
+          owner: "Marketplace on-call"
+          response_target: "4 hours"
+          runbook: "docs/operations/publisher-plugin-incidents.md"
+
+  - name: wattanam-marketplace
+    rules:
+      - alert: MarketplaceDown
+        expr: up{job="wattanam-marketplace"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "The marketplace API is not responding to scrapes"
+          owner: "Marketplace on-call"
+          response_target: "15 minutes"
+          runbook: "docs/operations/publisher-plugin-incidents.md"
+
+      - alert: MarketplaceDatabaseDown
+        expr: db_up{job="wattanam-marketplace"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "The marketplace API cannot reach its database"
+          owner: "Marketplace on-call"
+          response_target: "15 minutes"
+          runbook: "docs/operations/publisher-plugin-incidents.md"
+
+      - alert: MarketplaceHighErrorRate
+        expr: |
+          sum(rate(http_requests_total{job="wattanam-marketplace", status_code=~"5.."}[5m]))
+          / sum(rate(http_requests_total{job="wattanam-marketplace"}[5m])) > 0.01
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "More than 1% of marketplace API requests are failing with 5xx"
+          description: "Warning threshold ahead of the 99.9% monthly availability target (plan §13.2)."
+          owner: "Marketplace on-call"
+          response_target: "1 hour"
+          runbook: "docs/operations/publisher-plugin-incidents.md"
+
+      - alert: MarketplacePaymentWebhookBacklog
+        expr: payment_webhook_backlog{job="wattanam-marketplace"} > 0
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: "One or more payment webhook events have sat unprocessed for over 5 minutes"
+          owner: "Marketplace on-call"
+          response_target: "1 hour"
+          runbook: "docs/operations/publisher-plugin-incidents.md"
+
+      - alert: MarketplacePaymentWebhookHighLag
+        expr: payment_webhook_processing_lag_seconds{job="wattanam-marketplace"} > 300
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: "Average payment webhook processing lag over the last hour exceeds 5 minutes"
+          owner: "Marketplace on-call"
+          response_target: "1 hour"
+          runbook: "docs/operations/publisher-plugin-incidents.md"

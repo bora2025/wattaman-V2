@@ -15,6 +15,9 @@ import { InstallationRegistrationService } from './installation-registration.ser
 import { InstallationEntitlementAccessService } from './installation-entitlement-access.service';
 import { PublisherGovernanceService } from './publisher-governance.service';
 import { CustomerMarketplaceService } from './customer-marketplace.service';
+import { createMetricsRegistry } from './observability/metrics';
+import { requestLoggingMiddleware } from './observability/request-logging';
+import { readMetricsToken } from './observability/metrics-config';
 
 function adminGuard(expected: string) {
   const expectedBytes = Buffer.from(expected);
@@ -49,12 +52,25 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   const publisherGovernance = new PublisherGovernanceService(prisma, repository);
   const customerMarketplace = new CustomerMarketplaceService(prisma, commerce);
   const upload = multer({ storage: multer.memoryStorage(), limits: { files: 1, fileSize: config.maxArtifactBytes, fields: 10 } });
+  const metrics = createMetricsRegistry(prisma);
   app.disable('x-powered-by');
   app.use(helmet());
+  app.use(requestLoggingMiddleware(metrics));
   app.use(express.json({
     limit: '256kb',
     verify: (request, _response, buffer) => { (request as Request & { rawBody?: Buffer }).rawBody = Buffer.from(buffer); },
   }));
+
+  app.get('/metrics', async (request, response) => {
+    const token = readMetricsToken();
+    if (!token) return response.status(401).json({ error: 'METRICS_TOKEN is not configured; /metrics is disabled by default' });
+    const header = request.header('authorization') || '';
+    const supplied = header.startsWith('Bearer ') ? Buffer.from(header.slice(7)) : Buffer.alloc(0);
+    const expected = Buffer.from(token);
+    if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) return response.status(401).json({ error: 'Invalid metrics token' });
+    response.set('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
+    response.send(await metrics.registry.metrics());
+  });
 
   app.get('/health/live', (_request, response) => response.json({ status: 'alive' }));
   app.get('/health/ready', async (_request, response, next) => { try { response.json(await repository.health()); } catch (error) { next(error); } });

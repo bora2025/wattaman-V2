@@ -37,6 +37,7 @@ import { InstallationModule } from './installation/installation.module';
 import { PluginsModule } from './plugins/plugins.module';
 import { UpdatesModule } from './updates/updates.module';
 import { MarketplaceModule } from './marketplace/marketplace.module';
+import { ObservabilityModule } from './observability/observability.module';
 
 @Module({
   imports: [
@@ -76,6 +77,7 @@ import { MarketplaceModule } from './marketplace/marketplace.module';
     PluginsModule,
     UpdatesModule,
     MarketplaceModule,
+    ObservabilityModule,
   ],
   controllers: [AppController],
   providers: [
