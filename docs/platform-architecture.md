@@ -405,7 +405,7 @@ Before implementation, confirm:
 1. Whether the core will be open source, source-available, or proprietary.
 2. Whether installations serve one school or multiple organizations.
 3. Which database and storage providers are officially supported.
-4. Which current features remain core and which become plugins.
+4. Which current features remain core and which become plugins. (Tracked as the master plan's DEC-004; a 2026-08-29 review found it outgrown by the real ~35-module backend against its ~10 named concepts — see `docs/decisions/product-owner-decision-brief-2026-08-29.md` and `docs/architecture/module-boundaries.md` for the current, evidence-backed classification.)
 5. How plugin developers can access frontend and backend extension APIs.
 6. Whether paid licenses are perpetual with optional updates or subscription-only.
 7. What uptime and offline behavior is required for license validation.

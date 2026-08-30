@@ -52,7 +52,7 @@ These decisions must be recorded as Architecture Decision Records before impleme
 
 | Decision | Recommended default | Reason |
 |---|---|---|
-| Deployment | Docker Compose on Linux | Repeatable and supportable |
+| Deployment | Docker Compose on Linux (self-hosting) or one Railway project per school (managed hosting) — the master plan's DEC-008 has since named both as supported, not just Compose | Repeatable and supportable |
 | Backend | NestJS modular monolith | Matches current code and simplifies transactions |
 | Web frontend | Next.js | Matches current application |
 | Mobile | Expo application | Matches current application |
@@ -71,7 +71,7 @@ These decisions must be recorded as Architecture Decision Records before impleme
 1. Is Wattanam Core open source, source-available, or proprietary?
 2. Is a license perpetual, subscription-based, or perpetual with paid updates?
 3. Does one installation support exactly one school or multiple campuses?
-4. Which modules are included in the base product?
+4. Which modules are included in the base product? (The master plan's DEC-004 tracks this. A 2026-08-29 review found the real backend now has roughly 35 modules against DEC-004's ~10 named concepts — the decision has been outgrown by the real module list, not just left open; see `docs/decisions/product-owner-decision-brief-2026-08-29.md` and `docs/architecture/module-boundaries.md` before treating this as a simple yes/no.)
 5. Which countries, languages, currencies, and regulations are first-class at launch?
 6. Is internet access required after installation?
 7. Who may publish plugins during each release phase?
@@ -154,6 +154,14 @@ wattanam-v2/
 
 Do not perform this reorganization as one uncontrolled move. Introduce workspace tooling first, then move one application or shared package at a time while tests remain green.
 
+Only `packages/plugin-sdk` and `packages/plugin-cli` exist today (C-008) — `core-contracts`,
+`plugin-runtime`, `ui`, `configuration`, `logging`, and `testing` remain unbuilt, which is
+expected this early. But the *intent* for `packages/` has also narrowed since this was written:
+`docs/architecture/module-boundaries.md` now states `packages/` is for "publishable,
+framework-independent developer tooling... never business-domain code," explicitly ruling out
+`ui`/`configuration`/`logging` as ever moving here. Treat those three as superseded rather than
+simply pending.
+
 ## 5. Core Domain Boundaries
 
 ### 5.1 Platform Core
@@ -176,8 +184,18 @@ Core owns functionality that every installation needs:
 
 ### 5.2 Candidate Official Plugins
 
-- Announcements.
-- Attendance.
+> This list predates the real per-module classification. `docs/architecture/module-boundaries.md`
+> (A-007, kept current as new modules ship) is now the authoritative, evidence-backed answer to
+> "core, shared, or plugin-eligible" for every real `backend/src/*` module — treat any
+> disagreement below in its favor. Two corrections worth calling out explicitly:
+> **Announcements is no longer a candidate — it was extracted for real** (C-004, a live-verified
+> reference cutover: `docs/acceptance/gate-c-announcements-cutover-2026-08-28.md`), and
+> **Attendance is CORE, not plugin-eligible** (it's one of DEC-004's named base-product concepts,
+> and `session-config`/`holidays`/`card-aliases` are SHARED specifically because attendance
+> depends on them — extracting attendance would mean extracting all four together).
+
+- ~~Announcements~~ (already extracted; see note above).
+- ~~Attendance~~ (CORE; see note above).
 - Timetable.
 - Courses and learning content.
 - Assignments.
@@ -186,8 +204,10 @@ Core owns functionality that every installation needs:
 - Salary and payroll.
 - Staff CV.
 - Transportation and bus tracking.
-- Parent portal.
-- Card designer and card aliases.
+- Parent portal (the messaging *feature* — the underlying realtime room infrastructure it's built
+  on is SHARED, reused by the `realtime.notify` plugin capability, and doesn't move on its own).
+- Card designer (`card-templates`) — **not** card aliases: `card-aliases` is SHARED, a load-bearing
+  dependency of attendance (physical-card-to-student resolution), and cannot move independently.
 - Advanced notification providers.
 
 ### 5.3 Features That Must Stay in Core Initially
@@ -199,6 +219,7 @@ Core owns functionality that every installation needs:
 - Audit logging.
 - Plugin manager.
 - Database, migrations, and platform bootstrapping.
+- **Attendance** — named in DEC-004's base scope (see the correction in §5.2 above).
 
 Moving these areas into plugins would create circular dependencies and unsafe failure modes.
 
@@ -372,8 +393,9 @@ The manifest must include:
 - Plugin dependencies and compatible ranges.
 - Migration list.
 - Supported languages.
-- Package checksum.
 - Support and privacy URLs.
+
+The package checksum ended up living in the package's separate `checksums.json` (with `signature.json` for the publisher signature) rather than as a `plugin.json` manifest field — `backend/src/plugins/plugin-manifest.ts`'s real `PluginManifest` interface otherwise matches this list closely, including per-migration checksums.
 
 ### 9.3 Lifecycle States
 
@@ -392,6 +414,16 @@ Exceptional states:
 - `migration_failed`
 - `disabled_by_security_policy`
 - `update_available`
+
+**The real implementation collapsed this differently.** `PluginInstallation.status`
+(`backend/src/plugins/plugins.service.ts`) only ever holds `installed`, `active`, `inactive`,
+`removed`, `failed`, or `migrating` — none of the five exceptional states above exist as their
+own named status; every failure mode (incompatible core version, bad signature, a broken
+migration, an emergency security disable) collapses into the single generic `failed` status plus
+a `lastError` string explaining which. `migrating` is a real transitional state this list never
+anticipated. This is a genuine implementation simplification, not merely "not built yet" — treat
+the states above as the original design intent, and `plugins.service.ts` as the current source of
+truth for what a caller actually sees.
 
 ### 9.4 Lifecycle Operations
 
@@ -571,10 +603,13 @@ Centralized logs and monitoring
 
 - `web`
 - `api`
-- `worker`
 - `postgres` for the bundled option
-- `reverse-proxy` for the documented standalone deployment
-- Optional backup job
+- `gateway` — the real service name (not `reverse-proxy`), and it's the sole public ingress by
+  design (B-005's "gateway-only public exposure" security control: `web`/`api`/`postgres` are
+  never directly reachable), so it's part of the default stack, not an optional add-on for a
+  separately-documented standalone deployment as originally framed here.
+- Optional `worker` split (behind the `split-worker` Compose profile) and optional backup job
+  (behind the `operations` profile).
 
 Containers should run as non-root, use read-only filesystems where practical, expose health checks, and persist only declared volumes.
 
@@ -662,14 +697,16 @@ Each installation generates an identifier and local key pair. Marketplace regist
 
 ### 14.2 Entitlement Token
 
-A signed entitlement should contain only necessary claims:
-
-- Installation ID.
-- Plugin ID.
-- Purchased edition.
-- Valid update period.
-- Issued and expiry timestamps.
-- Optional environment allowance for production and staging.
+A signed entitlement should contain only necessary claims. **The real, shipped, live-verified
+schema (E-004; `apps/marketplace-api/src/entitlement.ts`'s `entitlementPayloadSchema`) ended up
+different from the claims list originally proposed here** — not an "edition" plus an
+"environment allowance," but: `installationId`, `customerId`, `productId`,
+`licensedMajorRange` (a semver range the installed core version must satisfy — the actual
+licensing model, replacing the "purchased edition" concept), `issuedAt`/`notBefore`/`expiresAt`,
+`updatesThrough` (how long update access lasts, separate from continued operation),
+`offlineRecheckAfter` (the offline grace window from §14.3), a `features` string array, plus
+`issuer`/`audience`/`keyId`/`nonce`/`tokenId`/`schemaVersion` for replay/rotation/versioning
+safety. Anyone implementing against this section should read the real schema, not this list.
 
 The installation verifies the signature locally using a pinned public key.
 
@@ -909,6 +946,15 @@ Every change should run:
 6. Dependency and secret scanning.
 7. Production builds.
 8. Migration validation.
+
+The real pipeline (`.github/workflows/pr-validation.yml`) runs these in a different order and
+shape, deliberately: migration validation first (against a real ephemeral Postgres), then
+typecheck/lint/test/build together per app, plus `gitleaks` secret scanning and `hadolint`
+Dockerfile linting this list didn't anticipate. Integration and plugin-contract tests aren't
+separate CI stages — they're folded into the same `npm test` run as everything else. Formatting
+is deliberately *not* a hard gate (see `docs/completion-checklist.md`'s CI/CD entry for why:
+retrofitting a formatter now would rewrite nearly every existing file). None of this contradicts
+the goal stated here, just the exact shape.
 
 ### 20.2 Release Pipeline
 
@@ -1216,6 +1262,20 @@ A platform capability is done only when:
 A release is done only when a clean installation, supported-version upgrade, backup, restore, and critical workflows all pass against release artifacts.
 
 ## 29. First 30 Implementation Tasks
+
+> **Historical status note, added 2026-08-30**: this reads as a pending starting checklist, but
+> it no longer is one. Per `docs/completion-checklist.md`, roughly 27 of these 30 tasks are
+> already done with live-verified evidence — everything from task 4 onward, spanning inventory
+> (A-002), production hardening (A-008/A-009), Docker packaging and first-run setup (the
+> 2026-08-27 foundation baseline), backup/restore (B-008/B-012), and the full plugin
+> manifest/SDK/registry/lifecycle/signature/safe-mode/announcements-extraction line (C-001
+> through C-008). Only tasks 1–3 — the Product Owner decisions themselves (DEC-001–003) — remain
+> genuinely open, and that's a business decision, not unstarted engineering. The master plan's
+> own traceability table already reflects this ("29 Initial tasks | ... | **Closed work packages
+> with evidence links**" — `platform-master-execution-plan.md`), this document simply hadn't
+> been updated to match, unlike Section 30 below. Treat the list as a historical record of the
+> starting point, not a live task list — use the [completion checklist](./completion-checklist.md)
+> for current status.
 
 1. Approve the Version 1 customer and hosting scope.
 2. Decide the core license and paid-plugin model.
