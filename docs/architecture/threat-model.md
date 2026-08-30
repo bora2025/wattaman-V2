@@ -46,7 +46,7 @@ Two boundaries carry the most weight in what follows: **(a)** the school API and
 | U-6 | An update fails partway through, leaving the school in an undefined state | Native backup + durable maintenance journal before mutation; completion records healthy-or-recovery-required | `D-005` |
 | U-7 | A malicious or vulnerable already-published plugin needs emergency removal from the field | Signed, non-destructive emergency-disable; advisory/withdrawal/communication process | `D-006` |
 
-**Residual risk**: Repository-key rotation has a **live, drilled** overlap procedure; the **entitlement** signing key (workflow 3, below) does not have an equivalent drill yet — this is a known, documented gap, not an oversight. **Sign-off**: _pending SEC review_.
+**Residual risk**: ~~Repository-key rotation has a live, drilled overlap procedure; the entitlement signing key does not have an equivalent drill yet.~~ **Closed 2026-08-29** — the entitlement signing key now has an equivalent live drill (`apps/marketplace-api/scripts/entitlement-signing-key-rotation-live-drill.js`, 9/9 checks: overlap coexistence, old-key cutoff on removal, key-id-mismatch and untrusted-key rejection), using the real, unmodified issuing/verification functions on both sides. **Sign-off**: _pending SEC review_.
 
 ## 3. Licensing / entitlement
 
@@ -60,23 +60,23 @@ Two boundaries carry the most weight in what follows: **(a)** the school API and
 | L-6 | Steal an installation's private signing key to impersonate it to the marketplace | Proof-of-possession challenge (signed, single-use, 5-minute window) required before binding/rotating a public key; rotation requires a signature from the *currently active* key, not just re-registration | `E-002` — replay, expiry, cross-installation claims, and hijacking an already-registered ID are all rejected (16 tests) |
 | L-7 | Entitlement signing key compromised | Distinct key from the repository key (compromising one doesn't forge the other) | [ADR-0006](./adr/0006-licensing.md), [secrets-inventory.md](../operations/secrets-inventory.md) |
 
-**Residual risk**: **L-7's rotation procedure is undrilled** (see U-4/U-7 sibling gap) — if the entitlement key were compromised today, the recovery path is theoretical, not rehearsed. Additionally, E-002/E-005's proof-of-possession and outage-grace logic are **unit-tested against mocked transactions only**; live-PostgreSQL verification of the full challenge/register/rotate/cache flow remains open (tracked in the completion checklist under E-002/E-005). **Sign-off**: _pending SEC review, pending live-database verification, pending entitlement-key rotation drill_.
+**Residual risk**: ~~L-7's rotation procedure is undrilled... E-002/E-005's proof-of-possession and outage-grace logic are unit-tested against mocked transactions only.~~ **Both closed 2026-08-29** — L-7's rotation now has a live drill (see workflow 2's residual risk above), and E-002/E-005's full challenge/register/rotate/cache flow is live-verified against two real PostgreSQL 16 databases with the marketplace's real Express app and the school's real registration/entitlement-cache service classes making real signed HTTP calls (`apps/marketplace-api/scripts/identity-registration-entitlement-live-drill.js`, wired into `.github/workflows/phase-e-commerce-certification.yml`; [evidence](../acceptance/gate-e-identity-registration-entitlement-live-drill-2026-08-29.md)) — not mocked transactions. **Sign-off**: _pending SEC review_.
 
 ## 4. Marketplace (identity, publisher governance, catalog)
 
 | # | Abuse case | Mitigation | Evidence |
 |---|---|---|---|
 | M-1 | Brute-force or credential-stuff a customer account | Scrypt password hashing; exponential lockout after repeated failures | `E-001` — 31 passing tests |
-| M-2 | Steal a session token from a database dump or a log | Session tokens hashed at rest (`MarketplaceSession.tokenHash`) — contrast with the school API's `RefreshToken.token`, which is plaintext (see residual risk) | `E-001`; [data-classification.md](./data-classification.md) |
+| M-2 | Steal a session token from a database dump or a log | Session tokens hashed at rest (`MarketplaceSession.tokenHash`). The school API's own `RefreshToken.token` had the same plaintext gap, but is now also hashed at rest with rotation and reuse-detection — the asymmetry this row used to flag no longer exists | `E-001`; [gate-security-refresh-token-custody-2026-08-29.md](../acceptance/gate-security-refresh-token-custody-2026-08-29.md) |
 | M-3 | Reuse an already-rotated session token after a legitimate rotation | Reuse-detection: presenting an already-rotated token revokes **every** session on the account | `E-001` — tested |
-| M-4 | Steal a customer's TOTP MFA shared secret | **Not mitigated** — `MarketplaceAccount.mfaSecret` is stored in plaintext (structurally can't be one-way hashed, but isn't encrypted at rest either) | [data-classification.md](./data-classification.md) — confirmed via `identity.service.ts` |
-| M-5 | A single compromised admin credential grants unlimited administrative action | **Partially mitigated**: `MARKETPLACE_ADMIN_TOKEN` is a single shared bearer token for every `/admin/v1/*` action, checked with constant-time comparison, but has no per-admin identity, no scoping, and no drilled rotation | [secrets-inventory.md](../operations/secrets-inventory.md) |
+| M-4 | Steal a customer's TOTP MFA shared secret | **Mitigated** — `MarketplaceAccount.mfaSecret` is encrypted at rest (AES-256-GCM via `IDENTITY_ENCRYPTION_KEYS_JSON`, `encryptSecret`/`decryptSecret` in `identity.service.ts`), with self-healing key rotation live-verified end to end | [secret-rotation-runbooks.md](../operations/secret-rotation-runbooks.md) |
+| M-5 | A single compromised admin credential grants unlimited administrative action | **Partially mitigated**: `MARKETPLACE_ADMIN_TOKEN` is a shared bearer token for every `/admin/v1/*` action, checked with constant-time comparison; rotation is now overlap-capable and live-drilled (`MARKETPLACE_SECONDARY_ADMIN_TOKENS_JSON`), but the token still has no per-admin identity or scoping — a leaked token still grants every admin action, not just the actions one admin should have | [secrets-inventory.md](../operations/secrets-inventory.md), [secret-rotation-runbooks.md](../operations/secret-rotation-runbooks.md) |
 | M-6 | A publisher's signing key is stolen and used to publish a malicious release under their trusted identity | Dual-controlled key enrollment/rotation/revocation; MFA-backed role membership; two-reviewer organization identity verification | `F-002` |
 | M-7 | A submitted plugin package contains malware, embedded secrets, or a known-vulnerable dependency | Automated analysis: signature/manifest/checksum/dependency/license verification, malware and secret-signal scanning, dependency-advisory checks, structured retained report | `F-003` |
 | M-8 | A reviewer approves their own (or a colluding) submission to bypass review | Durable enforcement of no-self-review; two distinct official approvals required for risky capabilities/destructive migrations; retained evidence | `F-004` |
 | M-9 | A malicious/abandoned/disputed/transferred plugin needs a documented incident response | Procedures and a tabletop matrix exist, paired with withdrawal/advisory controls | `F-006` |
 
-**Residual risk**: **M-4 and M-5 are real, currently-live gaps**, not just documentation gaps — `MarketplaceAccount.mfaSecret` should receive encryption-at-rest, and `MARKETPLACE_ADMIN_TOKEN` should move toward per-admin scoped credentials with a rotation runbook (both already flagged in [secrets-inventory.md](../operations/secrets-inventory.md) as engineering work, not resolved here). Fixing M-2's asymmetry with the school API's plaintext `RefreshToken.token` requires school-side engineering work (hash-at-rest, reuse-detection), tracked separately. **Sign-off**: _pending SEC review; M-4/M-5 should be prioritized before Gate E1_.
+**Residual risk**: ~~M-4 and M-5 are real, currently-live gaps... M-2's asymmetry with the school API's plaintext RefreshToken.token requires school-side engineering work.~~ **M-2 and M-4 closed 2026-08-29** (encryption-at-rest and refresh-token hash-at-rest, both cited above with live-drilled evidence). **M-5 partially closed**: rotation is no longer a hard cutover, but the token remains a single shared credential with no per-admin identity or scoping — a real, still-open gap, since a leaked token grants every admin action regardless of which admin leaked it. Moving to per-admin scoped credentials is genuine new engineering, not addressed by the rotation work. **Sign-off**: _pending SEC review; M-5's remaining scoping gap should be prioritized before Gate E1_.
 
 ## 5. Payments
 
@@ -115,9 +115,9 @@ Two boundaries carry the most weight in what follows: **(a)** the school API and
 | Workflow | Highest residual risk | Sign-off (name, date) |
 |---|---|---|
 | Installation | Real-legacy-data adoption unrehearsed | _pending_ |
-| Update | Entitlement key rotation undrilled | _pending_ |
-| Licensing | Same undrilled rotation; live-DB verification open | _pending_ |
-| Marketplace | Plaintext `mfaSecret`; unscoped shared admin token | _pending_ |
+| Update | ~~Entitlement key rotation undrilled~~ Closed 2026-08-29 (live-drilled) | _pending SEC review_ |
+| Licensing | ~~Same undrilled rotation; live-DB verification open~~ Closed 2026-08-29 (both live-drilled) | _pending SEC review_ |
+| Marketplace | Unscoped shared admin token (mfaSecret encryption and its rotation are closed 2026-08-29) | _pending_ |
 | Payments | P-6 design tradeoff needs customer communication | _pending_ |
 | Publisher | In-process trust model's architectural ceiling (Pu-2) | _pending — recommend explicit PO acceptance alongside DEC-011_ |
 
