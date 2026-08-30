@@ -5,6 +5,8 @@ import AuthGuard from '../../../components/AuthGuard'
 import Sidebar from '../../../components/Sidebar'
 import { accounterNav } from '../../../lib/accounter-nav'
 import { apiFetch } from '../../../lib/api'
+import { useInstallationCurrency } from '../../../lib/installation'
+import { formatMoneyMajor } from '../../../lib/formatMoney'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -42,8 +44,11 @@ interface BudgetReport {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const fmt = (n: number) =>
-  '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+// Set synchronously at the top of BudgetDashboard's render (not in an effect) so every
+// sibling component below it in the same render pass -- BarChart, StatCard, etc. -- sees the
+// current value the moment it's known, not one render behind.
+let currentCurrency = 'USD'
+const fmt = (n: number) => formatMoneyMajor(n, currentCurrency)
 
 function anchorToday(): string {
   return new Date().toISOString().split('T')[0]
@@ -143,6 +148,7 @@ function StatCard({ label, value, sub, colorClass }: {
 // ─── Budget Dashboard ─────────────────────────────────────────────────────────
 
 function BudgetDashboard() {
+  currentCurrency = useInstallationCurrency()
   const [period, setPeriod] = useState<Period>('monthly')
   const [anchor, setAnchor] = useState(anchorToday())
   const [report, setReport] = useState<BudgetReport | null>(null)

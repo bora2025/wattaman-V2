@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+
 export type InstallationState = 'ready' | 'installed' | 'legacy_unadopted';
 
 export interface InstallationMetadata {
@@ -48,6 +50,23 @@ export async function getInstallationStatus(signal?: AbortSignal): Promise<Insta
   });
   if (!response.ok) throw new Error(await responseMessage(response));
   return response.json();
+}
+
+/**
+ * The installation's configured currency (ISO 4217 code), for formatting money without
+ * hardcoding `$`. Falls back to 'USD' until the (public, unauthenticated) status endpoint
+ * resolves -- there is no meaningful "unknown currency" state to render instead.
+ */
+export function useInstallationCurrency(): string {
+  const [currency, setCurrency] = useState('USD');
+  useEffect(() => {
+    const controller = new AbortController();
+    getInstallationStatus(controller.signal)
+      .then((status) => { if (status.installation?.currency) setCurrency(status.installation.currency); })
+      .catch(() => { /* keep the USD fallback; this is a display nicety, not a hard dependency */ });
+    return () => controller.abort();
+  }, []);
+  return currency;
 }
 
 export async function installWattanam(payload: InstallRequest): Promise<InstallationStatus> {

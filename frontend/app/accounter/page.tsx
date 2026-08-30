@@ -7,6 +7,8 @@ import AuthGuard from '../../components/AuthGuard'
 import { accounterNav } from '../../lib/accounter-nav'
 import { apiFetch } from '../../lib/api'
 import { todayCambodia } from '../../lib/dateUtils'
+import { useInstallationCurrency } from '../../lib/installation'
+import { formatMoneyMajor } from '../../lib/formatMoney'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -56,7 +58,11 @@ function getStatus(r: FeeRecord): 'paid' | 'partial' | 'pending' | 'overdue' {
   return 'pending'
 }
 
-function fmt(n: number) { return '$' + n.toLocaleString() }
+// Set synchronously at the top of AccounterDashboard's render (not in an effect) so every
+// sibling component below it in the same render pass -- PaymentModal, InvoiceModal, etc. --
+// sees the current value the moment it's known, not one render behind.
+let currentCurrency = 'USD'
+function fmt(n: number) { return formatMoneyMajor(n, currentCurrency) }
 
 const STATUS_BADGE: Record<string, string> = {
   paid: 'bg-gray-900 text-white',
@@ -771,7 +777,7 @@ function AddFeeModal({ students, onClose, onCreated }: {
           {disc > 0 && total > 0 && (
             <div className="flex items-center justify-between bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-2.5 text-sm">
               <span className="text-emerald-700 font-medium">Net due after discount</span>
-              <span className="font-bold text-emerald-800">${effective.toFixed(2)}</span>
+              <span className="font-bold text-emerald-800">{fmt(effective)}</span>
             </div>
           )}
 
@@ -918,7 +924,7 @@ function QuickFeeModal({ student, onClose, onCreated }: {
           {disc > 0 && total > 0 && (
             <div className="flex items-center justify-between bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-2.5 text-sm">
               <span className="text-emerald-700 font-medium">After {disc}% discount</span>
-              <span className="font-bold text-emerald-800">${effective.toFixed(2)}</span>
+              <span className="font-bold text-emerald-800">{fmt(effective)}</span>
             </div>
           )}
 
@@ -978,6 +984,7 @@ function StatCard({ label, value, sub, icon, accent }: { label: string; value: s
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
 function AccounterDashboard() {
+  currentCurrency = useInstallationCurrency()
   const [records, setRecords] = useState<FeeRecord[]>([])
   const [students, setStudents] = useState<StudentInfo[]>([])
   const [loading, setLoading] = useState(true)

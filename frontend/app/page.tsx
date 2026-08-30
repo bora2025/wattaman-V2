@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useLanguage } from '../lib/i18n'
+import { useInstallationCurrency } from '../lib/installation'
+import { formatMoneyMajor } from '../lib/formatMoney'
 
 /* ─── Types ─────────────────────────────────────────────── */
 interface HeroSlide {
@@ -305,6 +307,7 @@ function themeForClass(key: string) {
 function OpenClassRegistrations() {
   const [classes, setClasses] = useState<PublicClass[]>([])
   const [loaded, setLoaded] = useState(false)
+  const currency = useInstallationCurrency()
 
   useEffect(() => {
     fetch('/api/class-registrations/public/classes')
@@ -380,7 +383,7 @@ function OpenClassRegistrations() {
 
                   <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
                     {cls.showPrice && cls.price != null ? (
-                      <span className="text-lg font-extrabold text-gray-900">${cls.price.toFixed(2)}</span>
+                      <span className="text-lg font-extrabold text-gray-900">{formatMoneyMajor(cls.price, currency)}</span>
                     ) : (
                       <span className="text-sm font-semibold text-gray-400">Free to apply</span>
                     )}
