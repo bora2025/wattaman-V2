@@ -208,23 +208,29 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   app.post('/admin/v1/publisher-policies', requireAdmin, async (request, response, next) => {
     try { response.status(201).json(await publisherGovernance.publishPolicy(request.body)); } catch (error) { next(error); }
   });
-  app.post('/admin/v1/publishers/:publisherId/members', requireAdmin, async (request, response, next) => {
-    try { response.status(201).json(await publisherGovernance.addVerifiedMember({ ...request.body, publisherId: request.params.publisherId })); } catch (error) { next(error); }
+  // These governance actions claim a specific acting identity (verifiedBy/approvedBy/reviewerId/etc.)
+  // that requireAdmin's shared bearer token cannot authenticate -- anyone holding that one token
+  // could otherwise name any two real reviewers/approvers in separate calls and forge the
+  // two-person/no-self-review guarantees below. requireSession ties the claim to who is actually
+  // logged in (the same session mechanism already used for publisher self-service), and the
+  // request.accountId override always wins over whatever the body claims.
+  app.post('/admin/v1/publishers/:publisherId/members', requireSession, async (request: Request & { accountId?: string }, response, next) => {
+    try { response.status(201).json(await publisherGovernance.addVerifiedMember({ ...request.body, publisherId: request.params.publisherId, verifiedBy: request.accountId })); } catch (error) { next(error); }
   });
   app.post('/admin/v1/marketplace-reviewers', requireAdmin, async (request, response, next) => {
     try { response.status(201).json(await publisherGovernance.addMarketplaceReviewer(request.body)); } catch (error) { next(error); }
   });
-  app.post('/admin/v1/publishers/:publisherId/approve', requireAdmin, async (request, response, next) => {
-    try { response.json(await publisherGovernance.approvePublisher({ ...request.body, publisherId: request.params.publisherId })); } catch (error) { next(error); }
+  app.post('/admin/v1/publishers/:publisherId/approve', requireSession, async (request: Request & { accountId?: string }, response, next) => {
+    try { response.json(await publisherGovernance.approvePublisher({ ...request.body, publisherId: request.params.publisherId, approvedBy: request.accountId })); } catch (error) { next(error); }
   });
-  app.post('/admin/v1/publisher-keys/:keyRecordId/approve', requireAdmin, async (request, response, next) => {
-    try { response.json(await publisherGovernance.approveKey({ ...request.body, keyRecordId: request.params.keyRecordId })); } catch (error) { next(error); }
+  app.post('/admin/v1/publisher-keys/:keyRecordId/approve', requireSession, async (request: Request & { accountId?: string }, response, next) => {
+    try { response.json(await publisherGovernance.approveKey({ ...request.body, keyRecordId: request.params.keyRecordId, approvedBy: request.accountId })); } catch (error) { next(error); }
   });
-  app.post('/admin/v1/publisher-keys/:keyRecordId/revoke', requireAdmin, async (request, response, next) => {
-    try { response.json(await publisherGovernance.revokeKey({ ...request.body, keyRecordId: request.params.keyRecordId })); } catch (error) { next(error); }
+  app.post('/admin/v1/publisher-keys/:keyRecordId/revoke', requireSession, async (request: Request & { accountId?: string }, response, next) => {
+    try { response.json(await publisherGovernance.revokeKey({ ...request.body, keyRecordId: request.params.keyRecordId, approvedBy: request.accountId })); } catch (error) { next(error); }
   });
-  app.post('/admin/v1/submissions/:submissionId/reviews', requireAdmin, async (request, response, next) => {
-    try { response.status(201).json(await publisherGovernance.review({ ...request.body, submissionId: request.params.submissionId })); } catch (error) { next(error); }
+  app.post('/admin/v1/submissions/:submissionId/reviews', requireSession, async (request: Request & { accountId?: string }, response, next) => {
+    try { response.status(201).json(await publisherGovernance.review({ ...request.body, submissionId: request.params.submissionId, reviewerId: request.accountId })); } catch (error) { next(error); }
   });
   app.post('/admin/v1/revenue/orders/:orderId/record', requireAdmin, async (request, response, next) => {
     try { response.json(await publisherGovernance.recordOrderRevenue(String(request.params.orderId), request.body?.feeBasisPoints)); } catch (error) { next(error); }
@@ -232,20 +238,24 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   app.post('/admin/v1/revenue/refunds/:refundId/record', requireAdmin, async (request, response, next) => {
     try { response.json(await publisherGovernance.recordRefundRevenue(String(request.params.refundId))); } catch (error) { next(error); }
   });
-  app.post('/admin/v1/revenue/corrections', requireAdmin, async (request, response, next) => {
-    try { response.status(201).json(await publisherGovernance.correctEntry(request.body)); } catch (error) { next(error); }
+  // correctEntry claims two distinct identities (createdBy/approvedBy) from a single call.
+  // createdBy stays body-supplied here -- it records whoever originally proposed the correction
+  // through an offline process this API has no way to independently witness -- but approvedBy,
+  // the person actually finalizing it through this API call, is authenticated, not self-asserted.
+  app.post('/admin/v1/revenue/corrections', requireSession, async (request: Request & { accountId?: string }, response, next) => {
+    try { response.status(201).json(await publisherGovernance.correctEntry({ ...request.body, approvedBy: request.accountId })); } catch (error) { next(error); }
   });
   app.post('/admin/v1/publisher-statements', requireAdmin, async (request, response, next) => {
     try { response.status(201).json(await publisherGovernance.generateStatement(request.body)); } catch (error) { next(error); }
   });
-  app.post('/admin/v1/publisher-payouts', requireAdmin, async (request, response, next) => {
-    try { response.status(201).json(await publisherGovernance.requestPayout(request.body)); } catch (error) { next(error); }
+  app.post('/admin/v1/publisher-payouts', requireSession, async (request: Request & { accountId?: string }, response, next) => {
+    try { response.status(201).json(await publisherGovernance.requestPayout({ ...request.body, requestedBy: request.accountId })); } catch (error) { next(error); }
   });
-  app.post('/admin/v1/publisher-payouts/:payoutId/approve', requireAdmin, async (request, response, next) => {
-    try { response.json(await publisherGovernance.approvePayout({ ...request.body, payoutId: request.params.payoutId })); } catch (error) { next(error); }
+  app.post('/admin/v1/publisher-payouts/:payoutId/approve', requireSession, async (request: Request & { accountId?: string }, response, next) => {
+    try { response.json(await publisherGovernance.approvePayout({ ...request.body, payoutId: request.params.payoutId, approvedBy: request.accountId })); } catch (error) { next(error); }
   });
-  app.post('/admin/v1/publisher-payouts/:payoutId/paid', requireAdmin, async (request, response, next) => {
-    try { response.json(await publisherGovernance.markPayoutPaid({ ...request.body, payoutId: request.params.payoutId })); } catch (error) { next(error); }
+  app.post('/admin/v1/publisher-payouts/:payoutId/paid', requireSession, async (request: Request & { accountId?: string }, response, next) => {
+    try { response.json(await publisherGovernance.markPayoutPaid({ ...request.body, payoutId: request.params.payoutId, paidBy: request.accountId })); } catch (error) { next(error); }
   });
   app.get('/admin/v1/pilot/metrics', requireAdmin, async (_request, response, next) => {
     try { response.json(await publisherGovernance.pilotMetrics()); } catch (error) { next(error); }
