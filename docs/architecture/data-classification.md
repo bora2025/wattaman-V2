@@ -31,7 +31,7 @@ Built from a full read of every model in `backend/prisma/schema.prisma` and `app
 | `User.email`, `User.name`, `User.phone`, `User.phoneNormalized` | 2 | Direct PII; `email`/`name`/`phone` also → 3rd party (SendGrid/Twilio recipient + message interpolation) |
 | `User.password` | 4 | bcrypt hash (cost 12) — correctly hashed |
 | `User.photo` | 3 | Identification photo, biometric-adjacent |
-| `RefreshToken.token` | 4 | Session credential — **stored in plaintext**, see "Known at-rest exposure" below |
+| `RefreshToken.token` | 4 | Session credential — SHA-256 digest at rest (remediated 2026-08-29), see "Known at-rest exposure" below |
 | `ParentLinkRequest.parentEmail/parentName/parentPhone` | 2 | Direct PII |
 | `ParentLinkRequest.note`, `rejectReason` | 3 | Freeform text, unbounded content |
 
@@ -125,8 +125,8 @@ Built from a full read of every model in `backend/prisma/schema.prisma` and `app
 |---|---|---|
 | `MarketplaceAccount.email`, `displayName` | 2 | Direct PII |
 | `MarketplaceAccount.passwordHash` | 4 | Correctly hashed |
-| `MarketplaceAccount.mfaSecret` | 4 | **Stored in plaintext** — see "Known at-rest exposure" |
-| `MarketplaceSession.tokenHash`, `MarketplaceEmailVerification.tokenHash`, `MarketplacePasswordReset.tokenHash`, `MarketplaceMfaRecoveryCode.codeHash` | 4 | All correctly hashed — the norm this schema follows everywhere except the two exceptions noted above |
+| `MarketplaceAccount.mfaSecret` | 4 | Encrypted at rest, AES-256-GCM (remediated 2026-08-29) — see "Known at-rest exposure" |
+| `MarketplaceSession.tokenHash`, `MarketplaceEmailVerification.tokenHash`, `MarketplacePasswordReset.tokenHash`, `MarketplaceMfaRecoveryCode.codeHash` | 4 | All correctly hashed — now the norm this schema follows throughout, `mfaSecret` included |
 | `MarketplaceAuditEvent.ip` | 2 | Requester IP |
 | `MarketplaceAuditEvent.metadata` (Json) | inherits | Same indirect-PII amplification risk as the school `AuditLog` |
 
@@ -180,15 +180,15 @@ Built from a full read of every model in `backend/prisma/schema.prisma` and `app
 
 ## Known at-rest exposure
 
-Three fields are stored without the hashing their peers use — confirmed by reading the actual service code, not just field names:
+Of the three fields originally found stored without the hashing/encryption their peers use, two are now remediated (2026-08-29) — confirmed by reading the actual service code, not just field names:
 
 | Field | Status | Why it matters |
 |---|---|---|
-| `RefreshToken.token` (school) | Plaintext session credential, no reuse-detection | Exposure lets an attacker impersonate the account holder and reach every Tier 2/3 field that account can see. Contrast: the marketplace's equivalent (`MarketplaceSession.tokenHash`) is correctly hashed — this is an inconsistency between the two backends, not a universal design choice. |
-| `ClassRegistration.generatedPassword` (school) | Plaintext, by design (so an admin can relay it to the registrant) | The same row also has a correctly-hashed `passwordHash` — the plaintext copy is a deliberate but real duplication of the credential at rest. |
-| `MarketplaceAccount.mfaSecret` | Plaintext TOTP shared secret, no encryption-at-rest | Structurally can't be one-way hashed (verifying a code requires recomputing the HMAC), but every other marketplace secret in this schema (`tokenHash`, `codeHash`, `passwordHash`) is protected at rest and this one isn't — worth an encryption-at-rest pass, not a hash. |
+| `RefreshToken.token` (school) | **Remediated** — new writes store only a SHA-256 digest, rotation is atomic, and presenting an already-rotated token revokes every active session on the account; live-verified on disposable PostgreSQL 16 ([gate-security-refresh-token-custody-2026-08-29.md](../acceptance/gate-security-refresh-token-custody-2026-08-29.md)) | Previously the one real inconsistency with the marketplace's already-hashed `MarketplaceSession.tokenHash`; that asymmetry is now closed. A nullable legacy column remains only for one-use compatibility with sessions issued before the fix and can be dropped after the maximum refresh-token lifetime. |
+| `ClassRegistration.generatedPassword` (school) | **Still plaintext, by design** (so an admin can relay it to the registrant) — this one was never a gap to fix | The same row also has a correctly-hashed `passwordHash` — the plaintext copy is a deliberate, disclosed duplication of the credential at rest, not an oversight. |
+| `MarketplaceAccount.mfaSecret` | **Remediated** — encrypted at rest (AES-256-GCM via `IDENTITY_ENCRYPTION_KEYS_JSON`, `encryptSecret`/`decryptSecret` in `identity.service.ts`), with self-healing key rotation live-verified end to end | Every other marketplace secret in this schema (`tokenHash`, `codeHash`, `passwordHash`) was already protected at rest; this was the one gap, structurally requiring encryption rather than hashing since verifying a TOTP code means recomputing the HMAC. |
 
-None of these are fixed by this document — they're engineering work, tracked here so they aren't lost, not resolved here.
+Real engineering closed the two genuine gaps here since this document was first written — this file wasn't updated in step, which a later full-checklist audit caught. `ClassRegistration.generatedPassword` was never actually a gap to begin with, just a disclosed design tradeoff.
 
 ## Change rule
 
