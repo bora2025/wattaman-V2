@@ -117,17 +117,38 @@ Manual proof exists that the Railway Core reference topology (private PostgreSQL
 
 ## Release gates at a glance
 
-| Gate | State |
-|---|---|
-| A0/A1 (architecture baseline) | not reached — 0/13 decisions accepted. **Every Phase A work package engineering can complete without a business decision is now done** (A-002/A-006/A-007/A-008/A-009/A-010; A-003/A-004/A-005 have complete artifacts pending formal acceptance). What's left is not engineering work: A-001 is a Product Owner action by definition — nothing else in Phase A can substitute for it |
-| B0/B1/B2 (installable core) | not reached — manual Railway Core proof exists; automated provisioning/legacy/domain/recovery gates open |
-| C0–C3 (plugin-capable core) | **Phase C engineering is complete** — C-001 through C-008 all done, including the public CLI/typed-SDK/harness/templates/publish tooling; no third-party access is correctly still closed (and correctly so — no third-party publisher exists yet; DEC-011 still `proposed`). Gate C3's "published support window" clause is the one piece that needs the Product Owner, not engineering |
-| D0–D2 (official repository) | implementation complete for D-001–D-007; formal gates remain pending upstream B-005 and the Product Owner's DEC-012 telemetry approval |
-| E0–E3 (paid official plugins) | E-001/002/003/004/005/007/008/009 done, all live-database verified; E-006/011 implemented (deployed-browser verification remains) and E-010's 23-check cross-service spine certified. Transactional email/privacy review, E0 decisions, and E3 policy/provider approval remain |
-| F0–F2 (controlled marketplace) | F-002–006/F-009 implementation complete; F-001 approvals and the real F-007 pilot/F-008 human go/no-go remain, so publishing stays closed |
+Checked 2026-08-30 against each gate's *exact literal wording* in the master plan (not just the
+phase-level summary that used to live here) — several gates turn out to already have their
+technical/evidentiary bar met, with only a formal sign-off act (not new engineering) separating
+them from "reached." Marked **met** below only where the gate's own literal text is satisfied by
+live-verified evidence; "engineering met" means the technical bar is cleared but the gate is a
+business/approval action by definition, not something engineering can close alone.
+
+| Gate | Exact criteria | State |
+|---|---|---|
+| A0 | All Version 1 decisions approved, or owned with a blocking deadline | not reached — 0/13 DEC items approved or deadlined |
+| A1 | Every DB model/provider/secret/file class has an owning domain *and retention rule* | not reached — ownership complete (A-002/A-008); retention *rules* specifically are A-006's job, blocked on DEC-005/006 |
+| B0 | Support matrix and Railway template approved | not reached — support-matrix.md is a proposal awaiting A0; the Railway template has never been created/published from a clean project |
+| B1 | Clean install and two legacy snapshots pass | half done — clean install proven (Railway Core reference, 2026-08-27); two sanitized real legacy snapshots still needed from outside engineering |
+| B2 | A real staging Railway project passes provisioning, replacement, backup, restore, and upgrade | not reached — every mechanism is built and dry-run/locally verified; none has run against a real Railway project (deliberately deferred — real cloud spend, a different risk category) |
+| C0 | No third-party publisher access | **met** — correctly still closed; no third-party publisher exists yet |
+| C1 | Rollback/restore evidence exists | **met** — C-001/C-002 live-verified rollback; B-008/B-012 live-verified restore |
+| C2 | Announcements has one authoritative data owner | **met** — C-004; `plugins/announcements/` owns it for real, core is a proxy |
+| C3 | SDK 1.0 frozen *for the published support window* | not reached — SDK 1.0 is frozen (C-006); the support-window length needs DEC-011 |
+| D0 | Telemetry decision approved | not reached — DEC-012 still `proposed` |
+| D1 | Keys and production service pass disaster drill | **engineering met, sign-off open** — D-001/D-002's restart/restore/checksum/key-overlap drills already passed against the real production marketplace; [gate-d-official-repository-2026-08-28.md](./acceptance/gate-d-official-repository-2026-08-28.md) itself says formal approval "depends on separately named business/deployment prerequisites," not missing evidence |
+| D2 | A school updates from the repository and recovers from an injected failed update | in progress — D-005/D-007's real test suite already exercises exactly this (corrupt/tampered/replay/downgrade, backup/maintenance/recovery-required, emergency disable — all live-tested); whether a synthetic-but-real drill satisfies "a school" or this needs a real B-005-provisioned installation is a judgment call for the Product Owner, not new engineering |
+| E0 | DEC-001–013 and legal rules approved | not reached — same DEC blocker as everywhere else |
+| E1 | Identity/payment threat model complete and provider selected | half done — threat model complete (A-004, six workflows); provider selection is DEC-009, still `proposed` |
+| E2 | Offline token and outage tests pass | **met** — E-004/E-005/E-010 live-verified: offline verification with `fetch` disabled outright, outage fail-open, tamper fail-closed |
+| E3 | Finance reconciliation and refund drill pass | **engineering met, policy sign-off open** — E-009's refund/dispute/revocation (22/22) and F-009's ledger reconciliation are live-verified and tested; FL sign-off on the refund/dispute *rules themselves* (a business decision under DEC-002/DEC-009) is what's actually left, not the mechanism |
+| F0 | Publishing remains closed | **met** — correctly closed by design until F1/F2 |
+| F1 | Policies and tooling operational | half done — tooling is fully operational (F-002–006/F-009 implementation complete); the four F-001 policy documents exist as candidates awaiting Legal/Finance/Product/Security approval |
+| F2 | Pilot completes at least one update, rejection, key rotation, vulnerability withdrawal, and support case | not reached, can't start yet — needs F-007's real 3–5 publishers and 5–10 plugins, which doesn't exist |
 
 ## What actually blocks the most forward progress right now
 
+0. **Gates C1, C2, D1, E2, and E3 are evidentially met right now and only need someone to formally say so.** The gate-by-gate check above (2026-08-30) found these five already satisfy their literal wording with live-verified evidence sitting in `docs/acceptance/` — the fastest possible forward progress available is a SEC/FL sign-off pass over that existing evidence, not any new engineering. D1 and E3 specifically have a named approver's evidence doc already stating exactly this ("depends on separately named business/deployment prerequisites," not missing work).
 1. **DEC-001–013 approval (PO).** Nothing in Gates A0, B0, C0, D0, E0/E1, or F0 can formally close without these, no matter how much engineering happens underneath them. [product-owner-decision-brief-2026-08-29.md](./decisions/product-owner-decision-brief-2026-08-29.md) found that 10 of the 13 already match shipped code exactly (accepting costs nothing), DEC-012 (telemetry) is a genuine blank slate, and DEC-004 (base scope) has actually been *outgrown* by the real module list — a real conversation, not a rubber stamp.
 2. **Two sanitized real legacy database snapshots (B-001/B-002/B-003).** Everything downstream of "adopt an existing school" is blocked on getting real (sanitized) data to rehearse against — this needs someone outside engineering to source it.
 3. **Browser-driven E2E (B-004, INS-004).** Repeatedly deferred across sessions for lack of a browser-automation runtime; needs that tooling enabled once, not new design work.
