@@ -270,14 +270,14 @@ Target: invite third parties only after SDK and commercial operations are stable
 | WP | Owner | Depends on | Work | Acceptance evidence |
 |---|---|---|---|---|
 | F-001 | FL/SEC | C-006/E-003 | Publisher agreement, acceptable use, privacy/security requirements, revenue/refund/support rules | Published versioned policies and acceptance records |
-| F-002 | BE/SEC | E-001/F-001 | Publisher organization, member roles, identity verification, key enrollment/rotation/revocation | Dual-control verification and audit trail tests |
+| F-002 | BE/SEC | E-001/F-001 | Publisher organization, member roles, identity verification, key enrollment/rotation/revocation | Dual-control verification and audit trail tests, each approval tied to an authenticated actor session — never a self-asserted identity field an API caller could supply on anyone's behalf |
 | F-003 | PL | C-007/F-002 | Submission API and automated analysis pipeline | Signature, manifest, dependency, license, malware, secret, vulnerability and migration reports |
-| F-004 | SEC/QA | F-003 | Manual review workspace and reproducible test environment | Two-person approval for risky capabilities/migrations; reviewer evidence retained |
+| F-004 | SEC/QA | F-003 | Manual review workspace and reproducible test environment | Two-person approval for risky capabilities/migrations, each approval authenticated to a real logged-in reviewer (not a claimed reviewer ID accepted on the strength of a shared credential alone); reviewer evidence retained |
 | F-005 | SUP/FL | F-001 | Ownership matrix for core, marketplace, publisher, refund and security support | Customer-facing escalation and response targets |
 | F-006 | SEC/SUP | F-004 | Vulnerable, malicious, abandoned, disputed and transferred plugin procedures | Tabletop and withdrawal/advisory drills |
 | F-007 | PO/QA | F-001–006/F-009 | Invite 3–5 publishers and 5–10 plugins | Pilot metrics: review time, defects, support burden, SDK gaps, incidents and settlement reconciliation |
 | F-008 | PL | F-007 | SDK/policy corrections and public-launch assessment | Explicit go/no-go; unresolved high-risk finding means no public launch |
-| F-009 | FL/BE | E-003/E-008/F-001 | Implement publisher revenue ledger, statements, tax/withholding data, refund allocation and manual payout reconciliation for the pilot | Order-to-statement-to-payout reconciliation balances exactly; corrections append entries and require dual approval |
+| F-009 | FL/BE | E-003/E-008/F-001 | Implement publisher revenue ledger, statements, tax/withholding data, refund allocation and manual payout reconciliation for the pilot | Order-to-statement-to-payout reconciliation balances exactly; corrections and payout approval/execution append entries and require dual approval, each approving/executing party authenticated to their own session, not merely named in the request |
 
 Gate F0: publishing remains closed. Gate F1: policies and tooling operational. Gate F2: pilot completes at least one update, rejection, key rotation, vulnerability withdrawal, and support case. Public self-service is a post-V1 decision, not an automatic outcome.
 
@@ -460,6 +460,8 @@ Audit result: **complete as of 2026-08-28**. This result certifies the execution
 | Open approvals visible and gated | complete | Proposed decisions have explicit freeze gates |
 
 Every planned capability has an accountable role and release gate. Changes after this audit use normal change control: record the changed decision, affected packages, gate impact, approver, and date.
+
+**Change record, 2026-08-30 (engineering, pending SEC review)**: F-002/F-004/F-009's acceptance-evidence wording is strengthened from "dual-control"/"two-person"/"dual approval" to explicitly require each approval be tied to an authenticated actor session, not a self-asserted identity field. This follows a real finding during implementation: the original wording was met at the data level (services correctly rejected a self-review or a duplicate approver ID) while the HTTP layer authenticated only "some caller holds the shared admin token," letting that token's holder forge any specific reviewer's or approver's identity in the request body — silently defeating the two-person guarantee these packages exist to provide. Affected packages: F-002 (key approval/revocation), F-004 (submission review), F-009 (revenue correction/payout approval/payout execution). No gate moves: F0–F2 were never claimed reached, and this closes an implementation gap the original wording should have foreclosed rather than opening a new one. See `docs/architecture/threat-model.md`'s M-5 entry and `docs/completion-checklist.md`'s F-004 entry for the live-verified fix.
 
 ## 22. Planning-to-delivery handoff
 
