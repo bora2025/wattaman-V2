@@ -5,6 +5,7 @@ import AuthGuard from '../../../components/AuthGuard';
 import Sidebar from '../../../components/Sidebar';
 import { adminNav } from '../../../lib/admin-nav';
 import { apiFetch } from '../../../lib/api';
+import { formatMoney } from '../../../lib/formatMoney';
 
 interface PluginRecord {
   id: string;
@@ -39,6 +40,14 @@ interface UpdateStatus {
 interface PluginExtensions { navigation: Array<{ pluginId: string; id: string; label: string; href: string; permission?: string }>; pages?: Array<{ pluginId: string; id: string; title: string; routePath: string; kind: string }> }
 interface PluginPreview { packageSha256: string; plugin: { id: string; name: string; description: string; version: string; publisher: string; requiresCore: string; capabilities: string[]; permissions: string[]; dependencies: Record<string, string>; migrations: Array<{ id: string; destructive: boolean }> } }
 interface MarketplaceLinkStatus { linked: boolean; accountEmailMasked?: string; scope?: string; expiresAt?: string }
+interface CatalogProduct {
+  id: string; name: string; description: string; license: string; paid: boolean;
+  publisher: { slug: string; displayName: string };
+  prices: Array<{ id: string; currency: string; amountMinor: number }>;
+  versions: Array<{ version: string; requiresCore: string; changelog?: string }>;
+  compatible: boolean;
+  ownership?: Array<{ installationId: string; installationLabel?: string; status: string }>;
+}
 
 export default function PluginsPage() {
   const [plugins, setPlugins] = useState<PluginRecord[]>([]);
@@ -48,6 +57,8 @@ export default function PluginsPage() {
   const [runtime, setRuntime] = useState<{ safeMode: boolean; loaded: string[] } | null>(null);
   const [linkStatus, setLinkStatus] = useState<MarketplaceLinkStatus | null>(null);
   const [linking, setLinking] = useState(false);
+  const [catalog, setCatalog] = useState<CatalogProduct[]>([]);
+  const [catalogError, setCatalogError] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
@@ -59,12 +70,26 @@ export default function PluginsPage() {
     if (updatesResponse.ok) setUpdates(await updatesResponse.json());
     if (extensionsResponse.ok) setExtensions(await extensionsResponse.json());
     if (runtimeResponse.ok) setRuntime(await runtimeResponse.json());
-    await loadLinkStatus();
+    const status = await loadLinkStatus();
+    if (status?.linked) await loadCatalog();
   }
 
-  async function loadLinkStatus() {
+  async function loadLinkStatus(): Promise<MarketplaceLinkStatus | undefined> {
     const response = await apiFetch('/api/admin/marketplace/link/status');
-    if (response.ok) setLinkStatus(await response.json());
+    if (!response.ok) return undefined;
+    const result = await response.json();
+    setLinkStatus(result);
+    return result;
+  }
+
+  async function loadCatalog() {
+    setCatalogError('');
+    try {
+      const response = await apiFetch('/api/admin/marketplace/catalog');
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.message || `Could not load the marketplace catalog (${response.status})`);
+      setCatalog(Array.isArray(result) ? result : []);
+    } catch (cause) { setCatalogError(cause instanceof Error ? cause.message : 'Could not load the marketplace catalog'); }
   }
 
   async function startLink() {
@@ -80,7 +105,7 @@ export default function PluginsPage() {
         const pollResponse = await apiFetch('/api/admin/marketplace/link/poll', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ requestId: result.requestId }) });
         const pollResult = await pollResponse.json().catch(() => ({}));
         if (!pollResponse.ok) throw new Error(pollResult.message || 'Linking failed');
-        if (pollResult.status === 'linked') { await loadLinkStatus(); break; }
+        if (pollResult.status === 'linked') { await loadLinkStatus(); await loadCatalog(); break; }
         if (pollResult.status === 'denied') throw new Error('The marketplace account owner denied this link request.');
         if (pollResult.status === 'expired') throw new Error('The link request expired before it was approved.');
       }
@@ -95,6 +120,7 @@ export default function PluginsPage() {
       const response = await apiFetch('/api/admin/marketplace/link/revoke', { method: 'POST' });
       if (!response.ok) throw new Error(`Unlink failed (${response.status})`);
       await loadLinkStatus();
+      setCatalog([]);
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Unlink failed'); }
     finally { setLinking(false); }
   }
@@ -204,10 +230,23 @@ export default function PluginsPage() {
               <h2 className="font-semibold text-slate-800">Marketplace</h2>
               <p className="mt-1 text-sm text-slate-500">Link this installation to a marketplace account to browse and buy new plugins directly from this panel.</p>
               {linkStatus?.linked ? (
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
-                  <span>Linked as {linkStatus.accountEmailMasked || 'a marketplace account'}</span>
-                  <button className="btn btn-secondary" disabled={linking} onClick={revokeLink}>{linking ? 'Unlinking…' : 'Unlink'}</button>
-                </div>
+                <>
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+                    <span>Linked as {linkStatus.accountEmailMasked || 'a marketplace account'}</span>
+                    <button className="btn btn-secondary" disabled={linking} onClick={revokeLink}>{linking ? 'Unlinking…' : 'Unlink'}</button>
+                  </div>
+                  {catalogError && <p className="mt-3 text-sm text-red-700">{catalogError}</p>}
+                  {catalog.length > 0 && <div className="mt-4 grid gap-4 md:grid-cols-2">{catalog.map((product) => (
+                    <div key={product.id} className="rounded-lg border border-slate-200 p-4">
+                      <div className="flex items-start justify-between gap-2"><div><strong className="text-slate-800">{product.name}</strong><p className="text-xs text-slate-500">{product.publisher.displayName} · {product.license}</p></div><span className={`h-fit rounded-full px-2 py-1 text-xs font-semibold ${product.compatible ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{product.compatible ? 'Compatible' : 'Incompatible'}</span></div>
+                      <p className="mt-2 text-sm text-slate-600">{product.description}</p>
+                      <div className="mt-2 text-sm font-medium text-slate-700">{product.paid ? (product.prices[0] ? formatMoney(product.prices[0].amountMinor, product.prices[0].currency) : 'Price unavailable') : 'Free'}</div>
+                      {product.versions[0] && <p className="mt-1 text-xs text-slate-500">Version {product.versions[0].version} · requires core {product.versions[0].requiresCore}</p>}
+                      {!!product.ownership?.length && <p className="mt-2 text-xs text-emerald-700">Owned: {product.ownership.map((entry) => `${entry.installationLabel || entry.installationId} (${entry.status.toLowerCase()})`).join(', ')}</p>}
+                    </div>
+                  ))}</div>}
+                  {catalog.length === 0 && !catalogError && <p className="mt-4 text-sm text-slate-500">No compatible plugins found in the catalog yet.</p>}
+                </>
               ) : (
                 <div className="mt-4">
                   <button className="btn btn-primary" disabled={linking} onClick={startLink}>{linking ? 'Waiting for approval…' : 'Link marketplace account'}</button>

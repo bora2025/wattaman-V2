@@ -5,6 +5,7 @@ import { MarketplaceLinkTokenStore } from './marketplace-link-token.store';
 import { MarketplaceIdentityConfig, readMarketplaceIdentityConfig } from './marketplace-identity-config';
 
 const REQUESTED_SCOPE = 'catalog:browse purchase:create download:artifact';
+const REFRESH_THRESHOLD_MS = 2 * 24 * 60 * 60 * 1000;
 
 function maskEmail(email?: string): string | undefined {
   if (!email) return undefined;
@@ -85,6 +86,27 @@ export class MarketplaceLinkService {
     await this.tokenStore.clear();
     await this.prisma.marketplaceProxyLink.update({ where: { id: 'singleton' }, data: { revokedAt: new Date() } });
     return { revoked: true };
+  }
+
+  /** Returns a usable delegated session token, transparently rotating it via the marketplace's
+   * existing refresh-with-reuse-detection endpoint when it is close to expiry -- the browser never
+   * sees this token, so nothing else needs to change when it rotates. */
+  async getValidAccessToken(): Promise<string> {
+    const link = await this.prisma.marketplaceProxyLink.findUnique({ where: { id: 'singleton' } });
+    if (!link || link.revokedAt) throw new ServiceUnavailableException('This installation is not linked to a marketplace account');
+    const token = await this.tokenStore.read();
+    if (!token) throw new ServiceUnavailableException('Marketplace link session is missing locally; relink this installation');
+    if (link.sessionExpiresAt.getTime() - Date.now() > REFRESH_THRESHOLD_MS) return token;
+    const config = this.requireConfig();
+    const result = await this.postJson(config, '/v1/sessions/refresh', { sessionToken: token });
+    if (result.status !== 200) {
+      if (link.sessionExpiresAt.getTime() > Date.now()) return token;
+      throw new ServiceUnavailableException('Marketplace link session has expired; relink this installation');
+    }
+    const refreshed = result.body as { sessionToken: string; expiresAt: string };
+    await this.tokenStore.write(refreshed.sessionToken);
+    await this.prisma.marketplaceProxyLink.update({ where: { id: 'singleton' }, data: { sessionExpiresAt: new Date(refreshed.expiresAt), lastUsedAt: new Date() } });
+    return refreshed.sessionToken;
   }
 
   private async installationId(): Promise<string> {

@@ -456,11 +456,12 @@ model InstallationMarketplaceGrantRequest {
   expiresAt                   DateTime
   respondedAt                 DateTime?
   deliveredAt                 DateTime?
-  grantId                     String?                 @unique
+  grantId                     String?
   installation                InstallationRegistration     @relation(fields: [installationRegistrationId], references: [id], onDelete: Cascade)
   grant                       InstallationMarketplaceGrant? @relation(fields: [grantId], references: [id])
 
   @@index([installationRegistrationId, status, expiresAt])
+  @@index([grantId])
 }
 
 model InstallationMarketplaceGrant {
@@ -475,7 +476,7 @@ model InstallationMarketplaceGrant {
   revokedReason                String?
   installation                 InstallationRegistration @relation(fields: [installationRegistrationId], references: [id])
   account                       MarketplaceAccount       @relation(fields: [accountId], references: [id])
-  request                       InstallationMarketplaceGrantRequest?
+  requests                      InstallationMarketplaceGrantRequest[]
 
   @@index([accountId, revokedAt])
 }
