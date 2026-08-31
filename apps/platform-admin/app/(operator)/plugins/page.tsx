@@ -21,6 +21,11 @@ export default function PluginsPage() {
       <CursorTable<PluginRow>
         path="plugins"
         emptyMessage="No plugins are in the catalog yet."
+        filters={[
+          { key: 'publisher', label: 'Publisher slug', placeholder: 'publisher' },
+          { key: 'status', label: 'Status', type: 'select', options: ['DRAFT', 'IN_REVIEW', 'APPROVED', 'REJECTED', 'WITHDRAWN'].map(value => ({ value, label: value.toLowerCase().replaceAll('_', ' ') })) },
+          { key: 'paid', label: 'Pricing', type: 'select', options: [{ value: 'true', label: 'Paid' }, { value: 'false', label: 'Free' }] },
+        ]}
         columns={[
           { header: 'Plugin', render: (row) => (
             <div>

@@ -11,7 +11,10 @@ interface SubmissionRow {
 
 export default function SubmissionsPage() {
   return <div className="space-y-4"><h1 className="text-xl font-bold">Plugin submissions</h1>
-    <CursorTable<SubmissionRow> path="submissions" emptyMessage="No submissions found." columns={[
+    <CursorTable<SubmissionRow> path="submissions" emptyMessage="No submissions found." filters={[
+      { key: 'status', label: 'Status', type: 'select', options: ['ANALYZING', 'NEEDS_REVIEW', 'APPROVED', 'REJECTED', 'WITHDRAWN'].map(value => ({ value, label: value.toLowerCase().replaceAll('_', ' ') })) },
+      { key: 'riskLevel', label: 'Risk level', placeholder: 'LOW, HIGH…' },
+    ]} columns={[
       { header: 'Plugin', render: row => <div><Link className="font-medium text-indigo-700 hover:underline" href={`/submissions/${row.id}`}>{row.pluginVersion.pluginId}</Link><div className="text-xs text-slate-500">{row.pluginVersion.version} · {row.pluginVersion.channel.toLowerCase()}</div></div> },
       { header: 'Publisher', render: row => row.publisher.displayName },
       { header: 'Status', render: row => row.status.toLowerCase().replaceAll('_', ' ') },

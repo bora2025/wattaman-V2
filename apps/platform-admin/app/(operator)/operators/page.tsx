@@ -13,7 +13,10 @@ interface OperatorRow {
 export default function OperatorsPage() {
   return <div className="space-y-4">
     <div className="flex items-start justify-between gap-4"><div><h1 className="text-xl font-bold">Platform operators</h1><p className="text-sm text-slate-500">Named operator identities, active role grants, and safe session counts.</p></div><Link className="pa-btn-secondary" href="/roles">View role definitions</Link></div>
-    <CursorTable<OperatorRow> path="operators" emptyMessage="No operators found." columns={[
+    <CursorTable<OperatorRow> path="operators" emptyMessage="No operators found." filters={[
+      { key: 'email', label: 'Email contains', placeholder: 'operator@example.com' },
+      { key: 'status', label: 'Status', type: 'select', options: [{ value: 'ACTIVE', label: 'Active' }, { value: 'SUSPENDED', label: 'Suspended' }] },
+    ]} columns={[
       { header: 'Operator', render: row => <div><Link className="font-medium text-indigo-700 hover:underline" href={`/operators/${row.id}`}>{row.displayName}</Link><div className="text-xs text-slate-500">{row.email}</div></div> },
       { header: 'Status', render: row => row.status.toLowerCase() },
       { header: 'MFA', render: row => row.mfaEnabled ? 'Enabled' : 'Enrollment required' },

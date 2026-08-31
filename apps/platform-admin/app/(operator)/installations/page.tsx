@@ -25,6 +25,10 @@ export default function InstallationsPage() {
       <CursorTable<InstallationRow>
         path="installations"
         emptyMessage="No school installations have registered yet."
+        filters={[
+          { key: 'label', label: 'School label', placeholder: 'School name' },
+          { key: 'linked', label: 'Marketplace link', type: 'select', options: [{ value: 'true', label: 'Linked' }, { value: 'false', label: 'Not linked' }] },
+        ]}
         columns={[
           { header: 'Installation', render: (row) => (
             <div>

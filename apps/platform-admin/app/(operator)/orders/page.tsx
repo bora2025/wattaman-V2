@@ -15,7 +15,10 @@ function amount(minor: number, currency: string) {
 
 export default function OrdersPage() {
   return <div className="space-y-4"><h1 className="text-xl font-bold">Orders</h1>
-    <CursorTable<OrderRow> path="orders" emptyMessage="No orders found." columns={[
+    <CursorTable<OrderRow> path="orders" emptyMessage="No orders found." filters={[
+      { key: 'status', label: 'Status', type: 'select', options: ['PENDING', 'PAID', 'CANCELLED', 'REFUNDED'].map(value => ({ value, label: value.toLowerCase() })) },
+      { key: 'currency', label: 'Currency', placeholder: 'USD' },
+    ]} columns={[
       { header: 'Order', render: row => <Link className="font-mono text-xs text-indigo-700 hover:underline" href={`/orders/${row.id}`}>{row.id}</Link> },
       { header: 'Customer', render: row => <div>{row.account.displayName}<div className="text-xs text-slate-500">{row.account.email}</div></div> },
       { header: 'School', render: row => row.installation.label || row.installation.installationId },

@@ -154,13 +154,16 @@ for this — not implied by the feature list being complete.
 
 ## Stage PA-2 — Read-only operations expansion
 
-- [~] **PA2-1** (BE) Read-only directory and commerce APIs — customer, installation, publisher,
+- [x] **PA2-1** (BE) Read-only directory and commerce APIs — customer, installation, publisher,
       plugin, submission, order, entitlement, advisory, and operations-health list/detail services
-      are implemented and compile; focused service/API contract tests remain
-- [~] **PA2-2** (FE) Operator list screens — customers, publishers, submissions, orders,
+      are implemented and compile; focused service tests verify masked identities, marketplace-only
+      school metadata, integer minor-unit money, 404 detail behavior, and exclusion of credential
+      and signed-entitlement material at the Prisma query boundary
+- [x] **PA2-2** (FE) Operator list screens — customers, publishers, submissions, orders,
       entitlements, advisories, and operations health are permission-filtered in navigation and
       available through the strict proxy allowlist; customer, school, publisher, plugin,
-      submission, and order detail routes are live in the production build. URL filters remain
+      submission, and order detail routes are live in the production build. Supported queue
+      filters are server-side and persisted in the URL for refresh/bookmark/share behavior
 - [~] **PA2-3** (BE/FE) CSV exports — bounded, formula-injection-safe export service with audit
       recording, strict proxy forwarding, and operator download screen are implemented; focused
       service tests cover audit-before-read, the row cap, masking, and formula defusing. Browser
