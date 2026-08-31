@@ -103,10 +103,10 @@ discipline — do not batch all of PA-1 into one unreviewable diff.
 - [x] **PA1-11** (FE) `/login` (with the full credentials → MFA → enrollment journey and a
       one-time recovery-code screen), protected operator shell, and permission-filtered navigation
       driven by the real `/me` permission set
-- [ ] **PA1-12** (FE) Correlation-ID propagation from browser request → audit row. The audit model
-      carries `correlationId` and the API accepts it, but the frontend does not yet generate and
-      send one per action — deferred with the mutation screens in PA-2, since PA-1's UI is
-      read-only and has no mutations worth correlating
+- [x] **PA1-12** (FE) Correlation-ID propagation: the browser generates one id per action, the
+      proxy forwards it, and the API stores it on the audit row with client IP and user agent.
+      Requests arriving without an id get a generated one, so no audit row is uncorrelated.
+      Live-verified: a client-supplied id appears verbatim on the resulting audit row
 
 ### Read-only proof surface (smallest useful slice of PA-2, pulled forward to prove the boundary)
 
@@ -129,12 +129,24 @@ discipline — do not batch all of PA-1 into one unreviewable diff.
       everything is blocked until MFA enrollment completes, real TOTP enrollment upgrades the
       session, role-scoped routes allow/deny correctly, an unlisted upstream route is unreachable
       through the proxy, and sign-out clears both cookie and server session
-- [ ] **PA1-17** (SRE) Deploy `apps/platform-admin` + its auth/session/dashboard slice to a
-      **non-production** Railway environment (see
-      [railway-manual-setup-guide.md](../operations/railway-manual-setup-guide.md) or
-      [railway-deployment-guide.md](../operations/railway-deployment-guide.md)) and perform one
-      restore drill covering the new operator/session/audit tables. Needs a Dockerfile for
-      `apps/platform-admin` first
+- [x] **PA1-17** (SRE) Deployed to an isolated non-production Railway project (**Wattanam
+      Platform Admin Staging**) with its own Postgres, its own signing keys, and no path to
+      promote into production, per plan §12. `platform-admin-web` talks to `marketplace-api` over
+      Railway private networking; only the web service is public. Restore drill **13/13**: all
+      seven new tables' row counts match after restoring into a fresh database, the owner's
+      password hash and MFA secret survive byte-for-byte, effective RBAC permissions still
+      resolve, and no grant/session/audit row is orphaned
+
+Two real bugs were found by deploying rather than by local testing, both now fixed:
+**(1)** every browser POST was rejected as cross-origin behind Railway's proxy, because the CSRF
+check compared `Origin` against `nextUrl.origin` (the internal listener, never the public URL) —
+sign-in was impossible in any deployed environment while working perfectly on localhost. The same
+bug existed in the school frontend's marketplace proxy and would have broken the customer portal's
+login/checkout and the marketplace-link approval flow, so it was fixed there too.
+**(2)** the first restore drill reported the operator MFA secret restoring as plaintext; that
+turned out to be the drill running in development mode with no encryption keyring, not a storage
+defect — re-run under `NODE_ENV=production` the secret persists as an `enc:v1:<keyId>:…` envelope
+and a subsequent TOTP login still authenticates.
 
 **PA-1 exit (from the plan, verbatim):** *"an operator can sign in with MFA, sees only permitted
 navigation, and unauthorized API tests fail closed."* Treat PA1-15/16/17 as the literal evidence

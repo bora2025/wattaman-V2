@@ -14,6 +14,23 @@ function marketplaceUrl() {
   return value;
 }
 
+/**
+ * Behind a reverse proxy (Railway, or the gateway container), `nextUrl.origin` is the internal
+ * listener, not the public URL the browser used — so comparing a browser's `Origin` header against
+ * it rejects every legitimate same-origin POST and silently breaks sign-in and checkout in a
+ * deployed environment while working fine on localhost. Trust the proxy's forwarded headers,
+ * falling back to nextUrl for direct/local runs.
+ */
+function expectedOrigins(request: NextRequest): string[] {
+  const origins = new Set<string>([request.nextUrl.origin]);
+  const forwardedHost = request.headers.get('x-forwarded-host') ?? request.headers.get('host');
+  if (forwardedHost) {
+    const proto = request.headers.get('x-forwarded-proto') ?? request.nextUrl.protocol.replace(':', '');
+    origins.add(`${proto}://${forwardedHost}`);
+  }
+  return [...origins];
+}
+
 async function proxy(request: NextRequest, segments: string[], method: 'GET' | 'POST') {
   const path = segments.join('/');
   const protectedArtifact = method === 'GET' && /^artifacts\/[a-f0-9]{64}$/.test(path);
@@ -25,7 +42,7 @@ async function proxy(request: NextRequest, segments: string[], method: 'GET' | '
   if (!allowed) return NextResponse.json({ error: 'Marketplace route is not allowed' }, { status: 404 });
   if (method === 'POST') {
     const origin = request.headers.get('origin');
-    if (origin && origin !== request.nextUrl.origin) return NextResponse.json({ error: 'Cross-origin marketplace mutation rejected' }, { status: 403 });
+    if (origin && !expectedOrigins(request).includes(origin)) return NextResponse.json({ error: 'Cross-origin marketplace mutation rejected' }, { status: 403 });
   }
   const session = request.cookies.get(SESSION_COOKIE)?.value;
   if ((sessionGet.has(path) || sessionPost.has(path) || protectedArtifact || isLinkDecision) && !session) return NextResponse.json({ error: 'Marketplace sign-in required' }, { status: 401 });

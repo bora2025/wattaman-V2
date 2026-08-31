@@ -23,6 +23,23 @@ function marketplaceUrl(): string {
   return value;
 }
 
+/**
+ * Behind a reverse proxy (Railway, and any ingress that terminates TLS), `nextUrl.origin` is the
+ * *internal* listener — e.g. http://localhost:3020 — not the public URL the browser used. Comparing
+ * a browser's `Origin` header against it rejects every legitimate same-origin POST, which silently
+ * makes sign-in impossible in a deployed environment while working perfectly on localhost. Trust
+ * the forwarded headers the proxy sets, falling back to nextUrl for direct/local runs.
+ */
+function expectedOrigins(request: NextRequest): string[] {
+  const origins = new Set<string>([request.nextUrl.origin]);
+  const forwardedHost = request.headers.get('x-forwarded-host') ?? request.headers.get('host');
+  if (forwardedHost) {
+    const proto = request.headers.get('x-forwarded-proto') ?? request.nextUrl.protocol.replace(':', '');
+    origins.add(`${proto}://${forwardedHost}`);
+  }
+  return [...origins];
+}
+
 function sessionCookieOptions(expiresAt?: string) {
   return {
     httpOnly: true,
@@ -40,7 +57,7 @@ async function proxy(request: NextRequest, segments: string[], method: 'GET' | '
 
   if (method === 'POST') {
     const origin = request.headers.get('origin');
-    if (origin && origin !== request.nextUrl.origin) {
+    if (origin && !expectedOrigins(request).includes(origin)) {
       return NextResponse.json({ error: 'Cross-origin mutation rejected' }, { status: 403 });
     }
   }
