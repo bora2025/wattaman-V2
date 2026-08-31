@@ -18,6 +18,9 @@ import { PublisherGovernanceService } from './publisher-governance.service';
 import { CustomerMarketplaceService } from './customer-marketplace.service';
 import { PlatformAuthService } from './platform-auth.service';
 import { PlatformReadService } from './platform-read.service';
+import { PlatformDirectoryService } from './platform-directory.service';
+import { PlatformCommerceReadService } from './platform-commerce-read.service';
+import { PlatformExportService } from './platform-export.service';
 import { PlatformRequest, requirePlatformPermission, requirePlatformSession } from './platform-rbac';
 import { actionContext } from './platform-context';
 import { createMetricsRegistry } from './observability/metrics';
@@ -69,6 +72,9 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   const customerMarketplace = new CustomerMarketplaceService(prisma, commerce);
   const platformAuth = new PlatformAuthService(prisma, config);
   const platformRead = new PlatformReadService(prisma);
+  const platformDirectory = new PlatformDirectoryService(prisma);
+  const platformCommerce = new PlatformCommerceReadService(prisma);
+  const platformExport = new PlatformExportService(prisma);
   const upload = multer({ storage: multer.memoryStorage(), limits: { files: 1, fileSize: config.maxArtifactBytes, fields: 10 } });
   const metrics = createMetricsRegistry(prisma);
   app.disable('x-powered-by');
@@ -267,11 +273,60 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   app.get('/platform/v1/dashboard', requirePlatformOperator, requirePlatformPermission(platformAuth, 'platform.dashboard.read'), async (_request, response, next) => {
     try { response.json(await platformRead.dashboard()); } catch (error) { next(error); }
   });
-  app.get('/platform/v1/plugins', requirePlatformOperator, requirePlatformPermission(platformAuth, 'plugins.read'), async (request, response, next) => {
-    try { response.json(await platformRead.plugins(request.query)); } catch (error) { next(error); }
+  // ── PA-2 read-only operations ──────────────────────────────────────────
+  const P = (key: string) => requirePlatformPermission(platformAuth, key);
+
+  app.get('/platform/v1/customers', requirePlatformOperator, P('customers.read'), async (request, response, next) => {
+    try { response.json(await platformDirectory.customers(request.query)); } catch (error) { next(error); }
   });
-  app.get('/platform/v1/installations', requirePlatformOperator, requirePlatformPermission(platformAuth, 'schools.read'), async (request, response, next) => {
-    try { response.json(await platformRead.installations(request.query)); } catch (error) { next(error); }
+  app.get('/platform/v1/customers/:accountId', requirePlatformOperator, P('customers.read'), async (request, response, next) => {
+    try { response.json(await platformDirectory.customer(String(request.params.accountId))); } catch (error) { next(error); }
+  });
+  app.get('/platform/v1/installations', requirePlatformOperator, P('schools.read'), async (request, response, next) => {
+    try { response.json(await platformDirectory.installations(request.query)); } catch (error) { next(error); }
+  });
+  app.get('/platform/v1/installations/:registrationId', requirePlatformOperator, P('schools.read'), async (request, response, next) => {
+    try { response.json(await platformDirectory.installation(String(request.params.registrationId))); } catch (error) { next(error); }
+  });
+  app.get('/platform/v1/publishers', requirePlatformOperator, P('publishers.read'), async (request, response, next) => {
+    try { response.json(await platformDirectory.publishers(request.query)); } catch (error) { next(error); }
+  });
+  app.get('/platform/v1/publishers/:publisherId', requirePlatformOperator, P('publishers.read'), async (request, response, next) => {
+    try { response.json(await platformDirectory.publisher(String(request.params.publisherId))); } catch (error) { next(error); }
+  });
+  app.get('/platform/v1/plugins', requirePlatformOperator, P('plugins.read'), async (request, response, next) => {
+    try { response.json(await platformDirectory.plugins(request.query)); } catch (error) { next(error); }
+  });
+  app.get('/platform/v1/plugins/:pluginId', requirePlatformOperator, P('plugins.read'), async (request, response, next) => {
+    try { response.json(await platformDirectory.plugin(String(request.params.pluginId))); } catch (error) { next(error); }
+  });
+  app.get('/platform/v1/submissions', requirePlatformOperator, P('plugins.review'), async (request, response, next) => {
+    try { response.json(await platformDirectory.submissions(request.query)); } catch (error) { next(error); }
+  });
+  app.get('/platform/v1/submissions/:submissionId', requirePlatformOperator, P('plugins.review'), async (request, response, next) => {
+    try { response.json(await platformDirectory.submission(String(request.params.submissionId))); } catch (error) { next(error); }
+  });
+  app.get('/platform/v1/orders', requirePlatformOperator, P('orders.read'), async (request, response, next) => {
+    try { response.json(await platformCommerce.orders(request.query)); } catch (error) { next(error); }
+  });
+  app.get('/platform/v1/orders/:orderId', requirePlatformOperator, P('orders.read'), async (request, response, next) => {
+    try { response.json(await platformCommerce.order(String(request.params.orderId))); } catch (error) { next(error); }
+  });
+  app.get('/platform/v1/entitlements', requirePlatformOperator, P('orders.read'), async (request, response, next) => {
+    try { response.json(await platformCommerce.entitlements(request.query)); } catch (error) { next(error); }
+  });
+  app.get('/platform/v1/advisories', requirePlatformOperator, P('advisories.read'), async (request, response, next) => {
+    try { response.json(await platformCommerce.advisories(request.query)); } catch (error) { next(error); }
+  });
+  app.get('/platform/v1/operations/health', requirePlatformOperator, P('operations.read'), async (_request, response, next) => {
+    try { response.json(await platformCommerce.operationsHealth()); } catch (error) { next(error); }
+  });
+  app.get('/platform/v1/exports', requirePlatformOperator, P('audit.export'), async (request: PlatformRequest, response, next) => {
+    try {
+      const result = await platformExport.export(request.query, { operatorId: request.operatorId!, context: actionContext(request) });
+      response.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': `attachment; filename="${result.filename}"` });
+      response.send(result.csv);
+    } catch (error) { next(error); }
   });
   app.get('/platform/v1/audit-events', requirePlatformOperator, requirePlatformPermission(platformAuth, 'audit.read'), async (request: PlatformRequest, response, next) => {
     try { response.json(await platformRead.auditEvents(request.query, { operatorId: request.operatorId!, context: actionContext(request) })); } catch (error) { next(error); }
