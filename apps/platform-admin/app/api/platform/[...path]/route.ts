@@ -15,7 +15,11 @@ const SESSION_COOKIE = 'wattanam_platform_session';
  */
 const publicPost = new Set(['auth/sessions', 'auth/sessions/refresh']);
 const sessionPost = new Set(['auth/sessions/revoke', 'auth/mfa/enroll', 'auth/mfa/enroll/confirm']);
-const sessionGet = new Set(['me', 'dashboard', 'plugins', 'installations', 'audit-events']);
+const sessionGet = new Set([
+  'me', 'dashboard', 'operators', 'roles', 'customers', 'installations', 'publishers', 'plugins', 'submissions',
+  'orders', 'entitlements', 'advisories', 'audit-events', 'operations/health', 'exports',
+]);
+const sessionGetDetail = /^(operators|customers|installations|publishers|plugins|submissions|orders)\/[0-9a-zA-Z._-]+$/;
 
 function marketplaceUrl(): string {
   const value = process.env.MARKETPLACE_API_URL;
@@ -52,7 +56,7 @@ function sessionCookieOptions(expiresAt?: string) {
 
 async function proxy(request: NextRequest, segments: string[], method: 'GET' | 'POST') {
   const path = segments.join('/');
-  const allowed = method === 'GET' ? sessionGet.has(path) : publicPost.has(path) || sessionPost.has(path);
+  const allowed = method === 'GET' ? sessionGet.has(path) || sessionGetDetail.test(path) : publicPost.has(path) || sessionPost.has(path);
   if (!allowed) return NextResponse.json({ error: 'Route is not allowed' }, { status: 404 });
 
   if (method === 'POST') {
@@ -63,7 +67,7 @@ async function proxy(request: NextRequest, segments: string[], method: 'GET' | '
   }
 
   const session = request.cookies.get(SESSION_COOKIE)?.value;
-  const needsSession = method === 'GET' ? sessionGet.has(path) : sessionPost.has(path);
+  const needsSession = method === 'GET' ? allowed : sessionPost.has(path);
   if (needsSession && !session) return NextResponse.json({ error: 'Sign-in required' }, { status: 401 });
 
   const target = new URL(`/platform/v1/${path}`, marketplaceUrl());
@@ -93,6 +97,13 @@ async function proxy(request: NextRequest, segments: string[], method: 'GET' | '
     });
   } catch {
     return NextResponse.json({ error: 'Marketplace API is unavailable' }, { status: 502 });
+  }
+
+  if (path === 'exports' && upstream.ok) {
+    const headers = new Headers({ 'content-type': upstream.headers.get('content-type') || 'text/csv; charset=utf-8' });
+    const disposition = upstream.headers.get('content-disposition');
+    if (disposition) headers.set('content-disposition', disposition);
+    return new NextResponse(upstream.body, { status: upstream.status, headers });
   }
 
   const payload = await upstream.json().catch(() => ({ error: 'Marketplace API returned invalid JSON' }));

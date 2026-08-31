@@ -21,6 +21,8 @@ import { PlatformReadService } from './platform-read.service';
 import { PlatformDirectoryService } from './platform-directory.service';
 import { PlatformCommerceReadService } from './platform-commerce-read.service';
 import { PlatformExportService } from './platform-export.service';
+import { PlatformOperatorReadService } from './platform-operator-read.service';
+import { platformOpenApi } from './platform-openapi';
 import { PlatformRequest, requirePlatformPermission, requirePlatformSession } from './platform-rbac';
 import { actionContext } from './platform-context';
 import { createMetricsRegistry } from './observability/metrics';
@@ -75,6 +77,7 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   const platformDirectory = new PlatformDirectoryService(prisma);
   const platformCommerce = new PlatformCommerceReadService(prisma);
   const platformExport = new PlatformExportService(prisma);
+  const platformOperators = new PlatformOperatorReadService(prisma);
   const upload = multer({ storage: multer.memoryStorage(), limits: { files: 1, fileSize: config.maxArtifactBytes, fields: 10 } });
   const metrics = createMetricsRegistry(prisma);
   app.disable('x-powered-by');
@@ -252,6 +255,10 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   const requirePlatformOperator = requirePlatformSession(platformAuth);
   const requireEnrollingOperator = requirePlatformSession(platformAuth, { allowUnverified: true });
 
+  app.get('/platform/v1/openapi.json', (request, response) => {
+    response.json(platformOpenApi(`${request.protocol}://${request.get('host')}`));
+  });
+
   app.post('/platform/v1/auth/sessions', async (request, response, next) => {
     try { response.json(await platformAuth.login(request.body, actionContext(request))); } catch (error) { next(error); }
   });
@@ -275,6 +282,16 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   });
   // ── PA-2 read-only operations ──────────────────────────────────────────
   const P = (key: string) => requirePlatformPermission(platformAuth, key);
+
+  app.get('/platform/v1/operators', requirePlatformOperator, P('operators.read'), async (request, response, next) => {
+    try { response.json(await platformOperators.operators(request.query)); } catch (error) { next(error); }
+  });
+  app.get('/platform/v1/operators/:operatorId', requirePlatformOperator, P('operators.read'), async (request, response, next) => {
+    try { response.json(await platformOperators.operator(String(request.params.operatorId))); } catch (error) { next(error); }
+  });
+  app.get('/platform/v1/roles', requirePlatformOperator, P('operators.read'), async (_request, response, next) => {
+    try { response.json(await platformOperators.roles()); } catch (error) { next(error); }
+  });
 
   app.get('/platform/v1/customers', requirePlatformOperator, P('customers.read'), async (request, response, next) => {
     try { response.json(await platformDirectory.customers(request.query)); } catch (error) { next(error); }

@@ -152,9 +152,37 @@ and a subsequent TOTP login still authenticates.
 navigation, and unauthorized API tests fail closed."* Treat PA1-15/16/17 as the literal evidence
 for this — not implied by the feature list being complete.
 
-## What comes after (not started by this checklist)
+## Stage PA-2 — Read-only operations expansion
 
-Stages PA-2 through PA-7 (read-only operations expansion, school plugin-request workflow,
+- [~] **PA2-1** (BE) Read-only directory and commerce APIs — customer, installation, publisher,
+      plugin, submission, order, entitlement, advisory, and operations-health list/detail services
+      are implemented and compile; focused service/API contract tests remain
+- [~] **PA2-2** (FE) Operator list screens — customers, publishers, submissions, orders,
+      entitlements, advisories, and operations health are permission-filtered in navigation and
+      available through the strict proxy allowlist; customer, school, publisher, plugin,
+      submission, and order detail routes are live in the production build. URL filters remain
+- [~] **PA2-3** (BE/FE) CSV exports — bounded, formula-injection-safe export service with audit
+      recording, strict proxy forwarding, and operator download screen are implemented; focused
+      service tests cover audit-before-read, the row cap, masking, and formula defusing. Browser
+      download evidence remains
+- [x] **PA2-4** (BE/FE) Operator/session inventory and role-management read screens — operator
+      list/detail routes expose active grants and bounded session metadata, while Prisma select
+      lists exclude password hashes, MFA secrets, recovery-code hashes, and session token hashes;
+      the separate role screen shows all seeded permissions and grant counts. Three focused safety
+      tests pass
+- [x] **PA2-5** (PL) Generate and validate the `/platform/v1` OpenAPI contract —
+      `GET /platform/v1/openapi.json` serves an OpenAPI 3.1 document covering every current
+      operator route, default opaque-bearer authentication, the two intentionally public auth
+      routes, required permission metadata, and the CSV media type. Four contract tests prevent
+      authentication/permission/media-type drift
+- [ ] **PA2-6** (QA) Complete authorization matrix, browser E2E, accessibility, and hosted
+      non-production evidence for the expanded read surface
+
+**PA-2 exit:** normal marketplace investigation needs no direct database access.
+
+## What comes after PA-2
+
+Stages PA-3 through PA-7 (school plugin-request workflow,
 publisher/submission review, the official-plugin build pipeline, commerce/finance operations, and
 security/support/production hardening) are fully specified in the source plan's §10 but
 deliberately **not** broken into checklist items here — each is large enough to deserve its own

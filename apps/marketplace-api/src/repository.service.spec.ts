@@ -55,11 +55,11 @@ describe('repository channel promotion', () => {
   });
 
   it('publishes only channel-allowed plugin releases compatible with the requesting core', async () => {
-    const publisher = { slug: 'wattanam' };
+    const publisher = { slug: 'wattanam', keys: [{ keyId: 'publisher-key-1', publicKeyPem: 'test-public-key' }] };
     const plugin = { name: 'Example', description: 'Example', isPaid: false, status: 'APPROVED', publisher };
     const version = (id: string, value: string, requiresCore: string, channel: 'STABLE' | 'BETA') => ({
       id, pluginId: id, version: value, requiresCore, channel, reviewStatus: 'APPROVED', withdrawnAt: null,
-      manifestJson: {}, changelog: null, artifact: { sha256: id.padEnd(64, 'a').slice(0, 64), sizeBytes: 10 }, plugin,
+      manifestJson: {}, changelog: null, artifact: { sha256: id.padEnd(64, 'a').slice(0, 64), sizeBytes: 10, publisherKeyId: 'publisher-key-1' }, plugin,
     });
     const prisma = {
       pluginVersion: { findMany: jest.fn().mockResolvedValue([

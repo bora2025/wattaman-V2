@@ -10,8 +10,17 @@ import { OperatorProfile, platformFetch, platformJson } from '../lib/api';
  * is not authorization"), so a hand-typed URL to a page they lack permission for still fails. */
 const NAV: Array<{ href: string; label: string; permission: string }> = [
   { href: '/dashboard', label: 'Dashboard', permission: 'platform.dashboard.read' },
-  { href: '/plugins', label: 'Plugins', permission: 'plugins.read' },
+  { href: '/operators', label: 'Operators', permission: 'operators.read' },
+  { href: '/customers', label: 'Customers', permission: 'customers.read' },
   { href: '/installations', label: 'School installations', permission: 'schools.read' },
+  { href: '/publishers', label: 'Publishers', permission: 'publishers.read' },
+  { href: '/plugins', label: 'Plugins', permission: 'plugins.read' },
+  { href: '/submissions', label: 'Submissions', permission: 'plugins.review' },
+  { href: '/orders', label: 'Orders', permission: 'orders.read' },
+  { href: '/entitlements', label: 'Entitlements', permission: 'orders.read' },
+  { href: '/advisories', label: 'Advisories', permission: 'advisories.read' },
+  { href: '/operations', label: 'Operations', permission: 'operations.read' },
+  { href: '/exports', label: 'Exports', permission: 'audit.export' },
   { href: '/audit', label: 'Audit', permission: 'audit.read' },
 ];
 
@@ -45,7 +54,7 @@ export default function OperatorShell({ children }: { children: React.ReactNode 
         <nav className="mt-6 space-y-1">
           {permitted.map((entry) => (
             <Link key={entry.href} href={entry.href}
-                  className={`block rounded-lg px-3 py-2 text-sm ${pathname === entry.href ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'}`}>
+                  className={`block rounded-lg px-3 py-2 text-sm ${pathname === entry.href || pathname.startsWith(`${entry.href}/`) ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'}`}>
               {entry.label}
             </Link>
           ))}

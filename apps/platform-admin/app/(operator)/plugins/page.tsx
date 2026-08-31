@@ -1,6 +1,7 @@
 'use client';
 
 import CursorTable from '../../../components/CursorTable';
+import Link from 'next/link';
 
 interface PluginRow {
   id: string;
@@ -23,7 +24,7 @@ export default function PluginsPage() {
         columns={[
           { header: 'Plugin', render: (row) => (
             <div>
-              <div className="font-medium">{row.name}</div>
+              <Link className="font-medium text-indigo-700 hover:underline" href={`/plugins/${row.id}`}>{row.name}</Link>
               <div className="font-mono text-xs text-slate-500">{row.id}</div>
             </div>
           ) },

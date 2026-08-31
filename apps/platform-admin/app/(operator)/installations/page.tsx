@@ -1,6 +1,7 @@
 'use client';
 
 import CursorTable from '../../../components/CursorTable';
+import Link from 'next/link';
 
 interface InstallationRow {
   id: string;
@@ -27,7 +28,7 @@ export default function InstallationsPage() {
         columns={[
           { header: 'Installation', render: (row) => (
             <div>
-              <div className="font-medium">{row.label || 'Unlabelled'}</div>
+              <Link className="font-medium text-indigo-700 hover:underline" href={`/installations/${row.id}`}>{row.label || 'Unlabelled'}</Link>
               <div className="font-mono text-xs text-slate-500">{row.installationId}</div>
             </div>
           ) },
