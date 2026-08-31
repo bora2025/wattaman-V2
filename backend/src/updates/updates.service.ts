@@ -140,7 +140,9 @@ export class UpdatesService {
     return { applied, destructiveRemovalPerformed: false };
   }
 
-  private async index(config: NonNullable<ReturnType<typeof readUpdateRepositoryConfig>>, coreVersion: string) {
+  /** Public so other services (e.g. the marketplace commerce install action) can reuse the same
+   * signature-verified, replay/downgrade-protected fetch instead of re-implementing it. */
+  async index(config: NonNullable<ReturnType<typeof readUpdateRepositoryConfig>>, coreVersion: string) {
     const url = new URL('/v1/index', config.url);
     url.searchParams.set('coreVersion', coreVersion);
     url.searchParams.set('channel', config.channel);

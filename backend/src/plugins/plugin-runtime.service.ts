@@ -66,7 +66,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnApplicati
     const root = this.pluginRoot();
     const installedPath = path.resolve(record.installedPath);
     if (!installedPath.startsWith(`${root}${path.sep}`)) throw new Error(`Plugin path is outside PLUGIN_DIR: ${id}`);
-    const verified = await this.verifier.verifyInstalledDirectory(installedPath, trustedPluginKeys(), readRuntimeConfig().appVersion);
+    const verified = await this.verifier.verifyInstalledDirectory(installedPath, await trustedPluginKeys(), readRuntimeConfig().appVersion);
     if (verified.manifest.id !== id || verified.manifest.version !== record.version) throw new Error('Installed plugin identity does not match registry');
     if (!verified.manifest.backendEntry) return;
     const entry = path.resolve(installedPath, verified.manifest.backendEntry);

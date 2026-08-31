@@ -115,6 +115,19 @@ export default function PluginsPage() {
     finally { setBusy(''); }
   }
 
+  async function installFromMarketplace(product: CatalogProduct) {
+    const version = product.versions[0]?.version;
+    if (!version) return setError('No compatible version is available to install.');
+    setBusy(`${product.id}:install`); setError('');
+    try {
+      const response = await apiFetch(`/api/admin/marketplace/plugins/${encodeURIComponent(product.id)}/${encodeURIComponent(version)}/install`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({}) });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.message || `Installation failed (${response.status})`);
+      await load();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Installation failed'); }
+    finally { setBusy(''); }
+  }
+
   async function startLink() {
     setLinking(true); setError('');
     try {
@@ -269,7 +282,10 @@ export default function PluginsPage() {
                       <div className="mt-2 text-sm font-medium text-slate-700">{product.paid ? (product.prices[0] ? formatMoney(product.prices[0].amountMinor, product.prices[0].currency) : 'Price unavailable') : 'Free'}</div>
                       {product.versions[0] && <p className="mt-1 text-xs text-slate-500">Version {product.versions[0].version} · requires core {product.versions[0].requiresCore}</p>}
                       {!!product.ownership?.length && <p className="mt-2 text-xs text-emerald-700">Owned: {product.ownership.map((entry) => `${entry.installationLabel || entry.installationId} (${entry.status.toLowerCase()})`).join(', ')}</p>}
-                      {product.paid && !owned && <button className="btn btn-primary mt-3" disabled={!!busy || !product.compatible} onClick={() => buy(product)}>{busy === `${product.id}:buy` ? 'Creating order…' : 'Buy'}</button>}
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {product.paid && !owned && <button className="btn btn-primary" disabled={!!busy || !product.compatible} onClick={() => buy(product)}>{busy === `${product.id}:buy` ? 'Creating order…' : 'Buy'}</button>}
+                        {product.compatible && (owned || !product.paid) && <button className="btn btn-primary" disabled={!!busy} onClick={() => installFromMarketplace(product)}>{busy === `${product.id}:install` ? 'Installing…' : 'Install'}</button>}
+                      </div>
                     </div>
                     );
                   })}</div>}

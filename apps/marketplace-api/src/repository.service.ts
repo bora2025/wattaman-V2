@@ -206,7 +206,7 @@ export class RepositoryService {
     const [versions, coreReleases, advisories] = await Promise.all([
       this.prisma.pluginVersion.findMany({
         where: { reviewStatus: 'APPROVED', withdrawnAt: null, channel: { in: allowedChannels }, plugin: { status: 'APPROVED' } },
-        include: { artifact: true, plugin: { include: { publisher: true } } },
+        include: { artifact: true, plugin: { include: { publisher: { include: { keys: { where: { revokedAt: null } } } } } } },
       }),
       this.prisma.coreRelease.findMany({ where: { withdrawnAt: null, channel: { in: allowedChannels } } }),
       this.prisma.securityAdvisory.findMany({ where: { withdrawnAt: null }, orderBy: { publishedAt: 'desc' } }),
@@ -220,6 +220,12 @@ export class RepositoryService {
         channel: item.channel.toLowerCase(), paid: item.plugin.isPaid, manifest: item.manifestJson,
         changelog: item.changelog, sha256: item.artifact!.sha256, sizeBytes: item.artifact!.sizeBytes,
         downloadUrl: `${this.config.publicBaseUrl}/v1/artifacts/${item.artifact!.sha256}`,
+        // Lets a school safely learn a new publisher's signing key straight from this
+        // already-signed index, exactly the same trust delegation update-checking already relies
+        // on -- omitted (undefined) if the key that signed this artifact was since revoked, so a
+        // revoked key can never be re-trusted this way.
+        publisherKeyId: item.artifact!.publisherKeyId,
+        publisherPublicKeyPem: item.plugin.publisher.keys.find((key) => key.keyId === item.artifact!.publisherKeyId)?.publicKeyPem,
       }));
     const payload = {
       schemaVersion: 1 as const,

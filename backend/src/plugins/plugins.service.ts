@@ -7,7 +7,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { readRuntimeConfig } from '../config/environment';
 import { trustedPluginKeys } from './plugin-config';
-import { PluginPackageVerifier, VerifiedPluginPackage } from './plugin-package';
+import { PluginPackageVerifier, TrustedPluginKeys, VerifiedPluginPackage } from './plugin-package';
 import { PluginRuntimeService } from './plugin-runtime.service';
 import { PluginMigrationsService } from './plugin-migrations.service';
 
@@ -74,7 +74,7 @@ export class PluginsService {
   runtimeStatus() { return this.runtime.status(); }
 
   async inspect(packageBuffer: Buffer) {
-    const verified = await this.verifier.verify(packageBuffer, trustedPluginKeys(), readRuntimeConfig().appVersion);
+    const verified = await this.verifier.verify(packageBuffer, await trustedPluginKeys(), readRuntimeConfig().appVersion);
     await this.assertDependencies(verified);
     return {
       packageSha256: verified.packageSha256,
@@ -88,9 +88,18 @@ export class PluginsService {
     };
   }
 
-  async install(packageBuffer: Buffer, confirmedPackageSha256?: string) {
+  /**
+   * `trustedKeys` defaults to the static, locally-configured allow-list merged with any
+   * publisher keys previously learned via a marketplace install (unchanged behavior for the
+   * manual-upload and official-repository-update paths, which never pass it). The marketplace
+   * purchase-install action passes an extended map that additionally trusts the one publisher key
+   * named in that specific signed catalog release, so a newly-purchased publisher's package can
+   * install without a manual PLUGIN_TRUSTED_KEYS edit -- the same bounded, signature-anchored
+   * trust delegation already used for core/plugin update checks, not a new trust root.
+   */
+  async install(packageBuffer: Buffer, confirmedPackageSha256?: string, trustedKeys?: TrustedPluginKeys) {
     const coreVersion = readRuntimeConfig().appVersion;
-    const verified = await this.verifier.verify(packageBuffer, trustedPluginKeys(), coreVersion);
+    const verified = await this.verifier.verify(packageBuffer, trustedKeys ?? await trustedPluginKeys(), coreVersion);
     if (confirmedPackageSha256 !== undefined && confirmedPackageSha256 !== verified.packageSha256) throw new BadRequestException('The package differs from the inspected package');
     await this.assertDependencies(verified);
     const current = await this.prisma.pluginInstallation.findUnique({ where: { id: verified.manifest.id } });

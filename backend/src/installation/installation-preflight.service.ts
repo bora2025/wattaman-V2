@@ -153,7 +153,7 @@ export class InstallationPreflightService {
   private async checkInitialPlugins(base64Packages: string[] | undefined): Promise<PreflightCheckResult[]> {
     if (!base64Packages?.length) return [];
     const coreVersion = readRuntimeConfig().appVersion;
-    const trustedKeys = trustedPluginKeys();
+    const trustedKeys = await trustedPluginKeys();
     return Promise.all(base64Packages.map(async (encoded, index) => {
       const name = `initialPlugin:${index}`;
       // Buffer.from(str, 'base64') never throws -- it decodes leniently -- so a garbage input

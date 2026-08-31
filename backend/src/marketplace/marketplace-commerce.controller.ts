@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
@@ -19,5 +19,10 @@ export class MarketplaceCommerceController {
   @Post('orders')
   createOrder(@Body() body: { priceId?: string; currency?: string }) {
     return this.commerce.createOrder(String(body?.priceId || ''), String(body?.currency || ''));
+  }
+
+  @Post('plugins/:pluginId/:version/install')
+  install(@Param('pluginId') pluginId: string, @Param('version') version: string, @Body() body: { activate?: boolean }) {
+    return this.commerce.install(pluginId, version, body?.activate === true);
   }
 }
