@@ -23,6 +23,7 @@ import { PlatformCommerceReadService } from './platform-commerce-read.service';
 import { PlatformExportService } from './platform-export.service';
 import { PlatformOperatorReadService } from './platform-operator-read.service';
 import { platformOpenApi } from './platform-openapi';
+import { SchoolPluginRequestService } from './school-plugin-request.service';
 import { PlatformRequest, requirePlatformPermission, requirePlatformSession } from './platform-rbac';
 import { actionContext } from './platform-context';
 import { createMetricsRegistry } from './observability/metrics';
@@ -78,6 +79,7 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   const platformCommerce = new PlatformCommerceReadService(prisma);
   const platformExport = new PlatformExportService(prisma);
   const platformOperators = new PlatformOperatorReadService(prisma);
+  const schoolPluginRequests = new SchoolPluginRequestService(prisma);
   const upload = multer({ storage: multer.memoryStorage(), limits: { files: 1, fileSize: config.maxArtifactBytes, fields: 10 } });
   const metrics = createMetricsRegistry(prisma);
   app.disable('x-powered-by');
@@ -178,6 +180,12 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   });
   app.get('/v1/customer/entitlements', requireCommerceSession, async (request: ScopedRequest, response, next) => {
     try { response.json(await customerMarketplace.entitlements(request.accountId!)); } catch (error) { next(error); }
+  });
+  app.get('/v1/customer/plugin-requests', requireCommerceSession, async (request: ScopedRequest, response, next) => {
+    try { response.json(await schoolPluginRequests.customerRequests(request.accountId!)); } catch (error) { next(error); }
+  });
+  app.post('/v1/customer/plugin-requests', requireCommerceSession, async (request: ScopedRequest, response, next) => {
+    try { response.status(201).json(await schoolPluginRequests.create(request.accountId!, request.body)); } catch (error) { next(error); }
   });
   app.post('/v1/mfa/enrollments', requireSession, async (request: Request & { accountId?: string }, response, next) => {
     try { response.status(201).json(await identity.enrollMfa(request.accountId!)); } catch (error) { next(error); }
@@ -285,6 +293,27 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
 
   app.get('/platform/v1/operators', requirePlatformOperator, P('operators.read'), async (request, response, next) => {
     try { response.json(await platformOperators.operators(request.query)); } catch (error) { next(error); }
+  });
+  app.get('/platform/v1/plugin-requests', requirePlatformOperator, P('plugin_requests.read'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await schoolPluginRequests.platformRequests(request.query, request.operatorId!)); } catch (error) { next(error); }
+  });
+  app.get('/platform/v1/plugin-requests/:requestId', requirePlatformOperator, P('plugin_requests.read'), async (request, response, next) => {
+    try { response.json(await schoolPluginRequests.platformRequest(String(request.params.requestId))); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/plugin-requests/:requestId/assign', requirePlatformOperator, P('plugin_requests.review'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await schoolPluginRequests.assign(String(request.params.requestId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/plugin-requests/:requestId/start-review', requirePlatformOperator, P('plugin_requests.review'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await schoolPluginRequests.startReview(String(request.params.requestId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/plugin-requests/:requestId/request-information', requirePlatformOperator, P('plugin_requests.review'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await schoolPluginRequests.requestInformation(String(request.params.requestId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/plugin-requests/:requestId/approve', requirePlatformOperator, P('plugin_requests.review'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await schoolPluginRequests.approve(String(request.params.requestId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/plugin-requests/:requestId/reject', requirePlatformOperator, P('plugin_requests.review'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await schoolPluginRequests.reject(String(request.params.requestId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
   });
   app.get('/platform/v1/operators/:operatorId', requirePlatformOperator, P('operators.read'), async (request, response, next) => {
     try { response.json(await platformOperators.operator(String(request.params.operatorId))); } catch (error) { next(error); }

@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const SESSION_COOKIE = 'wattanam_marketplace_session';
 const publicGet = new Set(['catalog', 'publisher-policies']);
-const sessionGet = new Set(['customer/orders', 'customer/entitlements']);
+const sessionGet = new Set(['customer/orders', 'customer/entitlements', 'customer/plugin-requests']);
 const publicPost = new Set(['accounts', 'accounts/email-verifications/confirm', 'sessions', 'sessions/refresh', 'password-resets', 'password-resets/confirm']);
-const sessionPost = new Set(['customer/orders', 'sessions/revoke', 'mfa/enrollments', 'mfa/enrollments/confirm', 'mfa/disable']);
+const sessionPost = new Set(['customer/orders', 'customer/plugin-requests', 'sessions/revoke', 'mfa/enrollments', 'mfa/enrollments/confirm', 'mfa/disable']);
 const linkRequestPathPattern = /^marketplace-links\/[0-9a-f-]{36}$/;
 const linkDecisionPathPattern = /^marketplace-links\/[0-9a-f-]{36}\/(approve|deny)$/;
 

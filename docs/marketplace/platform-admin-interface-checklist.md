@@ -1,11 +1,9 @@
 # Platform Admin Interface — Start-of-Implementation Checklist
 
-Source plan: [platform-admin-interface-plan.md](./platform-admin-interface-plan.md) (status:
-planned, implementation not started as of 2026-08-31). That document's Section 10 defines the full
-PA-0 → PA-7 delivery program; this checklist operationalizes only what's needed to **start**
-coding — Stage PA-0 (decisions that gate everything else) and Stage PA-1 / Section 15's first
-vertical slice. Do not begin PA-2 or later until every item below is checked and PA-1's exit
-criteria (bottom of this file) is demonstrably true, not just believed true.
+Source plan: [platform-admin-interface-plan.md](./platform-admin-interface-plan.md). Implementation
+is active: PA-1 is complete, PA-2 awaits hosted verification, and PA-3 is underway. Section 10 of
+the source plan defines the full PA-0 → PA-7 delivery program; this checklist is the evidence-backed
+execution record for each stage.
 
 Checkbox convention matches [completion-checklist.md](../completion-checklist.md): `[ ]` open,
 `[x]` done with evidence linked in the same line — no item is checked from intent or a plan
@@ -32,14 +30,17 @@ own stages start.
       (live-proven: Platform Owner itself is denied `plugins.read`/`schools.read`)
 - [x] **PO0-3** (PO/Sec) Operator identity provider: **marketplace-native accounts**, matching the
       plan's stated default. OIDC/passkeys remain a PA-7 decision, unblocked by this choice
-- [ ] **PA0-4** (PO/Sec) Approve the two-person-approval action list (payouts, publisher key
-      approval, revenue corrections, and any others identified) — plan §3/§5.7 name several but the
-      complete list must be explicit before `AdminApproval` (plan §6) is modeled. **Blocks PA-6**,
-      not PA-1
-- [ ] **PA0-5** (PO) Define school plugin-request types, SLA targets per type, price-override
-      authority, and trial policy (plan §5.3). **Blocks PA-3**, not PA-1
-- [ ] **PA0-6** (PO/Sec) Define the hosted-build network policy, evidence-retention duration, and
-      signing-key custody policy (plan §5.5). **Blocks PA-5**, not PA-1
+- [x] **PA0-4** (PO/Sec) Two-person action list approved — publisher identity/key actions,
+      stable third-party/core promotion, revenue corrections, payouts, high-value refunds,
+      exceptional manual entitlements, and production trust-key removal require a different
+      initiator and approver; emergency withdrawal has a one-business-day retrospective review
+- [x] **PA0-5** (PO) School plugin-request policy approved — all five request types, 1–3 business
+      day response/decision targets, 30-day trials, one trial per school/plugin/year, 10% Finance
+      discount authority, dual approval above 10%, and no below-floor pricing
+- [x] **PA0-6** (PO/Sec) Hosted-build policy approved — disposable network-denied workers,
+      allowlisted dependency proxy, bounded resources, tiered 90-day/1-year/release+7-year
+      evidence retention, and signing in a separate non-exportable KMS/HSM-backed service
+      ([decision record](../decisions/platform-admin-policy-decisions-2026-08-31.md))
 - [x] **PA0-7** (PL) PA-1 API contract defined and implemented: `POST /platform/v1/auth/sessions`,
       `/auth/sessions/refresh`, `/auth/sessions/revoke`, `/auth/mfa/enroll`,
       `/auth/mfa/enroll/confirm`, `GET /platform/v1/me`. A generated OpenAPI document is still
@@ -50,7 +51,7 @@ own stages start.
       mid-life, and the browser never holding a session token. Each is covered by a live check in
       the two drills below
 
-**Exit:** PA0-1/2/3/7/8 closed as above; PA0-4/5/6 remain open against their own later stages.
+**Exit:** all PA-0 decisions are approved; later implementation must conform to the linked policy.
 
 ## Stage PA-1 first slice — Secure admin foundation
 
@@ -186,10 +187,38 @@ for this — not implied by the feature list being complete.
 
 **PA-2 exit:** normal marketplace investigation needs no direct database access.
 
-## What comes after PA-2
+## Stage PA-3 — School plugin-request workflow
 
-Stages PA-3 through PA-7 (school plugin-request workflow,
-publisher/submission review, the official-plugin build pipeline, commerce/finance operations, and
+- [x] **PA3-1** (PO/Sec) Request policy approved — five request types, business-day SLA targets,
+      30-day/annual trial rules, discount authority, and dual-control exceptions are binding
+      ([decision](../decisions/platform-admin-policy-decisions-2026-08-31.md))
+- [x] **PA3-2** (DB) Additive request schema and migration — requests, immutable idempotent
+      decisions, public/internal messages, assignments, SLA timestamps, ownership relations, and
+      database-enforced exactly-one message author
+- [x] **PA3-3** (BE) Customer request creation/list API — verified account and installation
+      ownership required, approved catalog plugin required except for feature requests, annual
+      trial uniqueness enforced, and internal reasons/messages excluded from customer queries
+- [~] **PA3-4** (BE) Operator workflow API — filtered queue, detail, assignment, start-review,
+      request-information, approval, and rejection transitions are serializable, idempotent, and
+      audited. Customer information-response/cancellation and entitlement fulfilment remain
+- [x] **PA3-5** (FE) Platform operator queue/detail — URL filters, SLA visibility, assignment,
+      review, information request, approve/reject controls, and complete internal decision timeline
+- [x] **PA3-6** (FE) Customer marketplace request surface — linked schools can submit all five
+      request types and track their customer-safe status timeline; UI explicitly preserves local
+      school installation control
+- [ ] **PA3-7** (BE) Connect approved free/trial/private requests to idempotent entitlement
+      issuance and purchase assistance to order/manual-invoice state; enforce dual approval for
+      paid exceptions and grants longer than 90 days
+- [ ] **PA3-8** (QA/SRE) Live PostgreSQL migration/concurrency/retry drill, browser end-to-end for
+      request/approval/rejection/information/payment/entitlement/local-install paths, notifications,
+      accessibility, and hosted Railway evidence
+
+**PA-3 exit:** a registered school completes request → approval/payment rule → entitlement → local
+install, including rejection and retry tests.
+
+## What comes after PA-3
+
+Stages PA-4 through PA-7 (publisher/submission review, the official-plugin build pipeline, commerce/finance operations, and
 security/support/production hardening) are fully specified in the source plan's §10 but
 deliberately **not** broken into checklist items here — each is large enough to deserve its own
 checklist once PA-0/PA-1 are actually done, not planned in advance of proof that the foundation

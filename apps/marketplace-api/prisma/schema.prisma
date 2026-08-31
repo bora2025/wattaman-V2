@@ -12,6 +12,40 @@ enum PlatformOperatorStatus {
   SUSPENDED
 }
 
+enum SchoolPluginRequestType {
+  FREE_APPROVAL
+  PURCHASE_ASSISTANCE
+  PRIVATE_PLUGIN_ACCESS
+  TRIAL
+  FEATURE_REQUEST
+}
+
+enum SchoolPluginRequestStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  NEEDS_INFORMATION
+  APPROVED
+  REJECTED
+  CANCELLED
+  ENTITLEMENT_ISSUED
+}
+
+enum SchoolPluginRequestDecisionType {
+  ASSIGNED
+  STARTED_REVIEW
+  INFORMATION_REQUESTED
+  INFORMATION_RECEIVED
+  APPROVED
+  REJECTED
+  CANCELLED
+  ENTITLEMENT_ISSUED
+}
+
+enum SchoolPluginRequestMessageVisibility {
+  CUSTOMER
+  INTERNAL
+}
+
 enum PublisherStatus {
   PENDING
   VERIFIED
@@ -139,28 +173,30 @@ model Publisher {
 }
 
 model MarketplaceAccount {
-  id                   String                         @id @default(uuid())
-  email                String                         @unique
-  displayName          String
-  passwordHash         String
-  emailVerifiedAt      DateTime?
-  mfaEnabled           Boolean                        @default(false)
-  mfaSecret            String?
-  failedLoginCount     Int                            @default(0)
-  lockedUntil          DateTime?
-  createdAt            DateTime                       @default(now())
-  updatedAt            DateTime                       @updatedAt
-  orders               MarketplaceOrder[]
-  installations        InstallationRegistration[]
-  marketplaceGrants    InstallationMarketplaceGrant[]
-  sessions             MarketplaceSession[]
-  emailVerifications   MarketplaceEmailVerification[]
-  passwordResets       MarketplacePasswordReset[]
-  mfaRecoveryCodes     MarketplaceMfaRecoveryCode[]
-  auditEvents          MarketplaceAuditEvent[]
-  publisherMemberships PublisherMember[]
-  policyAcceptances    PublisherPolicyAcceptance[]
-  submissionReviews    SubmissionReview[]
+  id                    String                         @id @default(uuid())
+  email                 String                         @unique
+  displayName           String
+  passwordHash          String
+  emailVerifiedAt       DateTime?
+  mfaEnabled            Boolean                        @default(false)
+  mfaSecret             String?
+  failedLoginCount      Int                            @default(0)
+  lockedUntil           DateTime?
+  createdAt             DateTime                       @default(now())
+  updatedAt             DateTime                       @updatedAt
+  orders                MarketplaceOrder[]
+  installations         InstallationRegistration[]
+  marketplaceGrants     InstallationMarketplaceGrant[]
+  sessions              MarketplaceSession[]
+  emailVerifications    MarketplaceEmailVerification[]
+  passwordResets        MarketplacePasswordReset[]
+  mfaRecoveryCodes      MarketplaceMfaRecoveryCode[]
+  auditEvents           MarketplaceAuditEvent[]
+  publisherMemberships  PublisherMember[]
+  policyAcceptances     PublisherPolicyAcceptance[]
+  submissionReviews     SubmissionReview[]
+  schoolPluginRequests  SchoolPluginRequest[]
+  pluginRequestMessages SchoolPluginRequestMessage[]
 }
 
 model MarketplaceSession {
@@ -294,21 +330,22 @@ model PublisherPolicyAcceptance {
 }
 
 model MarketplacePlugin {
-  id           String                    @id
-  publisherId  String
-  name         String
-  description  String
-  license      String
-  isPaid       Boolean                   @default(false)
-  status       ReviewStatus              @default(DRAFT)
-  createdAt    DateTime                  @default(now())
-  updatedAt    DateTime                  @updatedAt
-  publisher    Publisher                 @relation(fields: [publisherId], references: [id])
-  versions     PluginVersion[]
-  advisories   SecurityAdvisory[]
-  entitlements InstallationEntitlement[]
-  orderLines   MarketplaceOrderLine[]
-  prices       ProductPrice[]
+  id                   String                    @id
+  publisherId          String
+  name                 String
+  description          String
+  license              String
+  isPaid               Boolean                   @default(false)
+  status               ReviewStatus              @default(DRAFT)
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+  publisher            Publisher                 @relation(fields: [publisherId], references: [id])
+  versions             PluginVersion[]
+  advisories           SecurityAdvisory[]
+  entitlements         InstallationEntitlement[]
+  orderLines           MarketplaceOrderLine[]
+  prices               ProductPrice[]
+  schoolPluginRequests SchoolPluginRequest[]
 }
 
 model ProductPrice {
@@ -412,19 +449,20 @@ model SecurityAdvisory {
 }
 
 model InstallationRegistration {
-  id             String                        @id @default(uuid())
-  installationId String                        @unique
+  id             String                                @id @default(uuid())
+  installationId String                                @unique
   accountId      String?
   label          String?
   lastSeenAt     DateTime?
-  createdAt      DateTime                      @default(now())
-  account        MarketplaceAccount?           @relation(fields: [accountId], references: [id])
+  createdAt      DateTime                              @default(now())
+  account        MarketplaceAccount?                   @relation(fields: [accountId], references: [id])
   keys           InstallationRegistrationKey[]
   entitlements   InstallationEntitlement[]
   downloads      DownloadEvent[]
   orders         MarketplaceOrder[]
   grantRequests  InstallationMarketplaceGrantRequest[]
   grant          InstallationMarketplaceGrant?
+  pluginRequests SchoolPluginRequest[]
 }
 
 model InstallationRegistrationKey {
@@ -453,35 +491,35 @@ model InstallationRegistrationChallenge {
 }
 
 model InstallationMarketplaceGrantRequest {
-  id                          String                  @id @default(uuid())
+  id                         String                        @id @default(uuid())
   installationRegistrationId String
-  requestedScope              String
-  status                      InstallationLinkStatus  @default(PENDING)
-  createdAt                   DateTime                @default(now())
-  expiresAt                   DateTime
-  respondedAt                 DateTime?
-  deliveredAt                 DateTime?
-  grantId                     String?
-  installation                InstallationRegistration     @relation(fields: [installationRegistrationId], references: [id], onDelete: Cascade)
-  grant                       InstallationMarketplaceGrant? @relation(fields: [grantId], references: [id])
+  requestedScope             String
+  status                     InstallationLinkStatus        @default(PENDING)
+  createdAt                  DateTime                      @default(now())
+  expiresAt                  DateTime
+  respondedAt                DateTime?
+  deliveredAt                DateTime?
+  grantId                    String?
+  installation               InstallationRegistration      @relation(fields: [installationRegistrationId], references: [id], onDelete: Cascade)
+  grant                      InstallationMarketplaceGrant? @relation(fields: [grantId], references: [id])
 
   @@index([installationRegistrationId, status, expiresAt])
   @@index([grantId])
 }
 
 model InstallationMarketplaceGrant {
-  id                          String                    @id @default(uuid())
-  installationRegistrationId String                    @unique
-  accountId                   String
-  scope                        String
-  consentedAt                 DateTime
-  createdAt                   DateTime                  @default(now())
-  expiresAt                   DateTime
-  revokedAt                   DateTime?
-  revokedReason                String?
-  installation                 InstallationRegistration @relation(fields: [installationRegistrationId], references: [id])
-  account                       MarketplaceAccount       @relation(fields: [accountId], references: [id])
-  requests                      InstallationMarketplaceGrantRequest[]
+  id                         String                                @id @default(uuid())
+  installationRegistrationId String                                @unique
+  accountId                  String
+  scope                      String
+  consentedAt                DateTime
+  createdAt                  DateTime                              @default(now())
+  expiresAt                  DateTime
+  revokedAt                  DateTime?
+  revokedReason              String?
+  installation               InstallationRegistration              @relation(fields: [installationRegistrationId], references: [id])
+  account                    MarketplaceAccount                    @relation(fields: [accountId], references: [id])
+  requests                   InstallationMarketplaceGrantRequest[]
 
   @@index([accountId, revokedAt])
 }
@@ -740,21 +778,91 @@ model CoreRelease {
 // not a shared one, per the plan's boundary rules.
 
 model PlatformOperator {
-  id               String                             @id @default(uuid())
-  email            String                             @unique
-  displayName      String
-  passwordHash     String
-  status           PlatformOperatorStatus              @default(ACTIVE)
-  mfaEnabled       Boolean                             @default(false)
-  mfaSecret        String?
-  failedLoginCount Int                                 @default(0)
-  lockedUntil      DateTime?
-  createdAt        DateTime                            @default(now())
-  updatedAt        DateTime                            @updatedAt
-  roles            PlatformOperatorRole[]
-  sessions         PlatformOperatorSession[]
-  mfaRecoveryCodes PlatformOperatorMfaRecoveryCode[]
-  auditEvents      PlatformAuditEvent[]
+  id                     String                            @id @default(uuid())
+  email                  String                            @unique
+  displayName            String
+  passwordHash           String
+  status                 PlatformOperatorStatus            @default(ACTIVE)
+  mfaEnabled             Boolean                           @default(false)
+  mfaSecret              String?
+  failedLoginCount       Int                               @default(0)
+  lockedUntil            DateTime?
+  createdAt              DateTime                          @default(now())
+  updatedAt              DateTime                          @updatedAt
+  roles                  PlatformOperatorRole[]
+  sessions               PlatformOperatorSession[]
+  mfaRecoveryCodes       PlatformOperatorMfaRecoveryCode[]
+  auditEvents            PlatformAuditEvent[]
+  assignedPluginRequests SchoolPluginRequest[]
+  pluginRequestDecisions SchoolPluginRequestDecision[]
+  pluginRequestMessages  SchoolPluginRequestMessage[]
+}
+
+// ─── Platform Admin (PA-3): school plugin-request workflow ───────────────
+
+model SchoolPluginRequest {
+  id                 String                        @id @default(uuid())
+  accountId          String
+  installationId     String
+  pluginId           String?
+  type               SchoolPluginRequestType
+  status             SchoolPluginRequestStatus     @default(SUBMITTED)
+  justification      String
+  intendedUsers      Int?
+  desiredAt          DateTime?
+  contactEmail       String
+  featureDescription String?
+  slaDueAt           DateTime
+  assignedOperatorId String?
+  submittedAt        DateTime                      @default(now())
+  decidedAt          DateTime?
+  fulfilledAt        DateTime?
+  cancelledAt        DateTime?
+  createdAt          DateTime                      @default(now())
+  updatedAt          DateTime                      @updatedAt
+  account            MarketplaceAccount            @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  installation       InstallationRegistration      @relation(fields: [installationId], references: [id], onDelete: Restrict)
+  plugin             MarketplacePlugin?            @relation(fields: [pluginId], references: [id], onDelete: Restrict)
+  assignedOperator   PlatformOperator?             @relation(fields: [assignedOperatorId], references: [id], onDelete: SetNull)
+  decisions          SchoolPluginRequestDecision[]
+  messages           SchoolPluginRequestMessage[]
+
+  @@index([status, slaDueAt])
+  @@index([accountId, submittedAt])
+  @@index([installationId, pluginId, type])
+  @@index([assignedOperatorId, status])
+}
+
+model SchoolPluginRequestDecision {
+  id             String                          @id @default(uuid())
+  requestId      String
+  operatorId     String
+  decision       SchoolPluginRequestDecisionType
+  publicMessage  String?
+  internalReason String?
+  conditions     Json?
+  idempotencyKey String                          @unique
+  createdAt      DateTime                        @default(now())
+  request        SchoolPluginRequest             @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  operator       PlatformOperator                @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+
+  @@index([requestId, createdAt])
+  @@index([operatorId, createdAt])
+}
+
+model SchoolPluginRequestMessage {
+  id               String                               @id @default(uuid())
+  requestId        String
+  visibility       SchoolPluginRequestMessageVisibility
+  body             String
+  accountAuthorId  String?
+  operatorAuthorId String?
+  createdAt        DateTime                             @default(now())
+  request          SchoolPluginRequest                  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  accountAuthor    MarketplaceAccount?                  @relation(fields: [accountAuthorId], references: [id], onDelete: Restrict)
+  operatorAuthor   PlatformOperator?                    @relation(fields: [operatorAuthorId], references: [id], onDelete: Restrict)
+
+  @@index([requestId, createdAt])
 }
 
 model PlatformRole {
@@ -797,19 +905,19 @@ model PlatformOperatorRole {
 }
 
 model PlatformOperatorSession {
-  id                  String                    @id @default(uuid())
+  id                  String                   @id @default(uuid())
   operatorId          String
-  tokenHash           String                    @unique
-  mfaVerified          Boolean                   @default(false)
-  createdAt           DateTime                  @default(now())
+  tokenHash           String                   @unique
+  mfaVerified         Boolean                  @default(false)
+  createdAt           DateTime                 @default(now())
   expiresAt           DateTime
   revokedAt           DateTime?
-  replacedBySessionId String?                   @unique
+  replacedBySessionId String?                  @unique
   ip                  String?
   userAgent           String?
-  operator            PlatformOperator          @relation(fields: [operatorId], references: [id], onDelete: Cascade)
-  replacedBy          PlatformOperatorSession?  @relation("PlatformSessionRotation", fields: [replacedBySessionId], references: [id])
-  rotatedFrom         PlatformOperatorSession?  @relation("PlatformSessionRotation")
+  operator            PlatformOperator         @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  replacedBy          PlatformOperatorSession? @relation("PlatformSessionRotation", fields: [replacedBySessionId], references: [id])
+  rotatedFrom         PlatformOperatorSession? @relation("PlatformSessionRotation")
 
   @@index([operatorId, revokedAt])
 }
