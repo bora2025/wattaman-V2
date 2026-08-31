@@ -176,7 +176,10 @@ for this — not implied by the feature list being complete.
       routes, required permission metadata, and the CSV media type. Four contract tests prevent
       authentication/permission/media-type drift
 - [ ] **PA2-6** (QA) Complete authorization matrix, browser E2E, accessibility, and hosted
-      non-production evidence for the expanded read surface
+      non-production evidence for the expanded read surface. **In progress:** the generated
+      OpenAPI permission metadata now drives a deny-by-default matrix across all 9 seeded roles
+      and every documented protected PA-2 route; it also fails if a route names an unseeded or
+      wholly unassigned permission. Browser, accessibility, and hosted evidence remain
 
 **PA-2 exit:** normal marketplace investigation needs no direct database access.
 
