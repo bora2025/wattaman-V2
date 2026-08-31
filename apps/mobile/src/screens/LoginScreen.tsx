@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -12,24 +12,31 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { login } from '../api';
+import { login, selectSchoolServer } from '../api';
+import { getSchoolServerUrl } from '../config';
 import { useAuth } from '../AuthContext';
 import { COLORS } from '../theme';
 
 export default function LoginScreen({ navigation }: any) {
   const { signIn } = useAuth();
+  const [serverUrl, setServerUrl] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    getSchoolServerUrl().then(setServerUrl).catch(() => undefined);
+  }, []);
+
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please enter email and password');
+    if (!serverUrl.trim() || !email.trim() || !password.trim()) {
+      Alert.alert('Error', 'Please enter school address, email and password');
       return;
     }
     setLoading(true);
     try {
+      await selectSchoolServer(serverUrl);
       await login(email.trim(), password);
       await signIn();
     } catch (err: any) {
@@ -60,6 +67,18 @@ export default function LoginScreen({ navigation }: any) {
       {/* White Card Form */}
       <View style={styles.card}>
         <View style={styles.form}>
+          <Text style={styles.label}>School address</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="https://school.example.com"
+            placeholderTextColor={COLORS.textLight}
+            value={serverUrl}
+            onChangeText={setServerUrl}
+            keyboardType="url"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+
           <Text style={styles.label}>Email</Text>
           <TextInput
             style={styles.input}

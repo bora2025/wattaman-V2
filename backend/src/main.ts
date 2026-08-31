@@ -36,6 +36,13 @@ async function bootstrap() {
   // Compress all responses
   app.use(compression());
 
+  // Stable compatibility contract for independently released web/mobile clients.
+  // URI paths remain backward-compatible; clients may advertise and observe this version.
+  app.use((_request, response, next) => {
+    response.setHeader('X-Wattanam-API-Version', '1');
+    next();
+  });
+
   // Global input validation — strips unknown properties, rejects invalid data
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,

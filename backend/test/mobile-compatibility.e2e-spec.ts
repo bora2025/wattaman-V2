@@ -9,8 +9,8 @@
  * response bodies or business behavior — those are covered elsewhere. It asserts one thing only:
  * every (method, path) pair the mobile client depends on still resolves to a real, registered
  * route, not a 404. That is the single most common shape a REST breaking change takes (a route
- * renamed, moved, or removed), and the backend has no API-versioning mechanism (see
- * contract-catalog.md §5) to catch it any other way.
+ * renamed, moved, or removed). The stable v1 compatibility header is also asserted so an
+ * independently released client can detect which public contract the school serves.
  *
  * A 401/403/400 is a PASS here (the route exists and rejected this particular call — normal for a
  * generic probe without real domain data). Only a 404 is a FAIL: that specifically means Nest could
@@ -43,6 +43,7 @@ beforeAll(async () => {
  * client would substitute a real one — the point is route resolution, not the specific record.
  */
 const MOBILE_ROUTES: Array<{ method: 'get' | 'post' | 'patch'; path: string; note: string }> = [
+  { method: 'get', path: '/installation/status', note: 'apps/mobile/src/config.ts: discovery' },
   { method: 'post', path: '/auth/login', note: 'apps/mobile/src/api.ts:9' },
   { method: 'post', path: '/auth/logout', note: 'apps/mobile/src/api.ts:44' },
   { method: 'post', path: '/auth/refresh', note: 'apps/mobile/src/api.ts:66' },
@@ -76,15 +77,6 @@ describe('A-010: mobile client route-existence contract', () => {
   it.each(MOBILE_ROUTES)('$method $path ($note) still resolves to a real route', async ({ method, path }) => {
     const res = await api[method](path).set(authHeader(adminToken)).send({});
     expect(res.status).not.toBe(404);
-  });
-
-  it('documents the known, pre-existing gap: POST /auth/forgot-password has no backend route', async () => {
-    // apps/mobile/src/screens/ForgotPasswordScreen.tsx:29 calls this endpoint, but it was never
-    // implemented server-side — a real drift found during the A-010 audit, not introduced by this
-    // fixture. This test asserts today's actual (broken) state on purpose: if it starts failing
-    // because the route now exists, update docs/architecture/contract-catalog.md's known-gaps
-    // section and move this assertion into MOBILE_ROUTES above instead of deleting it.
-    const res = await api.post('/auth/forgot-password').send({ email: 'admin@test.com' });
-    expect(res.status).toBe(404);
+    expect(res.headers['x-wattanam-api-version']).toBe('1');
   });
 });

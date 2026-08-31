@@ -14,7 +14,7 @@
     "domain:custom": "node tools/manage-custom-domain.js",
     "test:tools": "node --test tools/*.test.js",
     "test:tools:live": "node --test tools/*.live-test.js",
-    "install:all": "cd backend && npm install && cd ../frontend && npm install"
+    "install:all": "cd backend && npm install && cd ../frontend && npm install && cd ../apps/mobile && npm install"
   },
   "keywords": [],
   "author": "",

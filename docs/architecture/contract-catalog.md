@@ -49,7 +49,7 @@ No global prefix; paths below are literal. 34 controllers across 29 feature modu
 | GET | `/auth/child-schedule/:childUserId` | JWT+Roles: PARENT,ADMIN,SUPER_ADMIN | Child's schedule |
 | GET | `/auth/users/:id/full-profile` | JWT+Roles: ADMIN,SUPER_ADMIN | Full profile |
 
-> **Known gap** (found during this audit, not introduced by it): `apps/mobile/src/screens/ForgotPasswordScreen.tsx:29` calls `POST /auth/forgot-password` — **no such route exists**. This is dead/never-implemented mobile functionality, not a recent regression. It is either a missing backend route or a mobile screen that should be removed; this catalog records the finding, it does not decide which. See the fixture in §7.
+> **B-014 remediation (2026-08-31):** mobile no longer calls the nonexistent `POST /auth/forgot-password`; the screen now gives honest instructions to contact the school administrator.
 
 ### Attendance (`/attendance`) — 19 routes
 Record/bulk/check-out/create/update/delete for both student and staff attendance, an employee self-scan path, a role-restricted `WATTAMAN` class-free scan role, and read endpoints for records/daily totals. Roles used: `TEACHER,ADMIN,CLASS_ADMIN` (student-side mutations), `ADMIN`/`ADMIN,WATTAMAN_REPORTER` (staff-side + edits), plain `JWT` (self-service reads/scans). Full route list: `record`, `bulk`, `check-out`, `staff/record`, `staff/check-out`, `staff/auto-scan`, `employee/self-scan`, `employee/my-records` (GET), `records` (GET), `staff/records` (GET), `update` (PATCH), `edit-permission-type` (PATCH), `staff/update` (PATCH), `create-record`, `staff/create-record`, `staff/edit-permission-type` (PATCH), `record` (DELETE), `staff/record` (DELETE), `user-daily` (GET), `wattaman/scan`.
@@ -187,7 +187,7 @@ Publisher/policy/member/reviewer management and approval, submission review, rev
 | Plugin routes (§3) | Via `/plugin-api/*` and legacy proxies like `/announcements` | Not consumed today | N/A (this is the plugin's own surface) | N/A |
 | Marketplace API (§4) | Allowlisted subset only, via the marketplace proxy | Not consumed today | N/A | Allowlisted subset (same proxy) |
 
-**Operational finding, not a contract gap**: `apps/mobile/src/config.ts` hard-codes a single production `API_BASE_URL` with no environment branching (`__DEV__` check or `.env`) — every mobile build, including local development builds, talks to the production backend. This doesn't affect the contract catalog itself, but it means a compatibility fixture run in CI (§7) exercises the same backend a real device would, which is a reason to keep §7's fixture honest rather than a reason to defer fixing the missing dev/staging split (tracked as a finding here, not remediated by this document).
+**B-014 remediation (2026-08-31):** mobile now discovers a user-selected HTTPS school gateway, persists it in secure storage, and supports `EXPO_PUBLIC_API_URL` as an initial build-time value. Changing schools clears existing credentials.
 
 ## 7. Breaking-change policy and the compatibility fixture
 
@@ -198,13 +198,13 @@ Publisher/policy/member/reviewer management and approval, submission review, rev
 3. **The plugin SDK's existing policy is the model to imitate once REST versioning exists**: additive-within-1.x is free, breaking requires a major bump with an overlap window ([package-and-runtime.md](./plugins/package-and-runtime.md)). Building actual URL/header versioning for the REST surface to enforce this mechanically is follow-on engineering this catalog identifies as needed, not work this catalog performs.
 4. **Until that machinery exists, the compatibility fixture below is the enforcement mechanism**: it fails CI the moment a route a real client depends on stops resolving, which is the most common breaking-change shape in practice (see the plugin system's own `requiresCore` semver-range pattern, `plugin-package.spec.ts`, for the equivalent proven pattern on that surface).
 
-**The fixture**: [`backend/test/mobile-compatibility.e2e-spec.ts`](../../backend/test/mobile-compatibility.e2e-spec.ts) — one old-client compatibility fixture per this work package's acceptance criteria. It logs in as the seeded test admin, then calls every (method, path) pair `apps/mobile`'s API client actually depends on (mirrored from this catalog's §6 consumer map) and asserts none of them 404 — the one failure mode that specifically means "a route this client needs no longer exists." It also asserts, on purpose, that the known `POST /auth/forgot-password` gap still 404s today, so that filling that gap later is a deliberate, visible change to this file rather than a silent one. Run it the same way as the existing `workflow.e2e-spec.ts`: `npm run test:e2e` against a running, seeded backend (`npm run db:seed`).
+**The fixture**: [`backend/test/mobile-compatibility.e2e-spec.ts`](../../backend/test/mobile-compatibility.e2e-spec.ts) covers installation discovery and every backend route the mobile client consumes. It asserts that routes remain present and every response advertises compatibility contract v1. Run it against a running, seeded backend with `npm run test:e2e`.
 
 ## 8. Known gaps and findings from this audit (not fixed here — recorded so they aren't lost)
 
-- **`POST /auth/forgot-password`** is called by mobile but does not exist server-side (§1, §7).
-- **`apps/mobile/src/config.ts`** hard-codes a production URL with no dev/staging branching (§6).
-- **No API versioning exists** for the school REST/WebSocket surface at all (§0) — every future breaking change on this surface is currently caught only by the fixture in §7, not by any structural guarantee.
+- ~~Mobile called nonexistent `POST /auth/forgot-password`.~~ Remediated by B-014.
+- ~~Mobile hard-coded one production URL.~~ Remediated by B-014 school discovery.
+- School REST now advertises compatibility contract v1 through a non-breaking header. URI-versioned v2 routing and explicit unsupported-version negotiation remain future work before an actual breaking REST release.
 - **`/timetable/teacher-attendance/scan`** has no `@Roles()` restriction — any authenticated user (not just staff) can call it, unlike its `wattaman-scan` sibling which is role-restricted. Worth a deliberate decision (intentional broad access vs. an oversight), not silently tightened here.
 - **`/class-registrations/public/*`** is the only unauthenticated submission intake surface in the school backend — already flagged as the highest-exposure model in [data-classification.md](./data-classification.md); this catalog confirms it from the routing side too.
 

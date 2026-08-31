@@ -5,49 +5,27 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Alert,
   SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { fetchWithAuth } from '../api';
 import { COLORS } from '../theme';
 
 export default function ForgotPasswordScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
     if (!email.trim()) {
       Alert.alert('Error', 'Please enter your email address');
       return;
     }
-    setLoading(true);
-    try {
-      const res = await fetchWithAuth('/auth/forgot-password', {
-        method: 'POST',
-        body: JSON.stringify({ email: email.trim() }),
-      });
-      if (res.ok) {
-        Alert.alert(
-          'Success',
-          'If the email exists, a password reset link has been sent.',
-          [{ text: 'OK', onPress: () => navigation.goBack() }]
-        );
-      } else {
-        Alert.alert(
-          'Info',
-          'If the email exists, a password reset link has been sent.',
-          [{ text: 'OK', onPress: () => navigation.goBack() }]
-        );
-      }
-    } catch {
-      Alert.alert('Error', 'Unable to process request. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+    Alert.alert(
+      'Contact your school',
+      `Ask your school administrator to reset the password for ${email.trim()}.`,
+      [{ text: 'OK', onPress: () => navigation.goBack() }]
+    );
   };
 
   return (
@@ -72,7 +50,7 @@ export default function ForgotPasswordScreen({ navigation }: any) {
       <View style={styles.card}>
         <Text style={styles.heading}>Reset Password?</Text>
         <Text style={styles.description}>
-          Enter your email address below and we'll send you instructions to reset your password.
+          Enter your account email, then contact your school administrator for a password reset.
         </Text>
 
         <Text style={styles.label}>Enter Email Address</Text>
@@ -91,14 +69,9 @@ export default function ForgotPasswordScreen({ navigation }: any) {
           <TouchableOpacity
             style={styles.submitButton}
             onPress={handleSubmit}
-            disabled={loading}
             activeOpacity={0.8}
           >
-            {loading ? (
-              <ActivityIndicator color={COLORS.white} />
-            ) : (
-              <Text style={styles.submitButtonText}>Next Step</Text>
-            )}
+            <Text style={styles.submitButtonText}>Show Instructions</Text>
           </TouchableOpacity>
         </View>
       </View>

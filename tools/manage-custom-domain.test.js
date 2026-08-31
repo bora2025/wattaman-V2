@@ -56,28 +56,13 @@ function withJournal(journal, fn) {
   try { return fn(file); } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 }
 
-test('CLI: verify transitions pending -> verified against a real, live-checked CNAME that genuinely matches', () => {
-  // Reuses the same known-correct real-world pair the live DNS test file proves works
-  // (www.github.com CNAMEs to github.com) -- this exercises the full `verify` action for
-  // real, over the real internet, without needing a Railway-owned domain to test with.
-  withJournal({ schemaVersion: 1, domain: 'www.github.com', dnsInstructions: { type: 'CNAME', target: 'github.com' }, state: 'pending', history: [] }, (file) => {
-    const result = run(['verify', '--journal', file]);
-    assert.strictEqual(result.status, 0);
-    const parsed = JSON.parse(result.stdout);
-    assert.strictEqual(parsed.state, 'verified');
-    const journal = JSON.parse(fs.readFileSync(file, 'utf8'));
-    assert.strictEqual(journal.state, 'verified');
-    assert.strictEqual(journal.history.length, 1);
-  });
-});
-
 // decideVerifyState is tested directly with a constructed dnsCheckResult rather than through a
 // real "record not found yet" DNS lookup: a genuinely nonexistent name can resolve as either a
 // fast NXDOMAIN or a slow ETIMEOUT depending on the resolver a given network/sandbox uses (this
 // was found empirically -- a real ETIMEOUT surfaced in this environment against a nonexistent
 // subdomain, taking 25+ seconds and landing on "error" rather than "pending"). The live
-// pending->verified transition above already proves the real DNS integration end to end; this
-// covers the pending/error split precisely and fast, independent of resolver behavior.
+// separate *.live-test.js tier proves the real DNS integration end to end; this covers the
+// pending/error split precisely and fast, independent of resolver behavior.
 test('decideVerifyState: not_yet_propagated stays pending, any other DNS error becomes error, a match becomes verified', () => {
   assert.strictEqual(decideVerifyState({ matched: false, error: 'not_yet_propagated' }), 'pending');
   assert.strictEqual(decideVerifyState({ matched: false, error: 'dns_error:ETIMEOUT' }), 'error');

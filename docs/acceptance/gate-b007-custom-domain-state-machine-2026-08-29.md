@@ -1,5 +1,13 @@
 # B-007 — Custom-Domain State Machine — 2026-08-29
 
+> 2026-08-31 verification note: the public-DNS CLI transition test was moved from
+> the deterministic `tools/*.test.js` suite into `tools/*.live-test.js`, where it
+> belongs. The deterministic tier passes 17/17. The live tier passed 2/4 HTTPS/TLS
+> probes during this audit; both CNAME checks were prevented by the current
+> environment's DNS resolver returning `ECONNREFUSED`. This is recorded as an
+> external test-environment failure, not silently counted as a product pass or a
+> product regression. A real Railway-owned custom domain remains the acceptance gap.
+
 ## What this implements
 
 Plan acceptance bar: "Pending/verified/active/error states; exact DNS instructions; TLS and

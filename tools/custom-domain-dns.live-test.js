@@ -9,11 +9,39 @@
 
 const test = require('node:test');
 const assert = require('node:assert');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 const { checkCnameRecord, probeCustomDomain } = require('./custom-domain-dns');
+
+const SCRIPT = path.join(__dirname, 'manage-custom-domain.js');
 
 test('LIVE: checkCnameRecord against a real, well-known public CNAME (www.github.com -> github.com)', async () => {
   const result = await checkCnameRecord('www.github.com', 'github.com');
   assert.strictEqual(result.matched, true, `expected www.github.com to CNAME to github.com, got: ${JSON.stringify(result)}`);
+});
+
+test('LIVE: CLI verify transitions pending -> verified through real public DNS', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wattanam-domain-live-test-'));
+  const journalPath = path.join(dir, 'journal.json');
+  fs.writeFileSync(journalPath, JSON.stringify({
+    schemaVersion: 1,
+    domain: 'www.github.com',
+    dnsInstructions: { type: 'CNAME', target: 'github.com' },
+    state: 'pending',
+    history: [],
+  }));
+  try {
+    const result = spawnSync(process.execPath, [SCRIPT, 'verify', '--journal', journalPath], { encoding: 'utf8' });
+    assert.strictEqual(result.status, 0, result.stderr);
+    assert.strictEqual(JSON.parse(result.stdout).state, 'verified');
+    const journal = JSON.parse(fs.readFileSync(journalPath, 'utf8'));
+    assert.strictEqual(journal.state, 'verified');
+    assert.strictEqual(journal.history.length, 1);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test('LIVE: probeCustomDomain against a real public HTTPS endpoint proves the TLS+content mechanism actually works', async () => {

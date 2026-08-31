@@ -1,14 +1,15 @@
 import * as SecureStore from 'expo-secure-store';
-import { API_BASE_URL } from './config';
+import { MOBILE_API_VERSION, discoverSchoolServer, getSchoolServerUrl, saveSchoolServer } from './config';
 
 const TOKEN_KEY = 'auth_token';
 const REFRESH_KEY = 'auth_refresh_token';
 const USER_KEY = 'auth_user';
 
 export async function login(email: string, password: string) {
-  const res = await fetch(`${API_BASE_URL}/auth/login`, {
+  const serverUrl = await getSchoolServerUrl();
+  const res = await fetch(`${serverUrl}/api/auth/login`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: apiHeaders(),
     body: JSON.stringify({ email, password }),
   });
   if (!res.ok) {
@@ -41,14 +42,38 @@ export async function logout() {
   // Best-effort: tell the server to revoke refresh tokens. Ignore failures.
   try {
     const token = await SecureStore.getItemAsync(TOKEN_KEY);
-    await fetch(`${API_BASE_URL}/auth/logout`, {
+    const serverUrl = await getSchoolServerUrl();
+    await fetch(`${serverUrl}/api/auth/logout`, {
       method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers: apiHeaders(token),
     });
   } catch {}
+  await clearCredentials();
+}
+
+async function clearCredentials() {
   await SecureStore.deleteItemAsync(TOKEN_KEY);
   await SecureStore.deleteItemAsync(REFRESH_KEY);
   await SecureStore.deleteItemAsync(USER_KEY);
+}
+
+function apiHeaders(token?: string | null): Record<string, string> {
+  return {
+    'Content-Type': 'application/json',
+    'X-Wattanam-API-Version': MOBILE_API_VERSION,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
+
+export async function selectSchoolServer(value: string) {
+  const discovery = await discoverSchoolServer(value);
+  if (discovery.state !== 'installed') throw new Error('This school has not completed installation yet');
+  let previous = '';
+  try { previous = await getSchoolServerUrl(); } catch {}
+  const next = value.trim().replace(/\/$/, '');
+  if (previous && previous !== next) await clearCredentials();
+  await saveSchoolServer(value, discovery.installation?.id);
+  return discovery;
 }
 
 /**
@@ -63,9 +88,10 @@ export async function refreshAccessToken(): Promise<string | null> {
     try {
       const rt = await getRefreshToken();
       if (!rt) return null;
-      const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      const serverUrl = await getSchoolServerUrl();
+      const res = await fetch(`${serverUrl}/api/auth/refresh`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: apiHeaders(),
         body: JSON.stringify({ refresh_token: rt }),
       });
       if (!res.ok) return null;
@@ -86,11 +112,12 @@ export async function refreshAccessToken(): Promise<string | null> {
 }
 
 async function buildRequest(path: string, options: RequestInit, token: string | null) {
-  return fetch(`${API_BASE_URL}${path}`, {
+  const serverUrl = await getSchoolServerUrl();
+  const normalizedPath = path.startsWith('/api/') ? path : `/api${path}`;
+  return fetch(`${serverUrl}${normalizedPath}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...apiHeaders(token),
       ...options.headers,
     },
   });
