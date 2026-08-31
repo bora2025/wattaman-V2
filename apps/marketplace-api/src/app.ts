@@ -16,6 +16,9 @@ import { InstallationLinkService } from './installation-link.service';
 import { InstallationEntitlementAccessService } from './installation-entitlement-access.service';
 import { PublisherGovernanceService } from './publisher-governance.service';
 import { CustomerMarketplaceService } from './customer-marketplace.service';
+import { PlatformAuthService } from './platform-auth.service';
+import { PlatformReadService } from './platform-read.service';
+import { PlatformRequest, requirePlatformPermission, requirePlatformSession } from './platform-rbac';
 import { createMetricsRegistry } from './observability/metrics';
 import { requestLoggingMiddleware } from './observability/request-logging';
 import { matchesAnyToken, readMetricsTokens } from './observability/metrics-config';
@@ -63,6 +66,8 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   const entitlementAccess = new InstallationEntitlementAccessService(prisma);
   const publisherGovernance = new PublisherGovernanceService(prisma, repository);
   const customerMarketplace = new CustomerMarketplaceService(prisma, commerce);
+  const platformAuth = new PlatformAuthService(prisma, config);
+  const platformRead = new PlatformReadService(prisma);
   const upload = multer({ storage: multer.memoryStorage(), limits: { files: 1, fileSize: config.maxArtifactBytes, fields: 10 } });
   const metrics = createMetricsRegistry(prisma);
   app.disable('x-powered-by');
@@ -231,6 +236,44 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   });
   app.post('/v1/marketplace-links/:grantId/revoke', requireCommerceSession, async (request: ScopedRequest, response, next) => {
     try { response.json(await installationLink.revoke(String(request.params.grantId), { accountId: request.accountId!, scope: request.sessionScope!, sourceGrantId: request.sourceGrantId })); } catch (error) { next(error); }
+  });
+
+  // ─── Platform Admin API (PA-1) ────────────────────────────────────────────
+  // Separate operator identity from both customer (MarketplaceAccount) and publisher identities,
+  // per docs/marketplace/platform-admin-interface-plan.md §2/§4. Never uses adminGuard's shared
+  // bearer token -- that stays reserved for bootstrap/CI/break-glass automation (plan §13).
+  const requirePlatformOperator = requirePlatformSession(platformAuth);
+  const requireEnrollingOperator = requirePlatformSession(platformAuth, { allowUnverified: true });
+
+  app.post('/platform/v1/auth/sessions', async (request, response, next) => {
+    try { response.json(await platformAuth.login(request.body)); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/auth/sessions/refresh', async (request, response, next) => {
+    try { response.json(await platformAuth.refreshSession(request.body)); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/auth/sessions/revoke', requireEnrollingOperator, async (request, response, next) => {
+    try { response.json(await platformAuth.revokeSession(request.body)); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/auth/mfa/enroll', requireEnrollingOperator, async (request: PlatformRequest, response, next) => {
+    try { response.status(201).json(await platformAuth.enrollMfa(request.operatorId!)); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/auth/mfa/enroll/confirm', requireEnrollingOperator, async (request: PlatformRequest, response, next) => {
+    try { response.json(await platformAuth.confirmMfaEnrollment(request.operatorId!, request.sessionId!, request.body)); } catch (error) { next(error); }
+  });
+  app.get('/platform/v1/me', requirePlatformOperator, async (request: PlatformRequest, response, next) => {
+    try { response.json(await platformAuth.me(request.operatorId!)); } catch (error) { next(error); }
+  });
+  app.get('/platform/v1/dashboard', requirePlatformOperator, requirePlatformPermission(platformAuth, 'platform.dashboard.read'), async (_request, response, next) => {
+    try { response.json(await platformRead.dashboard()); } catch (error) { next(error); }
+  });
+  app.get('/platform/v1/plugins', requirePlatformOperator, requirePlatformPermission(platformAuth, 'plugins.read'), async (request, response, next) => {
+    try { response.json(await platformRead.plugins(request.query)); } catch (error) { next(error); }
+  });
+  app.get('/platform/v1/installations', requirePlatformOperator, requirePlatformPermission(platformAuth, 'schools.read'), async (request, response, next) => {
+    try { response.json(await platformRead.installations(request.query)); } catch (error) { next(error); }
+  });
+  app.get('/platform/v1/audit-events', requirePlatformOperator, requirePlatformPermission(platformAuth, 'audit.read'), async (request, response, next) => {
+    try { response.json(await platformRead.auditEvents(request.query)); } catch (error) { next(error); }
   });
 
   const requireAdmin = adminGuard(config.adminTokens);

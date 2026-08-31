@@ -7,6 +7,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum PlatformOperatorStatus {
+  ACTIVE
+  SUSPENDED
+}
+
 enum PublisherStatus {
   PENDING
   VERIFIED
@@ -724,4 +729,115 @@ model CoreRelease {
 
   @@unique([version, channel])
   @@index([channel, publishedAt])
+}
+
+// ─── Platform Admin (PA-1): operator identity, RBAC, sessions, audit ───────
+// See docs/marketplace/platform-admin-interface-plan.md and
+// docs/marketplace/platform-admin-interface-checklist.md. Deliberately reuses
+// this file's existing identity primitives (scrypt password hashing, TOTP MFA,
+// opaque rotating sessions) rather than introducing a second hashing/session
+// scheme -- operators are a distinct identity type from MarketplaceAccount,
+// not a shared one, per the plan's boundary rules.
+
+model PlatformOperator {
+  id               String                             @id @default(uuid())
+  email            String                             @unique
+  displayName      String
+  passwordHash     String
+  status           PlatformOperatorStatus              @default(ACTIVE)
+  mfaEnabled       Boolean                             @default(false)
+  mfaSecret        String?
+  failedLoginCount Int                                 @default(0)
+  lockedUntil      DateTime?
+  createdAt        DateTime                            @default(now())
+  updatedAt        DateTime                            @updatedAt
+  roles            PlatformOperatorRole[]
+  sessions         PlatformOperatorSession[]
+  mfaRecoveryCodes PlatformOperatorMfaRecoveryCode[]
+  auditEvents      PlatformAuditEvent[]
+}
+
+model PlatformRole {
+  id            String                   @id @default(uuid())
+  key           String                   @unique
+  displayName   String
+  description   String
+  createdAt     DateTime                 @default(now())
+  permissions   PlatformRolePermission[]
+  operatorRoles PlatformOperatorRole[]
+}
+
+model PlatformPermission {
+  id              String                   @id @default(uuid())
+  key             String                   @unique
+  description     String
+  rolePermissions PlatformRolePermission[]
+}
+
+model PlatformRolePermission {
+  roleId       String
+  permissionId String
+  role         PlatformRole       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   PlatformPermission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model PlatformOperatorRole {
+  id         String           @id @default(uuid())
+  operatorId String
+  roleId     String
+  grantedBy  String?
+  createdAt  DateTime         @default(now())
+  expiresAt  DateTime?
+  operator   PlatformOperator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  role       PlatformRole     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([operatorId, roleId])
+}
+
+model PlatformOperatorSession {
+  id                  String                    @id @default(uuid())
+  operatorId          String
+  tokenHash           String                    @unique
+  mfaVerified          Boolean                   @default(false)
+  createdAt           DateTime                  @default(now())
+  expiresAt           DateTime
+  revokedAt           DateTime?
+  replacedBySessionId String?                   @unique
+  ip                  String?
+  userAgent           String?
+  operator            PlatformOperator          @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  replacedBy          PlatformOperatorSession?  @relation("PlatformSessionRotation", fields: [replacedBySessionId], references: [id])
+  rotatedFrom         PlatformOperatorSession?  @relation("PlatformSessionRotation")
+
+  @@index([operatorId, revokedAt])
+}
+
+model PlatformOperatorMfaRecoveryCode {
+  id         String           @id @default(uuid())
+  operatorId String
+  codeHash   String           @unique
+  createdAt  DateTime         @default(now())
+  usedAt     DateTime?
+  operator   PlatformOperator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+}
+
+model PlatformAuditEvent {
+  id            String            @id @default(uuid())
+  operatorId    String?
+  action        String
+  success       Boolean           @default(true)
+  targetType    String?
+  targetId      String?
+  metadata      Json?
+  reason        String?
+  correlationId String?
+  ip            String?
+  userAgent     String?
+  createdAt     DateTime          @default(now())
+  operator      PlatformOperator? @relation(fields: [operatorId], references: [id], onDelete: SetNull)
+
+  @@index([operatorId, createdAt])
+  @@index([action, createdAt])
 }
