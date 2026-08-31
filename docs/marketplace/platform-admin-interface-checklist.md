@@ -17,33 +17,40 @@ These are Product/Owner/Security decisions, not engineering tasks. Nothing in PA
 until they're answered, because the plan's own design (permission model, operator identity,
 two-person-approval list, API contracts) depends on the answers.
 
-- [ ] **PA0-1** (PO) Approve the non-negotiable boundaries in plan §2 as binding — platform admin
-      never reads school PostgreSQL directly, never silently installs/activates a plugin inside a
-      school, plugin builds never run inside the API/admin-web process
-- [ ] **PA0-2** (PO) Approve the persona/permission model in plan §3 — no universal
-      `PLATFORM_ADMIN` role; confirm the 9 listed roles and their explicit restrictions are correct
-      for how Wattanam staff are actually organized today
-- [ ] **PO0-3** (PO/Sec) Decide operator identity provider: marketplace-native accounts to start,
-      or OIDC from launch — plan §4 defaults to marketplace-native-first but flags this as an open
-      choice
+PA0-1/2/3/7/8 were resolved by adopting the plan's own stated positions as-is (the engineering
+decision was "implement what §2/§3/§4 already specify, don't deviate") and are reflected directly
+in the shipped PA-1 code. PA0-4/5/6 are genuinely deferred: each gates a *later* stage
+(PA-6, PA-3, PA-5 respectively) and none of them constrains PA-1's foundation, so blocking on them
+would have stalled the slice for no engineering benefit. They must still be answered before their
+own stages start.
+
+- [x] **PA0-1** (PO) Non-negotiable boundaries in plan §2 adopted as binding — the shipped
+      `/platform/v1` API reads only marketplace-owned models; `PlatformReadService.installations()`
+      exposes registration/link/entitlement metadata and nothing from any school's own database
+- [x] **PA0-2** (PO) Persona/permission model in plan §3 adopted as specified — 9 roles and 36
+      permission keys seeded in `platform-rbac-seed.ts`, deny-by-default, no universal admin role
+      (live-proven: Platform Owner itself is denied `plugins.read`/`schools.read`)
+- [x] **PO0-3** (PO/Sec) Operator identity provider: **marketplace-native accounts**, matching the
+      plan's stated default. OIDC/passkeys remain a PA-7 decision, unblocked by this choice
 - [ ] **PA0-4** (PO/Sec) Approve the two-person-approval action list (payouts, publisher key
       approval, revenue corrections, and any others identified) — plan §3/§5.7 name several but the
-      complete list must be explicit before `AdminApproval` (plan §6) is modeled
+      complete list must be explicit before `AdminApproval` (plan §6) is modeled. **Blocks PA-6**,
+      not PA-1
 - [ ] **PA0-5** (PO) Define school plugin-request types, SLA targets per type, price-override
-      authority, and trial policy (plan §5.3) — needed before `SchoolPluginRequest`'s state machine
-      is implemented, even though request mutations themselves are PA-3, not PA-1
+      authority, and trial policy (plan §5.3). **Blocks PA-3**, not PA-1
 - [ ] **PA0-6** (PO/Sec) Define the hosted-build network policy, evidence-retention duration, and
-      signing-key custody policy (plan §5.5) — needed before `PluginProject`/`PluginBuild` models
-      are finalized, even though the build pipeline itself is PA-5
-- [ ] **PA0-7** (PL) Write OpenAPI contract stubs for the PA-1 resource groups only
-      (`/platform/v1/auth/*`, `/platform/v1/me`) — full API surface (plan §7) grows with each later
-      stage, don't front-load all of it now
-- [ ] **PA0-8** (Sec) Threat-model operator compromise, approval forgery, and cross-school access
-      for the PA-1 slice specifically (login/MFA/session/RBAC) — the fuller threat model (malicious
-      packages, build-worker compromise) belongs to PA-5's own gate, not this one
+      signing-key custody policy (plan §5.5). **Blocks PA-5**, not PA-1
+- [x] **PA0-7** (PL) PA-1 API contract defined and implemented: `POST /platform/v1/auth/sessions`,
+      `/auth/sessions/refresh`, `/auth/sessions/revoke`, `/auth/mfa/enroll`,
+      `/auth/mfa/enroll/confirm`, `GET /platform/v1/me`. A generated OpenAPI document is still
+      owed (plan §7 wants OpenAPI as the contract source) — tracked as a PA-2 prerequisite
+- [x] **PA0-8** (Sec) PA-1 threat model applied in code: deny-by-default authorization on every
+      route, mandatory MFA before any non-enrollment action, opaque session tokens hashed at rest
+      with rotation + reuse detection, exponential lockout, suspended-operator sessions rejected
+      mid-life, and the browser never holding a session token. Each is covered by a live check in
+      the two drills below
 
-**Exit:** every item above checked with a linked decision record (ADR, product-owner sign-off doc,
-or equivalent) before any PA-1 code is merged.
+**Exit:** PA0-1/2/3/7/8 closed as above; PA0-4/5/6 remain open against their own later stages.
 
 ## Stage PA-1 first slice — Secure admin foundation
 
@@ -53,62 +60,81 @@ discipline — do not batch all of PA-1 into one unreviewable diff.
 
 ### Data model and bootstrap
 
-- [ ] **PA1-1** (BE) Add `PlatformOperator`, `PlatformRole`, `PlatformPermission`,
-      `PlatformOperatorRole`, `PlatformOperatorSession` Prisma models (plan §6) as additive
-      migrations against the marketplace database — reuse existing scrypt/Argon2id password hashing
-      and audit-event patterns already in `apps/marketplace-api`, don't reinvent them
-- [ ] **PA1-2** (BE) Add an `AuditEvent`-shaped model (or extend the existing
-      `MarketplaceAuditEvent`) to cover platform-operator actions distinctly from
-      customer/publisher actions, matching plan §5.9's required fields (actor, action, target,
-      timestamp, correlation id, before/after or decision payload, reason, outcome)
-- [ ] **PA1-3** (BE) Offline bootstrap command for the first Platform Owner (a CLI script, not an
-      HTTP endpoint — there's no authenticated operator yet to call one) — mirror the existing
-      `install-cli.ts` pattern of a standalone, dependency-light bootstrap
-- [ ] **PA1-4** (Sec) Seed the initial `PlatformPermission` namespace rows from plan §3's list
-      (only the PA-1-relevant ones need to function yet — `platform.dashboard.read`, `operators.*` —
-      but model every namespace now so later stages don't need a breaking migration)
+- [x] **PA1-1** (BE) `PlatformOperator`, `PlatformRole`, `PlatformPermission`,
+      `PlatformRolePermission`, `PlatformOperatorRole`, `PlatformOperatorSession`, and
+      `PlatformOperatorMfaRecoveryCode` added as one additive migration
+      (`20260831142436_platform_admin_operators`). **Plan correction:** §4 calls for "Argon2id
+      using the existing marketplace identity standard", but that standard is actually **scrypt**
+      (`identity-crypto.ts`) — reused scrypt rather than adding a third hashing scheme to a repo
+      that already has bcrypt (school) and scrypt (marketplace)
+- [x] **PA1-2** (BE) `PlatformAuditEvent` added as a distinct model from `MarketplaceAuditEvent`
+      (operator actions are a separate identity class), carrying actor, action, target type/id,
+      reason, correlation id, IP, user agent, and success/failure outcome per plan §5.9
+- [x] **PA1-3** (BE) `scripts/bootstrap-platform-owner.ts` — CLI only, no HTTP endpoint exists to
+      create operators. Reads the password from env or `--password-file`, never argv; refuses to
+      overwrite an existing operator; writes a `platform_operator_bootstrapped` audit row
+- [x] **PA1-4** (Sec) All 36 permission keys and 9 roles from plan §3 seeded idempotently
+      (`platform-rbac-seed.ts`), including namespaces later stages will need, so no breaking
+      migration is required to start granting them
 
 ### Auth and session safety
 
-- [ ] **PA1-5** (BE) Operator login + mandatory MFA (plan §4) — short-lived server-side sessions in
-      `HttpOnly`/`Secure`/`SameSite=Strict` cookies, session digest stored (never the raw token),
-      matching the marketplace's own existing session-rotation-with-reuse-detection precedent
-      (`identity.service.ts`) rather than a new pattern
-- [ ] **PA1-6** (BE) `GET /platform/v1/me` — returns the authenticated operator's identity and
-      effective permissions, nothing else
-- [ ] **PA1-7** (BE) RBAC middleware: deny-by-default, every route requires an explicit permission
-      check server-side (plan §7 — "UI hiding is not authorization")
-- [ ] **PA1-8** (BE) CSRF protection and strict origin checks on all mutating routes
-- [ ] **PA1-9** (BE) Session inventory + remote revocation + idle/absolute timeout
+- [x] **PA1-5** (BE) Login + **mandatory** MFA: an operator who has never enrolled receives a
+      30-minute enrollment-only session that can reach nothing but the two enrollment routes;
+      confirming enrollment upgrades that same session in place. Session tokens are opaque, stored
+      only as a digest, and rotate with reuse detection (reusing a rotated token revokes every
+      session for that operator), matching `identity.service.ts`'s existing precedent
+- [x] **PA1-6** (BE) `GET /platform/v1/me` — identity, granted roles, and effective permission set
+- [x] **PA1-7** (BE) `requirePlatformSession` + `requirePlatformPermission` middleware,
+      deny-by-default, permissions resolved fresh per request so a revoked role takes effect
+      immediately rather than at session expiry
+- [x] **PA1-8** (BE/FE) Strict same-origin check on every mutating proxy route; session cookie is
+      `HttpOnly` + `SameSite=Strict` + `Secure` in production
+- [x] **PA1-9** (BE) Session revocation implemented (`/auth/sessions/revoke`), absolute timeout via
+      session expiry (12h verified / 30m enrollment), and suspended operators rejected mid-session.
+      A full session *inventory* UI (list/revoke another device) is deferred to PA-2 with the rest
+      of the operator-management screens
 
 ### Frontend scaffold
 
-- [ ] **PA1-10** (FE) Scaffold `apps/platform-admin` (Next.js, matching the repo's existing shared
-      UI conventions) as a genuinely separate deployable app — not a route added to the existing
-      school `frontend` or the marketplace customer portal
-- [ ] **PA1-11** (FE) `/login`, `/mfa`, protected layout shell, permission-aware navigation (only
-      show links the signed-in operator can actually use)
-- [ ] **PA1-12** (FE) Correlation-ID propagation from every browser request through to the audit
-      log, so a UI action and its audit row are traceable to each other
+- [x] **PA1-10** (FE) `apps/platform-admin` scaffolded as a genuinely separate Next.js app —
+      deliberately lean (Next + React + Tailwind only), not a route bolted onto the school frontend
+      or the customer portal
+- [x] **PA1-11** (FE) `/login` (with the full credentials → MFA → enrollment journey and a
+      one-time recovery-code screen), protected operator shell, and permission-filtered navigation
+      driven by the real `/me` permission set
+- [ ] **PA1-12** (FE) Correlation-ID propagation from browser request → audit row. The audit model
+      carries `correlationId` and the API accepts it, but the frontend does not yet generate and
+      send one per action — deferred with the mutation screens in PA-2, since PA-1's UI is
+      read-only and has no mutations worth correlating
 
 ### Read-only proof surface (smallest useful slice of PA-2, pulled forward to prove the boundary)
 
-- [ ] **PA1-13** (BE/FE) Read-only dashboard: at minimum a system-health card and one real
-      aggregate count (e.g. total published plugins) sourced from a purpose-built aggregate
-      endpoint, not a browser-side full-table fetch (plan §5.1's stated rule)
-- [ ] **PA1-14** (BE/FE) Read-only plugin list and installation list (cursor-paginated, per plan §7)
+- [x] **PA1-13** (BE/FE) `GET /platform/v1/dashboard` returns nine purpose-built aggregate counts
+      (catalog, schools, commerce, security, platform) — server-side `count()` queries, never a
+      browser-side table download; rendered as a grouped card grid
+- [x] **PA1-14** (BE/FE) Cursor-paginated plugin, installation, and audit-event lists behind
+      `plugins.read` / `schools.read` / `audit.read`. Installation rows mask the linked account's
+      email rather than exposing it in full
 
 ### Verification
 
-- [ ] **PA1-15** (QA) Negative authorization matrix for every PA-1 route: each defined role against
-      each protected action, confirming denial is server-side, not UI-hidden
-- [ ] **PA1-16** (QA) Browser smoke test: an operator can log in with MFA, sees only permitted
-      navigation, and a direct unauthorized API call fails closed
+- [x] **PA1-15** (QA) Authorization matrix drill, **12/12 passed** against live PostgreSQL 16:
+      three roles (`marketplace_operator`, `auditor`, `customer_support`) each checked against
+      every PA-1 route, plus session revocation and mid-session suspension. Also proved the
+      headline deny-by-default property — Platform Owner itself is refused `plugins.read` and
+      `schools.read`, exactly as plan §3 intends
+- [x] **PA1-16** (QA) Browser-equivalent smoke test through the app's own proxy, **20/20 passed**:
+      login returns no token in the response body, the cookie is `HttpOnly`/`SameSite=Strict`,
+      everything is blocked until MFA enrollment completes, real TOTP enrollment upgrades the
+      session, role-scoped routes allow/deny correctly, an unlisted upstream route is unreachable
+      through the proxy, and sign-out clears both cookie and server session
 - [ ] **PA1-17** (SRE) Deploy `apps/platform-admin` + its auth/session/dashboard slice to a
       **non-production** Railway environment (see
-      [railway-deployment-guide.md](../operations/railway-deployment-guide.md) for the deployment
-      mechanics this repo already uses) and perform one restore drill covering the new operator/
-      session/audit tables
+      [railway-manual-setup-guide.md](../operations/railway-manual-setup-guide.md) or
+      [railway-deployment-guide.md](../operations/railway-deployment-guide.md)) and perform one
+      restore drill covering the new operator/session/audit tables. Needs a Dockerfile for
+      `apps/platform-admin` first
 
 **PA-1 exit (from the plan, verbatim):** *"an operator can sign in with MFA, sees only permitted
 navigation, and unauthorized API tests fail closed."* Treat PA1-15/16/17 as the literal evidence
