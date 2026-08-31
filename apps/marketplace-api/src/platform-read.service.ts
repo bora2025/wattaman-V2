@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
+import { PlatformActionContext } from './platform-context';
 
 const listInput = z.object({
   cursor: z.string().uuid().optional(),
@@ -79,8 +80,22 @@ export class PlatformReadService {
     return this.paginate(masked, input.limit, (row) => row.id);
   }
 
-  async auditEvents(query: unknown) {
+  /** Plan §5.9: "Export and audit-log reads are themselves audited." The read is recorded before
+   * the rows are returned, so a reader cannot see their own access appear only after the fact. */
+  async auditEvents(query: unknown, reader: { operatorId: string; context: PlatformActionContext }) {
     const input = listInput.parse(query);
+    await this.prisma.platformAuditEvent.create({
+      data: {
+        operatorId: reader.operatorId,
+        action: 'platform_audit_read',
+        success: true,
+        targetType: 'PlatformAuditEvent',
+        metadata: { limit: input.limit, cursor: input.cursor ?? null },
+        correlationId: reader.context.correlationId,
+        ip: reader.context.ip,
+        userAgent: reader.context.userAgent,
+      },
+    });
     const rows = await this.prisma.platformAuditEvent.findMany({
       take: input.limit + 1,
       ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),

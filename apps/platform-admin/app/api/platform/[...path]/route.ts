@@ -69,6 +69,8 @@ async function proxy(request: NextRequest, segments: string[], method: 'GET' | '
         accept: 'application/json',
         ...(session ? { authorization: `Bearer ${session}` } : {}),
         ...(method === 'POST' ? { 'content-type': 'application/json' } : {}),
+        // Forwarded so the audit row the API writes carries the same id the browser used.
+        ...(request.headers.get('x-correlation-id') ? { 'x-correlation-id': request.headers.get('x-correlation-id')! } : {}),
       },
       ...(method === 'POST' ? { body } : {}),
     });

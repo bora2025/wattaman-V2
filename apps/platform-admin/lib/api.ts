@@ -3,11 +3,24 @@
  * API — the operator's session token lives in an HttpOnly cookie the browser cannot read, so
  * there is deliberately no token-handling code here at all.
  */
+/** One id per operator action, carried through the proxy to the API and stored on the audit row,
+ * so a screen interaction and its audit trail can be tied together during an investigation
+ * (plan §5.9). */
+function newCorrelationId(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
+  return `pa-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 export async function platformFetch(path: string, init?: RequestInit): Promise<Response> {
   return fetch(`/api/platform/${path}`, {
     ...init,
     credentials: 'same-origin',
-    headers: { accept: 'application/json', ...(init?.body ? { 'content-type': 'application/json' } : {}), ...init?.headers },
+    headers: {
+      accept: 'application/json',
+      'x-correlation-id': newCorrelationId(),
+      ...(init?.body ? { 'content-type': 'application/json' } : {}),
+      ...init?.headers,
+    },
   });
 }
 

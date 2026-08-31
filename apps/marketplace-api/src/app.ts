@@ -19,6 +19,7 @@ import { CustomerMarketplaceService } from './customer-marketplace.service';
 import { PlatformAuthService } from './platform-auth.service';
 import { PlatformReadService } from './platform-read.service';
 import { PlatformRequest, requirePlatformPermission, requirePlatformSession } from './platform-rbac';
+import { actionContext } from './platform-context';
 import { createMetricsRegistry } from './observability/metrics';
 import { requestLoggingMiddleware } from './observability/request-logging';
 import { matchesAnyToken, readMetricsTokens } from './observability/metrics-config';
@@ -246,19 +247,19 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   const requireEnrollingOperator = requirePlatformSession(platformAuth, { allowUnverified: true });
 
   app.post('/platform/v1/auth/sessions', async (request, response, next) => {
-    try { response.json(await platformAuth.login(request.body)); } catch (error) { next(error); }
+    try { response.json(await platformAuth.login(request.body, actionContext(request))); } catch (error) { next(error); }
   });
   app.post('/platform/v1/auth/sessions/refresh', async (request, response, next) => {
-    try { response.json(await platformAuth.refreshSession(request.body)); } catch (error) { next(error); }
+    try { response.json(await platformAuth.refreshSession(request.body, actionContext(request))); } catch (error) { next(error); }
   });
   app.post('/platform/v1/auth/sessions/revoke', requireEnrollingOperator, async (request, response, next) => {
-    try { response.json(await platformAuth.revokeSession(request.body)); } catch (error) { next(error); }
+    try { response.json(await platformAuth.revokeSession(request.body, actionContext(request))); } catch (error) { next(error); }
   });
   app.post('/platform/v1/auth/mfa/enroll', requireEnrollingOperator, async (request: PlatformRequest, response, next) => {
-    try { response.status(201).json(await platformAuth.enrollMfa(request.operatorId!)); } catch (error) { next(error); }
+    try { response.status(201).json(await platformAuth.enrollMfa(request.operatorId!, actionContext(request))); } catch (error) { next(error); }
   });
   app.post('/platform/v1/auth/mfa/enroll/confirm', requireEnrollingOperator, async (request: PlatformRequest, response, next) => {
-    try { response.json(await platformAuth.confirmMfaEnrollment(request.operatorId!, request.sessionId!, request.body)); } catch (error) { next(error); }
+    try { response.json(await platformAuth.confirmMfaEnrollment(request.operatorId!, request.sessionId!, request.body, actionContext(request))); } catch (error) { next(error); }
   });
   app.get('/platform/v1/me', requirePlatformOperator, async (request: PlatformRequest, response, next) => {
     try { response.json(await platformAuth.me(request.operatorId!)); } catch (error) { next(error); }
@@ -272,8 +273,8 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   app.get('/platform/v1/installations', requirePlatformOperator, requirePlatformPermission(platformAuth, 'schools.read'), async (request, response, next) => {
     try { response.json(await platformRead.installations(request.query)); } catch (error) { next(error); }
   });
-  app.get('/platform/v1/audit-events', requirePlatformOperator, requirePlatformPermission(platformAuth, 'audit.read'), async (request, response, next) => {
-    try { response.json(await platformRead.auditEvents(request.query)); } catch (error) { next(error); }
+  app.get('/platform/v1/audit-events', requirePlatformOperator, requirePlatformPermission(platformAuth, 'audit.read'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await platformRead.auditEvents(request.query, { operatorId: request.operatorId!, context: actionContext(request) })); } catch (error) { next(error); }
   });
 
   const requireAdmin = adminGuard(config.adminTokens);

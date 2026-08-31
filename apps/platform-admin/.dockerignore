@@ -1,0 +1,9 @@
+# node_modules must be installed inside the image: a host install (especially on Windows) leaves
+# platform-specific binaries and .bin shims that reference the host's node executable.
+node_modules
+.next
+.git
+.gitignore
+Dockerfile
+.dockerignore
+npm-debug.log*
