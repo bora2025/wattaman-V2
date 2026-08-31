@@ -38,6 +38,7 @@ interface UpdateStatus {
 
 interface PluginExtensions { navigation: Array<{ pluginId: string; id: string; label: string; href: string; permission?: string }>; pages?: Array<{ pluginId: string; id: string; title: string; routePath: string; kind: string }> }
 interface PluginPreview { packageSha256: string; plugin: { id: string; name: string; description: string; version: string; publisher: string; requiresCore: string; capabilities: string[]; permissions: string[]; dependencies: Record<string, string>; migrations: Array<{ id: string; destructive: boolean }> } }
+interface MarketplaceLinkStatus { linked: boolean; accountEmailMasked?: string; scope?: string; expiresAt?: string }
 
 export default function PluginsPage() {
   const [plugins, setPlugins] = useState<PluginRecord[]>([]);
@@ -45,6 +46,8 @@ export default function PluginsPage() {
   const [extensions, setExtensions] = useState<PluginExtensions>({ navigation: [] });
   const [preview, setPreview] = useState<PluginPreview | null>(null);
   const [runtime, setRuntime] = useState<{ safeMode: boolean; loaded: string[] } | null>(null);
+  const [linkStatus, setLinkStatus] = useState<MarketplaceLinkStatus | null>(null);
+  const [linking, setLinking] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
@@ -56,6 +59,44 @@ export default function PluginsPage() {
     if (updatesResponse.ok) setUpdates(await updatesResponse.json());
     if (extensionsResponse.ok) setExtensions(await extensionsResponse.json());
     if (runtimeResponse.ok) setRuntime(await runtimeResponse.json());
+    await loadLinkStatus();
+  }
+
+  async function loadLinkStatus() {
+    const response = await apiFetch('/api/admin/marketplace/link/status');
+    if (response.ok) setLinkStatus(await response.json());
+  }
+
+  async function startLink() {
+    setLinking(true); setError('');
+    try {
+      const response = await apiFetch('/api/admin/marketplace/link/start', { method: 'POST' });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.message || `Could not start linking (${response.status})`);
+      window.open(result.approvalUrl, '_blank', 'noopener,noreferrer');
+      const deadline = Date.now() + 15 * 60 * 1000;
+      while (Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        const pollResponse = await apiFetch('/api/admin/marketplace/link/poll', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ requestId: result.requestId }) });
+        const pollResult = await pollResponse.json().catch(() => ({}));
+        if (!pollResponse.ok) throw new Error(pollResult.message || 'Linking failed');
+        if (pollResult.status === 'linked') { await loadLinkStatus(); break; }
+        if (pollResult.status === 'denied') throw new Error('The marketplace account owner denied this link request.');
+        if (pollResult.status === 'expired') throw new Error('The link request expired before it was approved.');
+      }
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Linking failed'); }
+    finally { setLinking(false); }
+  }
+
+  async function revokeLink() {
+    if (!window.confirm('Unlink this marketplace account? Buying and installing new plugins from this panel will stop working until relinked.')) return;
+    setLinking(true); setError('');
+    try {
+      const response = await apiFetch('/api/admin/marketplace/link/revoke', { method: 'POST' });
+      if (!response.ok) throw new Error(`Unlink failed (${response.status})`);
+      await loadLinkStatus();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Unlink failed'); }
+    finally { setLinking(false); }
   }
 
   async function inspect() {
@@ -157,6 +198,22 @@ export default function PluginsPage() {
               {!!updates?.pluginUpdates?.length && <div className="mt-5 space-y-3">{updates.pluginUpdates.map((update) => <div key={update.pluginId} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-4"><div><strong className="text-slate-800">{update.pluginId}</strong><p className="mt-1 text-xs text-slate-500">{update.installedVersion} → {update.release.version} · requires core {update.release.requiresCore}</p>{update.release.changelog && <p className="mt-2 text-sm text-slate-600">{update.release.changelog}</p>}</div><button className="btn btn-primary" disabled={!!busy || update.status === 'active'} title={update.status === 'active' ? 'Deactivate this plugin before updating' : undefined} onClick={() => installRepositoryUpdate(update.pluginId, update.release.version)}>{busy === `${update.pluginId}:update` ? 'Verifying…' : update.status === 'active' ? 'Deactivate first' : 'Install update'}</button></div>)}</div>}
               {!!updates?.core?.updates?.length && <div className="mt-5 border-t border-slate-100 pt-4"><h3 className="text-sm font-semibold text-slate-700">Core updates</h3>{updates.core.updates.map((update) => <div key={update.version} className="mt-3 rounded-lg bg-slate-50 p-3 text-sm"><strong>Wattanam {update.version}</strong><p className="mt-1 text-slate-600">{update.releaseNotes}</p>{update.blockedByActivePlugins.length > 0 && <p className="mt-2 text-amber-700">Compatibility review required: {update.blockedByActivePlugins.join(', ')}</p>}</div>)}</div>}
               {updates?.enabled && !updates.pluginUpdates?.length && !updates.core?.updates?.length && <p className="mt-4 text-sm text-emerald-700">Installed core and plugins are current for this channel.</p>}
+            </section>
+
+            <section className="card p-6">
+              <h2 className="font-semibold text-slate-800">Marketplace</h2>
+              <p className="mt-1 text-sm text-slate-500">Link this installation to a marketplace account to browse and buy new plugins directly from this panel.</p>
+              {linkStatus?.linked ? (
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+                  <span>Linked as {linkStatus.accountEmailMasked || 'a marketplace account'}</span>
+                  <button className="btn btn-secondary" disabled={linking} onClick={revokeLink}>{linking ? 'Unlinking…' : 'Unlink'}</button>
+                </div>
+              ) : (
+                <div className="mt-4">
+                  <button className="btn btn-primary" disabled={linking} onClick={startLink}>{linking ? 'Waiting for approval…' : 'Link marketplace account'}</button>
+                  <p className="mt-2 text-xs text-slate-500">Opens the marketplace in a new tab, where the account owner reviews and approves the requested permissions.</p>
+                </div>
+              )}
             </section>
 
             <section className="space-y-4">

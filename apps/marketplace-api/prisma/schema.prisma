@@ -71,6 +71,14 @@ enum ChallengePurpose {
   ROTATE
 }
 
+enum InstallationLinkStatus {
+  PENDING
+  APPROVED
+  DENIED
+  EXPIRED
+  DELIVERED
+}
+
 enum PublisherRole {
   OWNER
   ADMIN
@@ -139,6 +147,7 @@ model MarketplaceAccount {
   updatedAt            DateTime                       @updatedAt
   orders               MarketplaceOrder[]
   installations        InstallationRegistration[]
+  marketplaceGrants    InstallationMarketplaceGrant[]
   sessions             MarketplaceSession[]
   emailVerifications   MarketplaceEmailVerification[]
   passwordResets       MarketplacePasswordReset[]
@@ -153,6 +162,8 @@ model MarketplaceSession {
   id                  String              @id @default(uuid())
   accountId           String
   tokenHash           String              @unique
+  scope               String              @default("FULL")
+  sourceGrantId       String?
   createdAt           DateTime            @default(now())
   expiresAt           DateTime
   revokedAt           DateTime?
@@ -162,6 +173,7 @@ model MarketplaceSession {
   rotatedFrom         MarketplaceSession? @relation("SessionRotation")
 
   @@index([accountId, revokedAt])
+  @@index([sourceGrantId, revokedAt])
 }
 
 model MarketplaceEmailVerification {
@@ -406,6 +418,8 @@ model InstallationRegistration {
   entitlements   InstallationEntitlement[]
   downloads      DownloadEvent[]
   orders         MarketplaceOrder[]
+  grantRequests  InstallationMarketplaceGrantRequest[]
+  grant          InstallationMarketplaceGrant?
 }
 
 model InstallationRegistrationKey {
@@ -431,6 +445,39 @@ model InstallationRegistrationChallenge {
   consumedAt     DateTime?
 
   @@index([installationId, purpose, consumedAt, expiresAt])
+}
+
+model InstallationMarketplaceGrantRequest {
+  id                          String                  @id @default(uuid())
+  installationRegistrationId String
+  requestedScope              String
+  status                      InstallationLinkStatus  @default(PENDING)
+  createdAt                   DateTime                @default(now())
+  expiresAt                   DateTime
+  respondedAt                 DateTime?
+  deliveredAt                 DateTime?
+  grantId                     String?                 @unique
+  installation                InstallationRegistration     @relation(fields: [installationRegistrationId], references: [id], onDelete: Cascade)
+  grant                       InstallationMarketplaceGrant? @relation(fields: [grantId], references: [id])
+
+  @@index([installationRegistrationId, status, expiresAt])
+}
+
+model InstallationMarketplaceGrant {
+  id                          String                    @id @default(uuid())
+  installationRegistrationId String                    @unique
+  accountId                   String
+  scope                        String
+  consentedAt                 DateTime
+  createdAt                   DateTime                  @default(now())
+  expiresAt                   DateTime
+  revokedAt                   DateTime?
+  revokedReason                String?
+  installation                 InstallationRegistration @relation(fields: [installationRegistrationId], references: [id])
+  account                       MarketplaceAccount       @relation(fields: [accountId], references: [id])
+  request                       InstallationMarketplaceGrantRequest?
+
+  @@index([accountId, revokedAt])
 }
 
 model InstallationEntitlement {

@@ -5,12 +5,17 @@ import { RolesGuard } from '../auth/roles.guard';
 import { EntitlementCacheService } from './entitlement-cache.service';
 import { readEntitlementConfig } from './entitlement-config';
 import { InstallationRegistrationService } from './installation-registration.service';
+import { MarketplaceLinkService } from './marketplace-link.service';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('SUPER_ADMIN')
 @Controller('admin/marketplace')
 export class MarketplaceIdentityController {
-  constructor(private readonly registration: InstallationRegistrationService, private readonly entitlements: EntitlementCacheService) {}
+  constructor(
+    private readonly registration: InstallationRegistrationService,
+    private readonly entitlements: EntitlementCacheService,
+    private readonly link: MarketplaceLinkService,
+  ) {}
 
   @Get('installation')
   async status() {
@@ -39,4 +44,16 @@ export class MarketplaceIdentityController {
   importEntitlement(@Param('pluginId') pluginId: string, @Body() body: { signedToken?: unknown }) {
     return this.entitlements.importOne(pluginId, body?.signedToken);
   }
+
+  @Post('link/start')
+  startLink(@Body() body: { label?: string }) { return this.link.start(body?.label); }
+
+  @Post('link/poll')
+  pollLink(@Body() body: { requestId?: string }) { return this.link.poll(String(body?.requestId || '')); }
+
+  @Get('link/status')
+  linkStatus() { return this.link.status(); }
+
+  @Post('link/revoke')
+  revokeLink() { return this.link.revoke(); }
 }

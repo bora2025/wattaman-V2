@@ -142,7 +142,7 @@ export class IdentityService {
         await this.audit(tx, { accountId: session.accountId, action: 'session_reuse_detected', success: false });
         return { ok: false as const };
       }
-      const next = await this.createSession(tx, session.accountId, now);
+      const next = await this.createSession(tx, session.accountId, now, { scope: session.scope, sourceGrantId: session.sourceGrantId ?? undefined });
       await tx.marketplaceSession.update({ where: { id: session.id }, data: { revokedAt: now, replacedBySessionId: next.sessionId } });
       await this.audit(tx, { accountId: session.accountId, action: 'session_refreshed', success: true });
       return { ok: true as const, value: { sessionToken: next.sessionToken, expiresAt: next.expiresAt } };
@@ -166,7 +166,7 @@ export class IdentityService {
   async resolveSession(rawToken: string, now = new Date()) {
     const session = await this.prisma.marketplaceSession.findUnique({ where: { tokenHash: hashToken(rawToken) } });
     if (!session || session.revokedAt || session.expiresAt <= now) throw new HttpError(401, 'Session is invalid');
-    return { accountId: session.accountId, sessionId: session.id };
+    return { accountId: session.accountId, sessionId: session.id, scope: session.scope, sourceGrantId: session.sourceGrantId ?? undefined };
   }
 
   async requestPasswordReset(value: unknown, now = new Date()) {
@@ -285,10 +285,10 @@ export class IdentityService {
     });
   }
 
-  private async createSession(tx: Prisma.TransactionClient, accountId: string, now: Date) {
+  private async createSession(tx: Prisma.TransactionClient, accountId: string, now: Date, options: { scope?: string; sourceGrantId?: string } = {}) {
     const token = newOpaqueToken();
     const expiresAt = new Date(now.getTime() + SESSION_LIFETIME_MS);
-    const session = await tx.marketplaceSession.create({ data: { accountId, tokenHash: token.hash, expiresAt } });
+    const session = await tx.marketplaceSession.create({ data: { accountId, tokenHash: token.hash, expiresAt, scope: options.scope ?? 'FULL', sourceGrantId: options.sourceGrantId } });
     return { sessionId: session.id, sessionToken: token.raw, expiresAt };
   }
 

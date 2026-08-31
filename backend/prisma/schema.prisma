@@ -36,6 +36,7 @@ model User {
   studentProfile Student?
   parentStudents Student[]      @relation("ParentStudents")
   refreshTokens  RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
 
   // Module 1: Salary
   salaries Salary[] @relation("UserSalaries")
@@ -374,6 +375,19 @@ model RefreshToken {
   @@index([userId])
   @@index([expiresAt])
   @@index([userId, revokedAt])
+}
+
+model PasswordResetToken {
+  id         String    @id @default(cuid())
+  tokenHash  String    @unique
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId, consumedAt])
+  @@index([expiresAt])
 }
 
 /// Append-only audit trail of every privileged action in the system.
@@ -1387,6 +1401,20 @@ model PluginInstallation {
 
   @@index([status])
   @@index([publisher])
+}
+
+model MarketplaceProxyLink {
+  id                 String    @id @default("singleton")
+  grantId            String
+  accountId          String
+  accountEmailMasked String?
+  scope              String
+  linkedAt           DateTime
+  expiresAt          DateTime
+  sessionExpiresAt   DateTime
+  revokedAt          DateTime?
+  lastUsedAt         DateTime?
+  updatedAt          DateTime  @updatedAt
 }
 
 model PluginPermissionGrant {

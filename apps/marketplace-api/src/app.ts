@@ -12,6 +12,7 @@ import { PaymentWebhookService } from './payment-webhook.service';
 import { IdentityService } from './identity.service';
 import { createTransactionalEmailService } from './transactional-email.service';
 import { InstallationRegistrationService } from './installation-registration.service';
+import { InstallationLinkService } from './installation-link.service';
 import { InstallationEntitlementAccessService } from './installation-entitlement-access.service';
 import { PublisherGovernanceService } from './publisher-governance.service';
 import { CustomerMarketplaceService } from './customer-marketplace.service';
@@ -29,13 +30,23 @@ export function adminGuard(validTokens: string[]) {
   };
 }
 
-function sessionGuard(identity: IdentityService) {
-  return async (request: Request & { accountId?: string }, _response: Response, next: NextFunction) => {
+type ScopedRequest = Request & { accountId?: string; sessionScope?: string; sourceGrantId?: string };
+
+/** Default-deny: only routes that opt into `allowScopes` accept a COMMERCE_PROXY (delegated,
+ * installation-proxied) session. Every existing requireSession call site keeps working unchanged
+ * against ordinary human FULL sessions, and a stolen/misused delegated session cannot reach
+ * account-management, publisher-governance, or payout routes it was never granted. */
+function sessionGuard(identity: IdentityService, options: { allowScopes?: string[] } = {}) {
+  const allowScopes = options.allowScopes ?? ['FULL'];
+  return async (request: ScopedRequest, _response: Response, next: NextFunction) => {
     const header = request.header('authorization') || '';
     if (!header.startsWith('Bearer ')) return next(new HttpError(401, 'Unauthorized'));
     try {
       const session = await identity.resolveSession(header.slice(7));
+      if (!allowScopes.includes(session.scope)) return next(new HttpError(403, 'This session scope cannot access this operation'));
       request.accountId = session.accountId;
+      request.sessionScope = session.scope;
+      request.sourceGrantId = session.sourceGrantId;
       next();
     } catch (error) { next(error); }
   };
@@ -48,6 +59,7 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   const paymentWebhooks = new PaymentWebhookService(prisma, config);
   const identity = new IdentityService(prisma, config, createTransactionalEmailService(config));
   const installationRegistration = new InstallationRegistrationService(prisma, config);
+  const installationLink = new InstallationLinkService(prisma, config);
   const entitlementAccess = new InstallationEntitlementAccessService(prisma);
   const publisherGovernance = new PublisherGovernanceService(prisma, repository);
   const customerMarketplace = new CustomerMarketplaceService(prisma, commerce);
@@ -139,16 +151,17 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   });
 
   const requireSession = sessionGuard(identity);
-  app.post('/v1/sessions/revoke', requireSession, async (request, response, next) => {
+  const requireCommerceSession = sessionGuard(identity, { allowScopes: ['FULL', 'COMMERCE_PROXY'] });
+  app.post('/v1/sessions/revoke', requireCommerceSession, async (request, response, next) => {
     try { response.json(await identity.revokeSession(request.body)); } catch (error) { next(error); }
   });
-  app.get('/v1/customer/orders', requireSession, async (request: Request & { accountId?: string }, response, next) => {
+  app.get('/v1/customer/orders', requireCommerceSession, async (request: ScopedRequest, response, next) => {
     try { response.json(await customerMarketplace.orders(request.accountId!)); } catch (error) { next(error); }
   });
-  app.post('/v1/customer/orders', requireSession, async (request: Request & { accountId?: string }, response, next) => {
+  app.post('/v1/customer/orders', requireCommerceSession, async (request: ScopedRequest, response, next) => {
     try { response.status(201).json(await customerMarketplace.checkout(request.accountId!, request.body)); } catch (error) { next(error); }
   });
-  app.get('/v1/customer/entitlements', requireSession, async (request: Request & { accountId?: string }, response, next) => {
+  app.get('/v1/customer/entitlements', requireCommerceSession, async (request: ScopedRequest, response, next) => {
     try { response.json(await customerMarketplace.entitlements(request.accountId!)); } catch (error) { next(error); }
   });
   app.post('/v1/mfa/enrollments', requireSession, async (request: Request & { accountId?: string }, response, next) => {
@@ -199,6 +212,25 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
         ts: String(request.query.ts || ''), signature: String(request.query.signature || ''),
       }));
     } catch (error) { next(error); }
+  });
+
+  app.post('/v1/installations/:installationId/marketplace-links', async (request, response, next) => {
+    try { response.status(201).json(await installationLink.requestLink({ ...request.body, installationId: request.params.installationId })); } catch (error) { next(error); }
+  });
+  app.get('/v1/marketplace-links/:requestId', async (request, response, next) => {
+    try { response.json(await installationLink.getRequest(request.params.requestId)); } catch (error) { next(error); }
+  });
+  app.post('/v1/marketplace-links/:requestId/approve', requireSession, async (request: ScopedRequest, response, next) => {
+    try { response.json(await installationLink.approve(String(request.params.requestId), request.accountId!)); } catch (error) { next(error); }
+  });
+  app.post('/v1/marketplace-links/:requestId/deny', requireSession, async (request: ScopedRequest, response, next) => {
+    try { response.json(await installationLink.deny(String(request.params.requestId), request.accountId!)); } catch (error) { next(error); }
+  });
+  app.post('/v1/installations/:installationId/marketplace-links/:requestId/exchange', async (request, response, next) => {
+    try { response.json(await installationLink.exchange({ ...request.body, installationId: request.params.installationId, requestId: String(request.params.requestId) })); } catch (error) { next(error); }
+  });
+  app.post('/v1/marketplace-links/:grantId/revoke', requireCommerceSession, async (request: ScopedRequest, response, next) => {
+    try { response.json(await installationLink.revoke(String(request.params.grantId), { accountId: request.accountId!, scope: request.sessionScope!, sourceGrantId: request.sourceGrantId })); } catch (error) { next(error); }
   });
 
   const requireAdmin = adminGuard(config.adminTokens);
