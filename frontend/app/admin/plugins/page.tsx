@@ -48,6 +48,10 @@ interface CatalogProduct {
   compatible: boolean;
   ownership?: Array<{ installationId: string; installationLabel?: string; status: string }>;
 }
+interface MarketplaceOrder {
+  id: string; status: string; currency: string; totalMinor: number; createdAt: string;
+  lines: Array<{ pluginId: string; plugin?: { id: string; name: string } }>;
+}
 
 export default function PluginsPage() {
   const [plugins, setPlugins] = useState<PluginRecord[]>([]);
@@ -59,6 +63,7 @@ export default function PluginsPage() {
   const [linking, setLinking] = useState(false);
   const [catalog, setCatalog] = useState<CatalogProduct[]>([]);
   const [catalogError, setCatalogError] = useState('');
+  const [orders, setOrders] = useState<MarketplaceOrder[]>([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
@@ -71,7 +76,7 @@ export default function PluginsPage() {
     if (extensionsResponse.ok) setExtensions(await extensionsResponse.json());
     if (runtimeResponse.ok) setRuntime(await runtimeResponse.json());
     const status = await loadLinkStatus();
-    if (status?.linked) await loadCatalog();
+    if (status?.linked) { await loadCatalog(); await loadOrders(); }
   }
 
   async function loadLinkStatus(): Promise<MarketplaceLinkStatus | undefined> {
@@ -92,6 +97,24 @@ export default function PluginsPage() {
     } catch (cause) { setCatalogError(cause instanceof Error ? cause.message : 'Could not load the marketplace catalog'); }
   }
 
+  async function loadOrders() {
+    const response = await apiFetch('/api/admin/marketplace/orders');
+    if (response.ok) setOrders(await response.json());
+  }
+
+  async function buy(product: CatalogProduct) {
+    const price = product.prices[0];
+    if (!price) return setError('This plugin has no available price.');
+    setBusy(`${product.id}:buy`); setError('');
+    try {
+      const response = await apiFetch('/api/admin/marketplace/orders', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ priceId: price.id, currency: price.currency }) });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.message || `Order creation failed (${response.status})`);
+      await loadOrders();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Order creation failed'); }
+    finally { setBusy(''); }
+  }
+
   async function startLink() {
     setLinking(true); setError('');
     try {
@@ -105,7 +128,7 @@ export default function PluginsPage() {
         const pollResponse = await apiFetch('/api/admin/marketplace/link/poll', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ requestId: result.requestId }) });
         const pollResult = await pollResponse.json().catch(() => ({}));
         if (!pollResponse.ok) throw new Error(pollResult.message || 'Linking failed');
-        if (pollResult.status === 'linked') { await loadLinkStatus(); await loadCatalog(); break; }
+        if (pollResult.status === 'linked') { await loadLinkStatus(); await loadCatalog(); await loadOrders(); break; }
         if (pollResult.status === 'denied') throw new Error('The marketplace account owner denied this link request.');
         if (pollResult.status === 'expired') throw new Error('The link request expired before it was approved.');
       }
@@ -121,6 +144,7 @@ export default function PluginsPage() {
       if (!response.ok) throw new Error(`Unlink failed (${response.status})`);
       await loadLinkStatus();
       setCatalog([]);
+      setOrders([]);
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Unlink failed'); }
     finally { setLinking(false); }
   }
@@ -236,16 +260,27 @@ export default function PluginsPage() {
                     <button className="btn btn-secondary" disabled={linking} onClick={revokeLink}>{linking ? 'Unlinking…' : 'Unlink'}</button>
                   </div>
                   {catalogError && <p className="mt-3 text-sm text-red-700">{catalogError}</p>}
-                  {catalog.length > 0 && <div className="mt-4 grid gap-4 md:grid-cols-2">{catalog.map((product) => (
+                  {catalog.length > 0 && <div className="mt-4 grid gap-4 md:grid-cols-2">{catalog.map((product) => {
+                    const owned = !!product.ownership?.some((entry) => entry.status === 'ACTIVE');
+                    return (
                     <div key={product.id} className="rounded-lg border border-slate-200 p-4">
                       <div className="flex items-start justify-between gap-2"><div><strong className="text-slate-800">{product.name}</strong><p className="text-xs text-slate-500">{product.publisher.displayName} · {product.license}</p></div><span className={`h-fit rounded-full px-2 py-1 text-xs font-semibold ${product.compatible ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{product.compatible ? 'Compatible' : 'Incompatible'}</span></div>
                       <p className="mt-2 text-sm text-slate-600">{product.description}</p>
                       <div className="mt-2 text-sm font-medium text-slate-700">{product.paid ? (product.prices[0] ? formatMoney(product.prices[0].amountMinor, product.prices[0].currency) : 'Price unavailable') : 'Free'}</div>
                       {product.versions[0] && <p className="mt-1 text-xs text-slate-500">Version {product.versions[0].version} · requires core {product.versions[0].requiresCore}</p>}
                       {!!product.ownership?.length && <p className="mt-2 text-xs text-emerald-700">Owned: {product.ownership.map((entry) => `${entry.installationLabel || entry.installationId} (${entry.status.toLowerCase()})`).join(', ')}</p>}
+                      {product.paid && !owned && <button className="btn btn-primary mt-3" disabled={!!busy || !product.compatible} onClick={() => buy(product)}>{busy === `${product.id}:buy` ? 'Creating order…' : 'Buy'}</button>}
                     </div>
-                  ))}</div>}
+                    );
+                  })}</div>}
                   {catalog.length === 0 && !catalogError && <p className="mt-4 text-sm text-slate-500">No compatible plugins found in the catalog yet.</p>}
+                  {orders.length > 0 && <div className="mt-6 border-t border-slate-100 pt-4">
+                    <div className="flex items-center justify-between"><h3 className="text-sm font-semibold text-slate-700">Orders</h3><button className="btn btn-secondary" onClick={loadOrders}>Refresh</button></div>
+                    <div className="mt-3 space-y-2">{orders.map((order) => <div key={order.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-3 text-sm">
+                      <span>{order.lines.map((line) => line.plugin?.name || line.pluginId).join(', ')} · {formatMoney(order.totalMinor, order.currency)}</span>
+                      <span className={`rounded-full px-2 py-1 text-xs font-semibold ${order.status === 'PAID' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800'}`}>{order.status === 'PENDING' ? 'Awaiting settlement' : order.status.toLowerCase()}</span>
+                    </div>)}</div>
+                  </div>}
                 </>
               ) : (
                 <div className="mt-4">
