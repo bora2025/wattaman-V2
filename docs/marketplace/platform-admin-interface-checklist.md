@@ -198,9 +198,10 @@ for this — not implied by the feature list being complete.
 - [x] **PA3-3** (BE) Customer request creation/list API — verified account and installation
       ownership required, approved catalog plugin required except for feature requests, annual
       trial uniqueness enforced, and internal reasons/messages excluded from customer queries
-- [~] **PA3-4** (BE) Operator workflow API — filtered queue, detail, assignment, start-review,
+- [x] **PA3-4** (BE) Request workflow API — filtered operator queue, detail, assignment, start-review,
       request-information, approval, and rejection transitions are serializable, idempotent, and
-      audited. Customer information-response/cancellation and entitlement fulfilment remain
+      audited; customers can answer only their own `NEEDS_INFORMATION` request with replay-safe
+      messages and cancel only their own non-terminal request, with both actions audited
 - [x] **PA3-5** (FE) Platform operator queue/detail — URL filters, SLA visibility, assignment,
       review, information request, approve/reject controls, and complete internal decision timeline
 - [x] **PA3-6** (FE) Customer marketplace request surface — linked schools can submit all five

@@ -32,6 +32,12 @@ const assignInput = z.object({
   internalReason: z.string().trim().min(3).max(5000),
 }).strict();
 
+const customerResponseInput = z.object({
+  idempotencyKey: z.string().min(16).max(200), body: z.string().trim().min(1).max(5000),
+}).strict();
+
+const customerCancelInput = z.object({ reason: z.string().trim().min(3).max(1000) }).strict();
+
 const SLA_BUSINESS_DAYS: Record<SchoolPluginRequestType, number> = {
   FREE_APPROVAL: 2, PURCHASE_ASSISTANCE: 2, PRIVATE_PLUGIN_ACCESS: 3, TRIAL: 1, FEATURE_REQUEST: 2,
 };
@@ -99,6 +105,46 @@ export class SchoolPluginRequestService {
         decisions: { select: { id: true, decision: true, publicMessage: true, createdAt: true }, orderBy: { createdAt: 'asc' } },
       },
     });
+  }
+
+  async customerRespond(accountId: string, requestId: string, value: unknown, now = new Date()) {
+    const input = customerResponseInput.parse(value);
+    return this.prisma.$transaction(async tx => {
+      const replay = await tx.schoolPluginRequestMessage.findUnique({ where: { idempotencyKey: input.idempotencyKey } });
+      if (replay) {
+        if (replay.requestId !== requestId || replay.accountAuthorId !== accountId) throw new HttpError(409, 'Idempotency key was already used for another message');
+        return tx.schoolPluginRequest.findUnique({ where: { id: requestId }, select: { id: true, status: true, updatedAt: true } });
+      }
+      const request = await tx.schoolPluginRequest.findUnique({ where: { id: requestId } });
+      if (!request || request.accountId !== accountId) throw new HttpError(404, 'School plugin request not found');
+      if (request.status !== 'NEEDS_INFORMATION') throw new HttpError(409, `Request cannot accept customer information from ${request.status}`);
+      await tx.schoolPluginRequestMessage.create({ data: {
+        requestId, visibility: 'CUSTOMER', body: input.body, accountAuthorId: accountId,
+        idempotencyKey: input.idempotencyKey, createdAt: now,
+      } });
+      const updated = await tx.schoolPluginRequest.update({ where: { id: requestId }, data: { status: 'UNDER_REVIEW' } });
+      await tx.marketplaceAuditEvent.create({ data: {
+        accountId, action: 'school_plugin_request_information_provided', success: true,
+        metadata: { requestId, from: request.status, to: updated.status },
+      } });
+      return updated;
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
+  async customerCancel(accountId: string, requestId: string, value: unknown, now = new Date()) {
+    const input = customerCancelInput.parse(value);
+    return this.prisma.$transaction(async tx => {
+      const request = await tx.schoolPluginRequest.findUnique({ where: { id: requestId } });
+      if (!request || request.accountId !== accountId) throw new HttpError(404, 'School plugin request not found');
+      if (request.status === 'CANCELLED') return request;
+      if (TERMINAL.has(request.status)) throw new HttpError(409, `Request cannot be cancelled from ${request.status}`);
+      const updated = await tx.schoolPluginRequest.update({ where: { id: requestId }, data: { status: 'CANCELLED', cancelledAt: now } });
+      await tx.marketplaceAuditEvent.create({ data: {
+        accountId, action: 'school_plugin_request_cancelled', success: true,
+        metadata: { requestId, from: request.status, to: updated.status, reason: input.reason },
+      } });
+      return updated;
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 
   async platformRequests(query: unknown, operatorId: string) {

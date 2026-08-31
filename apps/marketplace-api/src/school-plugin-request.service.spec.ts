@@ -74,4 +74,40 @@ describe('SchoolPluginRequestService', () => {
     expect(decisionSelect).not.toHaveProperty('internalReason');
     expect(prisma.schoolPluginRequest.findMany.mock.calls[0][0].select.messages.where).toEqual({ visibility: 'CUSTOMER' });
   });
+
+  it('accepts customer information only from NEEDS_INFORMATION and reopens review atomically', async () => {
+    const tx = {
+      schoolPluginRequestMessage: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({}) },
+      schoolPluginRequest: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'request-1', accountId: 'account-1', status: 'NEEDS_INFORMATION' }),
+        update: jest.fn().mockResolvedValue({ id: 'request-1', status: 'UNDER_REVIEW' }),
+      },
+      marketplaceAuditEvent: { create: jest.fn().mockResolvedValue({}) },
+    };
+    const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
+    const result = await new SchoolPluginRequestService(prisma).customerRespond('account-1', 'request-1', {
+      idempotencyKey: 'customer-response-0001', body: 'The plugin will initially be used by 25 teachers.',
+    });
+    expect(result?.status).toBe('UNDER_REVIEW');
+    expect(tx.schoolPluginRequestMessage.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      visibility: 'CUSTOMER', accountAuthorId: 'account-1', idempotencyKey: 'customer-response-0001',
+    }) });
+    expect(tx.marketplaceAuditEvent.create).toHaveBeenCalledWith({ data: expect.objectContaining({ action: 'school_plugin_request_information_provided' }) });
+  });
+
+  it('allows the owner to cancel a non-terminal request and treats a retry as already complete', async () => {
+    const tx = {
+      schoolPluginRequest: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'request-1', accountId: 'account-1', status: 'SUBMITTED' }),
+        update: jest.fn().mockResolvedValue({ id: 'request-1', accountId: 'account-1', status: 'CANCELLED' }),
+      },
+      marketplaceAuditEvent: { create: jest.fn().mockResolvedValue({}) },
+    };
+    const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
+    await expect(new SchoolPluginRequestService(prisma).customerCancel('account-1', 'request-1', { reason: 'No longer required.' })).resolves.toMatchObject({ status: 'CANCELLED' });
+    expect(tx.marketplaceAuditEvent.create).toHaveBeenCalledTimes(1);
+    tx.schoolPluginRequest.findUnique.mockResolvedValue({ id: 'request-1', accountId: 'account-1', status: 'CANCELLED' });
+    await expect(new SchoolPluginRequestService(prisma).customerCancel('account-1', 'request-1', { reason: 'Retry cancellation.' })).resolves.toMatchObject({ status: 'CANCELLED' });
+    expect(tx.marketplaceAuditEvent.create).toHaveBeenCalledTimes(1);
+  });
 });

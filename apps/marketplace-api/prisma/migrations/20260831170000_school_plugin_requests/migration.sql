@@ -26,7 +26,7 @@ CREATE TABLE "SchoolPluginRequestDecision" (
 CREATE TABLE "SchoolPluginRequestMessage" (
   "id" UUID NOT NULL, "requestId" UUID NOT NULL,
   "visibility" "SchoolPluginRequestMessageVisibility" NOT NULL, "body" TEXT NOT NULL,
-  "accountAuthorId" UUID, "operatorAuthorId" UUID,
+  "accountAuthorId" UUID, "operatorAuthorId" UUID, "idempotencyKey" TEXT,
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "SchoolPluginRequestMessage_pkey" PRIMARY KEY ("id"),
   CONSTRAINT "SchoolPluginRequestMessage_exactly_one_author" CHECK (
@@ -35,6 +35,7 @@ CREATE TABLE "SchoolPluginRequestMessage" (
 );
 
 CREATE UNIQUE INDEX "SchoolPluginRequestDecision_idempotencyKey_key" ON "SchoolPluginRequestDecision"("idempotencyKey");
+CREATE UNIQUE INDEX "SchoolPluginRequestMessage_idempotencyKey_key" ON "SchoolPluginRequestMessage"("idempotencyKey");
 CREATE INDEX "SchoolPluginRequest_status_slaDueAt_idx" ON "SchoolPluginRequest"("status", "slaDueAt");
 CREATE INDEX "SchoolPluginRequest_accountId_submittedAt_idx" ON "SchoolPluginRequest"("accountId", "submittedAt");
 CREATE INDEX "SchoolPluginRequest_installationId_pluginId_type_idx" ON "SchoolPluginRequest"("installationId", "pluginId", "type");

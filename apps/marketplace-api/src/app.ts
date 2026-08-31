@@ -187,6 +187,12 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   app.post('/v1/customer/plugin-requests', requireCommerceSession, async (request: ScopedRequest, response, next) => {
     try { response.status(201).json(await schoolPluginRequests.create(request.accountId!, request.body)); } catch (error) { next(error); }
   });
+  app.post('/v1/customer/plugin-requests/:requestId/respond', requireCommerceSession, async (request: ScopedRequest, response, next) => {
+    try { response.json(await schoolPluginRequests.customerRespond(request.accountId!, String(request.params.requestId), request.body)); } catch (error) { next(error); }
+  });
+  app.post('/v1/customer/plugin-requests/:requestId/cancel', requireCommerceSession, async (request: ScopedRequest, response, next) => {
+    try { response.json(await schoolPluginRequests.customerCancel(request.accountId!, String(request.params.requestId), request.body)); } catch (error) { next(error); }
+  });
   app.post('/v1/mfa/enrollments', requireSession, async (request: Request & { accountId?: string }, response, next) => {
     try { response.status(201).json(await identity.enrollMfa(request.accountId!)); } catch (error) { next(error); }
   });

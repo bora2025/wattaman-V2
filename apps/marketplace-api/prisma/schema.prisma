@@ -857,6 +857,7 @@ model SchoolPluginRequestMessage {
   body             String
   accountAuthorId  String?
   operatorAuthorId String?
+  idempotencyKey   String?                              @unique
   createdAt        DateTime                             @default(now())
   request          SchoolPluginRequest                  @relation(fields: [requestId], references: [id], onDelete: Cascade)
   accountAuthor    MarketplaceAccount?                  @relation(fields: [accountAuthorId], references: [id], onDelete: Restrict)

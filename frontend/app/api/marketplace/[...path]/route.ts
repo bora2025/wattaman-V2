@@ -7,6 +7,7 @@ const publicPost = new Set(['accounts', 'accounts/email-verifications/confirm', 
 const sessionPost = new Set(['customer/orders', 'customer/plugin-requests', 'sessions/revoke', 'mfa/enrollments', 'mfa/enrollments/confirm', 'mfa/disable']);
 const linkRequestPathPattern = /^marketplace-links\/[0-9a-f-]{36}$/;
 const linkDecisionPathPattern = /^marketplace-links\/[0-9a-f-]{36}\/(approve|deny)$/;
+const pluginRequestActionPattern = /^customer\/plugin-requests\/[0-9a-f-]{36}\/(respond|cancel)$/;
 
 function marketplaceUrl() {
   const value = process.env.MARKETPLACE_URL;
@@ -38,14 +39,14 @@ async function proxy(request: NextRequest, segments: string[], method: 'GET' | '
   const isLinkDecision = method === 'POST' && linkDecisionPathPattern.test(path);
   const allowed = method === 'GET'
     ? publicGet.has(path) || sessionGet.has(path) || protectedArtifact || isPublicLinkRequest
-    : publicPost.has(path) || sessionPost.has(path) || isLinkDecision;
+    : publicPost.has(path) || sessionPost.has(path) || isLinkDecision || pluginRequestActionPattern.test(path);
   if (!allowed) return NextResponse.json({ error: 'Marketplace route is not allowed' }, { status: 404 });
   if (method === 'POST') {
     const origin = request.headers.get('origin');
     if (origin && !expectedOrigins(request).includes(origin)) return NextResponse.json({ error: 'Cross-origin marketplace mutation rejected' }, { status: 403 });
   }
   const session = request.cookies.get(SESSION_COOKIE)?.value;
-  if ((sessionGet.has(path) || sessionPost.has(path) || protectedArtifact || isLinkDecision) && !session) return NextResponse.json({ error: 'Marketplace sign-in required' }, { status: 401 });
+  if ((sessionGet.has(path) || sessionPost.has(path) || protectedArtifact || isLinkDecision || pluginRequestActionPattern.test(path)) && !session) return NextResponse.json({ error: 'Marketplace sign-in required' }, { status: 401 });
   const target = new URL(`/v1/${path}`, marketplaceUrl());
   if (method === 'GET') request.nextUrl.searchParams.forEach((value, key) => target.searchParams.append(key, value));
   let requestBody = method === 'POST' ? await request.text() : undefined;

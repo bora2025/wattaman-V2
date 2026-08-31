@@ -1,7 +1,7 @@
 # Platform Admin Policy Decisions
 
-Status: **approved**  
-Decision date: 2026-08-31  
+Status: **approved**
+Decision date: 2026-08-31
 Applies to: PA-3, PA-5, and PA-6 of the platform-admin delivery plan
 
 These decisions adopt the plan's recommended security posture and unblock implementation. They
