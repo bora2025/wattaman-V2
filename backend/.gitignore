@@ -2,3 +2,6 @@ node_modules
 dist
 .env
 *.log
+
+# Generated at runtime by the update checker; local state, not source.
+update-state

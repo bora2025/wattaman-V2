@@ -1,6 +1,6 @@
 # Wattanam Platform Admin Interface — Architecture and Delivery Plan
 
-Status: **in progress; PA-1 complete, PA-2 verification underway, and PA-3 implementation started**
+Status: **implementation in progress; PA-0 and PA-1 complete, PA-2 and PA-3 partially complete, and PA-4 through PA-7 planned but not started**
 Owner: Wattanam platform operations  
 Scope: central marketplace, publishers, plugins, customer schools, commerce, support, and platform operations
 

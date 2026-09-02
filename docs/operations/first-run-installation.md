@@ -87,16 +87,22 @@ For an isolated certification database inside an existing operations container, 
 
 ## Fresh Railway School Flow
 
-1. Create the school project from the approved Wattanam template.
+For the concrete, tested Railway CLI commands (project/service creation, exact environment
+variables, volumes, and the platform-specific gotchas hit deploying this way) see
+[railway-deployment-guide.md](./railway-deployment-guide.md), which also covers deploying the
+marketplace itself and linking a school's admin panel to it. Summary:
+
+1. Create the school project (`api` + `web` + `gateway` + `Postgres`).
 2. Provision the new PostgreSQL service.
 3. Generate unique JWT and encryption secrets.
-4. Run checked-in migrations.
-5. Confirm `GET /installation/status` returns `ready`.
+4. Deploy — migrations run automatically as part of each service's start command.
+5. Confirm `GET /installation/status` (via the gateway) returns `ready`.
 6. Connect and verify the customer's domain.
-7. Submit the installation form over HTTPS.
+7. Submit the installation form over HTTPS (this document's sections above).
 8. Confirm status changes to `installed`.
 9. Sign in with the new owner account.
 10. Enable and verify backups.
+11. Link the installation to the marketplace from `/admin/plugins` if the school wants to browse and buy plugins directly.
 
 ## Legacy Installations
 
