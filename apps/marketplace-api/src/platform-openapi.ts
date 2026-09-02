@@ -49,6 +49,7 @@ export function platformOpenApi(baseUrl: string) {
       '/platform/v1/auth/sessions/revoke': path('post', { summary: 'Auth revoke session' }),
       '/platform/v1/auth/mfa/enroll': path('post', { summary: 'Auth enroll MFA' }),
       '/platform/v1/auth/mfa/enroll/confirm': path('post', { summary: 'Auth confirm MFA enrollment' }),
+      '/platform/v1/auth/password': path('post', { summary: 'Auth change own password' }),
       '/platform/v1/me': path('get', { summary: 'Operators get current operator' }),
       '/platform/v1/dashboard': path('get', { summary: 'Dashboard get aggregates', permission: 'platform.dashboard.read' }),
       '/platform/v1/operators': path('get', { summary: 'Operators list operators', permission: 'operators.read' }),

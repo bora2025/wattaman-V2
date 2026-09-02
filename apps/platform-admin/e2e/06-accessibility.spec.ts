@@ -55,6 +55,7 @@ test('the mandatory-enrollment screen is accessible', async ({ page }) => {
 const SCREENS = [
   '/dashboard', '/customers', '/installations', '/publishers', '/plugins',
   '/plugin-requests', '/orders', '/entitlements', '/advisories', '/operations', '/exports', '/audit',
+  '/account',
 ];
 
 test('every operator screen passes WCAG 2.1 A/AA', async ({ page }) => {

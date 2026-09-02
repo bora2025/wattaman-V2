@@ -33,7 +33,7 @@ dual control on exceptional grants — are exactly the ones a mocked backend wou
 
 ## Result
 
-**48 Playwright tests, all passed** (48.4s), against a database created from migrations in the same
+**52 Playwright tests, all passed** (42.3s), against a database created from migrations in the same
 run. Coverage by file:
 
 | Spec | Tests | What it establishes |
@@ -43,7 +43,8 @@ run. Coverage by file:
 | `03-read-surface` | 13 | Every PA-2 queue renders seeded records, filters narrow them and survive a reload via the URL, detail pages open, customer addresses are masked everywhere they appear, and reading the audit log writes its own `platform_audit_read` row attributed to the reader |
 | `04-exports` | 4 | Real browser downloads of `orders.csv`, `entitlements.csv`, `installations.csv`, `audit-events.csv`; masked addresses in the file; a seeded school label of `=SUM(1+1)` comes back as `"'=SUM(1+1)"`, inert in a spreadsheet; the download writes a `platform_export` audit row naming the operator |
 | `05-plugin-requests` | 5 | A free-plugin request driven queue→assign→review→approve→entitlement with a complete attributable timeline; free access to a *paid* plugin refused to a single operator, the second-approval control absent for the proposer, the API answering `409` to their direct attempt, then a second operator approving and the 180-day exceptional entitlement issuing |
-| `06-accessibility` | 6 | axe-core finds zero WCAG 2.1 A/AA violations on the sign-in, MFA, and enrollment screens, all twelve operator screens, and three detail screens; the shell is reachable and followable by keyboard alone |
+| `06-accessibility` | 6 | axe-core finds zero WCAG 2.1 A/AA violations on the sign-in, MFA, and enrollment screens, all thirteen operator screens, and three detail screens; the shell is reachable and followable by keyboard alone |
+| `07-account` | 4 | A live session alone cannot rotate a password — no code, a wrong code, and a wrong current password are each refused, with one message covering both factors; a real rotation signs every *other* session out while the calling one survives; the old password stops working and the new one starts; the change lands in the audit log |
 
 ## Defects found and fixed
 
@@ -59,8 +60,15 @@ marketplace deployment would have failed at provisioning. Seven column types cor
 on white) carried real information — an unlinked school, a system-generated audit actor, an empty
 detail field, the signed-in operator's roles — below the 4.5:1 WCAG AA threshold. Raised to
 `text-slate-500` (≈4.76:1) in `OperatorShell`, `RecordInspector`, and the audit, installations, and
-operations screens. This was the only violation class axe reported, and it appeared on all fifteen
-screens scanned.
+operations screens. This was the only violation class axe reported, and it appeared on every one of the
+fifteen screens scanned at the time.
+
+**3. Form hints folded into field labels.** On the account screen, help text nested inside its
+`<label>` made the field's accessible name "New password At least 12 characters" rather than
+"New password" — a screen reader announces the hint as part of the label every time focus lands
+there. Hints moved out of the label and attached with `aria-describedby`. axe does not flag this
+(the field is still labelled), so it surfaced only because a test addressed the field by its
+accessible name.
 
 ## Verification notes
 
@@ -71,8 +79,8 @@ screens scanned.
 - API assertions run `fetch` inside the page rather than through Playwright's `page.request`. The
   latter issues calls from outside the document, so the `SameSite=Strict` session cookie does not
   ride along and every authorization check returns `401` instead of the `403` under test.
-- `05-plugin-requests` drives a one-way lifecycle and therefore requires freshly seeded fixtures;
-  re-running it against a database it has already touched fails by design.
+- `05-plugin-requests` and `07-account` drive one-way state changes and therefore require freshly
+  seeded fixtures; re-running either against a database it has already touched fails by design.
 - One harness defect cost two red runs and is worth recording: running Playwright through
   `spawnSync` blocked the script's event loop, so nothing drained the API's stdout pipe. After
   ~64KB of request logs the API blocked on its next write and the remaining tests failed with

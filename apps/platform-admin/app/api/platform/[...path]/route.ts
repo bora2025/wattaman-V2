@@ -14,7 +14,7 @@ const SESSION_COOKIE = 'wattanam_platform_session';
  * through this proxy even if the upstream API exposes it.
  */
 const publicPost = new Set(['auth/sessions', 'auth/sessions/refresh']);
-const sessionPost = new Set(['auth/sessions/revoke', 'auth/mfa/enroll', 'auth/mfa/enroll/confirm']);
+const sessionPost = new Set(['auth/sessions/revoke', 'auth/mfa/enroll', 'auth/mfa/enroll/confirm', 'auth/password']);
 const sessionGet = new Set([
   'me', 'dashboard', 'operators', 'roles', 'customers', 'installations', 'publishers', 'plugins', 'submissions',
   'orders', 'entitlements', 'advisories', 'audit-events', 'operations/health', 'exports', 'plugin-requests',

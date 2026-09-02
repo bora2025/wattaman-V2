@@ -288,6 +288,9 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   app.post('/platform/v1/auth/mfa/enroll/confirm', requireEnrollingOperator, async (request: PlatformRequest, response, next) => {
     try { response.json(await platformAuth.confirmMfaEnrollment(request.operatorId!, request.sessionId!, request.body, actionContext(request))); } catch (error) { next(error); }
   });
+  app.post('/platform/v1/auth/password', requirePlatformOperator, async (request: PlatformRequest, response, next) => {
+    try { response.json(await platformAuth.changePassword(request.operatorId!, request.sessionId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
   app.get('/platform/v1/me', requirePlatformOperator, async (request: PlatformRequest, response, next) => {
     try { response.json(await platformAuth.me(request.operatorId!)); } catch (error) { next(error); }
   });

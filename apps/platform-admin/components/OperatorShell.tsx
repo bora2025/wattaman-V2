@@ -76,7 +76,13 @@ export default function OperatorShell({ children }: { children: React.ReactNode 
               {profile.roles.map((role) => role.displayName).join(', ') || 'no roles'}
             </span>
           </div>
-          <button className="pa-btn-secondary" onClick={signOut}>Sign out</button>
+          <div className="flex items-center gap-2">
+            {/* Outside the permission-filtered navigation on purpose: changing your own password
+                is not a granted capability, it is something every operator must always be able
+                to do — including one with no roles at all. */}
+            <Link className="pa-btn-secondary" href="/account">Your account</Link>
+            <button className="pa-btn-secondary" onClick={signOut}>Sign out</button>
+          </div>
         </header>
         <main className="min-w-0 flex-1 p-6">{children}</main>
       </div>

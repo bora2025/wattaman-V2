@@ -193,11 +193,12 @@ browser, and accessibility evidence.
       metadata drives a deny-by-default matrix across all 9 seeded roles and every documented
       protected PA-2 route, failing if a route names an unseeded or wholly unassigned permission.
       A Playwright harness (`npm run e2e`) now adds browser evidence on a stack built from
-      migrations on disposable PostgreSQL 16: **48/48 passing**, covering per-identity navigation
+      migrations on disposable PostgreSQL 16: **52/52 passing**, covering per-identity navigation
       equality, every denial asserted at both the screen and the API for the operator's own
-      browser session, masked identifiers, and zero axe-core WCAG 2.1 A/AA violations across 15
-      screens ([evidence](../acceptance/platform-admin-browser-e2e-2026-09-02.md)). **Isolated
-      Railway non-production evidence remains**
+      browser session, masked identifiers, operator-initiated password rotation, and zero axe-core
+      WCAG 2.1 A/AA violations across 16 screens
+      ([evidence](../acceptance/platform-admin-browser-e2e-2026-09-02.md)). **Isolated Railway
+      non-production evidence remains**
 
 Two defects were found by the browser harness rather than by any local test, both now fixed:
 **(1)** `prisma migrate deploy` could not build a marketplace database from scratch — the two PA-3

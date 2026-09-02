@@ -2,7 +2,8 @@ import { Prisma, PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { MarketplaceConfig } from './config';
 import {
-  generateRecoveryCodes, generateTotpSecret, hashToken, newOpaqueToken, totpUri, verifyPassword, verifyTotpCode,
+  generateRecoveryCodes, generateTotpSecret, hashPassword, hashToken, newOpaqueToken, totpUri, verifyPassword,
+  verifyTotpCode,
 } from './identity-crypto';
 import { HttpError } from './http-error';
 import { PlatformActionContext } from './platform-context';
@@ -22,6 +23,16 @@ const loginInput = z.object({
 const sessionTokenInput = z.object({ sessionToken: z.string().min(32).max(500) }).strict();
 
 const confirmMfaInput = z.object({ code: z.string().regex(/^\d{6}$/) }).strict();
+
+/** Minimum matches the bootstrap CLI's, so an operator cannot weaken a password below the bar
+ * their account was created under. */
+const MINIMUM_PASSWORD_LENGTH = 12;
+
+const changePasswordInput = z.object({
+  currentPassword: z.string().min(1).max(200),
+  newPassword: z.string().min(MINIMUM_PASSWORD_LENGTH).max(200),
+  code: z.string().min(6).max(20),
+}).strict();
 
 export class PlatformAuthService {
   constructor(private readonly prisma: PrismaClient, private readonly config: MarketplaceConfig) {}
@@ -168,6 +179,66 @@ export class PlatformAuthService {
       await this.audit(tx, { operatorId, action: 'platform_mfa_enabled', success: true, ...context });
       return { enabled: true, recoveryCodes: codes };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
+  /**
+   * Operator-initiated password rotation.
+   *
+   * Requires the current password *and* a fresh second factor, not merely a live session: the
+   * session cookie alone is what an attacker who walked up to an unlocked laptop already has, and
+   * a password change is precisely the action that would lock the real operator out.
+   *
+   * Every other session for the account is revoked, because the reason to rotate a password is
+   * usually that something else may hold it. The calling session survives — it was just
+   * re-authenticated with both factors, and signing the operator out of the screen they are
+   * standing in front of buys nothing.
+   */
+  async changePassword(operatorId: string, sessionId: string, value: unknown, context: PlatformActionContext, now = new Date()) {
+    const input = changePasswordInput.parse(value);
+    // Same commit-then-throw shape as login(): the failure paths write lockout counters and audit
+    // rows that must survive, and an interactive transaction discards every write if it throws.
+    const result = await this.prisma.$transaction(async (tx) => {
+      const operator = await tx.platformOperator.findUnique({ where: { id: operatorId } });
+      if (!operator) return { ok: false as const, status: 404, message: 'Operator not found' };
+      if (operator.lockedUntil && operator.lockedUntil > now) {
+        await this.audit(tx, { operatorId, action: 'platform_password_change_locked', success: false, ...context });
+        return { ok: false as const, status: 423, message: 'Account is temporarily locked; try again later' };
+      }
+
+      const currentValid = await verifyPassword(input.currentPassword, operator.passwordHash);
+      if (!currentValid) {
+        await this.registerFailure(tx, operatorId, operator.failedLoginCount, now);
+        await this.audit(tx, { operatorId, action: 'platform_password_change_failed', success: false, metadata: { reason: 'password' }, ...context });
+        return { ok: false as const, status: 401, message: 'Current password or code is incorrect' };
+      }
+      const mfaValid = await this.verifyMfaFactor(tx, operatorId, operator.mfaSecret, input.code, now);
+      if (!mfaValid) {
+        await this.registerFailure(tx, operatorId, operator.failedLoginCount, now);
+        await this.audit(tx, { operatorId, action: 'platform_password_change_failed', success: false, metadata: { reason: 'mfa' }, ...context });
+        return { ok: false as const, status: 401, message: 'Current password or code is incorrect' };
+      }
+      if (await verifyPassword(input.newPassword, operator.passwordHash)) {
+        return { ok: false as const, status: 400, message: 'New password must differ from the current one' };
+      }
+
+      const passwordHash = await hashPassword(input.newPassword);
+      await tx.platformOperator.update({
+        where: { id: operatorId },
+        data: { passwordHash, failedLoginCount: 0, lockedUntil: null },
+      });
+      const revoked = await tx.platformOperatorSession.updateMany({
+        where: { operatorId, revokedAt: null, id: { not: sessionId } },
+        data: { revokedAt: now },
+      });
+      await this.audit(tx, {
+        operatorId, action: 'platform_password_changed', success: true,
+        targetType: 'PlatformOperator', targetId: operatorId,
+        metadata: { revokedSessions: revoked.count }, ...context,
+      });
+      return { ok: true as const, value: { changed: true, revokedSessions: revoked.count } };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    if (!result.ok) throw new HttpError(result.status, result.message);
+    return result.value;
   }
 
   private async verifyMfaFactor(tx: Prisma.TransactionClient, operatorId: string, secret: string | null, code: string, now: Date): Promise<boolean> {
