@@ -72,6 +72,8 @@ export function platformOpenApi(baseUrl: string) {
       '/platform/v1/plugin-requests/{requestId}/approve': path('post', { summary: 'Plugins approve school request', permission: 'plugin_requests.review' }),
       '/platform/v1/plugin-requests/{requestId}/reject': path('post', { summary: 'Plugins reject school request', permission: 'plugin_requests.review' }),
       '/platform/v1/plugin-requests/{requestId}/fulfill': path('post', { summary: 'Commerce fulfil school request', permission: 'schools.entitlements.manage' }),
+      '/platform/v1/plugin-requests/{requestId}/exception-proposals': path('post', { summary: 'Commerce propose exceptional school entitlement', permission: 'schools.entitlements.manage' }),
+      '/platform/v1/plugin-requests/{requestId}/exception-decisions': path('post', { summary: 'Commerce decide exceptional school entitlement', permission: 'schools.entitlements.manage' }),
       '/platform/v1/orders': path('get', { summary: 'Commerce list orders', permission: 'orders.read' }),
       '/platform/v1/orders/{orderId}': path('get', { summary: 'Commerce get order', permission: 'orders.read' }),
       '/platform/v1/entitlements': path('get', { summary: 'Commerce list entitlements', permission: 'orders.read' }),

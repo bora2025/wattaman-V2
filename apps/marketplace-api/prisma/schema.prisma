@@ -47,6 +47,12 @@ enum SchoolPluginRequestMessageVisibility {
   INTERNAL
 }
 
+enum SchoolPluginRequestExceptionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum PublisherStatus {
   PENDING
   VERIFIED
@@ -781,35 +787,37 @@ model CoreRelease {
 // not a shared one, per the plan's boundary rules.
 
 model PlatformOperator {
-  id                     String                            @id @default(uuid())
-  email                  String                            @unique
-  displayName            String
-  passwordHash           String
-  status                 PlatformOperatorStatus            @default(ACTIVE)
-  mfaEnabled             Boolean                           @default(false)
-  mfaSecret              String?
-  failedLoginCount       Int                               @default(0)
-  lockedUntil            DateTime?
-  createdAt              DateTime                          @default(now())
-  updatedAt              DateTime                          @updatedAt
-  roles                  PlatformOperatorRole[]
-  sessions               PlatformOperatorSession[]
-  mfaRecoveryCodes       PlatformOperatorMfaRecoveryCode[]
-  auditEvents            PlatformAuditEvent[]
-  assignedPluginRequests SchoolPluginRequest[]
-  pluginRequestDecisions SchoolPluginRequestDecision[]
-  pluginRequestMessages  SchoolPluginRequestMessage[]
+  id                        String                                 @id @default(uuid())
+  email                     String                                 @unique
+  displayName               String
+  passwordHash              String
+  status                    PlatformOperatorStatus                 @default(ACTIVE)
+  mfaEnabled                Boolean                                @default(false)
+  mfaSecret                 String?
+  failedLoginCount          Int                                    @default(0)
+  lockedUntil               DateTime?
+  createdAt                 DateTime                               @default(now())
+  updatedAt                 DateTime                               @updatedAt
+  roles                     PlatformOperatorRole[]
+  sessions                  PlatformOperatorSession[]
+  mfaRecoveryCodes          PlatformOperatorMfaRecoveryCode[]
+  auditEvents               PlatformAuditEvent[]
+  assignedPluginRequests    SchoolPluginRequest[]
+  pluginRequestDecisions    SchoolPluginRequestDecision[]
+  pluginRequestMessages     SchoolPluginRequestMessage[]
+  requestedPluginExceptions SchoolPluginRequestExceptionApproval[] @relation("PluginExceptionRequester")
+  decidedPluginExceptions   SchoolPluginRequestExceptionApproval[] @relation("PluginExceptionDecider")
 }
 
 // ─── Platform Admin (PA-3): school plugin-request workflow ───────────────
 
 model SchoolPluginRequest {
-  id                 String                        @id @default(uuid())
+  id                 String                                @id @default(uuid())
   accountId          String
   installationId     String
   pluginId           String?
   type               SchoolPluginRequestType
-  status             SchoolPluginRequestStatus     @default(SUBMITTED)
+  status             SchoolPluginRequestStatus             @default(SUBMITTED)
   justification      String
   intendedUsers      Int?
   desiredAt          DateTime?
@@ -817,27 +825,49 @@ model SchoolPluginRequest {
   featureDescription String?
   slaDueAt           DateTime
   assignedOperatorId String?
-  orderId            String?                       @unique
-  entitlementId      String?                       @unique
-  submittedAt        DateTime                      @default(now())
+  orderId            String?                               @unique
+  entitlementId      String?                               @unique
+  submittedAt        DateTime                              @default(now())
   decidedAt          DateTime?
   fulfilledAt        DateTime?
   cancelledAt        DateTime?
-  createdAt          DateTime                      @default(now())
-  updatedAt          DateTime                      @updatedAt
-  account            MarketplaceAccount            @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  installation       InstallationRegistration      @relation(fields: [installationId], references: [id], onDelete: Restrict)
-  plugin             MarketplacePlugin?            @relation(fields: [pluginId], references: [id], onDelete: Restrict)
-  assignedOperator   PlatformOperator?             @relation(fields: [assignedOperatorId], references: [id], onDelete: SetNull)
-  order              MarketplaceOrder?             @relation(fields: [orderId], references: [id], onDelete: Restrict)
-  entitlement        InstallationEntitlement?      @relation(fields: [entitlementId], references: [id], onDelete: Restrict)
+  createdAt          DateTime                              @default(now())
+  updatedAt          DateTime                              @updatedAt
+  account            MarketplaceAccount                    @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  installation       InstallationRegistration              @relation(fields: [installationId], references: [id], onDelete: Restrict)
+  plugin             MarketplacePlugin?                    @relation(fields: [pluginId], references: [id], onDelete: Restrict)
+  assignedOperator   PlatformOperator?                     @relation(fields: [assignedOperatorId], references: [id], onDelete: SetNull)
+  order              MarketplaceOrder?                     @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  entitlement        InstallationEntitlement?              @relation(fields: [entitlementId], references: [id], onDelete: Restrict)
   decisions          SchoolPluginRequestDecision[]
   messages           SchoolPluginRequestMessage[]
+  exceptionApproval  SchoolPluginRequestExceptionApproval?
 
   @@index([status, slaDueAt])
   @@index([accountId, submittedAt])
   @@index([installationId, pluginId, type])
   @@index([assignedOperatorId, status])
+}
+
+model SchoolPluginRequestExceptionApproval {
+  id                     String                             @id @default(uuid())
+  requestId              String                             @unique
+  requestedByOperatorId  String
+  decidedByOperatorId    String?
+  status                 SchoolPluginRequestExceptionStatus @default(PENDING)
+  validityDays           Int
+  reason                 String
+  publicMessage          String?
+  requestIdempotencyKey  String                             @unique
+  decisionIdempotencyKey String?                            @unique
+  requestedAt            DateTime                           @default(now())
+  decidedAt              DateTime?
+  request                SchoolPluginRequest                @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  requestedBy            PlatformOperator                   @relation("PluginExceptionRequester", fields: [requestedByOperatorId], references: [id], onDelete: Restrict)
+  decidedBy              PlatformOperator?                  @relation("PluginExceptionDecider", fields: [decidedByOperatorId], references: [id], onDelete: Restrict)
+
+  @@index([status, requestedAt])
+  @@index([requestedByOperatorId, status])
 }
 
 model SchoolPluginRequestDecision {

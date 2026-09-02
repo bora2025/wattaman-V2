@@ -160,4 +160,57 @@ describe('SchoolPluginRequestService', () => {
     expect(tx.schoolPluginRequest.update).toHaveBeenCalledWith({ where: { id: 'request-2' }, data: { orderId: 'order-1' } });
     expect(tx).not.toHaveProperty('installationEntitlement');
   });
+
+  it('requires a different operator to approve an exceptional entitlement', async () => {
+    const proposal = { id: 'exception-1', requestId: 'request-3', requestedByOperatorId: 'operator-1', status: 'PENDING', validityDays: 365 };
+    const tx: any = {
+      schoolPluginRequestExceptionApproval: {
+        findUnique: jest.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(null),
+        create: jest.fn().mockResolvedValue(proposal), update: jest.fn(),
+      },
+      schoolPluginRequest: { findUnique: jest.fn().mockResolvedValue({ id: 'request-3', status: 'APPROVED', type: 'PRIVATE_PLUGIN_ACCESS', plugin: { isPaid: true } }) },
+      platformAuditEvent: { create: jest.fn().mockResolvedValue({}) },
+    };
+    const prisma: any = { $transaction: jest.fn((work: any) => work(tx)) };
+    const service = new SchoolPluginRequestService(prisma);
+    await expect(service.proposeException('request-3', 'operator-1', {
+      idempotencyKey: 'exception-proposal-0001', validityDays: 365, internalReason: 'Approved strategic access without payment.',
+    }, { correlationId: 'corr-proposal' })).resolves.toMatchObject({ status: 'PENDING' });
+
+    tx.schoolPluginRequestExceptionApproval.findUnique.mockReset().mockResolvedValueOnce(null).mockResolvedValueOnce(proposal);
+    await expect(service.decideException('request-3', 'operator-1', {
+      idempotencyKey: 'exception-decision-0001', decision: 'APPROVE', internalReason: 'Independent review completed successfully.',
+    }, { correlationId: 'corr-self' })).rejects.toThrow('requires a different operator');
+
+    tx.schoolPluginRequestExceptionApproval.findUnique.mockReset().mockResolvedValueOnce(null).mockResolvedValueOnce(proposal);
+    tx.schoolPluginRequestExceptionApproval.update.mockResolvedValue({ ...proposal, status: 'APPROVED', decidedByOperatorId: 'operator-2' });
+    await expect(service.decideException('request-3', 'operator-2', {
+      idempotencyKey: 'exception-decision-0002', decision: 'APPROVE', internalReason: 'Independent review completed successfully.',
+    }, { correlationId: 'corr-approve' })).resolves.toMatchObject({ status: 'APPROVED', decidedByOperatorId: 'operator-2' });
+  });
+
+  it('uses the independently approved validity for unpaid paid-plugin access', async () => {
+    const privateKey = generateKeyPairSync('ed25519').privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
+    const request: any = {
+      id: 'request-4', accountId: 'account-1', installationId: 'registration-1', pluginId: 'plugin-paid',
+      status: 'APPROVED', type: 'PRIVATE_PLUGIN_ACCESS', orderId: null,
+      installation: { installationId: '11111111-1111-4111-8111-111111111111' },
+      plugin: { id: 'plugin-paid', isPaid: true, prices: [] },
+      exceptionApproval: { status: 'APPROVED', validityDays: 180 },
+    };
+    const entitlement = { id: 'entitlement-4', status: 'ACTIVE' };
+    const tx: any = {
+      schoolPluginRequest: { findUnique: jest.fn().mockResolvedValue(request), update: jest.fn().mockResolvedValue({ ...request, status: 'ENTITLEMENT_ISSUED' }) },
+      schoolPluginRequestDecision: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({}) },
+      installationEntitlement: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue(entitlement) },
+      platformAuditEvent: { create: jest.fn().mockResolvedValue({}) },
+    };
+    const prisma: any = { schoolPluginRequest: { findUnique: jest.fn().mockResolvedValue(request) }, $transaction: jest.fn((work: any) => work(tx)) };
+    const now = new Date('2026-09-02T00:00:00.000Z');
+    await new SchoolPluginRequestService(prisma, { publicBaseUrl: 'https://marketplace.example', entitlementPrivateKey: privateKey, entitlementKeyId: 'entitlement-1' } as any).fulfill('request-4', 'operator-3', {
+      idempotencyKey: 'exception-fulfill-0001', internalReason: 'Dual approval verified before issuance.',
+    }, { correlationId: 'corr-fulfill-exception' }, now);
+    expect(tx.installationEntitlement.create.mock.calls[0][0].data.expiresAt).toEqual(new Date('2027-03-01T00:00:00.000Z'));
+    expect(tx.schoolPluginRequestDecision.create).toHaveBeenCalledWith({ data: expect.objectContaining({ conditions: expect.objectContaining({ validityDays: 180 }) }) });
+  });
 });

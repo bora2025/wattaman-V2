@@ -42,6 +42,17 @@ const customerResponseInput = z.object({
 const customerCancelInput = z.object({ reason: z.string().trim().min(3).max(1000) }).strict();
 
 const fulfillInput = decisionInput.extend({ currency: z.string().regex(/^[A-Z]{3}$/).optional() }).strict();
+const exceptionProposalInput = z.object({
+  idempotencyKey: z.string().min(16).max(200),
+  validityDays: z.number().int().min(1).max(3650),
+  internalReason: z.string().trim().min(10).max(5000),
+  publicMessage: z.string().trim().min(1).max(5000).optional(),
+}).strict();
+const exceptionDecisionInput = z.object({
+  idempotencyKey: z.string().min(16).max(200),
+  decision: z.enum(['APPROVE', 'REJECT']),
+  internalReason: z.string().trim().min(10).max(5000),
+}).strict();
 
 const SLA_BUSINESS_DAYS: Record<SchoolPluginRequestType, number> = {
   FREE_APPROVAL: 2, PURCHASE_ASSISTANCE: 2, PRIVATE_PLUGIN_ACCESS: 3, TRIAL: 1, FEATURE_REQUEST: 2,
@@ -189,6 +200,7 @@ export class SchoolPluginRequestService {
         assignedOperator: { select: { id: true, displayName: true, email: true } },
         decisions: { select: { id: true, decision: true, publicMessage: true, internalReason: true, conditions: true, createdAt: true, operator: { select: { id: true, displayName: true } } }, orderBy: { createdAt: 'asc' } },
         messages: { select: { id: true, visibility: true, body: true, createdAt: true, accountAuthorId: true, operatorAuthorId: true }, orderBy: { createdAt: 'asc' } },
+        exceptionApproval: { select: { id: true, status: true, validityDays: true, reason: true, publicMessage: true, requestedAt: true, decidedAt: true, requestedBy: { select: { id: true, displayName: true } }, decidedBy: { select: { id: true, displayName: true } } } },
       },
     });
     if (!request) throw new HttpError(404, 'School plugin request not found');
@@ -232,6 +244,60 @@ export class SchoolPluginRequestService {
       { status: 'REJECTED', decidedAt: now }, input, context, now, undefined, input.publicMessage);
   }
 
+  async proposeException(requestId: string, actorId: string, value: unknown, context: PlatformActionContext, now = new Date()) {
+    const input = exceptionProposalInput.parse(value);
+    return this.prisma.$transaction(async tx => {
+      const replay = await tx.schoolPluginRequestExceptionApproval.findUnique({ where: { requestIdempotencyKey: input.idempotencyKey } });
+      if (replay) {
+        if (replay.requestId !== requestId || replay.requestedByOperatorId !== actorId) throw new HttpError(409, 'Idempotency key was already used for another exception');
+        return replay;
+      }
+      const request = await tx.schoolPluginRequest.findUnique({ where: { id: requestId }, include: { plugin: { select: { isPaid: true } } } });
+      if (!request) throw new HttpError(404, 'School plugin request not found');
+      if (request.status !== 'APPROVED') throw new HttpError(409, `Exception cannot be proposed from ${request.status}`);
+      if (!request.plugin || request.type === 'FEATURE_REQUEST' || request.type === 'PURCHASE_ASSISTANCE') throw new HttpError(409, 'This request does not support an exceptional entitlement');
+      if (!request.plugin.isPaid && input.validityDays <= 90) throw new HttpError(400, 'Dual approval is required only for unpaid paid-plugin access or validity longer than 90 days');
+      const existing = await tx.schoolPluginRequestExceptionApproval.findUnique({ where: { requestId } });
+      if (existing) throw new HttpError(409, `An exception already exists with status ${existing.status}`);
+      const approval = await tx.schoolPluginRequestExceptionApproval.create({ data: {
+        requestId, requestedByOperatorId: actorId, validityDays: input.validityDays,
+        reason: input.internalReason, publicMessage: input.publicMessage,
+        requestIdempotencyKey: input.idempotencyKey, requestedAt: now,
+      } });
+      await tx.platformAuditEvent.create({ data: {
+        operatorId: actorId, action: 'school_plugin_request_exception_proposed', targetType: 'SchoolPluginRequest', targetId: requestId,
+        reason: input.internalReason, correlationId: context.correlationId, ip: context.ip, userAgent: context.userAgent,
+        metadata: { exceptionId: approval.id, validityDays: input.validityDays, paidPlugin: request.plugin.isPaid },
+      } });
+      return approval;
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
+  async decideException(requestId: string, actorId: string, value: unknown, context: PlatformActionContext, now = new Date()) {
+    const input = exceptionDecisionInput.parse(value);
+    return this.prisma.$transaction(async tx => {
+      const replay = await tx.schoolPluginRequestExceptionApproval.findUnique({ where: { decisionIdempotencyKey: input.idempotencyKey } });
+      if (replay) {
+        if (replay.requestId !== requestId || replay.decidedByOperatorId !== actorId) throw new HttpError(409, 'Idempotency key was already used for another exception decision');
+        return replay;
+      }
+      const approval = await tx.schoolPluginRequestExceptionApproval.findUnique({ where: { requestId } });
+      if (!approval) throw new HttpError(404, 'Exception proposal not found');
+      if (approval.status !== 'PENDING') throw new HttpError(409, `Exception is already ${approval.status}`);
+      if (approval.requestedByOperatorId === actorId) throw new HttpError(409, 'Exceptional entitlement approval requires a different operator');
+      const updated = await tx.schoolPluginRequestExceptionApproval.update({ where: { id: approval.id }, data: {
+        status: input.decision === 'APPROVE' ? 'APPROVED' : 'REJECTED', decidedByOperatorId: actorId,
+        decisionIdempotencyKey: input.idempotencyKey, decidedAt: now,
+      } });
+      await tx.platformAuditEvent.create({ data: {
+        operatorId: actorId, action: `school_plugin_request_exception_${input.decision.toLowerCase()}`, targetType: 'SchoolPluginRequest', targetId: requestId,
+        reason: input.internalReason, correlationId: context.correlationId, ip: context.ip, userAgent: context.userAgent,
+        metadata: { exceptionId: approval.id, requestedByOperatorId: approval.requestedByOperatorId, validityDays: approval.validityDays },
+      } });
+      return updated;
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
   async fulfill(requestId: string, actorId: string, value: unknown, context: PlatformActionContext, now = new Date()) {
     const input = fulfillInput.parse(value);
     const request = await this.prisma.schoolPluginRequest.findUnique({
@@ -239,6 +305,7 @@ export class SchoolPluginRequestService {
       include: {
         installation: { select: { id: true, installationId: true } },
         plugin: { include: { prices: { where: { validFrom: { lte: now }, OR: [{ validUntil: null }, { validUntil: { gt: now } }] }, orderBy: [{ currency: 'asc' }, { amountMinor: 'asc' }] } } },
+        exceptionApproval: true,
       },
     });
     if (!request) throw new HttpError(404, 'School plugin request not found');
@@ -247,10 +314,10 @@ export class SchoolPluginRequestService {
     if (request.type === 'FEATURE_REQUEST') throw new HttpError(409, 'A feature request is product feedback and cannot issue an entitlement');
     if (!request.plugin) throw new HttpError(409, 'Request has no plugin to fulfil');
     if (request.type === 'PURCHASE_ASSISTANCE') return this.createPurchaseOrder(request, actorId, input, context, now);
-    if ((request.type === 'FREE_APPROVAL' || request.type === 'PRIVATE_PLUGIN_ACCESS') && request.plugin.isPaid) {
-      throw new HttpError(409, 'A paid plugin requires purchase assistance and settled payment');
+    if ((request.type === 'FREE_APPROVAL' || request.type === 'PRIVATE_PLUGIN_ACCESS') && request.plugin.isPaid && request.exceptionApproval?.status !== 'APPROVED') {
+      throw new HttpError(409, 'Unpaid access to a paid plugin requires an approved two-person exception');
     }
-    return this.issueRequestEntitlement(request, actorId, input, context, now);
+    return this.issueRequestEntitlement(request, actorId, input, context, now, request.exceptionApproval?.status === 'APPROVED' ? request.exceptionApproval.validityDays : undefined);
   }
 
   private async createPurchaseOrder(
@@ -287,10 +354,10 @@ export class SchoolPluginRequestService {
   }
 
   private async issueRequestEntitlement(
-    request: any, actorId: string, input: z.infer<typeof fulfillInput>, context: PlatformActionContext, now: Date,
+    request: any, actorId: string, input: z.infer<typeof fulfillInput>, context: PlatformActionContext, now: Date, approvedValidityDays?: number,
   ) {
     if (!this.config?.entitlementPrivateKey || !this.config.entitlementKeyId) throw new HttpError(503, 'Entitlement signing is not configured');
-    const validityDays = request.type === 'TRIAL' ? 30 : 3650;
+    const validityDays = request.type === 'TRIAL' ? 30 : (approvedValidityDays ?? 90);
     const expiresAt = new Date(now.getTime() + validityDays * 86_400_000);
     const offlineUntil = new Date(now.getTime() + Math.min(30, validityDays) * 86_400_000);
     return this.prisma.$transaction(async tx => {

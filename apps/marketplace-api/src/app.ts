@@ -324,6 +324,12 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   app.post('/platform/v1/plugin-requests/:requestId/fulfill', requirePlatformOperator, P('schools.entitlements.manage'), async (request: PlatformRequest, response, next) => {
     try { response.json(await schoolPluginRequests.fulfill(String(request.params.requestId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
   });
+  app.post('/platform/v1/plugin-requests/:requestId/exception-proposals', requirePlatformOperator, P('schools.entitlements.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.status(201).json(await schoolPluginRequests.proposeException(String(request.params.requestId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/plugin-requests/:requestId/exception-decisions', requirePlatformOperator, P('schools.entitlements.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await schoolPluginRequests.decideException(String(request.params.requestId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
   app.get('/platform/v1/operators/:operatorId', requirePlatformOperator, P('operators.read'), async (request, response, next) => {
     try { response.json(await platformOperators.operator(String(request.params.operatorId))); } catch (error) { next(error); }
   });
