@@ -76,6 +76,17 @@ export async function selectSchoolServer(value: string) {
   return discovery;
 }
 
+export async function requestPasswordReset(email: string) {
+  const serverUrl = await getSchoolServerUrl();
+  const response = await fetch(`${serverUrl}/api/auth/forgot-password`, {
+    method: 'POST', headers: apiHeaders(), body: JSON.stringify({ email }),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || 'Unable to request password reset');
+  }
+}
+
 /**
  * Use the stored refresh token to obtain a fresh access token.
  * Returns the new access token, or null if refresh failed.

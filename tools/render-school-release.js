@@ -37,7 +37,7 @@ const blueprint = {
       variables: {
         NODE_ENV: 'production', PORT: '3001', APP_VERSION: evidence.version, GIT_COMMIT: evidence.source.commit,
         DATABASE_URL: '${{Postgres.DATABASE_URL}}', JWT_SECRET: '${{secret(64)}}',
-        CORS_ORIGINS: 'https://${{gateway.RAILWAY_PUBLIC_DOMAIN}}', COOKIE_SECURE: 'true',
+        CORS_ORIGINS: 'https://${{gateway.RAILWAY_PUBLIC_DOMAIN}}', PUBLIC_APP_URL: 'https://${{gateway.RAILWAY_PUBLIC_DOMAIN}}', COOKIE_SECURE: 'true',
         BACKUP_DIR: '/data/backups', PLUGIN_DIR: '/data/plugins', PLUGIN_DATA_DIR: '/data/plugin-data',
       },
     },

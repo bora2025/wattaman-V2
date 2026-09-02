@@ -49,7 +49,7 @@ No global prefix; paths below are literal. 34 controllers across 29 feature modu
 | GET | `/auth/child-schedule/:childUserId` | JWT+Roles: PARENT,ADMIN,SUPER_ADMIN | Child's schedule |
 | GET | `/auth/users/:id/full-profile` | JWT+Roles: ADMIN,SUPER_ADMIN | Full profile |
 
-> **B-014 remediation (2026-08-31):** mobile no longer calls the nonexistent `POST /auth/forgot-password`; the screen now gives honest instructions to contact the school administrator.
+> **Remediated 2026-08-31:** core now implements throttled `POST /auth/forgot-password` and `POST /auth/reset-password` using hashed, expiring, single-use tokens, generic anti-enumeration responses, email delivery, session revocation, and audit records. Web and mobile consumers are wired to it ([evidence](../acceptance/core-password-recovery-2026-08-31.md)).
 
 ### Attendance (`/attendance`) — 19 routes
 Record/bulk/check-out/create/update/delete for both student and staff attendance, an employee self-scan path, a role-restricted `WATTAMAN` class-free scan role, and read endpoints for records/daily totals. Roles used: `TEACHER,ADMIN,CLASS_ADMIN` (student-side mutations), `ADMIN`/`ADMIN,WATTAMAN_REPORTER` (staff-side + edits), plain `JWT` (self-service reads/scans). Full route list: `record`, `bulk`, `check-out`, `staff/record`, `staff/check-out`, `staff/auto-scan`, `employee/self-scan`, `employee/my-records` (GET), `records` (GET), `staff/records` (GET), `update` (PATCH), `edit-permission-type` (PATCH), `staff/update` (PATCH), `create-record`, `staff/create-record`, `staff/edit-permission-type` (PATCH), `record` (DELETE), `staff/record` (DELETE), `user-daily` (GET), `wattaman/scan`.

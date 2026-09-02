@@ -15,5 +15,6 @@ if (value.services.api.volume !== '/data' || value.services.postgres.volume !== 
 if (value.services.api.variables.DATABASE_URL !== '${{Postgres.DATABASE_URL}}') throw new Error('API must use the project-local PostgreSQL service');
 if (!value.services.api.variables.JWT_SECRET.includes('secret(')) throw new Error('JWT secret must be generated per deployment');
 if (value.services.api.variables.CORS_ORIGINS !== 'https://${{gateway.RAILWAY_PUBLIC_DOMAIN}}') throw new Error('CORS must bind to the public gateway origin');
+if (value.services.api.variables.PUBLIC_APP_URL !== 'https://${{gateway.RAILWAY_PUBLIC_DOMAIN}}') throw new Error('Public app URL must bind to the public gateway origin');
 const digest = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 process.stdout.write(`${JSON.stringify({ valid: true, sha256: digest, version: value.release.version })}\n`);

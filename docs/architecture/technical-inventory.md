@@ -63,7 +63,7 @@ Publisher and repository private signing keys are secret-manager inputs, never s
 
 | Class | Variables | Owner | Rule |
 |---|---|---|---|
-| Core required | NODE_ENV, PORT, DATABASE_URL, JWT_SECRET, CORS_ORIGINS | Platform/SRE | validate before startup; secrets never logged |
+| Core required | NODE_ENV, PORT, DATABASE_URL, JWT_SECRET, CORS_ORIGINS, PUBLIC_APP_URL | Platform/SRE | validate before startup; `PUBLIC_APP_URL` is the public gateway origin used in password-reset links; secrets never logged |
 | Release identity | APP_VERSION, GIT_COMMIT, RAILWAY_GIT_COMMIT_SHA | Release Engineering | immutable release metadata |
 | Authentication | COOKIE_SECURE, JWT_ACCESS_EXPIRY, JWT_REFRESH_EXPIRY | Security | secure production defaults; expiry changes reviewed |
 | Backup | BACKUP_DIR, BACKUP_RETENTION_DAYS | SRE | must resolve below persistent storage in production |

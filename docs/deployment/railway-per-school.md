@@ -65,6 +65,7 @@ GIT_COMMIT=<immutable release commit>
 DATABASE_URL=${{postgres.DATABASE_URL}}
 JWT_SECRET=<unique generated secret of at least 32 characters>
 CORS_ORIGINS=https://portal.customer-domain.example
+PUBLIC_APP_URL=https://portal.customer-domain.example
 COOKIE_SECURE=true
 PLUGIN_DIR=/data/plugins
 PLUGIN_TRUSTED_KEYS_FILE=/run/plugin-keys/trusted-keys.json
@@ -116,6 +117,7 @@ Set API CORS exactly:
 
 ```text
 CORS_ORIGINS=https://portal.customer-domain.example
+PUBLIC_APP_URL=https://portal.customer-domain.example
 ```
 
 HTTP and Socket.IO use this same exact-origin list. Wildcard Railway, Vercel, and `*` origins are not allowed in production. This topology keeps authentication cookies first-party and prevents browser exposure of internal service domains.

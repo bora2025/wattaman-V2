@@ -9,6 +9,8 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { AuditService } from '../audit/audit.service';
 import { getJwtSecret } from '../config/environment';
+import { PasswordResetService } from './password-reset.service';
+import { ConfirmPasswordResetDto, RequestPasswordResetDto } from './dto/password-reset.dto';
 
 const isProduction = process.env.NODE_ENV === 'production';
 const secureCookies = process.env.COOKIE_SECURE === undefined
@@ -26,7 +28,24 @@ export class AuthController {
   constructor(
     private authService: AuthService,
     private audit: AuditService,
+    private passwordReset: PasswordResetService,
   ) {}
+
+  @Throttle({ default: { ttl: 60000, limit: 3 } })
+  @Post('forgot-password')
+  async requestPasswordReset(@Body() body: RequestPasswordResetDto, @Request() req: any) {
+    await this.passwordReset.request(body.email);
+    await this.audit.log({ action: 'PASSWORD_RESET_REQUESTED', resource: 'AUTH', actorEmail: body.email, method: 'POST', path: '/auth/forgot-password', ip: this.clientIp(req) });
+    return { requested: true };
+  }
+
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
+  @Post('reset-password')
+  async confirmPasswordReset(@Body() body: ConfirmPasswordResetDto, @Request() req: any) {
+    await this.passwordReset.confirm(body.token, body.newPassword);
+    await this.audit.log({ action: 'PASSWORD_RESET', resource: 'AUTH', method: 'POST', path: '/auth/reset-password', ip: this.clientIp(req) });
+    return { reset: true };
+  }
 
   /** Extract client IP honouring X-Forwarded-For */
   private clientIp(req: any): string | null {

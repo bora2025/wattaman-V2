@@ -6,10 +6,13 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { DatabaseModule } from '../database/database.module';
 import { getJwtKeyId, getJwtSecret } from '../config/environment';
+import { NotificationModule } from '../notification/notification.module';
+import { PasswordResetService } from './password-reset.service';
 
 @Module({
   imports: [
     DatabaseModule,
+    NotificationModule,
     PassportModule,
     JwtModule.registerAsync({
       useFactory: () => ({
@@ -21,7 +24,7 @@ import { getJwtKeyId, getJwtSecret } from '../config/environment';
       }),
     }),
   ],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, PasswordResetService, JwtStrategy],
   controllers: [AuthController],
   exports: [JwtModule],
 })

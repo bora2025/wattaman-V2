@@ -11,21 +11,27 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { requestPasswordReset } from '../api';
 import { COLORS } from '../theme';
 
 export default function ForgotPasswordScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
     if (!email.trim()) {
       Alert.alert('Error', 'Please enter your email address');
       return;
     }
-    Alert.alert(
-      'Contact your school',
-      `Ask your school administrator to reset the password for ${email.trim()}.`,
-      [{ text: 'OK', onPress: () => navigation.goBack() }]
-    );
+    setLoading(true);
+    try {
+      await requestPasswordReset(email.trim());
+      Alert.alert('Check your email', 'If this account exists, password-reset instructions have been sent.', [{ text: 'OK', onPress: () => navigation.goBack() }]);
+    } catch (error: any) {
+      Alert.alert('Unable to send', error.message || 'Check your school address and connection, then try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -50,7 +56,7 @@ export default function ForgotPasswordScreen({ navigation }: any) {
       <View style={styles.card}>
         <Text style={styles.heading}>Reset Password?</Text>
         <Text style={styles.description}>
-          Enter your account email, then contact your school administrator for a password reset.
+          Enter your account email and we will send a secure reset link if the account exists.
         </Text>
 
         <Text style={styles.label}>Enter Email Address</Text>
@@ -69,9 +75,10 @@ export default function ForgotPasswordScreen({ navigation }: any) {
           <TouchableOpacity
             style={styles.submitButton}
             onPress={handleSubmit}
+            disabled={loading}
             activeOpacity={0.8}
           >
-            <Text style={styles.submitButtonText}>Show Instructions</Text>
+            <Text style={styles.submitButtonText}>{loading ? 'Sending…' : 'Send Reset Link'}</Text>
           </TouchableOpacity>
         </View>
       </View>
