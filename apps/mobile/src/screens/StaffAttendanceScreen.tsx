@@ -14,7 +14,7 @@ import {
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Location from 'expo-location';
 import * as Haptics from 'expo-haptics';
-import { Audio } from 'expo-av';
+import { useAudioPlayer } from 'expo-audio';
 import { Ionicons } from '@expo/vector-icons';
 import { fetchWithAuth } from '../api';
 import { useAuth } from '../AuthContext';
@@ -88,16 +88,13 @@ export default function StaffAttendanceScreen({ navigation }: any) {
   const [showPopup, setShowPopup] = useState(false);
   const popupAnim = useRef(new Animated.Value(0)).current;
   const scanLineAnim = useRef(new Animated.Value(0)).current;
-  const successSoundRef = useRef<Audio.Sound | null>(null);
+  const successSound = useAudioPlayer('https://cdn.pixabay.com/audio/2021/08/04/audio_0625c1539c.mp3');
 
   // ─── Init ───
   useEffect(() => {
     loadAllData();
-    loadSounds();
     requestLocationPermission();
-    return () => {
-      successSoundRef.current?.unloadAsync();
-    };
+    return undefined;
   }, []);
 
   useEffect(() => {
@@ -111,16 +108,6 @@ export default function StaffAttendanceScreen({ navigation }: any) {
     anim.start();
     return () => anim.stop();
   }, [cameraActive]);
-
-  const loadSounds = async () => {
-    try {
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: 'https://cdn.pixabay.com/audio/2021/08/04/audio_0625c1539c.mp3' },
-        { shouldPlay: false }
-      );
-      successSoundRef.current = sound;
-    } catch {}
-  };
 
   const requestLocationPermission = async () => {
     try {
@@ -242,10 +229,8 @@ export default function StaffAttendanceScreen({ navigation }: any) {
   const playSuccess = async () => {
     try {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      if (successSoundRef.current) {
-        await successSoundRef.current.setPositionAsync(0);
-        await successSoundRef.current.playAsync();
-      }
+      await successSound.seekTo(0);
+      successSound.play();
     } catch {}
   };
 

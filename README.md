@@ -11,6 +11,7 @@ Planning and delivery documentation:
 - [Technical ownership inventory](./docs/architecture/technical-inventory.md) — systems, data, configuration, files, providers, and contract boundaries.
 - [Version 1 support matrix](./docs/architecture/support-matrix.md) — tested runtime and deployment baselines.
 - [Architecture decision index](./docs/architecture/adr/README.md) — approval format and implementation mapping for DEC-001–013.
-- [Railway deployment per school](./docs/deployment/railway-per-school.md) — customer project and custom-domain runbook.
+- [Manual Railway dashboard setup](./docs/operations/railway-manual-setup-guide.md) — click-by-click marketplace and one-project-per-school deployment, setup, verification, persistence, and handoff.
+- [Railway deployment per school](./docs/deployment/railway-per-school.md) — architecture invariants and custom-domain runbook.
 - [Plugin package and runtime](./docs/plugins/package-and-runtime.md) — plugin trust and SDK contract.
 - [Official repository](./docs/marketplace/official-repository.md) — signed distribution operations.

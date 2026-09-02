@@ -12,7 +12,7 @@ import {
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Location from 'expo-location';
 import * as Haptics from 'expo-haptics';
-import { Audio } from 'expo-av';
+import { useAudioPlayer } from 'expo-audio';
 import { Ionicons } from '@expo/vector-icons';
 import { fetchWithAuth } from '../api';
 import { useAuth } from '../AuthContext';
@@ -50,12 +50,11 @@ export default function ScannerScreen({ navigation, route }: any) {
   const popupAnim = useRef(new Animated.Value(0)).current;
   const scanLineAnim = useRef(new Animated.Value(0)).current;
   const processingRef = useRef(false);
-  const successSoundRef = useRef<Audio.Sound | null>(null);
+  const successSound = useAudioPlayer('https://cdn.pixabay.com/audio/2021/08/04/audio_0625c1539c.mp3');
 
   useEffect(() => {
     if (scanMode === 'student') loadClasses();
-    loadSounds();
-    return () => { successSoundRef.current?.unloadAsync(); };
+    return undefined;
   }, []);
 
   useEffect(() => {
@@ -69,23 +68,11 @@ export default function ScannerScreen({ navigation, route }: any) {
     return () => anim.stop();
   }, []);
 
-  const loadSounds = async () => {
-    try {
-      const { sound: success } = await Audio.Sound.createAsync(
-        { uri: 'https://cdn.pixabay.com/audio/2021/08/04/audio_0625c1539c.mp3' },
-        { shouldPlay: false }
-      );
-      successSoundRef.current = success;
-    } catch {}
-  };
-
   const playSuccess = async () => {
     try {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      if (successSoundRef.current) {
-        await successSoundRef.current.setPositionAsync(0);
-        await successSoundRef.current.playAsync();
-      }
+      await successSound.seekTo(0);
+      successSound.play();
     } catch {}
   };
 

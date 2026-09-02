@@ -9,7 +9,7 @@ Status: **in progress**. Local engineering checks pass; signed builds and real-d
 - School URL and installation identity are stored with Expo SecureStore; switching domains clears authentication credentials.
 - Mobile sends `X-Wattanam-API-Version: 1`; the backend returns that compatibility version while retaining old paths for unversioned clients.
 - Login, logout, refresh and authenticated calls use the selected school's `/api` gateway.
-- Removed the call to the nonexistent forgot-password endpoint and replaced it with administrator-contact instructions.
+- Added core-backed password-reset requests from mobile; delivery uses the selected school's secure recovery workflow.
 - Added explicit EAS preview targets for Android APK and iOS simulator.
 
 ## Verification run
@@ -22,7 +22,8 @@ Status: **in progress**. Local engineering checks pass; signed builds and real-d
 | `backend: npm run build` | pass; 213 files compiled |
 | `backend: npm test -- --runInBand` | pass; 47 suites / 254 tests |
 | `git diff --check` | pass |
-| `apps/mobile: npm audit --omit=dev` | fail; 24 transitive findings (1 critical, 15 high, 7 moderate, 1 low), primarily Expo/Metro build-tool chains; requires a controlled Expo dependency remediation before release |
+| `expo-doctor` | pass; 20/20 after the SDK-55 patch alignment, square icon, and `expo-av` → `expo-audio` migration |
+| `apps/mobile: npm audit --omit=dev --audit-level=high` | pass; 0 high/critical. Nine moderate Expo native-build-chain findings remain; npm's proposed forced fix would downgrade Expo 55 to 46 and was rejected |
 
 ## Required before `[x]`
 
@@ -30,6 +31,6 @@ Status: **in progress**. Local engineering checks pass; signed builds and real-d
 2. Produce signed EAS preview/production artifacts for the supported Android/iOS matrix.
 3. On real devices, record install/discovery/login, access-token refresh, offline timeout/recovery, school-domain change with credential clearing, and old-client behavior after a core upgrade.
 4. Record device/OS versions, release commit and artifact identifiers so the result is reproducible.
-5. Remediate or formally assess the production dependency audit findings without applying an unreviewed forced Expo upgrade.
+5. Track the nine moderate Expo toolchain findings until an SDK-compatible upstream fix exists; do not apply npm's breaking Expo-46 downgrade.
 
 Local Expo export proves the JavaScript application bundles for both platforms; it is not evidence of native signing, installation, push/camera permissions, or device network behavior.

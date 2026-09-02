@@ -47,6 +47,7 @@ const MOBILE_ROUTES: Array<{ method: 'get' | 'post' | 'patch'; path: string; not
   { method: 'post', path: '/auth/login', note: 'apps/mobile/src/api.ts:9' },
   { method: 'post', path: '/auth/logout', note: 'apps/mobile/src/api.ts:44' },
   { method: 'post', path: '/auth/refresh', note: 'apps/mobile/src/api.ts:66' },
+  { method: 'post', path: '/auth/forgot-password', note: 'ForgotPasswordScreen.tsx' },
   { method: 'get', path: '/auth/users', note: 'UsersScreen.tsx:36' },
   { method: 'get', path: '/auth/users/search?q=test', note: 'SearchScreen.tsx:21' },
   { method: 'get', path: '/auth/users?roles=TEACHER,ADMIN', note: 'StaffAttendanceScreen.tsx:180' },
