@@ -1,6 +1,9 @@
 import { Prisma, PrismaClient, SchoolPluginRequestDecisionType, SchoolPluginRequestStatus, SchoolPluginRequestType } from '@prisma/client';
 import { z } from 'zod';
 import { HttpError } from './http-error';
+import { MarketplaceConfig } from './config';
+import { CommerceService } from './commerce.service';
+import { issueEntitlement } from './entitlement';
 import { PlatformActionContext } from './platform-context';
 import { cursorClause, maskEmail, pageInput, paginate } from './platform-read-support';
 
@@ -38,6 +41,8 @@ const customerResponseInput = z.object({
 
 const customerCancelInput = z.object({ reason: z.string().trim().min(3).max(1000) }).strict();
 
+const fulfillInput = decisionInput.extend({ currency: z.string().regex(/^[A-Z]{3}$/).optional() }).strict();
+
 const SLA_BUSINESS_DAYS: Record<SchoolPluginRequestType, number> = {
   FREE_APPROVAL: 2, PURCHASE_ASSISTANCE: 2, PRIVATE_PLUGIN_ACCESS: 3, TRIAL: 1, FEATURE_REQUEST: 2,
 };
@@ -56,7 +61,11 @@ function addBusinessDays(from: Date, days: number) {
 const TERMINAL = new Set<SchoolPluginRequestStatus>(['REJECTED', 'CANCELLED', 'ENTITLEMENT_ISSUED']);
 
 export class SchoolPluginRequestService {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly config?: MarketplaceConfig,
+    private readonly commerce?: CommerceService,
+  ) {}
 
   async create(accountId: string, value: unknown, now = new Date()) {
     const input = createInput.parse(value);
@@ -221,6 +230,106 @@ export class SchoolPluginRequestService {
     if (!input.publicMessage) throw new HttpError(400, 'A customer-visible rejection explanation is required');
     return this.transition(requestId, actorId, 'REJECTED', ['SUBMITTED', 'UNDER_REVIEW', 'NEEDS_INFORMATION'],
       { status: 'REJECTED', decidedAt: now }, input, context, now, undefined, input.publicMessage);
+  }
+
+  async fulfill(requestId: string, actorId: string, value: unknown, context: PlatformActionContext, now = new Date()) {
+    const input = fulfillInput.parse(value);
+    const request = await this.prisma.schoolPluginRequest.findUnique({
+      where: { id: requestId },
+      include: {
+        installation: { select: { id: true, installationId: true } },
+        plugin: { include: { prices: { where: { validFrom: { lte: now }, OR: [{ validUntil: null }, { validUntil: { gt: now } }] }, orderBy: [{ currency: 'asc' }, { amountMinor: 'asc' }] } } },
+      },
+    });
+    if (!request) throw new HttpError(404, 'School plugin request not found');
+    if (request.status === 'ENTITLEMENT_ISSUED') return request;
+    if (request.status !== 'APPROVED') throw new HttpError(409, `Request cannot be fulfilled from ${request.status}`);
+    if (request.type === 'FEATURE_REQUEST') throw new HttpError(409, 'A feature request is product feedback and cannot issue an entitlement');
+    if (!request.plugin) throw new HttpError(409, 'Request has no plugin to fulfil');
+    if (request.type === 'PURCHASE_ASSISTANCE') return this.createPurchaseOrder(request, actorId, input, context, now);
+    if ((request.type === 'FREE_APPROVAL' || request.type === 'PRIVATE_PLUGIN_ACCESS') && request.plugin.isPaid) {
+      throw new HttpError(409, 'A paid plugin requires purchase assistance and settled payment');
+    }
+    return this.issueRequestEntitlement(request, actorId, input, context, now);
+  }
+
+  private async createPurchaseOrder(
+    request: any, actorId: string, input: z.infer<typeof fulfillInput>, context: PlatformActionContext, now: Date,
+  ) {
+    if (request.orderId) return request;
+    if (!this.commerce) throw new HttpError(503, 'Commerce fulfilment is not configured');
+    const price = request.plugin.prices.find((candidate: { currency: string }) => !input.currency || candidate.currency === input.currency);
+    if (!price) throw new HttpError(409, input.currency ? `No active ${input.currency} price is available` : 'No active price is available');
+    const order = await this.commerce.createOrder({
+      accountId: request.accountId, installationId: request.installationId, currency: price.currency,
+      priceIds: [price.id], idempotencyKey: `plugin-request:${request.id}`,
+    }, now);
+    return this.prisma.$transaction(async tx => {
+      const current = await tx.schoolPluginRequest.findUnique({ where: { id: request.id } });
+      if (!current) throw new HttpError(404, 'School plugin request not found');
+      if (current.orderId) return current;
+      if (current.status !== 'APPROVED') throw new HttpError(409, `Request cannot create an order from ${current.status}`);
+      const replay = await tx.schoolPluginRequestDecision.findUnique({ where: { idempotencyKey: input.idempotencyKey } });
+      if (replay && (replay.requestId !== request.id || replay.decision !== 'ORDER_CREATED')) throw new HttpError(409, 'Idempotency key was already used for another action');
+      const updated = await tx.schoolPluginRequest.update({ where: { id: request.id }, data: { orderId: order.id } });
+      if (!replay) await tx.schoolPluginRequestDecision.create({ data: {
+        requestId: request.id, operatorId: actorId, decision: 'ORDER_CREATED', publicMessage: input.publicMessage,
+        internalReason: input.internalReason, conditions: { orderId: order.id, currency: price.currency, amountMinor: price.amountMinor },
+        idempotencyKey: input.idempotencyKey, createdAt: now,
+      } });
+      await tx.platformAuditEvent.create({ data: {
+        operatorId: actorId, action: 'school_plugin_request_order_created', targetType: 'SchoolPluginRequest', targetId: request.id,
+        reason: input.internalReason, correlationId: context.correlationId, ip: context.ip, userAgent: context.userAgent,
+        metadata: { orderId: order.id, currency: price.currency, amountMinor: price.amountMinor },
+      } });
+      return updated;
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
+  private async issueRequestEntitlement(
+    request: any, actorId: string, input: z.infer<typeof fulfillInput>, context: PlatformActionContext, now: Date,
+  ) {
+    if (!this.config?.entitlementPrivateKey || !this.config.entitlementKeyId) throw new HttpError(503, 'Entitlement signing is not configured');
+    const validityDays = request.type === 'TRIAL' ? 30 : 3650;
+    const expiresAt = new Date(now.getTime() + validityDays * 86_400_000);
+    const offlineUntil = new Date(now.getTime() + Math.min(30, validityDays) * 86_400_000);
+    return this.prisma.$transaction(async tx => {
+      const current = await tx.schoolPluginRequest.findUnique({ where: { id: request.id } });
+      if (!current) throw new HttpError(404, 'School plugin request not found');
+      if (current.status === 'ENTITLEMENT_ISSUED') return current;
+      if (current.status !== 'APPROVED') throw new HttpError(409, `Request cannot issue an entitlement from ${current.status}`);
+      const replay = await tx.schoolPluginRequestDecision.findUnique({ where: { idempotencyKey: input.idempotencyKey } });
+      if (replay && (replay.requestId !== request.id || replay.decision !== 'ENTITLEMENT_ISSUED')) throw new HttpError(409, 'Idempotency key was already used for another action');
+      const existing = await tx.installationEntitlement.findUnique({ where: { installationId_pluginId: { installationId: request.installationId, pluginId: request.pluginId } } });
+      let entitlement = existing;
+      if (!entitlement) {
+        const token = issueEntitlement({
+          installationId: request.installation.installationId, customerId: request.accountId, productId: request.pluginId,
+          licensedMajorRange: '^1.0.0', notBefore: now.toISOString(), expiresAt: expiresAt.toISOString(),
+          updatesThrough: expiresAt.toISOString(), offlineRecheckAfter: offlineUntil.toISOString(), features: [], issuer: this.config!.publicBaseUrl,
+        }, this.config!.entitlementPrivateKey, this.config!.entitlementKeyId, now);
+        entitlement = await tx.installationEntitlement.create({ data: {
+          installationId: request.installationId, pluginId: request.pluginId, tokenId: token.payload.tokenId,
+          expiresAt, updatesThrough: expiresAt, offlineUntil, signedToken: token as unknown as Prisma.InputJsonValue,
+        } });
+      } else if (entitlement.status !== 'ACTIVE') {
+        throw new HttpError(409, 'An existing non-active entitlement requires a separately reviewed correction');
+      }
+      const updated = await tx.schoolPluginRequest.update({
+        where: { id: request.id }, data: { status: 'ENTITLEMENT_ISSUED', entitlementId: entitlement.id, fulfilledAt: now },
+      });
+      if (!replay) await tx.schoolPluginRequestDecision.create({ data: {
+        requestId: request.id, operatorId: actorId, decision: 'ENTITLEMENT_ISSUED', publicMessage: input.publicMessage,
+        internalReason: input.internalReason, conditions: { entitlementId: entitlement.id, validityDays, localInstallationRequired: true },
+        idempotencyKey: input.idempotencyKey, createdAt: now,
+      } });
+      await tx.platformAuditEvent.create({ data: {
+        operatorId: actorId, action: 'school_plugin_request_entitlement_issued', targetType: 'SchoolPluginRequest', targetId: request.id,
+        reason: input.internalReason, correlationId: context.correlationId, ip: context.ip, userAgent: context.userAgent,
+        metadata: { entitlementId: entitlement.id, validityDays },
+      } });
+      return updated;
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 
   private async transition(

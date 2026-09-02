@@ -20,7 +20,7 @@ const sessionGet = new Set([
   'orders', 'entitlements', 'advisories', 'audit-events', 'operations/health', 'exports', 'plugin-requests',
 ]);
 const sessionGetDetail = /^(operators|customers|installations|publishers|plugins|submissions|orders|plugin-requests)\/[0-9a-zA-Z._-]+$/;
-const sessionPostPattern = /^plugin-requests\/[0-9a-f-]{36}\/(assign|start-review|request-information|approve|reject)$/;
+const sessionPostPattern = /^plugin-requests\/[0-9a-f-]{36}\/(assign|start-review|request-information|approve|reject|fulfill)$/;
 
 function marketplaceUrl(): string {
   const value = process.env.MARKETPLACE_API_URL;

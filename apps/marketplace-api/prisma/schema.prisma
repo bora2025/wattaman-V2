@@ -38,6 +38,7 @@ enum SchoolPluginRequestDecisionType {
   APPROVED
   REJECTED
   CANCELLED
+  ORDER_CREATED
   ENTITLEMENT_ISSUED
 }
 
@@ -542,6 +543,7 @@ model InstallationEntitlement {
   plugin         MarketplacePlugin        @relation(fields: [pluginId], references: [id])
   orderLineId    String?                  @unique
   orderLine      MarketplaceOrderLine?    @relation(fields: [orderLineId], references: [id])
+  pluginRequest  SchoolPluginRequest?
 
   @@unique([installationId, pluginId])
   @@index([status, expiresAt])
@@ -574,6 +576,7 @@ model MarketplaceOrder {
   lines          MarketplaceOrderLine[]
   payments       MarketplacePayment[]
   refunds        MarketplaceRefund[]
+  pluginRequest  SchoolPluginRequest?
 
   @@index([installationId, createdAt])
 }
@@ -814,6 +817,8 @@ model SchoolPluginRequest {
   featureDescription String?
   slaDueAt           DateTime
   assignedOperatorId String?
+  orderId            String?                       @unique
+  entitlementId      String?                       @unique
   submittedAt        DateTime                      @default(now())
   decidedAt          DateTime?
   fulfilledAt        DateTime?
@@ -824,6 +829,8 @@ model SchoolPluginRequest {
   installation       InstallationRegistration      @relation(fields: [installationId], references: [id], onDelete: Restrict)
   plugin             MarketplacePlugin?            @relation(fields: [pluginId], references: [id], onDelete: Restrict)
   assignedOperator   PlatformOperator?             @relation(fields: [assignedOperatorId], references: [id], onDelete: SetNull)
+  order              MarketplaceOrder?             @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  entitlement        InstallationEntitlement?      @relation(fields: [entitlementId], references: [id], onDelete: Restrict)
   decisions          SchoolPluginRequestDecision[]
   messages           SchoolPluginRequestMessage[]
 

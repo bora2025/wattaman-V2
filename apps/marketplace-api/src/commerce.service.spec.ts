@@ -60,6 +60,8 @@ describe('marketplace commerce invariants', () => {
         update: jest.fn().mockResolvedValue({}),
       },
       installationEntitlement: { upsert: jest.fn().mockResolvedValue({ id: 'entitlement-1' }) },
+      schoolPluginRequest: { findUnique: jest.fn().mockResolvedValue(null), update: jest.fn() },
+      platformAuditEvent: { create: jest.fn() },
     };
     const service = new CommerceService(prismaWith(tx), config());
     const result = await service.settleManualPayment({ orderId: ids.order, providerReference: 'invoice-2026-001' }, new Date('2026-08-28Z'));
@@ -67,6 +69,31 @@ describe('marketplace commerce invariants', () => {
     const token = tx.installationEntitlement.upsert.mock.calls[0][0].create.signedToken;
     expect(token.payload).toMatchObject({ installationId: 'school-public-id', productId: 'official.attendance', licensedMajorRange: '^1.0.0' });
     expect(tx.marketplaceOrder.update).toHaveBeenCalledWith({ where: { id: ids.order }, data: { status: 'PAID' } });
+  });
+
+  it('closes a linked purchase-assistance request only after verified payment issues its entitlement', async () => {
+    const line = {
+      id: 'line-1', pluginId: 'official.attendance', unitPriceMinor: 2500, entitlement: null,
+      price: { amountMinor: 2500, licensedMajor: 1, licenseDays: 365, updatesDays: 180 },
+    };
+    const tx = {
+      marketplacePayment: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'payment-1', orderId: ids.order, status: 'SUCCEEDED', amountMinor: 2500 }) },
+      marketplaceOrder: {
+        findUnique: jest.fn().mockResolvedValue({ id: ids.order, accountId: ids.account, installationId: ids.installation, status: 'PENDING', totalMinor: 2500, account: {}, installation: { installationId: 'school-public-id' }, lines: [line] }),
+        update: jest.fn().mockResolvedValue({}),
+      },
+      installationEntitlement: { upsert: jest.fn().mockResolvedValue({ id: 'entitlement-1' }) },
+      schoolPluginRequest: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'request-1', status: 'APPROVED' }),
+        update: jest.fn().mockResolvedValue({}),
+      },
+      platformAuditEvent: { create: jest.fn().mockResolvedValue({}) },
+    };
+    await new CommerceService(prismaWith(tx), config()).settleManualPayment({ orderId: ids.order, providerReference: 'invoice-request-1' }, new Date('2026-09-02Z'));
+    expect(tx.schoolPluginRequest.update).toHaveBeenCalledWith({
+      where: { id: 'request-1' }, data: { status: 'ENTITLEMENT_ISSUED', entitlementId: 'entitlement-1', fulfilledAt: new Date('2026-09-02Z') },
+    });
+    expect(tx.platformAuditEvent.create).toHaveBeenCalledWith({ data: expect.objectContaining({ action: 'school_plugin_request_entitlement_issued_after_payment' }) });
   });
 
   it('does not record payment when immutable line totals disagree', async () => {

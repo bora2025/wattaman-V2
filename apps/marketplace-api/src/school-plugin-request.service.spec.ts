@@ -1,4 +1,5 @@
 import { SchoolPluginRequestService } from './school-plugin-request.service';
+import { generateKeyPairSync } from 'node:crypto';
 
 describe('SchoolPluginRequestService', () => {
   it('creates a school-owned request with the approved business-day SLA', async () => {
@@ -109,5 +110,54 @@ describe('SchoolPluginRequestService', () => {
     tx.schoolPluginRequest.findUnique.mockResolvedValue({ id: 'request-1', accountId: 'account-1', status: 'CANCELLED' });
     await expect(new SchoolPluginRequestService(prisma).customerCancel('account-1', 'request-1', { reason: 'Retry cancellation.' })).resolves.toMatchObject({ status: 'CANCELLED' });
     expect(tx.marketplaceAuditEvent.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('issues a signed 30-day trial entitlement and preserves local-install consent', async () => {
+    const request = {
+      id: 'request-1', accountId: 'account-1', installationId: 'registration-1', pluginId: 'plugin-1',
+      status: 'APPROVED', type: 'TRIAL', orderId: null,
+      installation: { id: 'registration-1', installationId: '11111111-1111-4111-8111-111111111111' },
+      plugin: { id: 'plugin-1', isPaid: true, prices: [] },
+    };
+    const entitlement = { id: 'entitlement-1', status: 'ACTIVE' };
+    const tx = {
+      schoolPluginRequest: { findUnique: jest.fn().mockResolvedValue(request), update: jest.fn().mockResolvedValue({ ...request, status: 'ENTITLEMENT_ISSUED', entitlementId: entitlement.id }) },
+      schoolPluginRequestDecision: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({}) },
+      installationEntitlement: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue(entitlement) },
+      platformAuditEvent: { create: jest.fn().mockResolvedValue({}) },
+    };
+    const prisma = { schoolPluginRequest: { findUnique: jest.fn().mockResolvedValue(request) }, $transaction: jest.fn((work: any) => work(tx)) } as any;
+    const privateKey = generateKeyPairSync('ed25519').privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
+    const service = new SchoolPluginRequestService(prisma, { publicBaseUrl: 'https://marketplace.example', entitlementPrivateKey: privateKey, entitlementKeyId: 'entitlement-1' } as any, {} as any);
+    const now = new Date('2026-09-02T00:00:00.000Z');
+    await expect(service.fulfill('request-1', 'operator-1', {
+      idempotencyKey: 'fulfill-request-0001', internalReason: 'Trial eligibility verified.', publicMessage: 'Your trial is ready.',
+    }, { correlationId: 'corr-fulfill' }, now)).resolves.toMatchObject({ status: 'ENTITLEMENT_ISSUED' });
+    const created = tx.installationEntitlement.create.mock.calls[0][0].data;
+    expect(created.expiresAt).toEqual(new Date('2026-10-02T00:00:00.000Z'));
+    expect(created.signedToken.payload.installationId).toBe(request.installation.installationId);
+    expect(tx.schoolPluginRequestDecision.create).toHaveBeenCalledWith({ data: expect.objectContaining({ conditions: expect.objectContaining({ validityDays: 30, localInstallationRequired: true }) }) });
+  });
+
+  it('creates an immutable purchase order but does not issue entitlement before settlement', async () => {
+    const request = {
+      id: 'request-2', accountId: 'account-1', installationId: 'registration-1', pluginId: 'plugin-1',
+      status: 'APPROVED', type: 'PURCHASE_ASSISTANCE', orderId: null,
+      installation: { id: 'registration-1', installationId: '11111111-1111-4111-8111-111111111111' },
+      plugin: { id: 'plugin-1', isPaid: true, prices: [{ id: 'price-1', currency: 'USD', amountMinor: 2500 }] },
+    };
+    const tx = {
+      schoolPluginRequest: { findUnique: jest.fn().mockResolvedValue(request), update: jest.fn().mockResolvedValue({ ...request, orderId: 'order-1' }) },
+      schoolPluginRequestDecision: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({}) },
+      platformAuditEvent: { create: jest.fn().mockResolvedValue({}) },
+    };
+    const commerce = { createOrder: jest.fn().mockResolvedValue({ id: 'order-1', status: 'PENDING' }) };
+    const prisma = { schoolPluginRequest: { findUnique: jest.fn().mockResolvedValue(request) }, $transaction: jest.fn((work: any) => work(tx)) } as any;
+    await new SchoolPluginRequestService(prisma, {} as any, commerce as any).fulfill('request-2', 'operator-1', {
+      idempotencyKey: 'purchase-request-0001', internalReason: 'Purchase eligibility verified.', currency: 'USD',
+    }, { correlationId: 'corr-order' });
+    expect(commerce.createOrder).toHaveBeenCalledWith(expect.objectContaining({ idempotencyKey: 'plugin-request:request-2', priceIds: ['price-1'] }), expect.any(Date));
+    expect(tx.schoolPluginRequest.update).toHaveBeenCalledWith({ where: { id: 'request-2' }, data: { orderId: 'order-1' } });
+    expect(tx).not.toHaveProperty('installationEntitlement');
   });
 });

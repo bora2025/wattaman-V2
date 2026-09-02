@@ -123,6 +123,8 @@ describe('authenticated payment webhooks', () => {
         update: jest.fn().mockResolvedValue({}),
       },
       installationEntitlement: { upsert: jest.fn().mockResolvedValue({ id: 'entitlement-1' }) },
+      schoolPluginRequest: { findUnique: jest.fn().mockResolvedValue(null), update: jest.fn() },
+      platformAuditEvent: { create: jest.fn() },
     };
     const pair = generateKeyPairSync('ed25519');
     const key = pair.privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();

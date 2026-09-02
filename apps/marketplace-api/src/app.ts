@@ -79,7 +79,7 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   const platformCommerce = new PlatformCommerceReadService(prisma);
   const platformExport = new PlatformExportService(prisma);
   const platformOperators = new PlatformOperatorReadService(prisma);
-  const schoolPluginRequests = new SchoolPluginRequestService(prisma);
+  const schoolPluginRequests = new SchoolPluginRequestService(prisma, config, commerce);
   const upload = multer({ storage: multer.memoryStorage(), limits: { files: 1, fileSize: config.maxArtifactBytes, fields: 10 } });
   const metrics = createMetricsRegistry(prisma);
   app.disable('x-powered-by');
@@ -320,6 +320,9 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   });
   app.post('/platform/v1/plugin-requests/:requestId/reject', requirePlatformOperator, P('plugin_requests.review'), async (request: PlatformRequest, response, next) => {
     try { response.json(await schoolPluginRequests.reject(String(request.params.requestId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/plugin-requests/:requestId/fulfill', requirePlatformOperator, P('schools.entitlements.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await schoolPluginRequests.fulfill(String(request.params.requestId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
   });
   app.get('/platform/v1/operators/:operatorId', requirePlatformOperator, P('operators.read'), async (request, response, next) => {
     try { response.json(await platformOperators.operator(String(request.params.operatorId))); } catch (error) { next(error); }

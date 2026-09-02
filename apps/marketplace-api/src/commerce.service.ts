@@ -110,6 +110,20 @@ export class CommerceService {
         entitlementIds.push(entitlement.id);
       }
       await tx.marketplaceOrder.update({ where: { id: order.id }, data: { status: 'PAID' } });
+      const linkedRequest = await tx.schoolPluginRequest.findUnique({ where: { orderId: order.id } });
+      if (linkedRequest) {
+        if (linkedRequest.status !== 'APPROVED') throw new HttpError(409, `Linked plugin request cannot be fulfilled from ${linkedRequest.status}`);
+        if (entitlementIds.length !== 1) throw new HttpError(409, 'A school plugin request order must fulfil exactly one entitlement');
+        await tx.schoolPluginRequest.update({
+          where: { id: linkedRequest.id },
+          data: { status: 'ENTITLEMENT_ISSUED', entitlementId: entitlementIds[0], fulfilledAt: now },
+        });
+        await tx.platformAuditEvent.create({ data: {
+          action: 'school_plugin_request_entitlement_issued_after_payment', targetType: 'SchoolPluginRequest',
+          targetId: linkedRequest.id, reason: 'Verified payment settlement',
+          metadata: { orderId: order.id, paymentId: payment.id, entitlementId: entitlementIds[0] },
+        } });
+      }
       return { orderId: order.id, status: 'PAID' as const, paymentId: payment.id, entitlementIds };
   }
 

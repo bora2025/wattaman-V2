@@ -207,9 +207,13 @@ for this — not implied by the feature list being complete.
 - [x] **PA3-6** (FE) Customer marketplace request surface — linked schools can submit all five
       request types and track their customer-safe status timeline; UI explicitly preserves local
       school installation control
-- [ ] **PA3-7** (BE) Connect approved free/trial/private requests to idempotent entitlement
-      issuance and purchase assistance to order/manual-invoice state; enforce dual approval for
-      paid exceptions and grants longer than 90 days
+- [~] **PA3-7** (BE) Fulfilment — approved free/private-free requests and 30-day trials issue
+      signed installation-bound entitlements idempotently; purchase assistance creates one
+      immutable pending order and verified manual/webhook settlement atomically issues the
+      entitlement and closes the linked request. Paid plugins cannot use the free/private path,
+      feature requests cannot issue licences, existing terminal entitlements fail closed, and
+      every token records that local installation remains required. The separately modeled
+      two-person exception path for unpaid paid plugins or grants longer than 90 days remains
 - [ ] **PA3-8** (QA/SRE) Live PostgreSQL migration/concurrency/retry drill, browser end-to-end for
       request/approval/rejection/information/payment/entitlement/local-install paths, notifications,
       accessibility, and hosted Railway evidence
