@@ -7,3 +7,13 @@ node_modules
 Dockerfile
 .dockerignore
 npm-debug.log*
+
+# Browser E2E artefacts (scripts/e2e-stack.mjs). .e2e-fixtures.json holds throwaway operator
+# passwords and TOTP secrets and must never reach a build layer.
+e2e
+scripts
+playwright.config.ts
+test-results
+playwright-report
+.e2e-artifacts
+.e2e-fixtures.json

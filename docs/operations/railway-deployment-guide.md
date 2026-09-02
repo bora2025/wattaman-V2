@@ -295,6 +295,60 @@ This requires the school's `api` to already have `MARKETPLACE_URL` and
 `UPDATE_REPOSITORY_PUBLIC_KEY` set correctly (Part 2, step 4) — without those, linking fails with
 "Marketplace integration is not configured."
 
+## Part 4 — Deploying the Platform Admin
+
+The operator control plane is deployed **with the marketplace, never with a school** — its own
+isolated project (`Wattanam Platform Admin Staging` for non-production), its own Postgres, its own
+signing keys, and only the web service public.
+
+Two services, and they deploy differently, because their Dockerfiles expect different build
+contexts. Getting this wrong is the "wrong `railway.json`" trap in the table below, and it will
+build cleanly and then crash on someone else's environment variables.
+
+```bash
+# marketplace-api: its Dockerfile COPYs `apps/marketplace-api/...`, so it needs repo-root context.
+# The service carries RAILWAY_DOCKERFILE_PATH, which overrides the root railway.json.
+cd <repo root>
+railway up --service marketplace-api
+
+# platform-admin-web: its Dockerfile is self-contained (COPYs from its own directory), so the
+# archive root must be that directory. Run from the repo root and pass the path explicitly —
+# `cd apps/platform-admin && railway up` does NOT work: the CLI uploads the project directory
+# regardless, picks up the repo-root railway.json, and deploys the school backend instead.
+railway up ./apps/platform-admin --path-as-root --service platform-admin-web
+```
+
+Verify both, in this order:
+
+```bash
+curl -s https://<marketplace-api-domain>/health/live                       # {"status":"alive"}
+curl -s https://<marketplace-api-domain>/platform/v1/openapi.json | head   # contract is served
+curl -s -o /dev/null -w '%s
+' https://<platform-admin-domain>/login      # 200
+```
+
+### Creating the first operator
+
+There is no HTTP endpoint that creates an operator, by design, and a freshly migrated database has
+an empty role/permission catalog as well as no accounts. Both are handled by one script, piped into
+the running API container over SSH:
+
+```bash
+cd apps/marketplace-api
+PAYLOAD=$(printf '%s' '{"email":"you@example.com","name":"Your Name","password":"<12+ chars>"}' | base64 -w0)
+MSYS_NO_PATHCONV=1 railway ssh --service marketplace-api -i ~/.ssh/<key>   env PLATFORM_OPERATOR_B64=$PAYLOAD node < scripts/create-platform-operator.js
+```
+
+`MSYS_NO_PATHCONV=1` is needed on Git Bash for the same reason as `railway volume add`. Inputs go
+in base64 because `railway ssh` joins its command arguments and re-splits them on whitespace, which
+corrupts any quoted value containing a space. The script seeds the RBAC catalog idempotently, then
+creates the operator; it refuses to overwrite an existing email.
+
+The new operator has no second factor: their first sign-in returns an enrollment-only session that
+can reach nothing but the MFA routes. Note that **there is no password reset or administrator
+override** for an operator — rotation is self-service via the "Your account" screen, and a lost
+password means creating a new operator and suspending the old one.
+
 ## Troubleshooting Reference
 
 Issues hit and resolved during a real deployment, kept here so the next person doesn't rediscover
