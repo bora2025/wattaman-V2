@@ -36,9 +36,9 @@ export default function InstallationsPage() {
               <div className="font-mono text-xs text-slate-500">{row.installationId}</div>
             </div>
           ) },
-          { header: 'Account', render: (row) => row.account ? row.account.emailMasked : <span className="text-slate-400">unlinked</span> },
+          { header: 'Account', render: (row) => row.account ? row.account.emailMasked : <span className="text-slate-500">unlinked</span> },
           { header: 'Marketplace link', render: (row) => {
-            if (!row.grant) return <span className="text-slate-400">none</span>;
+            if (!row.grant) return <span className="text-slate-500">none</span>;
             if (row.grant.revokedAt) return <span className="text-amber-700">revoked</span>;
             return <span className="text-emerald-700">active</span>;
           } },

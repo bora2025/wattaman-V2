@@ -72,7 +72,7 @@ export default function OperatorShell({ children }: { children: React.ReactNode 
           <div className="text-sm">
             <span className="font-medium">{profile.operator.displayName}</span>
             <span className="ml-2 text-slate-500">{profile.operator.email}</span>
-            <span className="ml-2 text-xs text-slate-400">
+            <span className="ml-2 text-xs text-slate-500">
               {profile.roles.map((role) => role.displayName).join(', ') || 'no roles'}
             </span>
           </div>

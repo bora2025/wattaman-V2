@@ -4,19 +4,19 @@ CREATE TYPE "SchoolPluginRequestDecisionType" AS ENUM ('ASSIGNED', 'STARTED_REVI
 CREATE TYPE "SchoolPluginRequestMessageVisibility" AS ENUM ('CUSTOMER', 'INTERNAL');
 
 CREATE TABLE "SchoolPluginRequest" (
-  "id" UUID NOT NULL, "accountId" UUID NOT NULL, "installationId" UUID NOT NULL,
+  "id" TEXT NOT NULL, "accountId" TEXT NOT NULL, "installationId" TEXT NOT NULL,
   "pluginId" TEXT, "type" "SchoolPluginRequestType" NOT NULL,
   "status" "SchoolPluginRequestStatus" NOT NULL DEFAULT 'SUBMITTED',
   "justification" TEXT NOT NULL, "intendedUsers" INTEGER, "desiredAt" TIMESTAMP(3),
   "contactEmail" TEXT NOT NULL, "featureDescription" TEXT, "slaDueAt" TIMESTAMP(3) NOT NULL,
-  "assignedOperatorId" UUID, "submittedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "assignedOperatorId" TEXT, "submittedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "decidedAt" TIMESTAMP(3), "fulfilledAt" TIMESTAMP(3), "cancelledAt" TIMESTAMP(3),
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL,
   CONSTRAINT "SchoolPluginRequest_pkey" PRIMARY KEY ("id")
 );
 
 CREATE TABLE "SchoolPluginRequestDecision" (
-  "id" UUID NOT NULL, "requestId" UUID NOT NULL, "operatorId" UUID NOT NULL,
+  "id" TEXT NOT NULL, "requestId" TEXT NOT NULL, "operatorId" TEXT NOT NULL,
   "decision" "SchoolPluginRequestDecisionType" NOT NULL, "publicMessage" TEXT,
   "internalReason" TEXT, "conditions" JSONB, "idempotencyKey" TEXT NOT NULL,
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -24,9 +24,9 @@ CREATE TABLE "SchoolPluginRequestDecision" (
 );
 
 CREATE TABLE "SchoolPluginRequestMessage" (
-  "id" UUID NOT NULL, "requestId" UUID NOT NULL,
+  "id" TEXT NOT NULL, "requestId" TEXT NOT NULL,
   "visibility" "SchoolPluginRequestMessageVisibility" NOT NULL, "body" TEXT NOT NULL,
-  "accountAuthorId" UUID, "operatorAuthorId" UUID, "idempotencyKey" TEXT,
+  "accountAuthorId" TEXT, "operatorAuthorId" TEXT, "idempotencyKey" TEXT,
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "SchoolPluginRequestMessage_pkey" PRIMARY KEY ("id"),
   CONSTRAINT "SchoolPluginRequestMessage_exactly_one_author" CHECK (

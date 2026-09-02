@@ -1,8 +1,8 @@
 ALTER TYPE "SchoolPluginRequestDecisionType" ADD VALUE 'ORDER_CREATED';
 
 ALTER TABLE "SchoolPluginRequest"
-  ADD COLUMN "orderId" UUID,
-  ADD COLUMN "entitlementId" UUID;
+  ADD COLUMN "orderId" TEXT,
+  ADD COLUMN "entitlementId" TEXT;
 
 CREATE UNIQUE INDEX "SchoolPluginRequest_orderId_key" ON "SchoolPluginRequest"("orderId");
 CREATE UNIQUE INDEX "SchoolPluginRequest_entitlementId_key" ON "SchoolPluginRequest"("entitlementId");

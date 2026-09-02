@@ -30,7 +30,7 @@ export default function AuditPage() {
               {new Date(row.createdAt).toLocaleString()}
             </time>
           ) },
-          { header: 'Actor', render: (row) => row.operator ? row.operator.email : <span className="text-slate-400">system</span> },
+          { header: 'Actor', render: (row) => row.operator ? row.operator.email : <span className="text-slate-500">system</span> },
           { header: 'Action', render: (row) => <span className="font-mono text-xs">{row.action}</span> },
           { header: 'Target', render: (row) => row.targetType ? `${row.targetType}${row.targetId ? ` · ${row.targetId}` : ''}` : '—' },
           { header: 'Outcome', render: (row) => (

@@ -1,3 +1,10 @@
 node_modules
 .next
 next-env.d.ts
+
+# Browser E2E run artefacts (scripts/e2e-stack.mjs); .e2e-fixtures.json holds throwaway
+# operator passwords and TOTP secrets and must never be committed.
+test-results
+playwright-report
+.e2e-artifacts
+.e2e-fixtures.json

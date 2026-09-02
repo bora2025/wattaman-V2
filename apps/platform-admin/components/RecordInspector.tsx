@@ -8,7 +8,7 @@ function label(value: string) {
 }
 
 function Scalar({ value }: { value: unknown }) {
-  if (value === null || value === undefined || value === '') return <span className="text-slate-400">—</span>;
+  if (value === null || value === undefined || value === '') return <span className="text-slate-500">—</span>;
   if (typeof value === 'boolean') return <span>{value ? 'Yes' : 'No'}</span>;
   return <span className="break-words">{String(value)}</span>;
 }
@@ -25,7 +25,7 @@ function ObjectBlock({ value }: { value: Record<string, unknown> }) {
 }
 
 function ArrayBlock({ values }: { values: unknown[] }) {
-  if (!values.length) return <span className="text-slate-400">None</span>;
+  if (!values.length) return <span className="text-slate-500">None</span>;
   return <div className="space-y-2">{values.map((item, index) => <div key={index} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
     {item && typeof item === 'object' ? <ObjectBlock value={item as Record<string, unknown>} /> : <Scalar value={item} />}
   </div>)}</div>;
