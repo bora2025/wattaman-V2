@@ -98,6 +98,17 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
     response.send(await metrics.registry.metrics());
   });
 
+  app.get('/', (_request, response) => response.json({
+    service: 'wattanam-marketplace-api',
+    version: '0.1.0',
+    status: 'online',
+    message: 'Wattanam Marketplace API is running. This service provides JSON APIs, not a browser storefront.',
+    endpoints: {
+      live: '/health/live', ready: '/health/ready', catalog: '/v1/catalog',
+      repositoryIndex: '/v1/index', repositoryKey: '/v1/repository-key',
+      platformAdminOpenApi: '/platform/v1/openapi.json',
+    },
+  }));
   app.get('/health/live', (_request, response) => response.json({ status: 'alive' }));
   app.get('/health/ready', async (_request, response, next) => { try { response.json(await repository.health()); } catch (error) { next(error); } });
   app.get('/v1/repository-key', (_request, response) => response.json(repository.keyDocument()));
