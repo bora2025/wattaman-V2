@@ -24,13 +24,28 @@ export class InstallationRegistrationService {
     };
   }
 
-  async register(accountId: string, label?: string) {
+  /**
+   * `enrollmentToken` is the one-time secret a platform operator minted for this school before it
+   * was deployed. It is optional: a school that has no token (a self-hosted installation, or any
+   * of the schools that registered before the customer directory existed) registers exactly as it
+   * always did. Passing one binds this installation to that customer record on the marketplace
+   * side, which is what lets the operator console show a named school rather than a bare UUID.
+   *
+   * Deliberately not persisted here. It is single-use and is spent the moment this call succeeds,
+   * so keeping a copy in the school's database would only create a secret with no remaining
+   * purpose.
+   */
+  async register(accountId: string, label?: string, enrollmentToken?: string) {
     const config = this.requireConfig();
     const installationId = await this.installationId();
     const { publicKeyPem } = await this.keys.ensureKeyPair();
     const challenge = await this.requestChallenge(config, installationId, 'register');
     const signature = await this.keys.sign({ installationId, challengeId: challenge.challengeId, nonce: challenge.nonce, purpose: 'register' });
-    return this.postJson(config, '/v1/installations/register', { accountId, installationId, label, publicKeyPem, challengeId: challenge.challengeId, signature });
+    const token = enrollmentToken?.trim();
+    return this.postJson(config, '/v1/installations/register', {
+      accountId, installationId, label, publicKeyPem, challengeId: challenge.challengeId, signature,
+      ...(token ? { enrollmentToken: token } : {}),
+    });
   }
 
   async rotateKey() {

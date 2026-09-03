@@ -3,6 +3,7 @@ import { createHash, createPublicKey, randomBytes, verify } from 'node:crypto';
 import { z } from 'zod';
 import { MarketplaceConfig } from './config';
 import { HttpError } from './http-error';
+import { hashToken } from './identity-crypto';
 import { canonicalJson } from './signing';
 
 const CHALLENGE_LIFETIME_MS = 5 * 60 * 1000;
@@ -19,6 +20,16 @@ const registerInput = z.object({
   publicKeyPem: z.string().includes('PUBLIC KEY'),
   challengeId: z.string().uuid(),
   signature: z.string().base64(),
+  /**
+   * Optional so every school that registered before the customer directory existed keeps working
+   * unchanged. When present, it is the one-time secret an operator minted against a named customer
+   * school, and redeeming it binds this installation to that school.
+   *
+   * It does not make `accountId` trustworthy — that value is still whatever the caller sent. What
+   * it adds is provenance for the *school*: a registration carrying a token was authorised by a
+   * named operator against a named customer, which is more than the account binding has ever had.
+   */
+  enrollmentToken: z.string().trim().min(16).max(200).optional(),
 }).strict();
 
 const rotateInput = z.object({
@@ -85,8 +96,21 @@ export class InstallationRegistrationService {
         if ((error as { code?: string }).code === 'P2002') throw new HttpError(409, 'This public key is already registered for this installation');
         throw error;
       }
-      await this.audit(tx, { action: 'installation_registered', success: true, metadata: { installationId: input.installationId, accountId: input.accountId, keyFingerprint: fingerprint } });
-      return { installationId: input.installationId, accountId: input.accountId, keyFingerprint: fingerprint, registeredAt: now };
+
+      // Redeemed only after the signature verifies, so a forged or malformed attempt cannot burn a
+      // customer's one-time token on its way to being rejected.
+      const school = input.enrollmentToken
+        ? await this.redeemEnrollmentToken(tx, { token: input.enrollmentToken, registrationId: registration.id, installationId: input.installationId, now })
+        : null;
+
+      await this.audit(tx, {
+        action: 'installation_registered', success: true,
+        metadata: { installationId: input.installationId, accountId: input.accountId, keyFingerprint: fingerprint, ...(school ? { customerSchoolId: school.id, customerSchoolSlug: school.slug } : {}) },
+      });
+      return {
+        installationId: input.installationId, accountId: input.accountId, keyFingerprint: fingerprint, registeredAt: now,
+        ...(school ? { school: { id: school.id, name: school.name, slug: school.slug } } : {}),
+      };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 
@@ -119,6 +143,43 @@ export class InstallationRegistrationService {
       await this.audit(tx, { action: 'installation_key_rotated', success: true, metadata: { installationId: input.installationId, keyFingerprint: newFingerprint } });
       return { installationId: input.installationId, keyFingerprint: newFingerprint, rotatedAt: now };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
+  /**
+   * Consumes a school enrollment token and binds this registration to the customer school it was
+   * minted for.
+   *
+   * Every failure below reports the same message. A caller holding a wrong token learns only that
+   * it did not work — not whether it expired, was already used, was revoked, or was never real —
+   * because distinguishing those turns the endpoint into an oracle for probing tokens.
+   */
+  private async redeemEnrollmentToken(
+    tx: Prisma.TransactionClient,
+    input: { token: string; registrationId: string; installationId: string; now: Date },
+  ) {
+    const invalid = () => new HttpError(400, 'Enrollment token is not valid');
+    const record = await tx.schoolEnrollmentToken.findUnique({
+      where: { tokenHash: hashToken(input.token) },
+      select: { id: true, customerSchoolId: true, consumedAt: true, revokedAt: true, expiresAt: true },
+    });
+    if (!record || record.consumedAt || record.revokedAt || record.expiresAt <= input.now) throw invalid();
+
+    const school = await tx.customerSchool.findUnique({
+      where: { id: record.customerSchoolId },
+      select: { id: true, name: true, slug: true, status: true, installation: { select: { id: true } } },
+    });
+    if (!school || school.status === 'TERMINATED' || school.status === 'SUSPENDED') throw invalid();
+    // A token is minted only when the school has no installation, but a second deployment could
+    // still race in behind the first; the unique column would reject it, less legibly than this.
+    if (school.installation && school.installation.id !== input.registrationId) throw invalid();
+
+    await tx.schoolEnrollmentToken.update({
+      where: { id: record.id },
+      data: { consumedAt: input.now, consumedByInstallationId: input.installationId },
+    });
+    await tx.installationRegistration.update({ where: { id: input.registrationId }, data: { customerSchoolId: school.id } });
+    await tx.customerSchool.update({ where: { id: school.id }, data: { status: 'ACTIVE' } });
+    return school;
   }
 
   private async consumeChallenge(tx: Prisma.TransactionClient, input: { challengeId: string; installationId: string; purpose: 'REGISTER' | 'ROTATE'; now: Date }) {

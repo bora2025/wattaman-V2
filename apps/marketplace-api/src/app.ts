@@ -22,6 +22,7 @@ import { PlatformDirectoryService } from './platform-directory.service';
 import { PlatformCommerceReadService } from './platform-commerce-read.service';
 import { PlatformExportService } from './platform-export.service';
 import { PlatformOperatorReadService } from './platform-operator-read.service';
+import { CustomerSchoolService } from './customer-school.service';
 import { platformOpenApi } from './platform-openapi';
 import { SchoolPluginRequestService } from './school-plugin-request.service';
 import { PlatformRequest, requirePlatformPermission, requirePlatformSession } from './platform-rbac';
@@ -79,6 +80,7 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   const platformCommerce = new PlatformCommerceReadService(prisma);
   const platformExport = new PlatformExportService(prisma);
   const platformOperators = new PlatformOperatorReadService(prisma);
+  const customerSchools = new CustomerSchoolService(prisma);
   const schoolPluginRequests = new SchoolPluginRequestService(prisma, config, commerce);
   const upload = multer({ storage: multer.memoryStorage(), limits: { files: 1, fileSize: config.maxArtifactBytes, fields: 10 } });
   const metrics = createMetricsRegistry(prisma);
@@ -357,6 +359,31 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   app.get('/platform/v1/customers/:accountId', requirePlatformOperator, P('customers.read'), async (request, response, next) => {
     try { response.json(await platformDirectory.customer(String(request.params.accountId))); } catch (error) { next(error); }
   });
+  // ── School directory (increment 1) ──────────────────────────────────────
+  // `installations` above stays the raw registration view. These routes are the customer-facing
+  // record an operator creates during a sale, which exists before any deployment does.
+  app.get('/platform/v1/schools', requirePlatformOperator, P('schools.read'), async (request, response, next) => {
+    try { response.json(await customerSchools.schools(request.query)); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/schools', requirePlatformOperator, P('schools.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.status(201).json(await customerSchools.create(request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+  app.get('/platform/v1/schools/:schoolId', requirePlatformOperator, P('schools.read'), async (request, response, next) => {
+    try { response.json(await customerSchools.school(String(request.params.schoolId))); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/schools/:schoolId/update', requirePlatformOperator, P('schools.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await customerSchools.update(String(request.params.schoolId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/schools/:schoolId/enrollment-tokens', requirePlatformOperator, P('schools.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.status(201).json(await customerSchools.mintEnrollmentToken(String(request.params.schoolId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/schools/:schoolId/enrollment-tokens/:tokenId/revoke', requirePlatformOperator, P('schools.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await customerSchools.revokeEnrollmentToken(String(request.params.schoolId), String(request.params.tokenId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/schools/:schoolId/adopt-installation', requirePlatformOperator, P('schools.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await customerSchools.adoptInstallation(String(request.params.schoolId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+
   app.get('/platform/v1/installations', requirePlatformOperator, P('schools.read'), async (request, response, next) => {
     try { response.json(await platformDirectory.installations(request.query)); } catch (error) { next(error); }
   });

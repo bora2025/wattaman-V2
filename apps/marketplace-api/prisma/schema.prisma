@@ -125,6 +125,17 @@ enum InstallationLinkStatus {
   DELIVERED
 }
 
+/// Where a customer school sits in its commercial life, tracked by the control plane only.
+/// `AWAITING_CLAIM` means an enrollment token has been minted but no installation has presented
+/// it yet, so the school exists as a sales record before any infrastructure does.
+enum SchoolLifecycleStatus {
+  PROSPECT
+  AWAITING_CLAIM
+  ACTIVE
+  SUSPENDED
+  TERMINATED
+}
+
 enum PublisherRole {
   OWNER
   ADMIN
@@ -455,21 +466,91 @@ model SecurityAdvisory {
   @@index([pluginId, publishedAt])
 }
 
+/// The control plane's directory record for a customer school -- the thing an operator creates in
+/// the console, which exists before any infrastructure does and outlives any single installation.
+///
+/// It is deliberately separate from `InstallationRegistration`: that model is the *cryptographic*
+/// identity a deployment proves with its Ed25519 key, and it is created by the school, not by us.
+/// A school that is rebuilt onto a fresh deployment gets a new installation and keeps this record.
+///
+/// Nothing here is school business data. ADR-0002 makes each school its own database, and the
+/// control plane has no route into one; these are commercial facts we already hold about a
+/// customer (who they are, what they bought, whether they are in good standing).
+model CustomerSchool {
+  id                  String                    @id @default(uuid())
+  name                String
+  /// Kebab-case, matching tools/provision-railway-school.js's validation so a later provisioning
+  /// increment can derive a Railway project name from the same value without a second rule.
+  slug                String                    @unique
+  status              SchoolLifecycleStatus     @default(PROSPECT)
+  region              String?
+  timezone            String?
+  locale              String?
+  currency            String?
+  plan                String?
+  contactName         String?
+  contactEmail        String?
+  /// Populated by hand today, and by the provisioner when B-006 lands.
+  railwayProjectId    String?
+  gatewayOrigin       String?
+  notes               String?
+  createdByOperatorId String?
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+  suspendedAt         DateTime?
+  suspendedReason     String?
+  terminatedAt        DateTime?
+  terminatedReason    String?
+  createdBy           PlatformOperator?         @relation("CustomerSchoolCreator", fields: [createdByOperatorId], references: [id], onDelete: SetNull)
+  enrollmentTokens    SchoolEnrollmentToken[]
+  installation        InstallationRegistration?
+
+  @@index([status, createdAt])
+}
+
+/// A one-time secret an operator hands to whoever deploys a school, which that deployment presents
+/// at registration to prove it is the school we meant.
+///
+/// Only the hash is stored, exactly as `MarketplaceSession` and the school core's
+/// `PasswordResetToken` do: a leaked control-plane database backup must not yield a usable token.
+model SchoolEnrollmentToken {
+  id                    String            @id @default(uuid())
+  customerSchoolId      String
+  tokenHash             String            @unique
+  createdByOperatorId   String?
+  createdAt             DateTime          @default(now())
+  expiresAt             DateTime
+  consumedAt            DateTime?
+  /// The installation UUID that redeemed it, kept even after consumption so a disputed
+  /// registration can be traced back to the token and the operator who minted it.
+  consumedByInstallationId String?
+  revokedAt             DateTime?
+  school                CustomerSchool    @relation(fields: [customerSchoolId], references: [id], onDelete: Cascade)
+  createdBy             PlatformOperator? @relation("SchoolEnrollmentTokenCreator", fields: [createdByOperatorId], references: [id], onDelete: SetNull)
+
+  @@index([customerSchoolId, consumedAt, expiresAt])
+}
+
 model InstallationRegistration {
-  id             String                                @id @default(uuid())
-  installationId String                                @unique
-  accountId      String?
-  label          String?
-  lastSeenAt     DateTime?
-  createdAt      DateTime                              @default(now())
-  account        MarketplaceAccount?                   @relation(fields: [accountId], references: [id])
-  keys           InstallationRegistrationKey[]
-  entitlements   InstallationEntitlement[]
-  downloads      DownloadEvent[]
-  orders         MarketplaceOrder[]
-  grantRequests  InstallationMarketplaceGrantRequest[]
-  grant          InstallationMarketplaceGrant?
-  pluginRequests SchoolPluginRequest[]
+  id               String                                @id @default(uuid())
+  installationId   String                                @unique
+  accountId        String?
+  label            String?
+  lastSeenAt       DateTime?
+  createdAt        DateTime                              @default(now())
+  /// Nullable because every installation registered before the directory existed, and because a
+  /// self-hosted school may never be claimed. Unique so one directory record cannot silently
+  /// describe two deployments.
+  customerSchoolId String?                               @unique
+  account          MarketplaceAccount?                   @relation(fields: [accountId], references: [id])
+  school           CustomerSchool?                       @relation(fields: [customerSchoolId], references: [id], onDelete: SetNull)
+  keys             InstallationRegistrationKey[]
+  entitlements     InstallationEntitlement[]
+  downloads        DownloadEvent[]
+  orders           MarketplaceOrder[]
+  grantRequests    InstallationMarketplaceGrantRequest[]
+  grant            InstallationMarketplaceGrant?
+  pluginRequests   SchoolPluginRequest[]
 }
 
 model InstallationRegistrationKey {
@@ -807,6 +888,8 @@ model PlatformOperator {
   pluginRequestMessages     SchoolPluginRequestMessage[]
   requestedPluginExceptions SchoolPluginRequestExceptionApproval[] @relation("PluginExceptionRequester")
   decidedPluginExceptions   SchoolPluginRequestExceptionApproval[] @relation("PluginExceptionDecider")
+  createdCustomerSchools    CustomerSchool[]                       @relation("CustomerSchoolCreator")
+  mintedEnrollmentTokens    SchoolEnrollmentToken[]                @relation("SchoolEnrollmentTokenCreator")
 }
 
 // ─── Platform Admin (PA-3): school plugin-request workflow ───────────────

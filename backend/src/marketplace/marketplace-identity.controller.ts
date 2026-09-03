@@ -23,7 +23,9 @@ export class MarketplaceIdentityController {
   }
 
   @Post('installation/register')
-  register(@Body() body: { accountId?: string; label?: string }) { return this.registration.register(String(body?.accountId || ''), body?.label); }
+  register(@Body() body: { accountId?: string; label?: string; enrollmentToken?: string }) {
+    return this.registration.register(String(body?.accountId || ''), body?.label, body?.enrollmentToken);
+  }
 
   @Post('installation/keys/rotate')
   rotateKey() { return this.registration.rotateKey(); }

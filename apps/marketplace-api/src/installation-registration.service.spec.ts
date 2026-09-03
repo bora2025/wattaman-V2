@@ -1,5 +1,6 @@
 import { createHash, createPublicKey, generateKeyPairSync, sign } from 'node:crypto';
 import { InstallationRegistrationService } from './installation-registration.service';
+import { hashToken } from './identity-crypto';
 import { canonicalJson } from './signing';
 
 const installationId = '00000000-0000-4000-8000-000000000010';
@@ -203,5 +204,104 @@ describe('installation key rotation', () => {
     const service = new InstallationRegistrationService(prismaWith(tx({ installationRegistrationChallenge: { findUnique: jest.fn().mockResolvedValue(registerChallenge) } })), {} as any);
     await expect(service.rotateKey({ installationId, challengeId: challenge.id, signature, newPublicKeyPem: next.publicKey }, now))
       .rejects.toThrow('purpose does not match');
+  });
+});
+
+describe('installation registration with a school enrollment token', () => {
+  const now = new Date('2026-09-03T00:00:00.000Z');
+  const challengeId = '00000000-0000-4000-8000-000000000030';
+  const challenge = { id: challengeId, installationId, nonce: 'd'.repeat(64), purpose: 'REGISTER', consumedAt: null, expiresAt: new Date(now.getTime() + 60_000) };
+  const token = `wtn_enr_${'e'.repeat(64)}`;
+
+  function tx(overrides: Partial<Record<string, any>> = {}) {
+    return {
+      installationRegistrationChallenge: { findUnique: jest.fn().mockResolvedValue(challenge), update: jest.fn().mockResolvedValue({}) },
+      marketplaceAccount: { findUnique: jest.fn().mockResolvedValue({ id: accountId }) },
+      installationRegistration: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'registration-1' }), update: jest.fn().mockResolvedValue({}) },
+      installationRegistrationKey: { create: jest.fn().mockResolvedValue({}) },
+      marketplaceAuditEvent: { create: jest.fn().mockResolvedValue({}) },
+      schoolEnrollmentToken: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'token-1', customerSchoolId: 'school-1', consumedAt: null, revokedAt: null, expiresAt: new Date(now.getTime() + 86_400_000) }),
+        update: jest.fn().mockResolvedValue({}),
+      },
+      customerSchool: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'school-1', name: 'Angkor High School', slug: 'angkor-high', status: 'AWAITING_CLAIM', installation: null }),
+        update: jest.fn().mockResolvedValue({}),
+      },
+      ...overrides,
+    };
+  }
+
+  function validSignature(privateKeyPem: string) {
+    return signPayload(privateKeyPem, { installationId, challengeId: challenge.id, nonce: challenge.nonce, purpose: 'register' });
+  }
+
+  it('binds the installation to the customer school the token was minted for', async () => {
+    const { publicKey, privateKey } = keyPair();
+    const state = tx();
+    const service = new InstallationRegistrationService(prismaWith(state), {} as any);
+
+    const result = await service.register({
+      accountId, installationId, publicKeyPem: publicKey, challengeId: challenge.id, signature: validSignature(privateKey), enrollmentToken: token,
+    }, now);
+
+    expect(result).toMatchObject({ school: { id: 'school-1', slug: 'angkor-high' } });
+    expect(state.schoolEnrollmentToken.findUnique.mock.calls[0][0].where.tokenHash).toBe(hashToken(token));
+    expect(state.schoolEnrollmentToken.update.mock.calls[0][0].data).toEqual({ consumedAt: now, consumedByInstallationId: installationId });
+    expect(state.installationRegistration.update.mock.calls[0][0].data).toEqual({ customerSchoolId: 'school-1' });
+    expect(state.customerSchool.update.mock.calls[0][0].data).toEqual({ status: 'ACTIVE' });
+  });
+
+  it('registers without a token exactly as before, touching no directory record', async () => {
+    const { publicKey, privateKey } = keyPair();
+    const state = tx();
+    const service = new InstallationRegistrationService(prismaWith(state), {} as any);
+
+    const result = await service.register({ accountId, installationId, publicKeyPem: publicKey, challengeId: challenge.id, signature: validSignature(privateKey) }, now);
+
+    expect(result).not.toHaveProperty('school');
+    expect(state.schoolEnrollmentToken.findUnique).not.toHaveBeenCalled();
+    expect(state.customerSchool.update).not.toHaveBeenCalled();
+  });
+
+  // One message for every rejection: a caller probing tokens must not be able to tell an expired
+  // one from a revoked one from a value that was never real.
+  it.each([
+    ['unknown', { schoolEnrollmentToken: { findUnique: jest.fn().mockResolvedValue(null), update: jest.fn() } }],
+    ['already consumed', { schoolEnrollmentToken: { findUnique: jest.fn().mockResolvedValue({ id: 'token-1', customerSchoolId: 'school-1', consumedAt: now, revokedAt: null, expiresAt: new Date(now.getTime() + 86_400_000) }), update: jest.fn() } }],
+    ['revoked', { schoolEnrollmentToken: { findUnique: jest.fn().mockResolvedValue({ id: 'token-1', customerSchoolId: 'school-1', consumedAt: null, revokedAt: now, expiresAt: new Date(now.getTime() + 86_400_000) }), update: jest.fn() } }],
+    ['expired', { schoolEnrollmentToken: { findUnique: jest.fn().mockResolvedValue({ id: 'token-1', customerSchoolId: 'school-1', consumedAt: null, revokedAt: null, expiresAt: new Date(now.getTime() - 1_000) }), update: jest.fn() } }],
+  ])('refuses an %s token with an indistinguishable message', async (_label, override) => {
+    const { publicKey, privateKey } = keyPair();
+    const service = new InstallationRegistrationService(prismaWith(tx(override)), {} as any);
+
+    await expect(service.register({
+      accountId, installationId, publicKeyPem: publicKey, challengeId: challenge.id, signature: validSignature(privateKey), enrollmentToken: token,
+    }, now)).rejects.toThrow('Enrollment token is not valid');
+  });
+
+  it('refuses a token whose school has been suspended', async () => {
+    const { publicKey, privateKey } = keyPair();
+    const state = tx({ customerSchool: { findUnique: jest.fn().mockResolvedValue({ id: 'school-1', status: 'SUSPENDED', installation: null }), update: jest.fn() } });
+    const service = new InstallationRegistrationService(prismaWith(state), {} as any);
+
+    await expect(service.register({
+      accountId, installationId, publicKeyPem: publicKey, challengeId: challenge.id, signature: validSignature(privateKey), enrollmentToken: token,
+    }, now)).rejects.toThrow('Enrollment token is not valid');
+    expect(state.schoolEnrollmentToken.update).not.toHaveBeenCalled();
+  });
+
+  it('does not burn the token when the signature fails to verify', async () => {
+    const submitted = keyPair();
+    const other = keyPair();
+    const state = tx();
+    const service = new InstallationRegistrationService(prismaWith(state), {} as any);
+
+    await expect(service.register({
+      accountId, installationId, publicKeyPem: submitted.publicKey, challengeId: challenge.id,
+      signature: validSignature(other.privateKey), enrollmentToken: token,
+    }, now)).rejects.toThrow('Signature is invalid');
+    expect(state.schoolEnrollmentToken.findUnique).not.toHaveBeenCalled();
+    expect(state.schoolEnrollmentToken.update).not.toHaveBeenCalled();
   });
 });

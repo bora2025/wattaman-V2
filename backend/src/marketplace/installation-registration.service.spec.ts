@@ -39,6 +39,25 @@ describe('InstallationRegistrationService', () => {
     expect(registerCall.signature).toEqual(expect.any(String));
   });
 
+  it('forwards an enrollment token when one is supplied, and omits the field otherwise', async () => {
+    const respond = () => jest.spyOn(global, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ challengeId: 'challenge-1', nonce: 'n'.repeat(64), purpose: 'register', expiresAt: '2099-01-01T00:00:00.000Z' }), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ installationId: 'school-public-id', accountId: 'account-1', keyFingerprint: 'fp' }), { status: 201 }));
+
+    const withToken = respond();
+    await service.register('account-1', 'Main Campus', `  wtn_enr_${'a'.repeat(64)}  `);
+    // Trimmed, because an operator pasting a token out of a chat message brings whitespace with it.
+    expect(JSON.parse(String(withToken.mock.calls[1][1]?.body)).enrollmentToken).toBe(`wtn_enr_${'a'.repeat(64)}`);
+    withToken.mockRestore();
+
+    const withoutToken = respond();
+    await service.register('account-1', 'Main Campus');
+    // Absent rather than null: the marketplace input schema is strict, and an explicit null would
+    // fail validation for every school that has no token.
+    expect(JSON.parse(String(withoutToken.mock.calls[1][1]?.body))).not.toHaveProperty('enrollmentToken');
+    withoutToken.mockRestore();
+  });
+
   it('surfaces the marketplace error message when registration is rejected', async () => {
     jest.spyOn(global, 'fetch')
       .mockResolvedValueOnce(new Response(JSON.stringify({ challengeId: 'challenge-1', nonce: 'n'.repeat(64), purpose: 'register', expiresAt: '2099-01-01T00:00:00.000Z' }), { status: 201 }))
