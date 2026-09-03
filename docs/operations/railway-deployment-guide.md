@@ -280,6 +280,31 @@ the gateway's public URL, or via `POST /api/installation/install` (through the g
 same JSON body documented there. Check `GET /api/installation/status` first: if it already reports
 `"installed"`, someone has already completed this step — do not re-run it.
 
+### 10. If nobody can sign in
+
+The supported recovery is the emailed reset link (`POST /auth/password-reset/request`), which
+needs a working mail provider and someone who can read that mailbox. When neither holds — the
+school's only `SUPER_ADMIN` is locked out — there is no in-app override, because that account *is*
+the school's highest authority. The break-glass is a script piped into the running `api` container,
+so it takes deploy access at the moment it is used:
+
+```bash
+# First, confirm which email the account actually uses (a typo and a missing
+# account look identical on the sign-in form):
+railway ssh --project <project-id> --service api -i ~/.ssh/<key>   node < backend/scripts/reset-school-admin-password.js
+
+# Then set a new password (12+ characters, matching the HTTP reset path's policy):
+PAYLOAD=$(printf '%s' '{"email":"you@example.com","password":"<12+ chars>"}' | base64 -w0)
+railway ssh --project <project-id> --service api -i ~/.ssh/<key>   env SCHOOL_PASSWORD_B64=$PAYLOAD node < backend/scripts/reset-school-admin-password.js
+```
+
+Base64 for the same reason as the operator script: `railway ssh` re-splits its command on
+whitespace, and a password chosen to avoid spaces is a weaker password. The script resolves the
+account case-insensitively (exactly as `AuthService.validateUser` does), hashes with the image's
+own `bcryptjs`, revokes every existing session, consumes any outstanding reset links, and writes a
+`PASSWORD_RESET` audit row. It will not create an account — a mistyped email lists the real
+administrators instead of silently adding a second one.
+
 ## Part 3 — Linking the School to the Marketplace
 
 Once both are live, link the school's own admin panel to a marketplace account so it can browse,
@@ -364,3 +389,4 @@ them from scratch:
 | `railway link -p <name>` or `--project <name>` fails with "not found", even though `railway list` shows that exact name | The project is a trial project whose `deletedAt` is already populated (even if the timestamp is nominally in the future) — it's effectively inaccessible already | Check `railway list --json` for `deletedAt`; if set, treat the project as gone and create a fresh one (with billing attached, so it doesn't happen again) |
 | `railway connect Postgres` (piped, non-interactive) fails with "Connection URL should point to the Railway TCP proxy" | The Postgres service's internal `DATABASE_URL` isn't reachable from outside Railway's network by default | Not resolved in this guide — either enable the Postgres service's TCP proxy in the dashboard, or run queries from inside a Railway-hosted process instead of your local machine |
 | A generated PEM/JSON secret value silently loses its `\n` escaping or gets double-escaped | Piping values through nested `node -e "..."` shell commands — bash's own quote/backslash handling collides with JS string escaping in ways that are very easy to get wrong | Write real `.js` script files (via a heredoc or the Write tool) and run them with `node file.js`; verify the output by reading the file directly, not by re-parsing it through another shell command |
+| A school's sign-in form rejects every attempt with "Invalid credentials", including the email you believe is correct | Either the account's email differs from the one being typed, or its password is simply unknown — the API returns one identical message for both so it cannot be used to enumerate accounts | Run `backend/scripts/reset-school-admin-password.js` over `railway ssh` with no payload to list the real administrator emails, then re-run it with a payload to set a new password (Part 2, step 10) |
