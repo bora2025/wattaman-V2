@@ -16,11 +16,11 @@ const SESSION_COOKIE = 'wattanam_platform_session';
 const publicPost = new Set(['auth/sessions', 'auth/sessions/refresh']);
 const sessionPost = new Set(['auth/sessions/revoke', 'auth/mfa/enroll', 'auth/mfa/enroll/confirm', 'auth/password']);
 const sessionGet = new Set([
-  'me', 'dashboard', 'operators', 'roles', 'customers', 'installations', 'publishers', 'plugins', 'submissions',
+  'me', 'dashboard', 'operators', 'roles', 'customers', 'schools', 'installations', 'publishers', 'plugins', 'submissions',
   'orders', 'entitlements', 'advisories', 'audit-events', 'operations/health', 'exports', 'plugin-requests',
 ]);
-const sessionGetDetail = /^(operators|customers|installations|publishers|plugins|submissions|orders|plugin-requests)\/[0-9a-zA-Z._-]+$/;
-const sessionPostPattern = /^plugin-requests\/[0-9a-f-]{36}\/(assign|start-review|request-information|approve|reject|fulfill|exception-proposals|exception-decisions)$/;
+const sessionGetDetail = /^(operators|customers|schools|installations|publishers|plugins|submissions|orders|plugin-requests)\/[0-9a-zA-Z._-]+$/;
+const sessionPostPattern = /^(?:plugin-requests\/[0-9a-f-]{36}\/(?:assign|start-review|request-information|approve|reject|fulfill|exception-proposals|exception-decisions)|schools(?:\/[0-9a-f-]{36}\/(?:update|enrollment-tokens|adopt-installation)|\/[0-9a-f-]{36}\/enrollment-tokens\/[0-9a-f-]{36}\/revoke)?)$/;
 
 function marketplaceUrl(): string {
   const value = process.env.MARKETPLACE_API_URL;
