@@ -12,9 +12,9 @@ import { BusService } from './bus.service';
 import { JwtService } from '@nestjs/jwt';
 import { WsException } from '@nestjs/websockets';
 import { authenticateSocket, requireSocketUser } from '../common/socket-auth';
-import { getCorsOrigins } from '../config/environment';
+import { getCorsOriginsForGateway } from '../config/environment';
 
-@WebSocketGateway({ namespace: '/bus', cors: { origin: getCorsOrigins(), credentials: true } })
+@WebSocketGateway({ namespace: '/bus', cors: { origin: getCorsOriginsForGateway(), credentials: true } })
 export class BusGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
 

@@ -121,6 +121,27 @@ export function getCorsOrigins(env: NodeJS.ProcessEnv = process.env): string[] {
   return ['http://localhost:3000', 'http://localhost:3004'];
 }
 
+/**
+ * The same allow-list, for `@WebSocketGateway` decorators only.
+ *
+ * Decorator arguments are evaluated while the module graph loads — `main.ts` and `worker.ts` both
+ * `import { AppModule }` before their `bootstrap()` can call `readRuntimeConfig()`. Throwing from
+ * there means a missing `CORS_ORIGINS` is reported as a stack trace inside whichever gateway
+ * happened to be imported first (`dist/attendance/attendance.gateway.js`, say), naming a feature
+ * that has nothing to do with the problem.
+ *
+ * Returning an empty allow-list instead weakens nothing: `readRuntimeConfig()` still refuses to
+ * start a production process without `CORS_ORIGINS`, so this value is unreachable in the case it
+ * covers — it exists purely so the startup validation gets to report the error itself.
+ */
+export function getCorsOriginsForGateway(env: NodeJS.ProcessEnv = process.env): string[] {
+  try {
+    return getCorsOrigins(env);
+  } catch {
+    return [];
+  }
+}
+
 function resolveJwtSecret(env: NodeJS.ProcessEnv, nodeEnv: NodeEnvironment): string {
   const secret = env.JWT_SECRET?.trim() || DEVELOPMENT_JWT_SECRET;
   if (nodeEnv === 'production' && (secret.length < 32 || INSECURE_JWT_SECRETS.has(secret))) {

@@ -1,4 +1,4 @@
-import { getProcessRole, parseCorsOrigins, parseJwtSecondarySecrets, readRuntimeConfig, runsBackgroundJobs } from './environment';
+import { getCorsOrigins, getCorsOriginsForGateway, getProcessRole, parseCorsOrigins, parseJwtSecondarySecrets, readRuntimeConfig, runsBackgroundJobs } from './environment';
 
 describe('runtime environment', () => {
   const baseEnvironment: NodeJS.ProcessEnv = {
@@ -34,6 +34,27 @@ describe('runtime environment', () => {
       NODE_ENV: 'production',
       JWT_SECRET: 'a-unique-production-secret-with-more-than-32-characters',
     })).toThrow('CORS_ORIGINS');
+  });
+
+  /* The gateway variant exists because @WebSocketGateway decorators run while the module graph
+   * loads, before either entry point's bootstrap() reaches readRuntimeConfig(). If it threw there,
+   * a missing CORS_ORIGINS would be reported from inside an unrelated feature module. */
+  it('does not throw from a gateway decorator when production CORS origins are missing', () => {
+    const production = { ...baseEnvironment, NODE_ENV: 'production' };
+
+    expect(() => getCorsOrigins(production)).toThrow('CORS_ORIGINS');
+    expect(getCorsOriginsForGateway(production)).toEqual([]);
+  });
+
+  it('returns the configured origins to a gateway when they are present', () => {
+    const production = {
+      ...baseEnvironment,
+      NODE_ENV: 'production',
+      CORS_ORIGINS: 'https://school.example.com',
+    };
+
+    expect(getCorsOriginsForGateway(production)).toEqual(['https://school.example.com']);
+    expect(getCorsOriginsForGateway(baseEnvironment)).toEqual(getCorsOrigins(baseEnvironment));
   });
 
   it('parses exact HTTP origins', () => {

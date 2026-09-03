@@ -10,11 +10,11 @@ import { JwtService } from '@nestjs/jwt';
 import { WsException } from '@nestjs/websockets';
 import { OnGatewayConnection } from '@nestjs/websockets';
 import { authenticateSocket, requireSocketUser } from '../common/socket-auth';
-import { getCorsOrigins } from '../config/environment';
+import { getCorsOriginsForGateway } from '../config/environment';
 
 @WebSocketGateway({
   cors: {
-    origin: getCorsOrigins(),
+    origin: getCorsOriginsForGateway(),
     credentials: true,
   },
 })
