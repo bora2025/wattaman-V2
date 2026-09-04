@@ -58,6 +58,25 @@ describe('InstallationRegistrationService', () => {
     withoutToken.mockRestore();
   });
 
+  it('registers with an enrollment token alone, omitting the unverified account id', async () => {
+    const fetchMock = jest.spyOn(global, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ challengeId: 'challenge-1', nonce: 'n'.repeat(64), purpose: 'register', expiresAt: '2099-01-01T00:00:00.000Z' }), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ installationId: 'school-public-id', accountId: null, keyFingerprint: 'fp', school: { slug: 'angkor1' } }), { status: 201 }));
+
+    await service.register(undefined, 'Angkor1', `wtn_enr_${'a'.repeat(64)}`);
+
+    const body = JSON.parse(String(fetchMock.mock.calls[1][1]?.body));
+    expect(body).not.toHaveProperty('accountId');
+    expect(body.enrollmentToken).toBe(`wtn_enr_${'a'.repeat(64)}`);
+  });
+
+  it('refuses to register with neither an account nor a token', async () => {
+    const fetchMock = jest.spyOn(global, 'fetch');
+    await expect(service.register()).rejects.toThrow('account id or the enrollment token');
+    // Refused before the challenge round trip, so a mistyped form cannot consume a server nonce.
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('surfaces the marketplace error message when registration is rejected', async () => {
     jest.spyOn(global, 'fetch')
       .mockResolvedValueOnce(new Response(JSON.stringify({ challengeId: 'challenge-1', nonce: 'n'.repeat(64), purpose: 'register', expiresAt: '2099-01-01T00:00:00.000Z' }), { status: 201 }))

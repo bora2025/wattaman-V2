@@ -14,7 +14,16 @@ const challengeInput = z.object({
 }).strict();
 
 const registerInput = z.object({
-  accountId: z.string().uuid(),
+  /**
+   * Optional, because an enrollment token is the stronger claim.
+   *
+   * This value has never been verified — the endpoint only checks the account exists — so on a
+   * marketplace with no customer accounts yet it made enrollment impossible for a school an
+   * operator had explicitly authorised. A token minted by a named operator against a named school
+   * establishes provenance that this field never did, so it may stand alone; commercial ownership
+   * is attached later when a real customer approves a marketplace link.
+   */
+  accountId: z.string().uuid().optional(),
   installationId: z.string().uuid(),
   label: z.string().trim().min(1).max(120).optional(),
   publicKeyPem: z.string().includes('PUBLIC KEY'),
@@ -30,7 +39,10 @@ const registerInput = z.object({
    * named operator against a named customer, which is more than the account binding has ever had.
    */
   enrollmentToken: z.string().trim().min(16).max(200).optional(),
-}).strict();
+}).strict().refine(
+  (value) => Boolean(value.accountId || value.enrollmentToken),
+  { message: 'Either accountId or enrollmentToken is required', path: ['accountId'] },
+);
 
 const rotateInput = z.object({
   installationId: z.string().uuid(),
@@ -72,8 +84,10 @@ export class InstallationRegistrationService {
     const input = registerInput.parse(value);
     return this.prisma.$transaction(async (tx) => {
       const challenge = await this.consumeChallenge(tx, { challengeId: input.challengeId, installationId: input.installationId, purpose: 'REGISTER', now });
-      const account = await tx.marketplaceAccount.findUnique({ where: { id: input.accountId }, select: { id: true } });
-      if (!account) throw new HttpError(404, 'Account not found');
+      if (input.accountId) {
+        const account = await tx.marketplaceAccount.findUnique({ where: { id: input.accountId }, select: { id: true } });
+        if (!account) throw new HttpError(404, 'Account not found');
+      }
 
       const existing = await tx.installationRegistration.findUnique({
         where: { installationId: input.installationId },
@@ -86,9 +100,16 @@ export class InstallationRegistrationService {
         installationId: input.installationId, challengeId: challenge.id, nonce: challenge.nonce, purpose: 'register',
       }, input.signature);
 
+      // An omitted accountId must never clear one that is already recorded: re-registering a school
+      // that lost its key is a key operation, not a change of who owns it commercially.
       const registration = existing
-        ? await tx.installationRegistration.update({ where: { id: existing.id }, data: { accountId: input.accountId, label: input.label } })
-        : await tx.installationRegistration.create({ data: { installationId: input.installationId, accountId: input.accountId, label: input.label } });
+        ? await tx.installationRegistration.update({
+          where: { id: existing.id },
+          data: { ...(input.accountId ? { accountId: input.accountId } : {}), label: input.label },
+        })
+        : await tx.installationRegistration.create({
+          data: { installationId: input.installationId, accountId: input.accountId ?? null, label: input.label },
+        });
 
       try {
         await tx.installationRegistrationKey.create({ data: { installationRegistrationId: registration.id, keyFingerprint: fingerprint, publicKeyPem: input.publicKeyPem } });
@@ -105,10 +126,10 @@ export class InstallationRegistrationService {
 
       await this.audit(tx, {
         action: 'installation_registered', success: true,
-        metadata: { installationId: input.installationId, accountId: input.accountId, keyFingerprint: fingerprint, ...(school ? { customerSchoolId: school.id, customerSchoolSlug: school.slug } : {}) },
+        metadata: { installationId: input.installationId, accountId: registration.accountId, keyFingerprint: fingerprint, ...(school ? { customerSchoolId: school.id, customerSchoolSlug: school.slug } : {}) },
       });
       return {
-        installationId: input.installationId, accountId: input.accountId, keyFingerprint: fingerprint, registeredAt: now,
+        installationId: input.installationId, accountId: registration.accountId, keyFingerprint: fingerprint, registeredAt: now,
         ...(school ? { school: { id: school.id, name: school.name, slug: school.slug } } : {}),
       };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });

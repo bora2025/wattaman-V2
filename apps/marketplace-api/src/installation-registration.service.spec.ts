@@ -73,7 +73,9 @@ describe('installation registration (proof of possession)', () => {
     return {
       installationRegistrationChallenge: { findUnique: jest.fn().mockResolvedValue(challenge), update: jest.fn().mockResolvedValue({}) },
       marketplaceAccount: { findUnique: jest.fn().mockResolvedValue({ id: accountId }) },
-      installationRegistration: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'registration-1' }) },
+      // Prisma returns the whole row from create/update, and the service now reports the account it
+      // actually stored rather than the one that was requested -- so the double must carry it too.
+      installationRegistration: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'registration-1', accountId }) },
       installationRegistrationKey: { create: jest.fn().mockResolvedValue({}) },
       marketplaceAuditEvent: { create: jest.fn().mockResolvedValue({}) },
       ...overrides,
@@ -278,6 +280,47 @@ describe('installation registration with a school enrollment token', () => {
     await expect(service.register({
       accountId, installationId, publicKeyPem: publicKey, challengeId: challenge.id, signature: validSignature(privateKey), enrollmentToken: token,
     }, now)).rejects.toThrow('Enrollment token is not valid');
+  });
+
+  it('registers on the token alone when no account id is supplied', async () => {
+    const { publicKey, privateKey } = keyPair();
+    const state = tx({ installationRegistration: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'registration-1', accountId: null }), update: jest.fn().mockResolvedValue({}) } });
+    const service = new InstallationRegistrationService(prismaWith(state), {} as any);
+
+    const result = await service.register({
+      installationId, publicKeyPem: publicKey, challengeId: challenge.id, signature: validSignature(privateKey), enrollmentToken: token,
+    }, now);
+
+    expect(result.accountId).toBeNull();
+    expect(state.marketplaceAccount.findUnique).not.toHaveBeenCalled();
+    expect(state.installationRegistration.create.mock.calls[0][0].data.accountId).toBeNull();
+    expect(result).toMatchObject({ school: { slug: 'angkor-high' } });
+  });
+
+  it('refuses a registration carrying neither an account nor a token', async () => {
+    const { publicKey, privateKey } = keyPair();
+    const service = new InstallationRegistrationService(prismaWith(tx()), {} as any);
+    await expect(service.register({
+      installationId, publicKeyPem: publicKey, challengeId: challenge.id, signature: validSignature(privateKey),
+    }, now)).rejects.toThrow();
+  });
+
+  it('does not clear an existing account id when re-registering without one', async () => {
+    const { publicKey, privateKey } = keyPair();
+    const state = tx({
+      installationRegistration: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'registration-1', accountId: accountId, keys: [] }),
+        create: jest.fn(), update: jest.fn().mockResolvedValue({ id: 'registration-1', accountId }),
+      },
+    });
+    const service = new InstallationRegistrationService(prismaWith(state), {} as any);
+
+    await service.register({
+      installationId, publicKeyPem: publicKey, challengeId: challenge.id, signature: validSignature(privateKey), enrollmentToken: token,
+    }, now);
+
+    // Re-registering a school that lost its key is a key operation, not a change of owner.
+    expect(state.installationRegistration.update.mock.calls[0][0].data).not.toHaveProperty('accountId');
   });
 
   it('refuses a token whose school has been suspended', async () => {

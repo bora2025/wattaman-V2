@@ -79,7 +79,26 @@ export class InstallationLinkService {
         update: { accountId, scope: request.requestedScope, consentedAt: now, expiresAt: new Date(now.getTime() + GRANT_LIFETIME_MS), revokedAt: null, revokedReason: null },
       });
       await tx.installationMarketplaceGrantRequest.update({ where: { id: request.id }, data: { status: 'APPROVED', respondedAt: now, grantId: grant.id } });
-      await this.audit(tx, { accountId, action: 'installation_link_approved', success: true, metadata: { requestId, installationRegistrationId: request.installationRegistrationId } });
+
+      /**
+       * A school enrolled with an operator's enrollment token registers with no account, because a
+       * token is provenance for the *school* and says nothing about who owns it commercially. This
+       * consent is the first moment a real person claims it, so it is where that ownership attaches
+       * — without this, such a school could never place an order or raise a plugin request, both of
+       * which check `InstallationRegistration.accountId`.
+       *
+       * Only when it is null. Overwriting an existing owner would transfer a school's commercial
+       * identity as a side effect of granting a proxy session, which is not what anyone consented to.
+       */
+      const claimed = await tx.installationRegistration.updateMany({
+        where: { id: request.installationRegistrationId, accountId: null },
+        data: { accountId },
+      });
+
+      await this.audit(tx, {
+        accountId, action: 'installation_link_approved', success: true,
+        metadata: { requestId, installationRegistrationId: request.installationRegistrationId, ownershipClaimed: claimed.count === 1 },
+      });
       return { status: 'APPROVED' as const };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }

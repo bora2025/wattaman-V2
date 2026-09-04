@@ -35,15 +35,22 @@ export class InstallationRegistrationService {
    * so keeping a copy in the school's database would only create a secret with no remaining
    * purpose.
    */
-  async register(accountId: string, label?: string, enrollmentToken?: string) {
+  async register(accountId?: string, label?: string, enrollmentToken?: string) {
     const config = this.requireConfig();
+    const account = accountId?.trim();
+    const token = enrollmentToken?.trim();
+    if (!account && !token) {
+      throw new BadRequestException('Provide a marketplace account id or the enrollment token issued for this school');
+    }
     const installationId = await this.installationId();
     const { publicKeyPem } = await this.keys.ensureKeyPair();
     const challenge = await this.requestChallenge(config, installationId, 'register');
     const signature = await this.keys.sign({ installationId, challengeId: challenge.challengeId, nonce: challenge.nonce, purpose: 'register' });
-    const token = enrollmentToken?.trim();
+    // Both are omitted rather than sent empty: the marketplace input schema is strict, and an
+    // empty string fails its uuid check instead of reading as "not supplied".
     return this.postJson(config, '/v1/installations/register', {
-      accountId, installationId, label, publicKeyPem, challengeId: challenge.challengeId, signature,
+      installationId, label, publicKeyPem, challengeId: challenge.challengeId, signature,
+      ...(account ? { accountId: account } : {}),
       ...(token ? { enrollmentToken: token } : {}),
     });
   }

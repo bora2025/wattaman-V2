@@ -274,6 +274,32 @@ async function main() {
     const legacy = await legacyRegistration.register(account.id, 'Bora School');
     check('a school with no token registers exactly as before', Boolean(legacy.keyFingerprint) && !legacy.school, JSON.stringify(legacy.school || null));
 
+    // ── 5b. A token alone is enough, with no customer account anywhere ────
+    const tokenOnlySchool = await api('/platform/v1/schools', {
+      method: 'POST', token, body: JSON.stringify({ name: 'Token Only School', slug: 'token-only-school', internalReason: 'Enrolling before any customer account exists.' }),
+    });
+    const tokenOnlyMint = await api(`/platform/v1/schools/${tokenOnlySchool.body.id}/enrollment-tokens`, {
+      method: 'POST', token, body: JSON.stringify({ internalReason: 'Deploying before the customer signs up.' }),
+    });
+    const tokenOnlyInstallationId = crypto.randomUUID();
+    const tokenOnlyRegistration = await schoolRegistration(schoolPrisma, path.join(keyRoot, 'token-only'), tokenOnlyInstallationId);
+    const tokenOnly = await tokenOnlyRegistration.register(undefined, 'Token Only School', tokenOnlyMint.body.token);
+    check('a school enrols on the token alone, with no marketplace account', tokenOnly.school && tokenOnly.school.slug === 'token-only-school' && tokenOnly.accountId === null,
+      `account ${JSON.stringify(tokenOnly.accountId)}, school ${JSON.stringify(tokenOnly.school && tokenOnly.school.slug)}`);
+
+    const tokenOnlyView = await api(`/platform/v1/schools/${tokenOnlySchool.body.id}`, { token });
+    check('the token-only school is ACTIVE and unowned', tokenOnlyView.body.status === 'ACTIVE' && tokenOnlyView.body.installation && tokenOnlyView.body.installation.account === null,
+      `${tokenOnlyView.body.status}, account ${JSON.stringify(tokenOnlyView.body.installation && tokenOnlyView.body.installation.account)}`);
+
+    // Consent is where commercial ownership attaches to a school enrolled this way.
+    const registrationRow = await prisma.installationRegistration.findUnique({ where: { installationId: tokenOnlyInstallationId }, select: { id: true } });
+    const linkRequest = await prisma.installationMarketplaceGrantRequest.create({
+      data: { installationRegistrationId: registrationRow.id, requestedScope: 'COMMERCE_PROXY', expiresAt: new Date(Date.now() + 900_000) },
+    });
+    await new (require('../dist/installation-link.service').InstallationLinkService)(prisma, {}).approve(linkRequest.id, account.id);
+    const owned = await prisma.installationRegistration.findUnique({ where: { installationId: tokenOnlyInstallationId }, select: { accountId: true } });
+    check('approving a marketplace link claims ownership of an unowned school', owned.accountId === account.id, String(owned.accountId));
+
     // ── 6. Adopting a deployment that predates the directory ──────────────
     const bora = await api('/platform/v1/schools', {
       method: 'POST', token, body: JSON.stringify({ name: 'Bora School', slug: 'bora-school', internalReason: 'Existing customer, registered before the directory.' }),
@@ -314,13 +340,13 @@ async function main() {
     // and logging them would bury the real ones.
     check('rejected mutations leave no audit noise',
       JSON.stringify(actions) === JSON.stringify([
-        'customer_school_created', 'customer_school_created', 'customer_school_created',
-        'customer_school_installation_adopted', 'school_enrollment_token_minted',
+        'customer_school_created', 'customer_school_created', 'customer_school_created', 'customer_school_created',
+        'customer_school_installation_adopted', 'school_enrollment_token_minted', 'school_enrollment_token_minted',
       ]),
       actions.join(', '));
 
     const claimedFilter = await api('/platform/v1/schools?claimed=true', { token });
-    check('the claimed filter returns only bound schools', claimedFilter.body.items && claimedFilter.body.items.length === 2, `${claimedFilter.body.items && claimedFilter.body.items.length} items`);
+    check('the claimed filter returns only bound schools', claimedFilter.body.items && claimedFilter.body.items.length === 3, `${claimedFilter.body.items && claimedFilter.body.items.length} items`);
   } finally {
     server.close();
     await prisma.$disconnect();
