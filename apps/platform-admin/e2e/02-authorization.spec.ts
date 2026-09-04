@@ -13,11 +13,11 @@ const EXPECTED_NAV: Record<string, string[]> = {
   // No universal admin: the Platform Owner runs the platform and still cannot browse the catalog,
   // customer records, or commerce. That absence is a designed property, not an oversight.
   'owner2@e2e.test': ['Dashboard', 'Operators', 'Operations', 'Exports', 'Audit'],
-  'support@e2e.test': ['Dashboard', 'Customers', 'School installations', 'School plugin requests'],
+  'support@e2e.test': ['Dashboard', 'Customers', 'Customer schools', 'School installations', 'School plugin requests'],
   'finance@e2e.test': ['Dashboard', 'Orders', 'Entitlements'],
   'reviewer@e2e.test': ['Dashboard', 'Plugins', 'Submissions'],
   'auditor@e2e.test': [
-    'Dashboard', 'Customers', 'School installations', 'Publishers', 'Plugins',
+    'Dashboard', 'Customers', 'Customer schools', 'School installations', 'Publishers', 'Plugins',
     'School plugin requests', 'Orders', 'Entitlements', 'Advisories', 'Operations', 'Exports', 'Audit',
   ],
   'norole@e2e.test': [],

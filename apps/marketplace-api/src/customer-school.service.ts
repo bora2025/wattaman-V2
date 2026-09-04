@@ -60,6 +60,12 @@ const adoptInput = z.object({
   internalReason: reason,
 }).strict();
 
+const infrastructureInput = z.object({
+  railwayProjectId: z.string().trim().min(1).max(100).nullable(),
+  gatewayOrigin: z.string().url().max(300).nullable(),
+  internalReason: reason,
+}).strict();
+
 const SCHOOL_SELECT = {
   id: true, name: true, slug: true, status: true, region: true, timezone: true, locale: true,
   currency: true, plan: true, contactName: true, contactEmail: true, railwayProjectId: true,
@@ -159,10 +165,9 @@ export class CustomerSchoolService {
           select: SCHOOL_SELECT,
         });
       } catch (error) {
-        // The unique slug is what makes a double-submitted create safe: the retry conflicts instead
-        // of producing a second record for one customer.
-        if ((error as { code?: string }).code === 'P2002') throw new HttpError(409, `A customer school already uses the slug ${fields.slug}`);
-        throw error;
+        // The unique columns are what make a double-submitted create safe: the retry conflicts
+        // instead of producing a second record for one customer.
+        throw this.conflictOrRethrow(error, fields);
       }
       await this.audit(tx, operatorId, context, {
         action: 'customer_school_created', targetId: school.id, reason: internalReason,
@@ -180,11 +185,16 @@ export class CustomerSchoolService {
       if (!existing) throw new HttpError(404, 'Customer school not found');
       if (existing.status === 'TERMINATED') throw new HttpError(409, 'A terminated school cannot be edited');
 
-      const school = await tx.customerSchool.update({
-        where: { id: schoolId },
-        data: { ...fields, ...(fields.contactEmail ? { contactEmail: fields.contactEmail.toLowerCase() } : {}) },
-        select: SCHOOL_SELECT,
-      });
+      let school;
+      try {
+        school = await tx.customerSchool.update({
+          where: { id: schoolId },
+          data: { ...fields, ...(fields.contactEmail ? { contactEmail: fields.contactEmail.toLowerCase() } : {}) },
+          select: SCHOOL_SELECT,
+        });
+      } catch (error) {
+        throw this.conflictOrRethrow(error, fields);
+      }
       // The audit row carries the before/after of exactly the fields that moved, so the log alone
       // answers "what changed" without diffing two snapshots by hand.
       await this.audit(tx, operatorId, context, {
@@ -303,6 +313,67 @@ export class CustomerSchoolService {
       });
       return { ...updated, contactEmail: maskEmail(updated.contactEmail) };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
+  /**
+   * Turns a unique-constraint violation into a conflict that names the colliding field.
+   *
+   * Three columns are unique now, and "already exists" without saying which one leaves an operator
+   * guessing whether they reused a slug, a Railway project, or a gateway. The plan requires those
+   * collisions to be refused and resolved by a human (§14), so the message has to be actionable.
+   */
+  /**
+   * Records the infrastructure a school runs on, after discovery confirmed the deployment says so
+   * itself (plan §8 Stage B3).
+   *
+   * Separate from `update` because these two fields are identity, not description: they are what
+   * the uniqueness constraints protect, and writing them from a confirmed discovery result is a
+   * different act from an operator correcting a plan name. The audit row says which.
+   */
+  async recordInfrastructure(schoolId: string, operatorId: string, value: unknown, context: PlatformActionContext) {
+    const input = infrastructureInput.parse(value);
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.customerSchool.findUnique({
+        where: { id: schoolId },
+        select: { id: true, status: true, railwayProjectId: true, gatewayOrigin: true },
+      });
+      if (!existing) throw new HttpError(404, 'Customer school not found');
+      if (existing.status === 'TERMINATED') throw new HttpError(409, 'A terminated school cannot be edited');
+
+      let school;
+      try {
+        school = await tx.customerSchool.update({
+          where: { id: schoolId },
+          data: { railwayProjectId: input.railwayProjectId, gatewayOrigin: input.gatewayOrigin },
+          select: SCHOOL_SELECT,
+        });
+      } catch (error) {
+        throw this.conflictOrRethrow(error, input);
+      }
+      await this.audit(tx, operatorId, context, {
+        action: 'customer_school_infrastructure_recorded', targetId: schoolId, reason: input.internalReason,
+        metadata: {
+          railwayProjectId: { from: existing.railwayProjectId, to: school.railwayProjectId },
+          gatewayOrigin: { from: existing.gatewayOrigin, to: school.gatewayOrigin },
+        },
+      });
+      return { ...school, contactEmail: maskEmail(school.contactEmail) };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
+  private conflictOrRethrow(error: unknown, fields: Record<string, unknown>): unknown {
+    if ((error as { code?: string }).code !== 'P2002') return error;
+    const target = (error as { meta?: { target?: string[] | string } }).meta?.target;
+    const field = (Array.isArray(target) ? target[0] : target) ?? '';
+    const labels: Record<string, string> = {
+      slug: 'slug',
+      railwayProjectId: 'Railway project',
+      gatewayOrigin: 'gateway origin',
+    };
+    const label = labels[field];
+    if (!label) return new HttpError(409, 'Another customer school already uses one of these values');
+    const value = fields[field];
+    return new HttpError(409, `Another customer school already uses the ${label}${value ? ` ${value}` : ''}`);
   }
 
   private async audit(

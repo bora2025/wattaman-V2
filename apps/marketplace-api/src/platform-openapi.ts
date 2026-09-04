@@ -62,6 +62,8 @@ export function platformOpenApi(baseUrl: string) {
       '/platform/v1/schools/{schoolId}/update': path('post', { summary: 'Directory update school', permission: 'schools.manage' }),
       '/platform/v1/schools/{schoolId}/enrollment-tokens': path('post', { summary: 'Directory mint school enrollment token', permission: 'schools.manage' }),
       '/platform/v1/schools/{schoolId}/enrollment-tokens/{tokenId}/revoke': path('post', { summary: 'Directory revoke school enrollment token', permission: 'schools.manage' }),
+      '/platform/v1/schools/adoptions/discover': path('post', { summary: 'Directory discover school for adoption', permission: 'schools.manage' }),
+      '/platform/v1/schools/{schoolId}/infrastructure': path('post', { summary: 'Directory record school infrastructure', permission: 'schools.manage' }),
       '/platform/v1/schools/{schoolId}/adopt-installation': path('post', { summary: 'Directory adopt school installation', permission: 'schools.manage' }),
       '/platform/v1/installations': path('get', { summary: 'Directory list installations', permission: 'schools.read' }),
       '/platform/v1/installations/{registrationId}': path('get', { summary: 'Directory get installation', permission: 'schools.read' }),

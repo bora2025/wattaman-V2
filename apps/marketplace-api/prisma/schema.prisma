@@ -490,9 +490,11 @@ model CustomerSchool {
   plan                String?
   contactName         String?
   contactEmail        String?
-  /// Populated by hand today, and by the provisioner when B-006 lands.
-  railwayProjectId    String?
-  gatewayOrigin       String?
+  /// Populated by hand today, and by the provisioner when B-006 lands. Unique because a Railway
+  /// project holds exactly one school (ADR-0002), so two directory records pointing at one project
+  /// means one of them is wrong -- and the plan requires that collision to be refused, not merged.
+  railwayProjectId    String?                   @unique
+  gatewayOrigin       String?                   @unique
   notes               String?
   createdByOperatorId String?
   createdAt           DateTime                  @default(now())

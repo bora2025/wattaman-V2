@@ -31,12 +31,42 @@ describe('CustomerSchoolService', () => {
   });
 
   it('maps a duplicate slug to a conflict that names the collision', async () => {
-    const tx = { customerSchool: { create: jest.fn().mockRejectedValue({ code: 'P2002' }) }, platformAuditEvent: { create: jest.fn() } };
+    const tx = { customerSchool: { create: jest.fn().mockRejectedValue({ code: 'P2002', meta: { target: ['slug'] } }) }, platformAuditEvent: { create: jest.fn() } };
     const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
 
     await expect(new CustomerSchoolService(prisma).create('operator-1', {
       name: 'Angkor High School', slug: 'angkor-high', internalReason: 'New signed contract.',
     }, context)).rejects.toMatchObject({ status: 409, message: expect.stringContaining('angkor-high') });
+    expect(tx.platformAuditEvent.create).not.toHaveBeenCalled();
+  });
+
+  // One Railway project holds exactly one school, so a second record claiming it is a mistake the
+  // plan requires a human to resolve rather than something to merge silently.
+  it.each([
+    ['railwayProjectId', 'Railway project', 'b5b07c38-6569-4bee-ab88-6b134998c77d'],
+    ['gatewayOrigin', 'gateway origin', 'https://gateway-production-26d3.up.railway.app'],
+  ])('refuses a second school claiming the same %s', async (field, label, value) => {
+    const tx = { customerSchool: { create: jest.fn().mockRejectedValue({ code: 'P2002', meta: { target: [field] } }) }, platformAuditEvent: { create: jest.fn() } };
+    const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
+
+    await expect(new CustomerSchoolService(prisma).create('operator-1', {
+      name: 'Second Claim', slug: 'second-claim', [field]: value, internalReason: 'Conflict check.',
+    }, context)).rejects.toMatchObject({ status: 409, message: expect.stringContaining(label) });
+  });
+
+  it('reports a conflict on update too, since infrastructure fields are editable', async () => {
+    const tx = {
+      customerSchool: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'school-1', status: 'ACTIVE', railwayProjectId: null }),
+        update: jest.fn().mockRejectedValue({ code: 'P2002', meta: { target: ['railwayProjectId'] } }),
+      },
+      platformAuditEvent: { create: jest.fn() },
+    };
+    const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
+
+    await expect(new CustomerSchoolService(prisma).update('school-1', 'operator-1', {
+      railwayProjectId: 'b5b07c38-6569-4bee-ab88-6b134998c77d', internalReason: 'Recording infrastructure.',
+    }, context)).rejects.toMatchObject({ status: 409, message: expect.stringContaining('Railway project') });
     expect(tx.platformAuditEvent.create).not.toHaveBeenCalled();
   });
 

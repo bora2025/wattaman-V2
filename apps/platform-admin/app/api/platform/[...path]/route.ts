@@ -20,7 +20,20 @@ const sessionGet = new Set([
   'orders', 'entitlements', 'advisories', 'audit-events', 'operations/health', 'exports', 'plugin-requests',
 ]);
 const sessionGetDetail = /^(operators|customers|schools|installations|publishers|plugins|submissions|orders|plugin-requests)\/[0-9a-zA-Z._-]+$/;
-const sessionPostPattern = /^(?:plugin-requests\/[0-9a-f-]{36}\/(?:assign|start-review|request-information|approve|reject|fulfill|exception-proposals|exception-decisions)|schools(?:\/[0-9a-f-]{36}\/(?:update|enrollment-tokens|adopt-installation)|\/[0-9a-f-]{36}\/enrollment-tokens\/[0-9a-f-]{36}\/revoke)?)$/;
+/**
+ * Mutations reachable through this proxy, one readable pattern each. A single combined expression
+ * became hard to extend without silently widening it -- and a path that is not listed here is a
+ * 404 from this proxy, so an over-broad edit is the failure mode that matters.
+ */
+const ID = '[0-9a-f-]{36}';
+const sessionPostPatterns = [
+  new RegExp(`^plugin-requests/${ID}/(assign|start-review|request-information|approve|reject|fulfill|exception-proposals|exception-decisions)$`),
+  /^schools$/,
+  /^schools\/adoptions\/discover$/,
+  new RegExp(`^schools/${ID}/(update|enrollment-tokens|adopt-installation|infrastructure)$`),
+  new RegExp(`^schools/${ID}/enrollment-tokens/${ID}/revoke$`),
+];
+const matchesSessionPost = (path: string) => sessionPostPatterns.some((pattern) => pattern.test(path));
 
 function marketplaceUrl(): string {
   const value = process.env.MARKETPLACE_API_URL;
@@ -57,7 +70,7 @@ function sessionCookieOptions(expiresAt?: string) {
 
 async function proxy(request: NextRequest, segments: string[], method: 'GET' | 'POST') {
   const path = segments.join('/');
-  const allowed = method === 'GET' ? sessionGet.has(path) || sessionGetDetail.test(path) : publicPost.has(path) || sessionPost.has(path) || sessionPostPattern.test(path);
+  const allowed = method === 'GET' ? sessionGet.has(path) || sessionGetDetail.test(path) : publicPost.has(path) || sessionPost.has(path) || matchesSessionPost(path);
   if (!allowed) return NextResponse.json({ error: 'Route is not allowed' }, { status: 404 });
 
   if (method === 'POST') {
@@ -68,7 +81,7 @@ async function proxy(request: NextRequest, segments: string[], method: 'GET' | '
   }
 
   const session = request.cookies.get(SESSION_COOKIE)?.value;
-  const needsSession = method === 'GET' ? allowed : sessionPost.has(path) || sessionPostPattern.test(path);
+  const needsSession = method === 'GET' ? allowed : sessionPost.has(path) || matchesSessionPost(path);
   if (needsSession && !session) return NextResponse.json({ error: 'Sign-in required' }, { status: 401 });
 
   const target = new URL(`/platform/v1/${path}`, marketplaceUrl());

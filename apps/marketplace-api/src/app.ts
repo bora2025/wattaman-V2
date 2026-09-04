@@ -23,6 +23,7 @@ import { PlatformCommerceReadService } from './platform-commerce-read.service';
 import { PlatformExportService } from './platform-export.service';
 import { PlatformOperatorReadService } from './platform-operator-read.service';
 import { CustomerSchoolService } from './customer-school.service';
+import { SchoolDiscoveryService } from './school-discovery.service';
 import { platformOpenApi } from './platform-openapi';
 import { SchoolPluginRequestService } from './school-plugin-request.service';
 import { PlatformRequest, requirePlatformPermission, requirePlatformSession } from './platform-rbac';
@@ -81,6 +82,7 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   const platformExport = new PlatformExportService(prisma);
   const platformOperators = new PlatformOperatorReadService(prisma);
   const customerSchools = new CustomerSchoolService(prisma);
+  const schoolDiscovery = new SchoolDiscoveryService(prisma);
   const schoolPluginRequests = new SchoolPluginRequestService(prisma, config, commerce);
   const upload = multer({ storage: multer.memoryStorage(), limits: { files: 1, fileSize: config.maxArtifactBytes, fields: 10 } });
   const metrics = createMetricsRegistry(prisma);
@@ -379,6 +381,14 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   });
   app.post('/platform/v1/schools/:schoolId/enrollment-tokens/:tokenId/revoke', requirePlatformOperator, P('schools.manage'), async (request: PlatformRequest, response, next) => {
     try { response.json(await customerSchools.revokeEnrollmentToken(String(request.params.schoolId), String(request.params.tokenId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+  // Railway-first adoption (plan §8). Discovery is read-only and deliberately a POST: the gateway
+  // it is asked to contact is an outbound effect, not a cacheable lookup.
+  app.post('/platform/v1/schools/adoptions/discover', requirePlatformOperator, P('schools.manage'), async (request, response, next) => {
+    try { response.json(await schoolDiscovery.discover(request.body)); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/schools/:schoolId/infrastructure', requirePlatformOperator, P('schools.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await customerSchools.recordInfrastructure(String(request.params.schoolId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
   });
   app.post('/platform/v1/schools/:schoolId/adopt-installation', requirePlatformOperator, P('schools.manage'), async (request: PlatformRequest, response, next) => {
     try { response.json(await customerSchools.adoptInstallation(String(request.params.schoolId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
