@@ -18,4 +18,4 @@ RUN npm ci --omit=dev && chown -R node:node /app
 COPY --from=build --chown=node:node /app/dist ./dist
 RUN mkdir -p /data/artifacts && chown node:node /data/artifacts
 EXPOSE 3010
-CMD ["sh", "-c", "chown node:node /data/artifacts && exec su-exec node sh -c 'npx prisma migrate deploy && node dist/main.js'"]
+CMD ["sh", "-c", "mkdir -p /data/artifacts && chown node:node /data/artifacts && exec su-exec node sh -c 'npx prisma migrate deploy && node dist/main.js'"]
