@@ -26,6 +26,7 @@ const schema = z.object({
   IDENTITY_ENCRYPTION_KEYS_JSON: z.string().optional(),
   IDENTITY_ENCRYPTION_ACTIVE_KEY_ID: z.string().regex(/^[a-zA-Z0-9._-]{1,100}$/).optional(),
   TRANSACTIONAL_EMAIL_PROVIDER: z.enum(['disabled', 'sendgrid']).default('disabled'),
+  ALLOW_MFA_ONLY_PRODUCTION: z.enum(['true', 'false']).default('false'),
   SENDGRID_API_KEY: z.string().min(20).optional(),
   TRANSACTIONAL_EMAIL_FROM: z.string().email().optional(),
 });
@@ -65,8 +66,8 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): MarketplaceCon
   if (value.TRANSACTIONAL_EMAIL_PROVIDER === 'sendgrid' && (!value.SENDGRID_API_KEY || !value.TRANSACTIONAL_EMAIL_FROM)) {
     throw new Error('SENDGRID_API_KEY and TRANSACTIONAL_EMAIL_FROM are required for SendGrid transactional email');
   }
-  if (value.NODE_ENV === 'production' && value.TRANSACTIONAL_EMAIL_PROVIDER === 'disabled') {
-    throw new Error('TRANSACTIONAL_EMAIL_PROVIDER must be configured in production');
+  if (value.NODE_ENV === 'production' && value.TRANSACTIONAL_EMAIL_PROVIDER === 'disabled' && value.ALLOW_MFA_ONLY_PRODUCTION !== 'true') {
+    throw new Error('TRANSACTIONAL_EMAIL_PROVIDER must be configured in production unless ALLOW_MFA_ONLY_PRODUCTION=true is explicitly accepted');
   }
   const artifactPath = path.resolve(value.ARTIFACT_STORAGE_PATH);
   mkdirSync(artifactPath, { recursive: true });

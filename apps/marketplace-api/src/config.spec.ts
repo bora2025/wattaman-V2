@@ -57,4 +57,13 @@ describe('marketplace signing configuration', () => {
     (env as Record<string, string>).IDENTITY_ENCRYPTION_ACTIVE_KEY_ID = 'active';
     expect(() => readConfig(env)).toThrow('TRANSACTIONAL_EMAIL_PROVIDER must be configured');
   });
+
+  it('allows an explicitly accepted MFA-only production deployment without email', () => {
+    const env = environment(privateKey(), privateKey());
+    (env as Record<string, string>).NODE_ENV = 'production';
+    (env as Record<string, string>).IDENTITY_ENCRYPTION_KEYS_JSON = JSON.stringify({ active: Buffer.alloc(32, 1).toString('base64') });
+    (env as Record<string, string>).IDENTITY_ENCRYPTION_ACTIVE_KEY_ID = 'active';
+    (env as Record<string, string>).ALLOW_MFA_ONLY_PRODUCTION = 'true';
+    expect(readConfig(env).transactionalEmail.provider).toBe('disabled');
+  });
 });

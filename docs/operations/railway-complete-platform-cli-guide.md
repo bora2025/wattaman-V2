@@ -124,6 +124,11 @@ SENDGRID_API_KEY=<secret>
 TRANSACTIONAL_EMAIL_FROM=<verified sender>
 ```
 
+For an explicitly accepted MFA-only installation, set `TRANSACTIONAL_EMAIL_PROVIDER=disabled`
+and `ALLOW_MFA_ONLY_PRODUCTION=true` instead of configuring SendGrid. Platform operator MFA stays
+mandatory, but marketplace email verification and self-service password recovery are unavailable;
+operator recovery requires the audited deployment CLI.
+
 Reference Railway PostgreSQL; do not copy its resolved password. Mount a persistent volume at
 `/data/artifacts`. Generate a public domain targeting port `3010`, then set `PUBLIC_BASE_URL` to
 that exact HTTPS origin without a trailing slash.
