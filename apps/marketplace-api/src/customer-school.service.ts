@@ -281,7 +281,7 @@ export class CustomerSchoolService {
    * only runs at registration, and re-registering would mean rotating a school's identity key for
    * a bookkeeping reason.
    */
-  async adoptInstallation(schoolId: string, operatorId: string, value: unknown, context: PlatformActionContext) {
+  async adoptInstallation(schoolId: string, operatorId: string, value: unknown, context: PlatformActionContext, now = new Date()) {
     const input = adoptInput.parse(value);
     return this.prisma.$transaction(async (tx) => {
       const school = await tx.customerSchool.findUnique({
@@ -294,14 +294,26 @@ export class CustomerSchoolService {
 
       const registration = await tx.installationRegistration.findUnique({
         where: { installationId: input.installationId },
-        select: { id: true, installationId: true, label: true, customerSchoolId: true },
+        select: {
+          id: true, installationId: true, label: true, customerSchoolId: true,
+          keys: { where: { revokedAt: null }, select: { keyFingerprint: true }, take: 2 },
+        },
       });
       if (!registration) throw new HttpError(404, 'No installation is registered with that installation id');
       if (registration.customerSchoolId && registration.customerSchoolId !== schoolId) {
         throw new HttpError(409, 'That installation already belongs to another customer school');
       }
+      if (registration.keys.length !== 1) {
+        throw new HttpError(409, 'That installation does not have exactly one active identity key');
+      }
 
       await tx.installationRegistration.update({ where: { id: registration.id }, data: { customerSchoolId: schoolId } });
+      // A manual adoption supersedes the enrollment path. Revoke every outstanding credential so
+      // an old token cannot remain valid after the operator has established the identity by hand.
+      const revokedTokens = await tx.schoolEnrollmentToken.updateMany({
+        where: { customerSchoolId: schoolId, consumedAt: null, revokedAt: null, expiresAt: { gt: now } },
+        data: { revokedAt: now },
+      });
       const updated = await tx.customerSchool.update({
         where: { id: schoolId },
         data: { status: 'ACTIVE' },
@@ -309,7 +321,11 @@ export class CustomerSchoolService {
       });
       await this.audit(tx, operatorId, context, {
         action: 'customer_school_installation_adopted', targetId: schoolId, reason: input.internalReason,
-        metadata: { installationId: registration.installationId, registrationId: registration.id, previousLabel: registration.label },
+        metadata: {
+          installationId: registration.installationId, registrationId: registration.id,
+          activeKeyFingerprint: registration.keys[0].keyFingerprint,
+          previousLabel: registration.label, revokedEnrollmentTokens: revokedTokens.count,
+        },
       });
       return { ...updated, contactEmail: maskEmail(updated.contactEmail) };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });

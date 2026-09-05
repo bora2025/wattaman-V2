@@ -1,8 +1,11 @@
 # Customer School Provisioning and Platform Control Plan
 
-Status: planning only — no implementation authorized by this document  
-Owner: Wattanam Platform  
-Last reviewed: 2026-09-04  
+Status: implementation in progress — Phases 1–2 complete in code; Phase 3 control-plane foundation complete
+
+Owner: Wattanam Platform
+
+Last reviewed: 2026-09-05
+
 Scope: Railway-managed customer schools and the central Platform Admin control plane
 
 ## 1. Goal
@@ -47,12 +50,22 @@ Already implemented:
 - Railway per-school provisioning script with one-school-per-project validation.
 - Audit records for school creation, changes, token issuance/revocation, and adoption.
 
-Current gaps:
+Implemented on 2026-09-05:
+
+- canonical Railway service/build contracts and a CI validator;
+- duplicate Railway project/gateway prevention and SSRF-safe adoption discovery;
+- durable provisioning request and attempt records with an explicit state-transition service;
+- payload-bound idempotency, same-request transactional locking, expiring second-operator
+  approval, retry/cancel behavior, sanitized failures, and audit events;
+- Platform Admin provisioning creation, status list, approval, cancellation, and retry controls;
+- allowlisted Platform Admin proxy routes and OpenAPI contracts for the provisioning workflow.
+
+Remaining gaps:
 
 - Creating a Railway project does not create a Platform Admin school record.
-- Platform Admin cannot launch or track Railway provisioning.
-- The school creation form does not yet provide a complete provisioning/adoption workflow.
-- There is no durable provisioning job, retry journal, or reconciliation scheduler.
+- The approved provisioning worker and Railway adapter are not yet deployed.
+- Provisioning does not yet expose its full checkpoint timeline in Platform Admin.
+- There is no reconciliation scheduler.
 - Existing Railway projects are not automatically matched to directory records.
 - Installation registration still requires operator-run setup steps.
 - Platform Admin has no consolidated deployment, DNS, backup, upgrade, or agent-heartbeat view.
@@ -535,5 +548,6 @@ Approve or revise these decisions:
 7. The first implementation target is adoption of Angkor1 project `b5b07c38…`, followed by a
    disposable Platform-first school.
 
-No coding or production mutation should begin until these seven decisions are recorded as
-accepted architecture decisions.
+Decision status: accepted by the project owner. Coding may proceed, but production infrastructure
+mutation remains disabled until the worker's scoped Railway credential, quotas, hosted failure
+drill, and rollback evidence pass Phase 3 acceptance.

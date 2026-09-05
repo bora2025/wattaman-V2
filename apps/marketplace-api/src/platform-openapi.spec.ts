@@ -20,7 +20,7 @@ describe('platformOpenApi', () => {
     const protectedReads = Object.entries(document.paths)
       .filter(([route]) => !route.startsWith('/platform/v1/auth/') && route !== '/platform/v1/me')
       .map(([, value]) => Object.values(value)[0]);
-    expect(protectedReads).toHaveLength(39);
+    expect(protectedReads).toHaveLength(45);
     expect(protectedReads.every(value => 'x-wattanam-permission' in value)).toBe(true);
   });
 

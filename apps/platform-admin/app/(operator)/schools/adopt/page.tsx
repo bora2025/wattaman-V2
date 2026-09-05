@@ -1,9 +1,9 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { platformJson } from '../../../../lib/api';
+import { OperatorProfile, platformJson } from '../../../../lib/api';
 
 interface SchoolSummary {
   id: string; name: string; slug: string; status: string;
@@ -35,17 +35,32 @@ interface Discovery {
  */
 export default function AdoptSchoolPage() {
   const router = useRouter();
+  const [permission, setPermission] = useState<'loading' | 'allowed' | 'denied'>('loading');
   const [gatewayOrigin, setGatewayOrigin] = useState('');
   const [railwayProjectId, setRailwayProjectId] = useState('');
   const [reason, setReason] = useState('');
   const [discovery, setDiscovery] = useState<Discovery | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [note, setNote] = useState('');
+  const [identityConfirmed, setIdentityConfirmed] = useState(false);
+
+  useEffect(() => {
+    platformJson<OperatorProfile>('me')
+      .then(profile => setPermission(profile.permissions.includes('schools.manage') ? 'allowed' : 'denied'))
+      .catch(() => setPermission('denied'));
+  }, []);
+
+  function changeDeployment(field: 'gateway' | 'project', value: string) {
+    if (field === 'gateway') setGatewayOrigin(value);
+    else setRailwayProjectId(value);
+    // A discovery result is valid only for the exact identifiers that produced it. Clearing it
+    // prevents an operator editing the form and then adopting the previously inspected school.
+    setDiscovery(null); setIdentityConfirmed(false); setError('');
+  }
 
   async function discover(event: FormEvent) {
     event.preventDefault();
-    setBusy(true); setError(''); setDiscovery(null); setNote('');
+    setBusy(true); setError(''); setDiscovery(null); setIdentityConfirmed(false);
     try {
       setDiscovery(await platformJson<Discovery>('schools/adoptions/discover', {
         method: 'POST',
@@ -60,7 +75,7 @@ export default function AdoptSchoolPage() {
    * infrastructure and adopts the registration if the school already has one. */
   async function adopt() {
     if (!discovery || discovery.outcome === 'CONFLICT') return;
-    setBusy(true); setError(''); setNote('');
+    setBusy(true); setError('');
     try {
       const detected = discovery.detected;
       let school = discovery.match;
@@ -89,16 +104,17 @@ export default function AdoptSchoolPage() {
           method: 'POST',
           body: JSON.stringify({ installationId: detected.installationId, internalReason: reason }),
         });
-      } else if (!discovery.registration) {
-        setNote('The directory record is ready, but this school has never registered with the marketplace. Mint an enrollment token on its page and register the school before it becomes active.');
       }
-      router.push(`/schools/${school.id}`);
+      router.push(`/schools/${school.id}${!discovery.registration ? '?enrollment=required' : '?adopted=true'}`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Adoption failed');
     } finally { setBusy(false); }
   }
 
-  const canAdopt = Boolean(discovery && discovery.outcome !== 'CONFLICT' && reason.trim().length >= 3);
+  const canAdopt = Boolean(discovery && discovery.outcome !== 'CONFLICT' && discovery.ready && identityConfirmed && reason.trim().length >= 3);
+
+  if (permission === 'loading') return <p className="text-sm text-slate-500">Loading…</p>;
+  if (permission === 'denied') return <p role="alert" className="rounded-lg bg-red-50 p-4 text-sm text-red-700">You need the schools.manage permission to adopt a Railway school.</p>;
 
   return <div className="space-y-4">
     <div>
@@ -113,13 +129,13 @@ export default function AdoptSchoolPage() {
         <div>
           <label className="text-xs font-medium text-slate-600" htmlFor="gateway">Gateway origin <span aria-hidden="true">*</span></label>
           <input id="gateway" required type="url" className="pa-input mt-1" value={gatewayOrigin} aria-describedby="gateway-hint"
-            placeholder="https://gateway-production-26d3.up.railway.app" onChange={event => setGatewayOrigin(event.target.value)} />
+            placeholder="https://gateway-production-26d3.up.railway.app" onChange={event => changeDeployment('gateway', event.target.value)} />
           <p id="gateway-hint" className="mt-1 text-xs text-slate-500">HTTPS origin only, no path. Private and loopback addresses are refused.</p>
         </div>
         <div>
           <label className="text-xs font-medium text-slate-600" htmlFor="project">Railway project ID</label>
           <input id="project" className="pa-input mt-1" value={railwayProjectId} aria-describedby="project-hint"
-            placeholder="b5b07c38-6569-4bee-ab88-6b134998c77d" onChange={event => setRailwayProjectId(event.target.value)} />
+            placeholder="b5b07c38-6569-4bee-ab88-6b134998c77d" onChange={event => changeDeployment('project', event.target.value)} />
           <p id="project-hint" className="mt-1 text-xs text-slate-500">Optional. Infrastructure metadata only — it is not proof of ownership.</p>
         </div>
       </div>
@@ -160,12 +176,16 @@ export default function AdoptSchoolPage() {
 
       {discovery.outcome !== 'CONFLICT' && <section className="pa-card space-y-3">
         <h2 className="font-semibold">4. Record the decision</h2>
+        {!discovery.ready && <p role="alert" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">This deployment is not reporting ready. Adoption is disabled until its public readiness check succeeds. Fix the deployment and run discovery again.</p>}
+        <label className="flex items-start gap-2 text-sm text-slate-700">
+          <input className="mt-1" type="checkbox" checked={identityConfirmed} onChange={event => setIdentityConfirmed(event.target.checked)} />
+          <span>I confirm the detected school, installation ID, gateway, and directory decision belong to this customer.</span>
+        </label>
         <label className="block text-xs font-medium text-slate-600" htmlFor="reason">Internal reason <span aria-hidden="true">*</span>
           <textarea id="reason" required minLength={3} className="pa-input mt-1 min-h-20" value={reason}
             onChange={event => setReason(event.target.value)} placeholder="Migrating an existing customer into the platform directory" />
         </label>
         {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-        {note && <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{note}</p>}
         <button className="pa-btn-primary" disabled={busy || !canAdopt} onClick={adopt}>
           {busy ? 'Adopting…' : discovery.outcome === 'MATCH' ? 'Adopt into existing record' : 'Create record and adopt'}
         </button>

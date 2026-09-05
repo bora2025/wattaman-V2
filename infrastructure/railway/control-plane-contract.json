@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "environment": "production",
+  "canonicalProject": {
+    "name": "Wattanam V2 Marketplace",
+    "railwayProjectId": "b828cc9c-57aa-46c1-8ff7-1836773f1cfa"
+  },
+  "databaseService": "Postgres",
+  "services": {
+    "marketplace-api": {
+      "configPath": "/infrastructure/railway/marketplace-api.railway.json",
+      "rootDirectory": "/",
+      "dockerfilePath": "apps/marketplace-api/Dockerfile",
+      "databaseUrl": "${{Postgres.DATABASE_URL}}"
+    },
+    "platform-admin-web": {
+      "configPath": "/infrastructure/railway/platform-admin.railway.json",
+      "rootDirectory": "/",
+      "dockerfilePath": "infrastructure/railway/platform-admin.Dockerfile",
+      "marketplaceApiUrl": "http://${{marketplace-api.RAILWAY_PRIVATE_DOMAIN}}:3010"
+    }
+  }
+}

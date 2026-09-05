@@ -181,9 +181,10 @@ describe('CustomerSchoolService', () => {
         update: jest.fn().mockResolvedValue({ id: 'school-1', status: 'ACTIVE', contactEmail: null }),
       },
       installationRegistration: {
-        findUnique: jest.fn().mockResolvedValue({ id: 'registration-1', installationId: '11111111-1111-4111-8111-111111111111', label: 'Bora School', customerSchoolId: null }),
+        findUnique: jest.fn().mockResolvedValue({ id: 'registration-1', installationId: '11111111-1111-4111-8111-111111111111', label: 'Bora School', customerSchoolId: null, keys: [{ keyFingerprint: 'fingerprint-1' }] }),
         update: jest.fn(),
       },
+      schoolEnrollmentToken: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
       platformAuditEvent: { create: jest.fn() },
     };
     const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
@@ -195,13 +196,34 @@ describe('CustomerSchoolService', () => {
     expect(tx.installationRegistration.update.mock.calls[0][0].data).toEqual({ customerSchoolId: 'school-1' });
     expect(tx.customerSchool.update.mock.calls[0][0].data).toEqual({ status: 'ACTIVE' });
     expect(tx.platformAuditEvent.create.mock.calls[0][0].data.action).toBe('customer_school_installation_adopted');
+    expect(tx.schoolEnrollmentToken.updateMany).toHaveBeenCalled();
+    expect(tx.platformAuditEvent.create.mock.calls[0][0].data.metadata).toMatchObject({
+      activeKeyFingerprint: 'fingerprint-1', revokedEnrollmentTokens: 1,
+    });
+  });
+
+  it('refuses to activate an installation without exactly one active identity key', async () => {
+    const tx = {
+      customerSchool: { findUnique: jest.fn().mockResolvedValue({ id: 'school-1', status: 'PROSPECT', installation: null }), update: jest.fn() },
+      installationRegistration: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'registration-1', installationId: '11111111-1111-4111-8111-111111111111', customerSchoolId: null, keys: [] }),
+        update: jest.fn(),
+      },
+    };
+    const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
+
+    await expect(new CustomerSchoolService(prisma).adoptInstallation('school-1', 'operator-1', {
+      installationId: '11111111-1111-4111-8111-111111111111', internalReason: 'Attempt activation.',
+    }, context)).rejects.toMatchObject({ status: 409, message: expect.stringContaining('active identity key') });
+    expect(tx.installationRegistration.update).not.toHaveBeenCalled();
+    expect(tx.customerSchool.update).not.toHaveBeenCalled();
   });
 
   it('refuses to adopt an installation that belongs to another customer school', async () => {
     const tx = {
       customerSchool: { findUnique: jest.fn().mockResolvedValue({ id: 'school-1', status: 'PROSPECT', installation: null }), update: jest.fn() },
       installationRegistration: {
-        findUnique: jest.fn().mockResolvedValue({ id: 'registration-1', installationId: '11111111-1111-4111-8111-111111111111', customerSchoolId: 'school-2' }),
+        findUnique: jest.fn().mockResolvedValue({ id: 'registration-1', installationId: '11111111-1111-4111-8111-111111111111', customerSchoolId: 'school-2', keys: [{ keyFingerprint: 'fingerprint-1' }] }),
         update: jest.fn(),
       },
     };

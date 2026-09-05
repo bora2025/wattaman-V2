@@ -4,6 +4,12 @@ Status: operational runbook
 Scope: central marketplace, private platform administration, and isolated customer schools  
 Validated repository layout: 2026-09-03
 
+> **Production control-plane correction (2026-09-05):** the production Platform Admin now shares
+> the one canonical marketplace API/database in `Wattanam V2 Marketplace`; do not create the
+> second production marketplace project described later in this historical guide. Use
+> [railway-canonical-control-plane.md](./railway-canonical-control-plane.md) for current production
+> configuration. The separate topology below is valid only for an isolated staging environment.
+
 This guide creates three separate deployment boundaries:
 
 ```text

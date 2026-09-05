@@ -13,6 +13,7 @@
     "provision:railway:school": "node tools/provision-railway-school.js",
     "domain:custom": "node tools/manage-custom-domain.js",
     "test:tools": "node --test tools/*.test.js",
+    "verify:control-plane": "node tools/verify-control-plane-config.js",
     "test:tools:live": "node --test tools/*.live-test.js",
     "install:all": "cd backend && npm install && cd ../frontend && npm install && cd ../apps/mobile && npm install"
   },

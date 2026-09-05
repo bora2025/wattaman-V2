@@ -136,6 +136,23 @@ enum SchoolLifecycleStatus {
   TERMINATED
 }
 
+enum SchoolProvisioningStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  PROVISIONING
+  READY
+  FAILED_RETRYABLE
+  CANCELLED
+}
+
+enum SchoolProvisioningAttemptStatus {
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
 enum PublisherRole {
   OWNER
   ADMIN
@@ -506,7 +523,61 @@ model CustomerSchool {
   createdBy           PlatformOperator?         @relation("CustomerSchoolCreator", fields: [createdByOperatorId], references: [id], onDelete: SetNull)
   enrollmentTokens    SchoolEnrollmentToken[]
   installation        InstallationRegistration?
+  provisioningRequests SchoolProvisioningRequest[]
 
+  @@index([status, createdAt])
+}
+
+model SchoolProvisioningRequest {
+  id                       String                   @id @default(uuid())
+  customerSchoolId         String
+    idempotencyKey           String                   @unique
+    requestFingerprint       String
+  status                   SchoolProvisioningStatus @default(DRAFT)
+  targetWorkspaceId        String
+  environment              String                   @default("production")
+  region                   String?
+  releaseVersion           String
+  apiImage                  String
+  webImage                  String
+  gatewayImage              String
+  requestedDomain          String?
+  requestedByOperatorId    String
+  approvedByOperatorId     String?
+  internalReason           String
+  submittedAt              DateTime?
+  approvedAt               DateTime?
+  approvalExpiresAt        DateTime?
+  cancelledAt              DateTime?
+  completedAt              DateTime?
+  lastSuccessfulCheckpoint String?
+  lastErrorCode            String?
+  lastErrorMessage         String?
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
+  school                   CustomerSchool           @relation(fields: [customerSchoolId], references: [id], onDelete: Restrict)
+  requestedBy              PlatformOperator         @relation("SchoolProvisioningRequester", fields: [requestedByOperatorId], references: [id], onDelete: Restrict)
+  approvedBy               PlatformOperator?        @relation("SchoolProvisioningApprover", fields: [approvedByOperatorId], references: [id], onDelete: Restrict)
+  attempts                 SchoolProvisioningAttempt[]
+
+  @@index([status, createdAt])
+  @@index([customerSchoolId, createdAt])
+}
+
+model SchoolProvisioningAttempt {
+  id             String                           @id @default(uuid())
+  requestId      String
+  attemptNumber  Int
+  status         SchoolProvisioningAttemptStatus  @default(RUNNING)
+  workerId       String?
+  startedAt      DateTime                         @default(now())
+  finishedAt     DateTime?
+  errorCode      String?
+  errorMessage   String?
+  createdAt      DateTime                         @default(now())
+  request        SchoolProvisioningRequest        @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@unique([requestId, attemptNumber])
   @@index([status, createdAt])
 }
 
@@ -892,6 +963,8 @@ model PlatformOperator {
   decidedPluginExceptions   SchoolPluginRequestExceptionApproval[] @relation("PluginExceptionDecider")
   createdCustomerSchools    CustomerSchool[]                       @relation("CustomerSchoolCreator")
   mintedEnrollmentTokens    SchoolEnrollmentToken[]                @relation("SchoolEnrollmentTokenCreator")
+  requestedSchoolProvisioning SchoolProvisioningRequest[]           @relation("SchoolProvisioningRequester")
+  approvedSchoolProvisioning  SchoolProvisioningRequest[]           @relation("SchoolProvisioningApprover")
 }
 
 // ─── Platform Admin (PA-3): school plugin-request workflow ───────────────

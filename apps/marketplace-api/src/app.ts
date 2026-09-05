@@ -26,6 +26,7 @@ import { CustomerSchoolService } from './customer-school.service';
 import { SchoolDiscoveryService } from './school-discovery.service';
 import { platformOpenApi } from './platform-openapi';
 import { SchoolPluginRequestService } from './school-plugin-request.service';
+import { SchoolProvisioningService } from './school-provisioning.service';
 import { PlatformRequest, requirePlatformPermission, requirePlatformSession } from './platform-rbac';
 import { actionContext } from './platform-context';
 import { createMetricsRegistry } from './observability/metrics';
@@ -84,6 +85,7 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   const customerSchools = new CustomerSchoolService(prisma);
   const schoolDiscovery = new SchoolDiscoveryService(prisma);
   const schoolPluginRequests = new SchoolPluginRequestService(prisma, config, commerce);
+  const schoolProvisioning = new SchoolProvisioningService(prisma);
   const upload = multer({ storage: multer.memoryStorage(), limits: { files: 1, fileSize: config.maxArtifactBytes, fields: 10 } });
   const metrics = createMetricsRegistry(prisma);
   app.disable('x-powered-by');
@@ -370,6 +372,25 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   app.post('/platform/v1/schools', requirePlatformOperator, P('schools.manage'), async (request: PlatformRequest, response, next) => {
     try { response.status(201).json(await customerSchools.create(request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
   });
+  app.get('/platform/v1/schools/provisioning-requests', requirePlatformOperator, P('schools.read'), async (request, response, next) => {
+    try { response.json(await schoolProvisioning.list(request.query)); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/schools/provisioning-requests', requirePlatformOperator, P('schools.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.status(201).json(await schoolProvisioning.create(request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+  app.get('/platform/v1/schools/provisioning-requests/:requestId', requirePlatformOperator, P('schools.read'), async (request, response, next) => {
+    try { response.json(await schoolProvisioning.get(String(request.params.requestId))); } catch (error) { next(error); }
+  });
+  for (const [action, invoke] of Object.entries({
+    submit: schoolProvisioning.submit.bind(schoolProvisioning),
+    approve: schoolProvisioning.approve.bind(schoolProvisioning),
+    cancel: schoolProvisioning.cancel.bind(schoolProvisioning),
+    retry: schoolProvisioning.retry.bind(schoolProvisioning),
+  })) {
+    app.post(`/platform/v1/schools/provisioning-requests/:requestId/${action}`, requirePlatformOperator, P('schools.manage'), async (request: PlatformRequest, response, next) => {
+      try { response.json(await invoke(String(request.params.requestId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+    });
+  }
   app.get('/platform/v1/schools/:schoolId', requirePlatformOperator, P('schools.read'), async (request, response, next) => {
     try { response.json(await customerSchools.school(String(request.params.schoolId))); } catch (error) { next(error); }
   });

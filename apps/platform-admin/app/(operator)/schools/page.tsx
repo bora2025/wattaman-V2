@@ -51,6 +51,7 @@ export default function SchoolsPage() {
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div><h1 className="text-xl font-bold">Customer schools</h1><p className="text-sm text-slate-500">Create the customer directory record before deploying or enrolling its isolated school installation.</p></div>
       {canManage && <div className="flex gap-2">
+        <Link className="pa-btn-secondary" href="/schools/provisioning">Provision a new school</Link>
         <Link className="pa-btn-secondary" href="/schools/adopt">Adopt existing Railway school</Link>
         <button className="pa-btn-primary" onClick={() => setShowCreate(value => !value)}>{showCreate ? 'Cancel' : 'Create customer school'}</button>
       </div>}

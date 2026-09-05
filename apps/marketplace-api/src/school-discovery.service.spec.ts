@@ -96,6 +96,16 @@ describe('SchoolDiscoveryService', () => {
     expect(result.outcome).toBe('CREATE');
   });
 
+  it('reports a conflict instead of offering adoption when registration has no active key', async () => {
+    const service = new SchoolDiscoveryService(prismaWith({
+      registration: { id: 'registration-1', installationId: STATUS.installation.installationId, label: 'Angkor1', customerSchoolId: null, keys: [] },
+    }), gateway());
+
+    const result = await service.discover({ gatewayOrigin: ORIGIN });
+    expect(result.outcome).toBe('CONFLICT');
+    expect(result.conflictReasons).toContain('this installation does not have exactly one active identity key');
+  });
+
   it('refuses a school that has not completed first-run installation', async () => {
     const service = new SchoolDiscoveryService(prismaWith(), gateway({ status: { state: 'legacy_unadopted', installation: null } }));
     await expect(service.discover({ gatewayOrigin: ORIGIN })).rejects.toMatchObject({ status: 409 });
@@ -138,6 +148,19 @@ describe('SchoolDiscoveryService', () => {
       // The point is that nothing was ever requested, not merely that the call failed.
       expect(fetchImpl).not.toHaveBeenCalled();
     });
+
+    it('revalidates DNS before use and sends no request after a public host rebinds privately', async () => {
+      const fetchImpl = gateway();
+      const resolveAll = jest.fn()
+        .mockResolvedValueOnce([{ address: '104.18.0.1', family: 4 }])
+        .mockResolvedValue([{ address: '169.254.169.254', family: 4 }]);
+      const service = new SchoolDiscoveryService(prismaWith(), fetchImpl, resolveAll);
+
+      await expect(service.discover({ gatewayOrigin: 'https://school.example.com' }))
+        .rejects.toMatchObject({ status: 400, message: expect.stringContaining('non-public') });
+      expect(resolveAll).toHaveBeenCalledTimes(4);
+      expect(fetchImpl).not.toHaveBeenCalled();
+    });
   });
 });
 
@@ -145,7 +168,8 @@ describe('isBlockedAddress', () => {
   it.each([
     '127.0.0.1', '0.0.0.0', '10.1.2.3', '172.31.255.255', '192.168.0.1',
     '169.254.169.254', '100.64.0.1', '224.0.0.1',
-    '::1', '::', 'fe80::1', 'fd00::1', '::ffff:169.254.169.254',
+    '192.0.2.1', '198.18.0.1', '198.51.100.2', '203.0.113.3',
+    '::1', '::', 'fe80::1', 'fd00::1', 'ff02::1', '2001:db8::1', '::ffff:169.254.169.254',
   ])('blocks %s', (address) => expect(isBlockedAddress(address)).toBe(true));
 
   it.each(['8.8.8.8', '1.1.1.1', '104.18.0.1', '172.32.0.1', '2606:4700::1111', '::ffff:8.8.8.8'])(

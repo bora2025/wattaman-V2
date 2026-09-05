@@ -5,6 +5,15 @@ on:
   workflow_dispatch:
 
 jobs:
+  control-plane-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Reject unsafe Railway control-plane configuration
+        run: npm run verify:control-plane && node --test tools/verify-control-plane-config.test.js
+
   backend:
     runs-on: ubuntu-latest
     services:
@@ -119,6 +128,7 @@ jobs:
           - frontend/Dockerfile
           - backend/Dockerfile
           - apps/marketplace-api/Dockerfile
+          - infrastructure/railway/platform-admin.Dockerfile
           - infrastructure/gateway/Dockerfile
     steps:
       - uses: actions/checkout@v4

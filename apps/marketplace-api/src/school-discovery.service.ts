@@ -42,6 +42,11 @@ const versionDocument = z.object({
 
 export type AdoptionOutcome = 'CREATE' | 'MATCH' | 'CONFLICT';
 
+type ResolvedAddress = { address: string; family: number };
+type ResolveAll = (hostname: string) => Promise<ResolvedAddress[]>;
+
+const systemResolveAll: ResolveAll = (hostname) => lookup(hostname, { all: true });
+
 /**
  * Read-only discovery of a school that was deployed before Platform-first provisioning existed
  * (plan §8, Flow B).
@@ -52,7 +57,11 @@ export type AdoptionOutcome = 'CREATE' | 'MATCH' | 'CONFLICT';
  * confirmation before anything is created.
  */
 export class SchoolDiscoveryService {
-  constructor(private readonly prisma: PrismaClient, private readonly fetchImpl: typeof fetch = fetch) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly fetchImpl: typeof fetch = fetch,
+    private readonly resolveAll: ResolveAll = systemResolveAll,
+  ) {}
 
   async discover(value: unknown) {
     const input = discoverInput.parse(value);
@@ -121,6 +130,7 @@ export class SchoolDiscoveryService {
     const reasons: string[] = [];
     if (distinct.length > 1) reasons.push('slug, Railway project, and gateway point at different customer schools');
     if (claimedElsewhere) reasons.push('this installation is already adopted by another customer school');
+    if (registration && registration.keys.length !== 1) reasons.push('this installation does not have exactly one active identity key');
 
     const outcome: AdoptionOutcome = reasons.length > 0 ? 'CONFLICT' : distinct.length === 1 ? 'MATCH' : 'CREATE';
     return {
@@ -157,17 +167,25 @@ export class SchoolDiscoveryService {
     if (url.pathname !== '/' || url.search || url.hash) throw new HttpError(400, 'gatewayOrigin must be an origin without a path, query, or fragment');
     if (url.username || url.password) throw new HttpError(400, 'gatewayOrigin must not carry credentials');
 
-    const addresses = isIP(url.hostname)
-      ? [{ address: url.hostname, family: isIP(url.hostname) }]
-      : await lookup(url.hostname, { all: true }).catch(() => { throw new HttpError(400, 'gatewayOrigin does not resolve'); });
+    await this.assertPublicHostname(url.hostname);
+    return url.origin;
+  }
+
+  private async assertPublicHostname(hostname: string): Promise<void> {
+    const addresses = isIP(hostname)
+      ? [{ address: hostname, family: isIP(hostname) }]
+      : await this.resolveAll(hostname).catch(() => { throw new HttpError(400, 'gatewayOrigin does not resolve'); });
     if (addresses.length === 0) throw new HttpError(400, 'gatewayOrigin does not resolve');
     for (const { address } of addresses) {
       if (isBlockedAddress(address)) throw new HttpError(400, 'gatewayOrigin resolves to a non-public address');
     }
-    return url.origin;
   }
 
   private async getJson(url: string): Promise<unknown> {
+    // Resolve again immediately before every outbound request. The initial validation protects the
+    // submitted origin; this second check protects the gap between validation and use when an
+    // attacker changes a short-lived DNS answer (DNS rebinding). Redirects remain disabled below.
+    await this.assertPublicHostname(new URL(url).hostname);
     let response: Response;
     try {
       response = await this.fetchImpl(url, {
@@ -193,12 +211,16 @@ const SUMMARY = { id: true, name: true, slug: true, status: true, railwayProject
 export function isBlockedAddress(address: string): boolean {
   const family = isIP(address);
   if (family === 4) {
-    const [a, b] = address.split('.').map(Number);
+    const [a, b, c] = address.split('.').map(Number);
     if (a === 10 || a === 127 || a === 0) return true;
     if (a === 172 && b >= 16 && b <= 31) return true;
     if (a === 192 && b === 168) return true;
     if (a === 169 && b === 254) return true; // link-local, and 169.254.169.254 metadata
     if (a === 100 && b >= 64 && b <= 127) return true; // carrier-grade NAT
+    if (a === 192 && b === 0) return true; // IETF protocol assignments
+    if (a === 198 && (b === 18 || b === 19)) return true; // benchmark networks
+    if (a === 198 && b === 51 && c === 100) return true; // TEST-NET-2
+    if (a === 203 && b === 0 && c === 113) return true; // TEST-NET-3
     if (a >= 224) return true; // multicast and reserved
     return false;
   }
@@ -206,6 +228,8 @@ export function isBlockedAddress(address: string): boolean {
     const value = address.toLowerCase();
     if (value === '::1' || value === '::') return true;
     if (value.startsWith('fe80') || value.startsWith('fc') || value.startsWith('fd')) return true;
+    if (value.startsWith('ff') || value.startsWith('fec') || value.startsWith('fed') || value.startsWith('fee') || value.startsWith('fef')) return true;
+    if (value.startsWith('2001:db8')) return true; // documentation prefix
     // IPv4-mapped addresses carry a v4 address that must be judged by v4 rules.
     const mapped = value.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
     if (mapped) return isBlockedAddress(mapped[1]);
