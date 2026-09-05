@@ -1,15 +1,17 @@
 # Railway Canonical Production Control Plane
 
-Status: deployment contract  
-Canonical Railway project: `Wattanam V2 Marketplace`  
-Project ID: `b828cc9c-57aa-46c1-8ff7-1836773f1cfa`
+Status: deployment contract
+
+Canonical Railway project: `Wattanam Marketplace Production`
+
+Project ID: `6be51398-fec2-481c-84b8-86e6a978fad8`
 
 Production has exactly one marketplace API and one marketplace database. `platform-admin-web`
 is an interface to that API; it must not run a second marketplace API or use a second Postgres
 database. Staging remains isolated and must never be presented as production.
 
 ```text
-Wattanam V2 Marketplace (one Railway project)
+Wattanam Marketplace Production (one Railway project)
 ├── Postgres                  canonical marketplace database
 ├── marketplace-api          canonical API
 └── platform-admin-web       operator UI -> marketplace-api private domain
@@ -63,7 +65,7 @@ above before the first deployment and after any Railway configuration change.
 These commands upload the repository root and rely on each service's checked-in Railway config:
 
 ```powershell
-railway.cmd link --project b828cc9c-57aa-46c1-8ff7-1836773f1cfa --environment production
+railway.cmd link --project 6be51398-fec2-481c-84b8-86e6a978fad8 --environment production
 railway.cmd status
 npm run verify:control-plane
 railway.cmd up --service marketplace-api --environment production --detach

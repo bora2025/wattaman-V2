@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "environment": "production",
   "canonicalProject": {
-    "name": "Wattanam V2 Marketplace",
-    "railwayProjectId": "b828cc9c-57aa-46c1-8ff7-1836773f1cfa"
+    "name": "Wattanam Marketplace Production",
+    "railwayProjectId": "6be51398-fec2-481c-84b8-86e6a978fad8"
   },
   "databaseService": "Postgres",
   "services": {
