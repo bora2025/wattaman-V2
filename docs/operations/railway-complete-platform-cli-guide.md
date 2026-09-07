@@ -401,6 +401,7 @@ Before production handoff:
 
 Related references:
 
+- [Marketplace to Customer School: End-to-End Guide](./marketplace-to-customer-school-end-to-end.md)
 - [Manual Railway Setup Guide](./railway-manual-setup-guide.md)
 - [Railway Deployment Guide](./railway-deployment-guide.md)
 - [Per-school Railway Architecture](../deployment/railway-per-school.md)

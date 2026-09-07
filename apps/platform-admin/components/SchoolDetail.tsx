@@ -10,19 +10,104 @@ interface School {
   contactEmail: string | null; railwayProjectId: string | null; gatewayOrigin: string | null; notes: string | null;
   installation: { id: string; installationId: string; label: string | null; lastSeenAt: string | null } | null;
   enrollmentTokens: Array<{ id: string; createdAt: string; expiresAt: string; consumedAt: string | null; revokedAt: string | null }>;
+  domains: Array<{ id: string; hostname: string; isPrimary: boolean; verifiedAt: string | null; createdAt: string }>;
 }
+
+interface Usage { measuredAt: string; source: string; lastSeenAt: string | null; counts: { entitlements: number; orders: number; downloads: number; pluginRequests: number } }
+interface Plan { id: string; slug: string; name: string; currency: string; amountMinor: number; billingInterval: string; dueDays: number; active: boolean }
+interface Billing { schoolCurrency: string | null; billingPlan: Plan | null; outstandingMinor: number; invoices: Array<{ id: string; invoiceNumber: string; status: string; currency: string; amountMinor: number; paidMinor: number; description: string; dueAt: string; issuedAt: string; payments: Array<{ id: string; provider: string; providerReference: string; amountMinor: number; receivedAt: string }> }>; notifications: Array<{ id: string; type: string; status: string; subject: string; recipientEmail: string | null; createdAt: string; failureMessage: string | null }> }
 
 export default function SchoolDetail({ schoolId, notice }: { schoolId: string; notice?: 'enrollment-required' | 'adopted' }) {
   const [school, setSchool] = useState<School | null>(null);
   const [canManage, setCanManage] = useState(false);
+  const [canReadBilling, setCanReadBilling] = useState(false);
+  const [canManageBilling, setCanManageBilling] = useState(false);
   const [reason, setReason] = useState('Provision new customer school installation');
   const [token, setToken] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [usage, setUsage] = useState<Usage | null>(null);
+  const [hostname, setHostname] = useState('');
+  const [billing, setBilling] = useState<Billing | null>(null);
+  const [invoiceAmount, setInvoiceAmount] = useState('');
+  const [invoiceDescription, setInvoiceDescription] = useState('Platform subscription');
+  const [invoiceDue, setInvoiceDue] = useState('');
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [selectedPlanId, setSelectedPlanId] = useState('');
   const load = useCallback(() => platformJson<School>(`schools/${encodeURIComponent(schoolId)}`).then(setSchool).catch(cause => setError(cause instanceof Error ? cause.message : 'Could not load school')), [schoolId]);
 
-  useEffect(() => { load(); platformJson<OperatorProfile>('me').then(profile => setCanManage(profile.permissions.includes('schools.manage'))).catch(() => undefined); }, [load]);
+  useEffect(() => {
+    load();
+    platformJson<Usage>(`schools/${encodeURIComponent(schoolId)}/usage`).then(setUsage).catch(() => undefined);
+    platformJson<OperatorProfile>('me').then(profile => {
+      setCanManage(profile.permissions.includes('schools.manage'));
+      setCanReadBilling(profile.permissions.includes('school_billing.read'));
+      setCanManageBilling(profile.permissions.includes('school_billing.manage'));
+    }).catch(() => undefined);
+  }, [load, schoolId]);
+
+  useEffect(() => { if (canReadBilling) { platformJson<Billing>(`schools/${encodeURIComponent(schoolId)}/billing`).then(value => { setBilling(value); setSelectedPlanId(value.billingPlan?.id || ''); }).catch(() => undefined); platformJson<Plan[]>('school-billing-plans').then(setPlans).catch(() => undefined); } }, [canReadBilling, schoolId]);
+
+  async function mutate(path: string, body: Record<string, unknown>) {
+    setBusy(true); setError('');
+    try { await platformJson(`schools/${schoolId}/${path}`, { method: 'POST', body: JSON.stringify(body) }); await load(); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : 'Operation failed'); }
+    finally { setBusy(false); }
+  }
+
+  async function addDomain(event: React.FormEvent) {
+    event.preventDefault();
+    await mutate('domains', { hostname, isPrimary: school?.domains.length === 0, internalReason: reason });
+    setHostname('');
+  }
+
+  async function issueInvoice(event: React.FormEvent) {
+    event.preventDefault();
+    const amountMinor = Math.round(Number(invoiceAmount) * 100);
+    if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0) { setError('Invoice amount must be positive'); return; }
+    setBusy(true); setError('');
+    try {
+      await platformJson(`schools/${schoolId}/invoices`, { method: 'POST', body: JSON.stringify({
+        currency: school?.currency || 'USD', amountMinor, description: invoiceDescription,
+        dueAt: new Date(`${invoiceDue}T23:59:59.000Z`).toISOString(), idempotencyKey: crypto.randomUUID(), internalReason: reason,
+      }) });
+      setInvoiceAmount('');
+      setBilling(await platformJson<Billing>(`schools/${schoolId}/billing`));
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not issue invoice'); }
+    finally { setBusy(false); }
+  }
+
+  async function recordPayment(invoice: Billing['invoices'][number]) {
+    const amountText = window.prompt(`Payment amount in ${invoice.currency}`, ((invoice.amountMinor - invoice.paidMinor) / 100).toFixed(2));
+    if (!amountText) return;
+    const providerReference = window.prompt('Bank/payment reference');
+    if (!providerReference) return;
+    const amountMinor = Math.round(Number(amountText) * 100);
+    setBusy(true); setError('');
+    try {
+      await platformJson(`schools/${schoolId}/invoices/${invoice.id}/payments`, { method: 'POST', body: JSON.stringify({
+        provider: 'manual', providerReference, amountMinor, receivedAt: new Date().toISOString(), internalReason: reason,
+      }) });
+      setBilling(await platformJson<Billing>(`schools/${schoolId}/billing`));
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not record payment'); }
+    finally { setBusy(false); }
+  }
+
+  async function assignCentralPlan() {
+    if (!selectedPlanId) return;
+    setBusy(true); setError('');
+    try { await platformJson(`schools/${schoolId}/billing-plan`, { method: 'POST', body: JSON.stringify({ planId: selectedPlanId, internalReason: reason }) }); setBilling(await platformJson<Billing>(`schools/${schoolId}/billing`)); await load(); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not assign billing plan'); }
+    finally { setBusy(false); }
+  }
+
+  async function issueCentralPlanInvoice() {
+    setBusy(true); setError('');
+    try { await platformJson(`schools/${schoolId}/plan-invoices`, { method: 'POST', body: JSON.stringify({ periodStart: new Date().toISOString(), idempotencyKey: crypto.randomUUID(), internalReason: reason }) }); setBilling(await platformJson<Billing>(`schools/${schoolId}/billing`)); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not create plan invoice'); }
+    finally { setBusy(false); }
+  }
 
   async function mintToken() {
     setBusy(true); setError(''); setToken('');
@@ -60,8 +145,12 @@ export default function SchoolDetail({ schoolId, notice }: { schoolId: string; n
       <Item label="Region" value={school.region || '—'} /><Item label="Locale / timezone" value={[school.locale, school.timezone].filter(Boolean).join(' · ') || '—'} /><Item label="Currency" value={school.currency || '—'} />
       <Item label="Railway project" value={school.railwayProjectId || 'Not recorded'} /><Item label="Gateway" value={school.gatewayOrigin || 'Not recorded'} /><Item label="Installation" value={school.installation?.installationId || 'Not claimed'} />
     </dl></section>
+    {usage && <section className="pa-card space-y-3"><div><h2 className="font-semibold">Marketplace usage</h2><p className="text-xs text-slate-500">Marketplace-observed metadata only; no student or school operational data is read.</p></div><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{Object.entries(usage.counts).map(([key, value]) => <div className="rounded-lg border p-3" key={key}><div className="text-2xl font-bold">{value}</div><div className="text-xs text-slate-500">{key.replace(/([A-Z])/g, ' $1').toLowerCase()}</div></div>)}</div><p className="text-xs text-slate-500">Last installation contact: {usage.lastSeenAt ? new Date(usage.lastSeenAt).toLocaleString() : 'never'} · measured {new Date(usage.measuredAt).toLocaleString()}</p></section>}
+    {billing && <section className="pa-card space-y-4"><div><h2 className="font-semibold">School billing</h2><p className="text-sm text-slate-600">Central Wattanam pricing and money owed by this school. Separate from student fees and plugin purchases.</p><p className="mt-1 text-lg font-bold">Outstanding: {new Intl.NumberFormat(undefined, { style: 'currency', currency: billing.schoolCurrency || 'USD' }).format(billing.outstandingMinor / 100)}</p></div>{canManageBilling && <div className="flex flex-wrap gap-2"><select className="pa-input min-w-64" value={selectedPlanId} onChange={event => setSelectedPlanId(event.target.value)}><option value="">Select central price…</option>{plans.filter(plan => plan.active).map(plan => <option key={plan.id} value={plan.id}>{plan.name} — {(plan.amountMinor / 100).toFixed(2)} {plan.currency}/{plan.billingInterval.toLowerCase()}</option>)}</select><button className="pa-btn-secondary" disabled={busy || !selectedPlanId || reason.trim().length < 3} onClick={assignCentralPlan}>Assign plan</button><button className="pa-btn-primary" disabled={busy || !billing.billingPlan || reason.trim().length < 3} onClick={issueCentralPlanInvoice}>Invoice central price</button></div>}{billing.invoices.length === 0 ? <p className="text-sm text-slate-500">No invoices.</p> : <div className="space-y-2">{billing.invoices.map(invoice => <article className="rounded-lg border p-3 text-sm" key={invoice.id}><div className="flex flex-wrap justify-between gap-2"><div><div className="font-mono font-semibold">{invoice.invoiceNumber}</div><div>{invoice.description}</div><div className="text-xs text-slate-500">Due {new Date(invoice.dueAt).toLocaleDateString()} · {invoice.status.toLowerCase().replace('_', ' ')}</div></div><div className="text-right"><div className="font-semibold">{new Intl.NumberFormat(undefined, { style: 'currency', currency: invoice.currency }).format(invoice.amountMinor / 100)}</div><div className="text-xs text-slate-500">Paid {(invoice.paidMinor / 100).toFixed(2)}</div></div></div>{canManageBilling && invoice.status !== 'PAID' && invoice.status !== 'VOID' && <div className="mt-2 flex gap-2"><button className="pa-btn-secondary" disabled={busy || reason.trim().length < 3} onClick={() => recordPayment(invoice)}>Record payment</button>{invoice.paidMinor === 0 && <button className="pa-btn-secondary" disabled={busy || reason.trim().length < 3} onClick={async () => { await mutate(`invoices/${invoice.id}/void`, { internalReason: reason }); setBilling(await platformJson<Billing>(`schools/${schoolId}/billing`)); }}>Void</button>}</div>}</article>)}</div>}{billing.notifications.length > 0 && <div><h3 className="text-sm font-semibold">Billing alerts</h3><ul className="mt-2 space-y-1 text-xs text-slate-600">{billing.notifications.map(item => <li key={item.id}>{item.subject} · {item.status.toLowerCase()}{item.failureMessage ? ` — ${item.failureMessage}` : ''}</li>)}</ul></div>}{canManageBilling && school.status !== 'TERMINATED' && <form className="grid gap-3 md:grid-cols-4" onSubmit={issueInvoice}><input className="pa-input" inputMode="decimal" placeholder={`One-off amount (${school.currency || 'USD'})`} value={invoiceAmount} onChange={event => setInvoiceAmount(event.target.value)} required /><input className="pa-input md:col-span-2" placeholder="Description" value={invoiceDescription} onChange={event => setInvoiceDescription(event.target.value)} required /><input className="pa-input" type="date" value={invoiceDue} onChange={event => setInvoiceDue(event.target.value)} required /><button className="pa-btn-primary md:col-span-4" disabled={busy || reason.trim().length < 3}>Issue one-off invoice</button></form>}</section>}
+    <section className="pa-card space-y-3"><div><h2 className="font-semibold">School domains</h2><p className="text-xs text-slate-500">Record domain ownership here after attaching DNS/TLS to the Railway gateway.</p></div>{school.domains.length === 0 ? <p className="text-sm text-slate-500">No custom domains recorded.</p> : <ul className="space-y-2">{school.domains.map(domain => <li className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 text-sm" key={domain.id}><div><span className="font-mono">{domain.hostname}</span>{domain.isPrimary && <span className="ml-2 rounded bg-indigo-50 px-2 py-1 text-xs text-indigo-700">primary</span>}<div className="text-xs text-slate-500">{domain.verifiedAt ? `Verified ${new Date(domain.verifiedAt).toLocaleString()}` : 'Not verified'}</div></div>{canManage && <div className="flex gap-2"><button className="pa-btn-secondary" disabled={busy} onClick={() => mutate(`domains/${domain.id}/verify`, { verified: !domain.verifiedAt, internalReason: reason })}>{domain.verifiedAt ? 'Mark unverified' : 'Mark verified'}</button><button className="pa-btn-secondary" disabled={busy} onClick={() => mutate(`domains/${domain.id}/remove`, { internalReason: reason })}>Remove</button></div>}</li>)}</ul>}{canManage && school.status !== 'TERMINATED' && <form className="flex flex-wrap gap-2" onSubmit={addDomain}><input className="pa-input min-w-64 flex-1" aria-label="Domain hostname" placeholder="portal.school.example" value={hostname} onChange={event => setHostname(event.target.value.toLowerCase().trim())} required /><button className="pa-btn-primary" disabled={busy || reason.trim().length < 3}>Add domain</button></form>}</section>
     {token && <section className="rounded-xl border border-amber-300 bg-amber-50 p-5"><h2 className="font-semibold text-amber-950">Copy this enrollment token now</h2><p className="mt-1 text-sm text-amber-900">It is displayed only once. Store it in the new school API as its enrollment secret; do not send it through chat or email.</p><code className="mt-3 block break-all rounded-lg bg-white p-3 text-sm">{token}</code><button className="pa-btn-secondary mt-3" type="button" onClick={copyToken}>{copied ? 'Copied' : 'Copy token'}</button></section>}
     {canManage && !school.installation && <section className="pa-card space-y-3"><h2 className="font-semibold">Installation enrollment</h2>{liveToken ? <><p className="text-sm text-amber-700">A live token already exists and expires {new Date(liveToken.expiresAt).toLocaleString()}. Its plaintext cannot be displayed again. Revoke it if it was lost or must be replaced.</p><label className="block text-xs font-medium text-slate-600">Internal reason<textarea className="pa-input mt-1 min-h-20" minLength={3} value={reason} onChange={event => setReason(event.target.value)} /></label><button className="pa-btn-secondary" disabled={busy || reason.trim().length < 3} type="button" onClick={() => revokeToken(liveToken.id)}>{busy ? 'Revoking…' : 'Revoke enrollment token'}</button></> : <><p className="text-sm text-slate-600">Create a seven-day, one-time token after you are ready to deploy this school.</p><label className="block text-xs font-medium text-slate-600">Internal reason<textarea className="pa-input mt-1 min-h-20" minLength={3} value={reason} onChange={event => setReason(event.target.value)} /></label><button className="pa-btn-primary" disabled={busy || reason.trim().length < 3} onClick={mintToken}>{busy ? 'Creating…' : 'Create enrollment token'}</button></>}{error && <p role="alert" className="text-sm text-red-700">{error}</p>}</section>}
+    {canManage && <section className="pa-card space-y-3"><h2 className="font-semibold">Lifecycle controls</h2><p className="text-sm text-slate-600">Suspension disables marketplace onboarding while retaining the record. Termination is the guarded soft-delete; Railway resources and school data are not deleted automatically.</p><label className="block text-xs font-medium text-slate-600">Required internal reason<textarea className="pa-input mt-1 min-h-20" minLength={3} value={reason} onChange={event => setReason(event.target.value)} /></label><div className="flex flex-wrap gap-2">{school.status === 'ACTIVE' && <button className="pa-btn-secondary" disabled={busy || reason.trim().length < 3} onClick={() => mutate('suspend', { internalReason: reason })}>Suspend school</button>}{school.status === 'SUSPENDED' && <button className="pa-btn-primary" disabled={busy || reason.trim().length < 3} onClick={() => mutate('reactivate', { internalReason: reason })}>Reactivate school</button>}{school.status !== 'TERMINATED' && <button className="rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" disabled={busy || reason.trim().length < 3} onClick={() => { if (window.confirm(`Terminate ${school.name}? This does not delete Railway resources.`)) mutate('terminate', { internalReason: reason }); }}>Terminate (soft delete)</button>}</div>{error && <p role="alert" className="text-sm text-red-700">{error}</p>}</section>}
     <section className="pa-card"><h2 className="font-semibold">What happens next</h2><ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-slate-600"><li>Provision one isolated Railway project for this school.</li><li>Configure the school API with the one-time enrollment token.</li><li>Run installation and marketplace registration.</li><li>Return here and confirm the installation is claimed and healthy.</li></ol></section>
   </div>;
 }

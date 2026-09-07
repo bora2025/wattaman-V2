@@ -68,6 +68,13 @@ describe('installation entitlement access', () => {
     await expect(service.getOne({ installationId, pluginId, ts, signature }, now)).rejects.toThrow('not registered');
   });
 
+  it('rejects signed entitlement access from a suspended customer school', async () => {
+    const { privateKey, publicKey } = keyPair();
+    const p = prisma({ installationRegistration: { findUnique: jest.fn().mockResolvedValue({ id: registrationId, keys: [{ publicKeyPem: publicKey }], school: { status: 'SUSPENDED' } }) } });
+    const signature = signed(privateKey, { installationId, pluginId, ts });
+    await expect(new InstallationEntitlementAccessService(p).getOne({ installationId, pluginId, ts, signature }, now)).rejects.toThrow('not active');
+  });
+
   it('returns 404 when no entitlement exists for the plugin', async () => {
     const { privateKey, publicKey } = keyPair();
     const p = prisma({ installationRegistration: { findUnique: jest.fn().mockResolvedValue({ id: registrationId, keys: [{ publicKeyPem: publicKey }] }) } });

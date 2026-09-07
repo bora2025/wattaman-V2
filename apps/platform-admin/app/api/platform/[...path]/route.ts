@@ -19,8 +19,9 @@ const sessionGet = new Set([
   'me', 'dashboard', 'operators', 'roles', 'customers', 'schools', 'installations', 'publishers', 'plugins', 'submissions',
   'orders', 'entitlements', 'advisories', 'audit-events', 'operations/health', 'exports', 'plugin-requests',
   'schools/provisioning-requests',
+  'school-billing-plans',
 ]);
-const sessionGetDetail = /^(operators|customers|schools|installations|publishers|plugins|submissions|orders|plugin-requests)\/[0-9a-zA-Z._-]+$|^schools\/provisioning-requests\/[0-9a-f-]{36}$/;
+const sessionGetDetail = /^(operators|customers|schools|installations|publishers|plugins|submissions|orders|plugin-requests)\/[0-9a-zA-Z._-]+$|^schools\/[0-9a-f-]{36}\/(usage|billing)$|^schools\/provisioning-requests\/[0-9a-f-]{36}$/;
 /**
  * Mutations reachable through this proxy, one readable pattern each. A single combined expression
  * became hard to extend without silently widening it -- and a path that is not listed here is a
@@ -33,7 +34,14 @@ const sessionPostPatterns = [
   /^schools\/provisioning-requests$/,
   new RegExp(`^schools/provisioning-requests/${ID}/(submit|approve|cancel|retry)$`),
   /^schools\/adoptions\/discover$/,
+  /^school-billing-plans$/,
+  /^school-billing-alerts\/dispatch$/,
   new RegExp(`^schools/${ID}/(update|enrollment-tokens|adopt-installation|infrastructure)$`),
+  new RegExp(`^schools/${ID}/(suspend|reactivate|terminate|domains)$`),
+  new RegExp(`^schools/${ID}/domains/${ID}/(verify|remove)$`),
+  new RegExp(`^schools/${ID}/invoices$`),
+  new RegExp(`^schools/${ID}/(billing-plan|plan-invoices)$`),
+  new RegExp(`^schools/${ID}/invoices/${ID}/(payments|void)$`),
   new RegExp(`^schools/${ID}/enrollment-tokens/${ID}/revoke$`),
 ];
 const matchesSessionPost = (path: string) => sessionPostPatterns.some((pattern) => pattern.test(path));

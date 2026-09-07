@@ -66,11 +66,25 @@ const infrastructureInput = z.object({
   internalReason: reason,
 }).strict();
 
+const lifecycleInput = z.object({ internalReason: reason }).strict();
+
+const domainInput = z.object({
+  hostname: z.string().trim().toLowerCase().max(253).regex(
+    /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/,
+    'hostname must be a valid DNS hostname without a scheme or path',
+  ),
+  isPrimary: z.boolean().default(false),
+  internalReason: reason,
+}).strict();
+
+const domainVerificationInput = z.object({ verified: z.boolean(), internalReason: reason }).strict();
+
 const SCHOOL_SELECT = {
   id: true, name: true, slug: true, status: true, region: true, timezone: true, locale: true,
   currency: true, plan: true, contactName: true, contactEmail: true, railwayProjectId: true,
   gatewayOrigin: true, notes: true, createdAt: true, updatedAt: true,
   suspendedAt: true, suspendedReason: true, terminatedAt: true, terminatedReason: true,
+  domains: { select: { id: true, hostname: true, isPrimary: true, verifiedAt: true, createdAt: true }, orderBy: { isPrimary: 'desc' } },
   createdBy: { select: { id: true, displayName: true } },
 } as const;
 
@@ -328,6 +342,141 @@ export class CustomerSchoolService {
         },
       });
       return { ...updated, contactEmail: maskEmail(updated.contactEmail) };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
+  async suspend(schoolId: string, operatorId: string, value: unknown, context: PlatformActionContext, now = new Date()) {
+    const input = lifecycleInput.parse(value);
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.customerSchool.findUnique({ where: { id: schoolId }, select: { id: true, status: true } });
+      if (!existing) throw new HttpError(404, 'Customer school not found');
+      if (existing.status !== 'ACTIVE') throw new HttpError(409, 'Only an active school can be suspended');
+      const school = await tx.customerSchool.update({
+        where: { id: schoolId },
+        data: { status: 'SUSPENDED', suspendedAt: now, suspendedReason: input.internalReason },
+        select: SCHOOL_SELECT,
+      });
+      await this.audit(tx, operatorId, context, { action: 'customer_school_suspended', targetId: schoolId, reason: input.internalReason });
+      return { ...school, contactEmail: maskEmail(school.contactEmail) };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
+  async reactivate(schoolId: string, operatorId: string, value: unknown, context: PlatformActionContext) {
+    const input = lifecycleInput.parse(value);
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.customerSchool.findUnique({ where: { id: schoolId }, select: { id: true, status: true } });
+      if (!existing) throw new HttpError(404, 'Customer school not found');
+      if (existing.status !== 'SUSPENDED') throw new HttpError(409, 'Only a suspended school can be reactivated');
+      const school = await tx.customerSchool.update({
+        where: { id: schoolId },
+        data: { status: 'ACTIVE', suspendedAt: null, suspendedReason: null },
+        select: SCHOOL_SELECT,
+      });
+      await this.audit(tx, operatorId, context, { action: 'customer_school_reactivated', targetId: schoolId, reason: input.internalReason });
+      return { ...school, contactEmail: maskEmail(school.contactEmail) };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
+  /** Soft deletion: retain the commercial record and audit chain, revoke outstanding claims, and
+   * prevent further edits. Railway/data deletion is a separate witnessed decommission operation. */
+  async terminate(schoolId: string, operatorId: string, value: unknown, context: PlatformActionContext, now = new Date()) {
+    const input = lifecycleInput.parse(value);
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.customerSchool.findUnique({ where: { id: schoolId }, select: { id: true, status: true } });
+      if (!existing) throw new HttpError(404, 'Customer school not found');
+      if (existing.status === 'TERMINATED') throw new HttpError(409, 'Customer school is already terminated');
+      const revoked = await tx.schoolEnrollmentToken.updateMany({
+        where: { customerSchoolId: schoolId, consumedAt: null, revokedAt: null }, data: { revokedAt: now },
+      });
+      const school = await tx.customerSchool.update({
+        where: { id: schoolId },
+        data: { status: 'TERMINATED', terminatedAt: now, terminatedReason: input.internalReason },
+        select: SCHOOL_SELECT,
+      });
+      await this.audit(tx, operatorId, context, {
+        action: 'customer_school_terminated', targetId: schoolId, reason: input.internalReason,
+        metadata: { revokedEnrollmentTokens: revoked.count },
+      });
+      return { ...school, contactEmail: maskEmail(school.contactEmail) };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
+  async usage(schoolId: string) {
+    const school = await this.prisma.customerSchool.findUnique({
+      where: { id: schoolId },
+      select: {
+        id: true, status: true,
+        installation: {
+          select: {
+            installationId: true, lastSeenAt: true,
+            _count: { select: { entitlements: true, orders: true, downloads: true, pluginRequests: true } },
+          },
+        },
+      },
+    });
+    if (!school) throw new HttpError(404, 'Customer school not found');
+    return {
+      schoolId: school.id, lifecycle: school.status, measuredAt: new Date().toISOString(),
+      source: 'marketplace-observed',
+      installationId: school.installation?.installationId ?? null,
+      lastSeenAt: school.installation?.lastSeenAt ?? null,
+      counts: school.installation?._count ?? { entitlements: 0, orders: 0, downloads: 0, pluginRequests: 0 },
+    };
+  }
+
+  async addDomain(schoolId: string, operatorId: string, value: unknown, context: PlatformActionContext) {
+    const input = domainInput.parse(value);
+    return this.prisma.$transaction(async (tx) => {
+      const school = await tx.customerSchool.findUnique({ where: { id: schoolId }, select: { id: true, status: true } });
+      if (!school) throw new HttpError(404, 'Customer school not found');
+      if (school.status === 'TERMINATED') throw new HttpError(409, 'A terminated school cannot add domains');
+      if (input.isPrimary) await tx.customerSchoolDomain.updateMany({ where: { customerSchoolId: schoolId, isPrimary: true }, data: { isPrimary: false } });
+      let domain;
+      try {
+        domain = await tx.customerSchoolDomain.create({
+          data: { customerSchoolId: schoolId, hostname: input.hostname, isPrimary: input.isPrimary },
+          select: { id: true, hostname: true, isPrimary: true, verifiedAt: true, createdAt: true },
+        });
+      } catch (error) {
+        if ((error as { code?: string }).code === 'P2002') throw new HttpError(409, 'This hostname is already assigned');
+        throw error;
+      }
+      await this.audit(tx, operatorId, context, {
+        action: 'customer_school_domain_added', targetId: schoolId, reason: input.internalReason,
+        metadata: { domainId: domain.id, hostname: domain.hostname, isPrimary: domain.isPrimary },
+      });
+      return domain;
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
+  async verifyDomain(schoolId: string, domainId: string, operatorId: string, value: unknown, context: PlatformActionContext, now = new Date()) {
+    const input = domainVerificationInput.parse(value);
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.customerSchoolDomain.findUnique({ where: { id: domainId } });
+      if (!existing || existing.customerSchoolId !== schoolId) throw new HttpError(404, 'School domain not found');
+      const domain = await tx.customerSchoolDomain.update({
+        where: { id: domainId }, data: { verifiedAt: input.verified ? now : null },
+        select: { id: true, hostname: true, isPrimary: true, verifiedAt: true, createdAt: true },
+      });
+      await this.audit(tx, operatorId, context, {
+        action: input.verified ? 'customer_school_domain_verified' : 'customer_school_domain_unverified',
+        targetId: schoolId, reason: input.internalReason, metadata: { domainId, hostname: domain.hostname },
+      });
+      return domain;
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
+  async removeDomain(schoolId: string, domainId: string, operatorId: string, value: unknown, context: PlatformActionContext) {
+    const input = lifecycleInput.parse(value);
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.customerSchoolDomain.findUnique({ where: { id: domainId } });
+      if (!existing || existing.customerSchoolId !== schoolId) throw new HttpError(404, 'School domain not found');
+      await tx.customerSchoolDomain.delete({ where: { id: domainId } });
+      await this.audit(tx, operatorId, context, {
+        action: 'customer_school_domain_removed', targetId: schoolId, reason: input.internalReason,
+        metadata: { domainId, hostname: existing.hostname, wasPrimary: existing.isPrimary },
+      });
+      return { removed: true, id: domainId };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 

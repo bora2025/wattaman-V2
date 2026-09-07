@@ -37,8 +37,9 @@ export class CustomerMarketplaceService {
 
   async checkout(accountId: string, value: unknown) {
     const input = checkoutInput.parse(value);
-    const installation = await this.prisma.installationRegistration.findUnique({ where: { installationId: input.installationId }, select: { id: true, accountId: true } });
+    const installation = await this.prisma.installationRegistration.findUnique({ where: { installationId: input.installationId }, select: { id: true, accountId: true, school: { select: { status: true } } } });
     if (!installation || installation.accountId !== accountId) throw new HttpError(403, 'Installation is not registered to this account');
+    if (installation.school && installation.school.status !== 'ACTIVE') throw new HttpError(403, 'Customer school is not active');
     return this.commerce.createOrder({ accountId, installationId: installation.id, currency: input.currency, priceIds: input.priceIds, idempotencyKey: input.idempotencyKey });
   }
 
@@ -57,7 +58,7 @@ export class CustomerMarketplaceService {
   }
 
   async authorizeAccountDownload(accountId: string, pluginId: string, now = new Date()) {
-    const entitlement = await this.prisma.installationEntitlement.findFirst({ where: { pluginId, status: 'ACTIVE', installation: { accountId }, expiresAt: { gt: now }, updatesThrough: { gte: now } } });
+    const entitlement = await this.prisma.installationEntitlement.findFirst({ where: { pluginId, status: 'ACTIVE', installation: { accountId, OR: [{ school: null }, { school: { status: 'ACTIVE' } }] }, expiresAt: { gt: now }, updatesThrough: { gte: now } } });
     if (!entitlement) throw new HttpError(403, 'An active entitlement with update access is required');
     return entitlement.installationId;
   }

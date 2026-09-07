@@ -14,6 +14,8 @@ export const PLATFORM_PERMISSIONS: Array<{ key: string; description: string }> =
   { key: 'schools.read', description: 'View school installations' },
   { key: 'schools.manage', description: 'Correct or unlink school installation records' },
   { key: 'schools.entitlements.manage', description: 'Issue, revoke, or correct a school installation entitlement' },
+  { key: 'school_billing.read', description: 'View customer-school invoices, balances, and payments' },
+  { key: 'school_billing.manage', description: 'Issue or void school invoices and record received payments' },
   { key: 'plugin_requests.read', description: 'View school plugin requests' },
   { key: 'plugin_requests.review', description: 'Approve, reject, or request information on a school plugin request' },
   { key: 'publishers.read', description: 'View publisher applications and identity evidence' },
@@ -58,7 +60,7 @@ export const PLATFORM_ROLES: Array<{ key: string; displayName: string; descripti
   {
     key: 'marketplace_operator', displayName: 'Marketplace Operator',
     description: 'Catalog, schools, plugin requests, and manual entitlements. No key custody or payout approval.',
-    permissions: ['platform.dashboard.read', 'customers.read', 'schools.read', 'schools.manage', 'schools.entitlements.manage', 'plugin_requests.read', 'plugin_requests.review', 'plugins.read'],
+    permissions: ['platform.dashboard.read', 'customers.read', 'schools.read', 'schools.manage', 'schools.entitlements.manage', 'school_billing.read', 'plugin_requests.read', 'plugin_requests.review', 'plugins.read'],
   },
   {
     key: 'plugin_reviewer', displayName: 'Plugin Reviewer',
@@ -78,7 +80,7 @@ export const PLATFORM_ROLES: Array<{ key: string; displayName: string; descripti
   {
     key: 'finance_operator', displayName: 'Finance Operator',
     description: 'Orders, refunds, statements, and reconciliation. Cannot publish or sign plugins.',
-    permissions: ['platform.dashboard.read', 'orders.read', 'refunds.create', 'entitlements.manage', 'revenue.read'],
+    permissions: ['platform.dashboard.read', 'orders.read', 'refunds.create', 'entitlements.manage', 'revenue.read', 'school_billing.read', 'school_billing.manage'],
   },
   {
     key: 'payout_approver', displayName: 'Payout Approver',
@@ -93,6 +95,6 @@ export const PLATFORM_ROLES: Array<{ key: string; displayName: string; descripti
   {
     key: 'auditor', displayName: 'Auditor',
     description: 'Read-only access to all audit-safe records and exports. No mutations.',
-    permissions: ['platform.dashboard.read', 'customers.read', 'schools.read', 'plugin_requests.read', 'publishers.read', 'plugins.read', 'orders.read', 'revenue.read', 'advisories.read', 'support.read', 'audit.read', 'audit.export', 'operations.read'],
+    permissions: ['platform.dashboard.read', 'customers.read', 'schools.read', 'school_billing.read', 'plugin_requests.read', 'publishers.read', 'plugins.read', 'orders.read', 'revenue.read', 'advisories.read', 'support.read', 'audit.read', 'audit.export', 'operations.read'],
   },
 ];

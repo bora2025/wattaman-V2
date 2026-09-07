@@ -127,6 +127,78 @@ describe('CustomerSchoolService', () => {
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
+  it('suspends only an active school and records the reason', async () => {
+    const tx = {
+      customerSchool: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'school-1', status: 'ACTIVE' }),
+        update: jest.fn().mockResolvedValue({ id: 'school-1', status: 'SUSPENDED', contactEmail: null, domains: [] }),
+      },
+      platformAuditEvent: { create: jest.fn() },
+    };
+    const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
+    await new CustomerSchoolService(prisma).suspend('school-1', 'operator-1', { internalReason: 'Payment delinquency confirmed.' }, context);
+    expect(tx.customerSchool.update.mock.calls[0][0].data).toMatchObject({ status: 'SUSPENDED', suspendedReason: 'Payment delinquency confirmed.' });
+    expect(tx.platformAuditEvent.create.mock.calls[0][0].data.action).toBe('customer_school_suspended');
+  });
+
+  it('reactivates only a suspended school and clears suspension metadata', async () => {
+    const tx = {
+      customerSchool: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'school-1', status: 'SUSPENDED' }),
+        update: jest.fn().mockResolvedValue({ id: 'school-1', status: 'ACTIVE', contactEmail: null, domains: [] }),
+      },
+      platformAuditEvent: { create: jest.fn() },
+    };
+    const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
+    await new CustomerSchoolService(prisma).reactivate('school-1', 'operator-1', { internalReason: 'Account returned to good standing.' }, context);
+    expect(tx.customerSchool.update.mock.calls[0][0].data).toEqual({ status: 'ACTIVE', suspendedAt: null, suspendedReason: null });
+  });
+
+  it('soft-terminates a school and revokes unused enrollment tokens', async () => {
+    const tx = {
+      customerSchool: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'school-1', status: 'SUSPENDED' }),
+        update: jest.fn().mockResolvedValue({ id: 'school-1', status: 'TERMINATED', contactEmail: null, domains: [] }),
+      },
+      schoolEnrollmentToken: { updateMany: jest.fn().mockResolvedValue({ count: 2 }) },
+      platformAuditEvent: { create: jest.fn() },
+    };
+    const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
+    await new CustomerSchoolService(prisma).terminate('school-1', 'operator-1', { internalReason: 'Contract ended and retention approved.' }, context);
+    expect(tx.schoolEnrollmentToken.updateMany).toHaveBeenCalled();
+    expect(tx.platformAuditEvent.create.mock.calls[0][0].data.metadata).toEqual({ revokedEnrollmentTokens: 2 });
+  });
+
+  it('reports only marketplace-observed usage for a school', async () => {
+    const prisma = { customerSchool: { findUnique: jest.fn().mockResolvedValue({
+      id: 'school-1', status: 'ACTIVE', installation: {
+        installationId: '11111111-1111-4111-8111-111111111111', lastSeenAt: null,
+        _count: { entitlements: 2, orders: 3, downloads: 4, pluginRequests: 5 },
+      },
+    }) } } as any;
+    const result = await new CustomerSchoolService(prisma).usage('school-1');
+    expect(result.source).toBe('marketplace-observed');
+    expect(result.counts).toEqual({ entitlements: 2, orders: 3, downloads: 4, pluginRequests: 5 });
+    expect(prisma.customerSchool.findUnique.mock.calls[0][0].select).not.toHaveProperty('students');
+  });
+
+  it('normalizes and audits a unique school domain', async () => {
+    const tx = {
+      customerSchool: { findUnique: jest.fn().mockResolvedValue({ id: 'school-1', status: 'ACTIVE' }) },
+      customerSchoolDomain: {
+        updateMany: jest.fn(),
+        create: jest.fn().mockResolvedValue({ id: 'domain-1', hostname: 'portal.school.example', isPrimary: true, verifiedAt: null }),
+      },
+      platformAuditEvent: { create: jest.fn() },
+    };
+    const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
+    await new CustomerSchoolService(prisma).addDomain('school-1', 'operator-1', {
+      hostname: 'Portal.School.Example', isPrimary: true, internalReason: 'Customer DNS cutover.',
+    }, context);
+    expect(tx.customerSchoolDomain.create.mock.calls[0][0].data.hostname).toBe('portal.school.example');
+    expect(tx.platformAuditEvent.create.mock.calls[0][0].data.action).toBe('customer_school_domain_added');
+  });
+
   it('stores only the hash of a minted token and returns the plaintext once', async () => {
     const tx = {
       customerSchool: {

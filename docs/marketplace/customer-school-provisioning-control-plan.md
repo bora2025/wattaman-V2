@@ -60,6 +60,20 @@ Implemented on 2026-09-05:
 - Platform Admin provisioning creation, status list, approval, cancellation, and retry controls;
 - allowlisted Platform Admin proxy routes and OpenAPI contracts for the provisioning workflow.
 
+Implemented on 2026-09-07:
+
+- audited lifecycle controls for active → suspended → active and guarded soft termination;
+- suspension enforcement for new checkout, plugin request, entitlement refresh, and paid download
+  access while retaining legacy unclaimed installations;
+- per-school custom-domain records with global hostname uniqueness, one-primary-per-school,
+  verification state, removal, and immutable audit reasons;
+- marketplace-observed usage summaries for entitlements, orders, downloads, plugin requests, and
+  installation last-seen time without access to a school's operational database;
+- Platform Admin lifecycle, domain, and usage controls behind `schools.read`/`schools.manage` and
+  the strict server-side proxy allowlist;
+- soft termination revokes unused enrollment tokens but deliberately does not delete Railway
+  resources or customer data.
+
 Remaining gaps:
 
 - Creating a Railway project does not create a Platform Admin school record.
@@ -70,6 +84,10 @@ Remaining gaps:
 - Installation registration still requires operator-run setup steps.
 - Platform Admin has no consolidated deployment, DNS, backup, upgrade, or agent-heartbeat view.
 - There is no remote-command approval and acknowledgement protocol.
+- Domain verification is an audited operator assertion; automated Railway DNS/TLS evidence and
+  custom-domain provisioning still require the Railway adapter/worker.
+- Usage is limited to marketplace-owned facts; CPU, memory, storage, database size, backup age,
+  and school feature activity require a privacy-reviewed metrics agent and retention policy.
 
 ## 4. Recommended ownership model
 
@@ -551,3 +569,41 @@ Approve or revise these decisions:
 Decision status: accepted by the project owner. Coding may proceed, but production infrastructure
 mutation remains disabled until the worker's scoped Railway credential, quotas, hosted failure
 drill, and rollback evidence pass Phase 3 acceptance.
+
+## 20. School billing implementation (2026-09-07)
+
+The marketplace control plane now includes a separate customer-school billing ledger. It does not
+read or modify student fee data and it does not replace the existing plugin-purchase ledger.
+
+Implemented:
+
+- finance-scoped `school_billing.read` and `school_billing.manage` permissions;
+- immutable, idempotent invoices in integer minor currency units;
+- manual/offline payment recording with unique provider references;
+- partial-payment and paid state transitions with overpayment protection;
+- voiding of unpaid invoices only;
+- per-school outstanding balance and payment history in Platform Admin;
+- audit events containing operator, reason, target, correlation ID, and payment/invoice metadata;
+- transaction locking for concurrent payment and void operations;
+- API documentation, proxy allowlisting, migration constraints, and automated service tests.
+
+Operator workflow:
+
+1. Open **Platform Admin → Schools → selected school**.
+2. Enter an internal action reason.
+3. Under **School billing**, issue an invoice using the school's configured currency.
+4. After verifying a bank transfer or other offline receipt, select **Record payment** and enter the
+   amount and unique receipt/reference number.
+5. Confirm that the invoice becomes `partially paid` or `paid` and that outstanding balance changes.
+
+Deployment requirements:
+
+1. Deploy marketplace database migration `20260907020000_school_billing`.
+2. Deploy Marketplace API and run the RBAC seed so existing standard roles receive the new
+   permissions.
+3. Deploy Platform Admin after Marketplace API is healthy.
+4. Sign out and sign in again if the current operator session does not show the new permissions.
+
+Not claimed complete: online card/bank checkout, payment-provider webhooks, receipts/PDFs, tax/VAT,
+credit notes/refunds, recurring subscription generation, automated overdue suspension, and payment
+reconciliation. Those require an approved payment provider and finance/legal policy before coding.

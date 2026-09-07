@@ -82,11 +82,12 @@ export class SchoolPluginRequestService {
     const input = createInput.parse(value);
     const [account, installation, plugin] = await Promise.all([
       this.prisma.marketplaceAccount.findUnique({ where: { id: accountId }, select: { email: true, emailVerifiedAt: true } }),
-      this.prisma.installationRegistration.findUnique({ where: { installationId: input.installationId }, select: { id: true, accountId: true } }),
+      this.prisma.installationRegistration.findUnique({ where: { installationId: input.installationId }, select: { id: true, accountId: true, school: { select: { status: true } } } }),
       input.pluginId ? this.prisma.marketplacePlugin.findUnique({ where: { id: input.pluginId }, select: { id: true, status: true } }) : null,
     ]);
     if (!account?.emailVerifiedAt) throw new HttpError(403, 'A verified marketplace account is required');
     if (!installation || installation.accountId !== accountId) throw new HttpError(403, 'Installation is not registered to this account');
+    if (installation.school && installation.school.status !== 'ACTIVE') throw new HttpError(403, 'Customer school is not active');
     if (input.type === 'FEATURE_REQUEST') {
       if (input.pluginId || !input.featureDescription) throw new HttpError(400, 'A feature request requires featureDescription and cannot name an existing plugin');
     } else if (!plugin || plugin.status !== 'APPROVED') {

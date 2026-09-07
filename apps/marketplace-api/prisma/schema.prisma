@@ -136,6 +136,32 @@ enum SchoolLifecycleStatus {
   TERMINATED
 }
 
+enum SchoolInvoiceStatus {
+  ISSUED
+  PARTIALLY_PAID
+  PAID
+  VOID
+}
+
+enum SchoolBillingInterval {
+  MONTHLY
+  ANNUAL
+}
+
+enum SchoolBillingNotificationType {
+  INVOICE_ISSUED
+  DUE_SOON
+  OVERDUE
+  PAYMENT_RECEIVED
+}
+
+enum SchoolBillingNotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
 enum SchoolProvisioningStatus {
   DRAFT
   PENDING_APPROVAL
@@ -524,8 +550,121 @@ model CustomerSchool {
   enrollmentTokens    SchoolEnrollmentToken[]
   installation        InstallationRegistration?
   provisioningRequests SchoolProvisioningRequest[]
+  domains             CustomerSchoolDomain[]
+  invoices            SchoolInvoice[]
+  billingPlanId       String?
+  billingPlan         SchoolBillingPlan?        @relation(fields: [billingPlanId], references: [id], onDelete: SetNull)
+  billingNotifications SchoolBillingNotification[]
 
   @@index([status, createdAt])
+}
+
+/// Central pricing catalog for the Wattanam service itself. Invoice prices are snapshotted so a
+/// later plan-price change never rewrites historical financial records.
+model SchoolBillingPlan {
+  id              String                @id @default(uuid())
+  slug            String                @unique
+  name            String
+  currency        String
+  amountMinor     Int
+  billingInterval SchoolBillingInterval
+  dueDays         Int                   @default(14)
+  active          Boolean               @default(true)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  schools         CustomerSchool[]
+  invoices        SchoolInvoice[]
+
+  @@index([active, slug])
+}
+
+/// Public hostnames assigned to a customer school. DNS and TLS are still provisioned by Railway;
+/// this records the control-plane intent and verification result without storing DNS credentials.
+model CustomerSchoolDomain {
+  id               String         @id @default(uuid())
+  customerSchoolId String
+  hostname         String         @unique
+  isPrimary        Boolean        @default(false)
+  verifiedAt       DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  school           CustomerSchool @relation(fields: [customerSchoolId], references: [id], onDelete: Cascade)
+
+  @@index([customerSchoolId, isPrimary])
+}
+
+/// Platform service invoices owed by a customer school. These are separate from plugin orders
+/// and never contain student fees or any other school operational data.
+model SchoolInvoice {
+  id                  String              @id @default(uuid())
+  invoiceNumber       String              @unique
+  customerSchoolId    String
+  status              SchoolInvoiceStatus @default(ISSUED)
+  currency            String
+  amountMinor         Int
+  paidMinor           Int                 @default(0)
+  description         String
+  periodStart         DateTime?
+  periodEnd           DateTime?
+  dueAt               DateTime
+  issuedAt            DateTime            @default(now())
+  paidAt              DateTime?
+  voidedAt            DateTime?
+  voidReason           String?
+  idempotencyKey      String              @unique
+  createdByOperatorId String
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  school              CustomerSchool      @relation(fields: [customerSchoolId], references: [id], onDelete: Restrict)
+  createdBy           PlatformOperator    @relation("SchoolInvoiceCreator", fields: [createdByOperatorId], references: [id], onDelete: Restrict)
+  payments            SchoolPayment[]
+  billingPlanId       String?
+  billingPlanSlug     String?
+  billingPlan         SchoolBillingPlan? @relation(fields: [billingPlanId], references: [id], onDelete: SetNull)
+  notifications       SchoolBillingNotification[]
+
+  @@index([customerSchoolId, issuedAt])
+  @@index([status, dueAt])
+}
+
+model SchoolBillingNotification {
+  id               String                          @id @default(uuid())
+  customerSchoolId String
+  invoiceId        String
+  type             SchoolBillingNotificationType
+  status           SchoolBillingNotificationStatus @default(PENDING)
+  recipientEmail   String?
+  subject          String
+  message          String
+  deduplicationKey String                          @unique
+  attemptedAt      DateTime?
+  sentAt           DateTime?
+  failureMessage   String?
+  createdAt        DateTime                        @default(now())
+  school           CustomerSchool                  @relation(fields: [customerSchoolId], references: [id], onDelete: Restrict)
+  invoice          SchoolInvoice                    @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+
+  @@index([status, createdAt])
+  @@index([customerSchoolId, createdAt])
+}
+
+/// Append-only evidence of money received for a school invoice. Provider references make retries
+/// idempotent; corrections use explicit future reversal records rather than editing history.
+model SchoolPayment {
+  id                   String           @id @default(uuid())
+  invoiceId            String
+  provider             String
+  providerReference    String
+  amountMinor          Int
+  receivedAt           DateTime
+  note                 String?
+  recordedByOperatorId String
+  createdAt            DateTime         @default(now())
+  invoice              SchoolInvoice    @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  recordedBy           PlatformOperator @relation("SchoolPaymentRecorder", fields: [recordedByOperatorId], references: [id], onDelete: Restrict)
+
+  @@unique([provider, providerReference])
+  @@index([invoiceId, receivedAt])
 }
 
 model SchoolProvisioningRequest {
@@ -962,6 +1101,8 @@ model PlatformOperator {
   requestedPluginExceptions SchoolPluginRequestExceptionApproval[] @relation("PluginExceptionRequester")
   decidedPluginExceptions   SchoolPluginRequestExceptionApproval[] @relation("PluginExceptionDecider")
   createdCustomerSchools    CustomerSchool[]                       @relation("CustomerSchoolCreator")
+  createdSchoolInvoices     SchoolInvoice[]                        @relation("SchoolInvoiceCreator")
+  recordedSchoolPayments    SchoolPayment[]                        @relation("SchoolPaymentRecorder")
   mintedEnrollmentTokens    SchoolEnrollmentToken[]                @relation("SchoolEnrollmentTokenCreator")
   requestedSchoolProvisioning SchoolProvisioningRequest[]           @relation("SchoolProvisioningRequester")
   approvedSchoolProvisioning  SchoolProvisioningRequest[]           @relation("SchoolProvisioningApprover")

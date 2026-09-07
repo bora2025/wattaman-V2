@@ -45,10 +45,11 @@ export class InstallationEntitlementAccessService {
     if (!Number.isFinite(tsMillis) || Math.abs(now.getTime() - tsMillis) > FRESHNESS_WINDOW_MS) throw new HttpError(401, 'Request timestamp is outside the freshness window');
     const registration = await this.prisma.installationRegistration.findUnique({
       where: { installationId: input.installationId },
-      include: { keys: { where: { revokedAt: null } } },
+      include: { keys: { where: { revokedAt: null } }, school: { select: { status: true } } },
     });
     const activeKey = registration?.keys[0];
     if (!registration || !activeKey) throw new HttpError(404, 'Installation is not registered');
+    if (registration.school && registration.school.status !== 'ACTIVE') throw new HttpError(403, 'Customer school is not active');
     const bytes = Buffer.from(canonicalJson(payload));
     let valid: boolean;
     try {

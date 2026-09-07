@@ -27,6 +27,7 @@ import { SchoolDiscoveryService } from './school-discovery.service';
 import { platformOpenApi } from './platform-openapi';
 import { SchoolPluginRequestService } from './school-plugin-request.service';
 import { SchoolProvisioningService } from './school-provisioning.service';
+import { SchoolBillingService } from './school-billing.service';
 import { PlatformRequest, requirePlatformPermission, requirePlatformSession } from './platform-rbac';
 import { actionContext } from './platform-context';
 import { createMetricsRegistry } from './observability/metrics';
@@ -70,7 +71,8 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   const repository = new RepositoryService(prisma, config);
   const commerce = new CommerceService(prisma, config);
   const paymentWebhooks = new PaymentWebhookService(prisma, config);
-  const identity = new IdentityService(prisma, config, createTransactionalEmailService(config));
+  const transactionalEmail = createTransactionalEmailService(config);
+  const identity = new IdentityService(prisma, config, transactionalEmail);
   const installationRegistration = new InstallationRegistrationService(prisma, config);
   const installationLink = new InstallationLinkService(prisma, config);
   const entitlementAccess = new InstallationEntitlementAccessService(prisma);
@@ -86,6 +88,7 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   const schoolDiscovery = new SchoolDiscoveryService(prisma);
   const schoolPluginRequests = new SchoolPluginRequestService(prisma, config, commerce);
   const schoolProvisioning = new SchoolProvisioningService(prisma);
+  const schoolBilling = new SchoolBillingService(prisma, transactionalEmail);
   const upload = multer({ storage: multer.memoryStorage(), limits: { files: 1, fileSize: config.maxArtifactBytes, fields: 10 } });
   const metrics = createMetricsRegistry(prisma);
   app.disable('x-powered-by');
@@ -394,6 +397,9 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   app.get('/platform/v1/schools/:schoolId', requirePlatformOperator, P('schools.read'), async (request, response, next) => {
     try { response.json(await customerSchools.school(String(request.params.schoolId))); } catch (error) { next(error); }
   });
+  app.get('/platform/v1/schools/:schoolId/usage', requirePlatformOperator, P('schools.read'), async (request, response, next) => {
+    try { response.json(await customerSchools.usage(String(request.params.schoolId))); } catch (error) { next(error); }
+  });
   app.post('/platform/v1/schools/:schoolId/update', requirePlatformOperator, P('schools.manage'), async (request: PlatformRequest, response, next) => {
     try { response.json(await customerSchools.update(String(request.params.schoolId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
   });
@@ -413,6 +419,51 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   });
   app.post('/platform/v1/schools/:schoolId/adopt-installation', requirePlatformOperator, P('schools.manage'), async (request: PlatformRequest, response, next) => {
     try { response.json(await customerSchools.adoptInstallation(String(request.params.schoolId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/schools/:schoolId/suspend', requirePlatformOperator, P('schools.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await customerSchools.suspend(String(request.params.schoolId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/schools/:schoolId/reactivate', requirePlatformOperator, P('schools.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await customerSchools.reactivate(String(request.params.schoolId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/schools/:schoolId/terminate', requirePlatformOperator, P('schools.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await customerSchools.terminate(String(request.params.schoolId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/schools/:schoolId/domains', requirePlatformOperator, P('schools.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.status(201).json(await customerSchools.addDomain(String(request.params.schoolId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/schools/:schoolId/domains/:domainId/verify', requirePlatformOperator, P('schools.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await customerSchools.verifyDomain(String(request.params.schoolId), String(request.params.domainId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/schools/:schoolId/domains/:domainId/remove', requirePlatformOperator, P('schools.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await customerSchools.removeDomain(String(request.params.schoolId), String(request.params.domainId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+  app.get('/platform/v1/schools/:schoolId/billing', requirePlatformOperator, P('school_billing.read'), async (request, response, next) => {
+    try { response.json(await schoolBilling.billing(String(request.params.schoolId))); } catch (error) { next(error); }
+  });
+  app.get('/platform/v1/school-billing-plans', requirePlatformOperator, P('school_billing.read'), async (_request, response, next) => {
+    try { response.json(await schoolBilling.plans()); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/school-billing-plans', requirePlatformOperator, P('school_billing.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.status(201).json(await schoolBilling.createPlan(request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/schools/:schoolId/billing-plan', requirePlatformOperator, P('school_billing.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await schoolBilling.assignPlan(String(request.params.schoolId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/schools/:schoolId/plan-invoices', requirePlatformOperator, P('school_billing.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.status(201).json(await schoolBilling.issuePlanInvoice(String(request.params.schoolId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/school-billing-alerts/dispatch', requirePlatformOperator, P('school_billing.manage'), async (_request, response, next) => {
+    try { response.json(await schoolBilling.dispatchDueAlerts()); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/schools/:schoolId/invoices', requirePlatformOperator, P('school_billing.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.status(201).json(await schoolBilling.issueInvoice(String(request.params.schoolId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/schools/:schoolId/invoices/:invoiceId/payments', requirePlatformOperator, P('school_billing.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.status(201).json(await schoolBilling.recordPayment(String(request.params.schoolId), String(request.params.invoiceId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/schools/:schoolId/invoices/:invoiceId/void', requirePlatformOperator, P('school_billing.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await schoolBilling.voidInvoice(String(request.params.schoolId), String(request.params.invoiceId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
   });
 
   app.get('/platform/v1/installations', requirePlatformOperator, P('schools.read'), async (request, response, next) => {

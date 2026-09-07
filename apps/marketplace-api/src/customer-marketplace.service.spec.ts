@@ -34,10 +34,20 @@ describe('CustomerMarketplaceService', () => {
     await expect(new CustomerMarketplaceService(prisma, {} as any).checkout(ids.account, { installationId: ids.publicInstallation, currency: 'USD', priceIds: [ids.price], idempotencyKey: 'customer-checkout-0002' })).rejects.toThrow('not registered to this account');
   });
 
+  it('rejects checkout for a suspended customer school', async () => {
+    const prisma: any = { installationRegistration: { findUnique: jest.fn().mockResolvedValue({ id: ids.registration, accountId: ids.account, school: { status: 'SUSPENDED' } }) } };
+    await expect(new CustomerMarketplaceService(prisma, {} as any).checkout(ids.account, {
+      installationId: ids.publicInstallation, currency: 'USD', priceIds: [ids.price], idempotencyKey: 'customer-checkout-0003',
+    })).rejects.toThrow('not active');
+  });
+
   it('authorizes paid downloads only with active unexpired update access', async () => {
     const prisma: any = { installationEntitlement: { findFirst: jest.fn().mockResolvedValue({ installationId: ids.registration }) } };
     await expect(new CustomerMarketplaceService(prisma, {} as any).authorizeAccountDownload(ids.account, 'official.attendance', new Date('2026-08-29Z'))).resolves.toBe(ids.registration);
-    expect(prisma.installationEntitlement.findFirst).toHaveBeenCalledWith({ where: expect.objectContaining({ pluginId: 'official.attendance', status: 'ACTIVE', installation: { accountId: ids.account } }) });
+    expect(prisma.installationEntitlement.findFirst).toHaveBeenCalledWith({ where: expect.objectContaining({
+      pluginId: 'official.attendance', status: 'ACTIVE',
+      installation: expect.objectContaining({ accountId: ids.account }),
+    }) });
   });
 
   it('denies a paid download without qualifying ownership', async () => {
