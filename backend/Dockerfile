@@ -22,7 +22,7 @@ FROM node:20-slim AS runner
 
 ARG POSTGRES_CLIENT_MAJOR=18
 RUN apt-get update -qq \
-    && apt-get install -y --no-install-recommends ca-certificates curl gnupg openssl \
+    && apt-get install -y --no-install-recommends ca-certificates curl gnupg gosu openssl \
     && install -d -m 0755 /usr/share/postgresql-common/pgdg \
     && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
        | gpg --dearmor -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg \
@@ -49,6 +49,4 @@ ENV PROCESS_ROLE=combined
 EXPOSE 3001
 EXPOSE 3002
 
-USER node
-
-CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy --schema=prisma/schema.prisma && exec node dist/main"]
+CMD ["sh", "-c", "mkdir -p /data/backups /data/plugins /data/plugin-data /data/marketplace-identity && chown -R node:node /data && ./node_modules/.bin/prisma migrate deploy --schema=prisma/schema.prisma && exec gosu node node dist/main"]
