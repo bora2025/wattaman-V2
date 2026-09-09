@@ -375,6 +375,9 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   app.post('/platform/v1/customers/:accountId/mfa/issue', requirePlatformOperator, P('customers.manage'), async (request: PlatformRequest, response, next) => {
     try { response.json(await customerAccounts.issueMfa(String(request.params.accountId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
   });
+  app.post('/platform/v1/customers/:accountId/password/reset', requirePlatformOperator, P('customers.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await customerAccounts.resetPassword(String(request.params.accountId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
   app.get('/platform/v1/customers/:accountId', requirePlatformOperator, P('customers.read'), async (request, response, next) => {
     try { response.json(await platformDirectory.customer(String(request.params.accountId))); } catch (error) { next(error); }
   });

@@ -22,6 +22,12 @@ interface IssuedFactor {
   sessionsRevoked: number;
 }
 
+interface IssuedPassword {
+  password: string;
+  sessionsRevoked: number;
+  mfaStillRequired: boolean;
+}
+
 /**
  * Restores a locked-out customer's access without handing the operator their identity.
  *
@@ -38,6 +44,7 @@ export default function CustomerMfaReset({ accountId }: { accountId: string }) {
   const [error, setError] = useState('');
   const [result, setResult] = useState<ResetResult | null>(null);
   const [issued, setIssued] = useState<IssuedFactor | null>(null);
+  const [password, setPassword] = useState<IssuedPassword | null>(null);
   const [confirmEmail, setConfirmEmail] = useState('');
 
   async function load() {
@@ -86,6 +93,22 @@ export default function CustomerMfaReset({ accountId }: { accountId: string }) {
     } finally { setBusy(false); }
   }
 
+  /** The emailed reset link needs a mail provider this deployment does not have, so an owner who
+   * forgets their password has no other way back. */
+  async function resetPassword() {
+    if (!window.confirm('Set a new password for this customer?\n\nYou will see it. Their current password stops working immediately and every signed-in session ends. This is recorded against you and against the customer.')) return;
+    setBusy(true); setError(''); setResult(null); setIssued(null); setPassword(null);
+    try {
+      setPassword(await platformJson<IssuedPassword>(`customers/${encodeURIComponent(accountId)}/password/reset`, {
+        method: 'POST', body: JSON.stringify({ internalReason: reason, confirmEmail: confirmEmail.trim() }),
+      }));
+      setReason(''); setConfirmEmail('');
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not reset the password');
+    } finally { setBusy(false); }
+  }
+
   if (!customer) return null;
 
   return <section className="pa-card mt-4 space-y-3">
@@ -127,12 +150,32 @@ export default function CustomerMfaReset({ accountId }: { accountId: string }) {
       </dl>
     </section>}
 
+    {password && <section className="rounded-xl border border-amber-300 bg-amber-50 p-5">
+      <h3 className="font-semibold text-amber-950">Send this password to the account owner now</h3>
+      <p className="mt-1 text-sm text-amber-900">
+        Shown once. Ask them to change it after signing in.
+        {password.mfaStillRequired
+          ? ' Their second factor still applies, so this alone will not sign anyone in.'
+          : ' This account has no second factor, so this alone is full access to it.'}
+        {password.sessionsRevoked > 0 ? ` ${password.sessionsRevoked} existing ${password.sessionsRevoked === 1 ? 'session was' : 'sessions were'} ended.` : ''}
+      </p>
+      <code className="mt-3 block break-all rounded-lg bg-white p-3 text-sm">{password.password}</code>
+    </section>}
+
     {canManage && <>
       <label className="block text-xs font-medium text-slate-600" htmlFor="mfa-reset-reason">
         Internal reason <span aria-hidden="true">*</span>
         <textarea id="mfa-reset-reason" className="pa-input mt-1 min-h-20" minLength={3} value={reason}
           onChange={event => setReason(event.target.value)}
           placeholder="Owner lost their authenticator; identity confirmed by phone" />
+      </label>
+      {/* Shared by both credential-issuing actions below: retyping the address is what stops the
+          wrong row being picked from a list. The reset action above needs no confirmation because
+          it produces nothing anyone can sign in with. */}
+      <label className="block text-xs font-medium text-slate-600" htmlFor="mfa-issue-confirm">
+        Retype the account email — required for the two actions that show you a credential
+        <input id="mfa-issue-confirm" type="email" className="pa-input mt-1" value={confirmEmail}
+          onChange={event => setConfirmEmail(event.target.value)} placeholder="owner@example.com" />
       </label>
       {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
@@ -148,16 +191,25 @@ export default function CustomerMfaReset({ accountId }: { accountId: string }) {
       </div>}
 
       <div className="rounded-lg border border-amber-300 p-3">
+        <h3 className="text-sm font-semibold">Reset password — you will see it</h3>
+        <p className="mt-1 text-xs text-slate-500">
+          For an owner who has forgotten their password. The emailed reset link needs a mail provider this
+          deployment does not have, so this is the only way back.
+          {customer.mfaEnabled
+            ? ' Their second factor still applies, so this password alone will not sign anyone in.'
+            : ' This account has no second factor, so this password alone is full access.'}
+        </p>
+        <button className="pa-btn-secondary mt-2" disabled={busy || reason.trim().length < 3 || !confirmEmail.trim()} onClick={resetPassword}>
+          {busy ? 'Resetting…' : 'Reset password'}
+        </button>
+      </div>
+
+      <div className="rounded-lg border border-amber-300 p-3">
         <h3 className="text-sm font-semibold">Generate and send — you will see the codes</h3>
         <p className="mt-1 text-xs text-slate-500">
           Use when the owner cannot enrol one themselves. It produces a working credential for their account,
           so you will be able to sign in as them until they replace it. Recorded against you and against the customer.
         </p>
-        <label className="mt-2 block text-xs font-medium text-slate-600" htmlFor="mfa-issue-confirm">
-          Retype the account email to confirm <span aria-hidden="true">*</span>
-          <input id="mfa-issue-confirm" type="email" className="pa-input mt-1" value={confirmEmail}
-            onChange={event => setConfirmEmail(event.target.value)} placeholder="owner@example.com" />
-        </label>
         <button className="pa-btn-primary mt-2" disabled={busy || reason.trim().length < 3 || !confirmEmail.trim()} onClick={issue}>
           {busy ? 'Generating…' : 'Generate second factor'}
         </button>

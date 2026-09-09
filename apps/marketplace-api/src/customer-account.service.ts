@@ -1,11 +1,21 @@
 import { Prisma, PrismaClient } from '@prisma/client';
+import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 import { MarketplaceConfig } from './config';
 import { HttpError } from './http-error';
-import { generateRecoveryCodes, generateTotpSecret, hashToken, totpUri } from './identity-crypto';
+import { generateRecoveryCodes, generateTotpSecret, hashPassword, hashToken, totpUri } from './identity-crypto';
 import { PlatformActionContext } from './platform-context';
 import { maskEmail } from './platform-read-support';
 import { encryptSecret } from './secret-encryption';
+
+/** Ambiguous characters are excluded because this value gets read off a screen and retyped. */
+function generatePassword(length = 24) {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789-_';
+  const bytes = randomBytes(length * 2);
+  let value = '';
+  for (let i = 0; value.length < length; i += 1) value += alphabet[bytes[i % bytes.length] % alphabet.length];
+  return value;
+}
 
 const resetMfaInput = z.object({
   internalReason: z.string().trim().min(3).max(5000),
@@ -18,6 +28,11 @@ const issueMfaInput = z.object({
    * account rather than a reversible metadata change, so picking the wrong row from a list should
    * not be enough to do it.
    */
+  confirmEmail: z.string().email().max(320),
+}).strict();
+
+const resetPasswordInput = z.object({
+  internalReason: z.string().trim().min(3).max(5000),
   confirmEmail: z.string().email().max(320),
 }).strict();
 
@@ -94,6 +109,73 @@ export class CustomerAccountService {
         recoveryCodesDestroyed: codes.count,
         sessionsRevoked: sessions.count,
         nextStep: 'The account owner enrols a new authenticator at their next sign-in, and is the only person who sees the new secret and recovery codes.',
+      };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
+  /**
+   * Sets a new password for a customer and returns it to the operator to pass on.
+   *
+   * The supported path is the emailed reset link, which needs a mail provider this deployment does
+   * not have. Without this, an owner who forgets their password has no way back at all — which is
+   * exactly where this account was before, and why the password had to be reset over SSH.
+   *
+   * The password is generated rather than accepted: it is shown once and meant to be replaced, and
+   * accepting one invites reuse of a password the operator already holds. It carries the same cost
+   * as `issueMfa` and the same compensating controls — a retyped address, every session ended, and
+   * a record on both sides that an operator set this credential.
+   */
+  async resetPassword(accountId: string, operatorId: string, value: unknown, context: PlatformActionContext, now = new Date()) {
+    const input = resetPasswordInput.parse(value);
+    return this.prisma.$transaction(async (tx) => {
+      const account = await tx.marketplaceAccount.findUnique({
+        where: { id: accountId },
+        select: { id: true, email: true, displayName: true, mfaEnabled: true },
+      });
+      if (!account) throw new HttpError(404, 'Customer account not found');
+      if (account.email.toLowerCase() !== input.confirmEmail.trim().toLowerCase()) {
+        throw new HttpError(400, 'The confirmation address does not match this account');
+      }
+
+      const password = generatePassword();
+      await tx.marketplaceAccount.update({
+        where: { id: accountId },
+        // Hashed by the same function the login path verifies against, never a re-implementation.
+        // Lockout counters clear too: an owner who forgot their password has usually been failing
+        // sign-in, and leaving them locked would defeat the point.
+        data: { passwordHash: await hashPassword(password), failedLoginCount: 0, lockedUntil: null },
+      });
+      const sessions = await tx.marketplaceSession.updateMany({
+        where: { accountId, revokedAt: null }, data: { revokedAt: now },
+      });
+      // Outstanding emailed reset links are consumed: a link issued before this point would let
+      // whoever holds it set a password of their own afterwards.
+      await tx.marketplacePasswordReset.updateMany({
+        where: { accountId, consumedAt: null }, data: { consumedAt: now },
+      });
+
+      await tx.platformAuditEvent.create({
+        data: {
+          operatorId, action: 'customer_password_reset_by_operator', success: true,
+          targetType: 'MarketplaceAccount', targetId: accountId, reason: input.internalReason,
+          metadata: { operatorSetPassword: true, sessionsRevoked: sessions.count },
+          correlationId: context.correlationId, ip: context.ip, userAgent: context.userAgent,
+        },
+      });
+      await tx.marketplaceAuditEvent.create({
+        data: { accountId, action: 'password_reset_by_operator', success: true, metadata: { operatorId } },
+      });
+
+      return {
+        accountId,
+        email: maskEmail(account.email),
+        displayName: account.displayName,
+        password,
+        sessionsRevoked: sessions.count,
+        // Stated because it changes what the owner needs from you: with MFA on, this password alone
+        // does not get them in, which is a meaningful reduction in what a leak of it would cost.
+        mfaStillRequired: account.mfaEnabled,
+        warning: 'Shown once. Send it over a channel you trust and ask the owner to change it after signing in.',
       };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }

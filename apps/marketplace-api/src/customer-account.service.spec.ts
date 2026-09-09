@@ -103,6 +103,82 @@ describe('CustomerAccountService.resetMfa', () => {
   });
 });
 
+describe('CustomerAccountService.resetPassword', () => {
+  const now = new Date('2026-09-09T06:00:00.000Z');
+  const input = { internalReason: 'Owner forgot password; no mail provider configured.', confirmEmail: 'owner@example.com' };
+
+  function passwordTx(account: Record<string, unknown> | null = { id: ACCOUNT, email: 'owner@example.com', displayName: 'Bora', mfaEnabled: true }) {
+    return { ...tx(account), marketplacePasswordReset: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) } };
+  }
+
+  it('generates a strong password and stores only its hash', async () => {
+    const state = passwordTx();
+    const result = await new CustomerAccountService(prismaWith(state), CONFIG).resetPassword(ACCOUNT, 'operator-1', input, context, now);
+
+    expect(result.password).toHaveLength(24);
+    const stored = state.marketplaceAccount.update.mock.calls[0][0].data;
+    // Never the plaintext: a database backup must not be a standing credential for this customer.
+    expect(stored.passwordHash).not.toContain(result.password);
+    expect(String(stored.passwordHash).length).toBeGreaterThan(0);
+  });
+
+  it('clears the lockout that usually accompanies a forgotten password', async () => {
+    const state = passwordTx();
+    await new CustomerAccountService(prismaWith(state), CONFIG).resetPassword(ACCOUNT, 'operator-1', input, context, now);
+
+    expect(state.marketplaceAccount.update.mock.calls[0][0].data).toMatchObject({ failedLoginCount: 0, lockedUntil: null });
+  });
+
+  it('ends live sessions and consumes outstanding reset links', async () => {
+    const state = passwordTx();
+    await new CustomerAccountService(prismaWith(state), CONFIG).resetPassword(ACCOUNT, 'operator-1', input, context, now);
+
+    expect(state.marketplaceSession.updateMany).toHaveBeenCalledWith({
+      where: { accountId: ACCOUNT, revokedAt: null }, data: { revokedAt: now },
+    });
+    // A link issued before this point would otherwise let its holder set a password afterwards.
+    expect(state.marketplacePasswordReset.updateMany).toHaveBeenCalledWith({
+      where: { accountId: ACCOUNT, consumedAt: null }, data: { consumedAt: now },
+    });
+  });
+
+  // With a second factor still in place, this password alone does not get anyone in, which changes
+  // what a leak of it costs. The operator is told either way.
+  it.each([[true], [false]])('reports whether a second factor still stands (mfaEnabled=%s)', async (mfaEnabled) => {
+    const state = passwordTx({ id: ACCOUNT, email: 'owner@example.com', displayName: 'Bora', mfaEnabled });
+    const result = await new CustomerAccountService(prismaWith(state), CONFIG).resetPassword(ACCOUNT, 'operator-1', input, context, now);
+
+    expect(result.mfaStillRequired).toBe(mfaEnabled);
+  });
+
+  it('refuses when the retyped address does not match the account', async () => {
+    const state = passwordTx();
+    await expect(new CustomerAccountService(prismaWith(state), CONFIG)
+      .resetPassword(ACCOUNT, 'operator-1', { ...input, confirmEmail: 'someone.else@example.com' }, context, now))
+      .rejects.toMatchObject({ status: 400 });
+    expect(state.marketplaceAccount.update).not.toHaveBeenCalled();
+  });
+
+  it('records plainly that an operator set this password', async () => {
+    const state = passwordTx();
+    await new CustomerAccountService(prismaWith(state), CONFIG).resetPassword(ACCOUNT, 'operator-1', input, context, now);
+
+    expect(state.platformAuditEvent.create.mock.calls[0][0].data).toMatchObject({
+      operatorId: 'operator-1', action: 'customer_password_reset_by_operator',
+      targetId: ACCOUNT, metadata: { operatorSetPassword: true },
+    });
+    expect(state.marketplaceAuditEvent.create.mock.calls[0][0].data).toMatchObject({
+      accountId: ACCOUNT, action: 'password_reset_by_operator',
+    });
+  });
+
+  it('refuses an unknown account', async () => {
+    const state = passwordTx(null);
+    await expect(new CustomerAccountService(prismaWith(state), CONFIG).resetPassword(ACCOUNT, 'operator-1', input, context, now))
+      .rejects.toMatchObject({ status: 404 });
+  });
+});
+
 describe('CustomerAccountService.issueMfa', () => {
   const now = new Date('2026-09-09T06:00:00.000Z');
   const input = { internalReason: 'Owner cannot enrol; no portal screen exists.', confirmEmail: 'owner@example.com' };
