@@ -87,7 +87,7 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   const platformOperators = new PlatformOperatorReadService(prisma);
   const customerSchools = new CustomerSchoolService(prisma);
   const schoolDiscovery = new SchoolDiscoveryService(prisma);
-  const customerAccounts = new CustomerAccountService(prisma);
+  const customerAccounts = new CustomerAccountService(prisma, config);
   const schoolPluginRequests = new SchoolPluginRequestService(prisma, config, commerce);
   const schoolProvisioning = new SchoolProvisioningService(prisma);
   const schoolBilling = new SchoolBillingService(prisma, transactionalEmail);
@@ -369,6 +369,11 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   // the owner sees the replacement and the operator never does (see CustomerAccountService).
   app.post('/platform/v1/customers/:accountId/mfa/reset', requirePlatformOperator, P('customers.manage'), async (request: PlatformRequest, response, next) => {
     try { response.json(await customerAccounts.resetMfa(String(request.params.accountId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+  // Returns a working second factor to the operator. The recovery of last resort while the customer
+  // portal has no enrolment screen -- see CustomerAccountService for what it costs.
+  app.post('/platform/v1/customers/:accountId/mfa/issue', requirePlatformOperator, P('customers.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await customerAccounts.issueMfa(String(request.params.accountId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
   });
   app.get('/platform/v1/customers/:accountId', requirePlatformOperator, P('customers.read'), async (request, response, next) => {
     try { response.json(await platformDirectory.customer(String(request.params.accountId))); } catch (error) { next(error); }

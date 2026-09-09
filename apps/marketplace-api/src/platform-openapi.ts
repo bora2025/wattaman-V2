@@ -57,6 +57,7 @@ export function platformOpenApi(baseUrl: string) {
       '/platform/v1/roles': path('get', { summary: 'Operators list roles', permission: 'operators.read' }),
       '/platform/v1/customers': path('get', { summary: 'Directory list customers', permission: 'customers.read' }),
       '/platform/v1/customers/{accountId}/mfa/reset': path('post', { summary: 'Directory reset customer MFA', permission: 'customers.manage' }),
+      '/platform/v1/customers/{accountId}/mfa/issue': path('post', { summary: 'Directory issue customer MFA', permission: 'customers.manage' }),
       '/platform/v1/customers/{accountId}': path('get', { summary: 'Directory get customer', permission: 'customers.read' }),
       '/platform/v1/schools': { ...path('get', { summary: 'Directory list schools', permission: 'schools.read' }), ...path('post', { summary: 'Directory create school', permission: 'schools.manage' }) },
       '/platform/v1/schools/provisioning-requests': { ...path('get', { summary: 'List durable school provisioning requests', permission: 'schools.read' }), ...path('post', { summary: 'Create a school provisioning request', permission: 'schools.manage' }) },

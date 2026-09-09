@@ -15,6 +15,13 @@ interface ResetResult {
   sessionsRevoked: number;
 }
 
+interface IssuedFactor {
+  secret: string;
+  otpauthUri: string;
+  recoveryCodes: string[];
+  sessionsRevoked: number;
+}
+
 /**
  * Restores a locked-out customer's access without handing the operator their identity.
  *
@@ -30,6 +37,8 @@ export default function CustomerMfaReset({ accountId }: { accountId: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<ResetResult | null>(null);
+  const [issued, setIssued] = useState<IssuedFactor | null>(null);
+  const [confirmEmail, setConfirmEmail] = useState('');
 
   async function load() {
     try { setCustomer(await platformJson<Customer>(`customers/${encodeURIComponent(accountId)}`)); }
@@ -58,6 +67,25 @@ export default function CustomerMfaReset({ accountId }: { accountId: string }) {
     } finally { setBusy(false); }
   }
 
+  /**
+   * Mints a factor the operator can pass on. Kept behind its own confirmation because, unlike a
+   * reset, it produces a working credential for someone else's account: whoever sees these values
+   * can sign in as this customer until the owner replaces them.
+   */
+  async function issue() {
+    if (!window.confirm('Generate a second factor for this customer?\n\nYou will see their authenticator secret and recovery codes. Anyone who sees them can sign in as this customer — including approving, in their name, a school’s permission to create paid orders. This is recorded against you and against the customer.')) return;
+    setBusy(true); setError(''); setResult(null); setIssued(null);
+    try {
+      setIssued(await platformJson<IssuedFactor>(`customers/${encodeURIComponent(accountId)}/mfa/issue`, {
+        method: 'POST', body: JSON.stringify({ internalReason: reason, confirmEmail: confirmEmail.trim() }),
+      }));
+      setReason(''); setConfirmEmail('');
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not generate a second factor');
+    } finally { setBusy(false); }
+  }
+
   if (!customer) return null;
 
   return <section className="pa-card mt-4 space-y-3">
@@ -76,21 +104,64 @@ export default function CustomerMfaReset({ accountId }: { accountId: string }) {
       Tell the owner to sign in and enrol a new authenticator — the secret is shown to them, once, and never to you.
     </p>}
 
-    {canManage && customer.mfaEnabled && <>
+    {issued && <section className="rounded-xl border border-amber-300 bg-amber-50 p-5">
+      <h3 className="font-semibold text-amber-950">Send these to the account owner now</h3>
+      <p className="mt-1 text-sm text-amber-900">
+        Shown once. Use a channel you trust — not chat or email if you can avoid it — and ask the owner to
+        replace them when they can. Until they do, anyone who has seen these can sign in as this customer.
+        {issued.sessionsRevoked > 0 ? ` ${issued.sessionsRevoked} existing ${issued.sessionsRevoked === 1 ? 'session was' : 'sessions were'} ended.` : ''}
+      </p>
+      <dl className="mt-3 space-y-3 text-sm">
+        <div>
+          <dt className="text-xs uppercase text-amber-800">Authenticator secret</dt>
+          <dd><code className="mt-1 block break-all rounded-lg bg-white p-3">{issued.secret}</code></dd>
+        </div>
+        <div>
+          <dt className="text-xs uppercase text-amber-800">otpauth URI</dt>
+          <dd><code className="mt-1 block break-all rounded-lg bg-white p-3 text-xs">{issued.otpauthUri}</code></dd>
+        </div>
+        <div>
+          <dt className="text-xs uppercase text-amber-800">Recovery codes</dt>
+          <dd><code className="mt-1 block break-all rounded-lg bg-white p-3">{issued.recoveryCodes.join('  ')}</code></dd>
+        </div>
+      </dl>
+    </section>}
+
+    {canManage && <>
       <label className="block text-xs font-medium text-slate-600" htmlFor="mfa-reset-reason">
         Internal reason <span aria-hidden="true">*</span>
         <textarea id="mfa-reset-reason" className="pa-input mt-1 min-h-20" minLength={3} value={reason}
           onChange={event => setReason(event.target.value)}
           placeholder="Owner lost their authenticator; identity confirmed by phone" />
       </label>
-      <p className="text-xs text-slate-500">
-        Use only after confirming who you are speaking to. This ends their sessions and cannot be undone;
-        the owner regains access by enrolling a new authenticator.
-      </p>
       {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-      <button className="pa-btn-primary" disabled={busy || reason.trim().length < 3} onClick={reset}>
-        {busy ? 'Resetting…' : 'Reset multi-factor authentication'}
-      </button>
+
+      {customer.mfaEnabled && <div className="rounded-lg border p-3">
+        <h3 className="text-sm font-semibold">Reset — the owner enrols their own</h3>
+        <p className="mt-1 text-xs text-slate-500">
+          Clears the factor and ends their sessions. You never see the replacement. Prefer this whenever the
+          owner still knows their password and can reach an enrolment screen.
+        </p>
+        <button className="pa-btn-secondary mt-2" disabled={busy || reason.trim().length < 3} onClick={reset}>
+          {busy ? 'Resetting…' : 'Reset multi-factor authentication'}
+        </button>
+      </div>}
+
+      <div className="rounded-lg border border-amber-300 p-3">
+        <h3 className="text-sm font-semibold">Generate and send — you will see the codes</h3>
+        <p className="mt-1 text-xs text-slate-500">
+          Use when the owner cannot enrol one themselves. It produces a working credential for their account,
+          so you will be able to sign in as them until they replace it. Recorded against you and against the customer.
+        </p>
+        <label className="mt-2 block text-xs font-medium text-slate-600" htmlFor="mfa-issue-confirm">
+          Retype the account email to confirm <span aria-hidden="true">*</span>
+          <input id="mfa-issue-confirm" type="email" className="pa-input mt-1" value={confirmEmail}
+            onChange={event => setConfirmEmail(event.target.value)} placeholder="owner@example.com" />
+        </label>
+        <button className="pa-btn-primary mt-2" disabled={busy || reason.trim().length < 3 || !confirmEmail.trim()} onClick={issue}>
+          {busy ? 'Generating…' : 'Generate second factor'}
+        </button>
+      </div>
     </>}
 
     {!canManage && <p className="text-xs text-slate-500">Resetting a second factor needs the customers.manage permission.</p>}
