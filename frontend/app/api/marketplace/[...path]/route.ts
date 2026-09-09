@@ -15,21 +15,23 @@ function marketplaceUrl() {
   return value;
 }
 
-/**
- * Behind a reverse proxy (Railway, or the gateway container), `nextUrl.origin` is the internal
- * listener, not the public URL the browser used — so comparing a browser's `Origin` header against
- * it rejects every legitimate same-origin POST and silently breaks sign-in and checkout in a
- * deployed environment while working fine on localhost. Trust the proxy's forwarded headers,
- * falling back to nextUrl for direct/local runs.
- */
-function expectedOrigins(request: NextRequest): string[] {
-  const origins = new Set<string>([request.nextUrl.origin]);
-  const forwardedHost = request.headers.get('x-forwarded-host') ?? request.headers.get('host');
-  if (forwardedHost) {
-    const proto = request.headers.get('x-forwarded-proto') ?? request.nextUrl.protocol.replace(':', '');
-    origins.add(`${proto}://${forwardedHost}`);
+/** Railway terminates TLS before the school gateway, so Next.js can observe an internal `http`
+ * scheme for a browser request whose real Origin is `https`. Comparing full origins therefore
+ * rejects valid same-origin mutations. Host equality is stable across that boundary; production
+ * still requires the browser Origin itself to be HTTPS. */
+function allowsMutationOrigin(request: NextRequest, origin: string): boolean {
+  let parsed: URL;
+  try { parsed = new URL(origin); } catch { return false; }
+  if (process.env.NODE_ENV === 'production' && parsed.protocol !== 'https:') return false;
+  const hosts = new Set<string>();
+  for (const header of ['host', 'x-forwarded-host']) {
+    for (const value of (request.headers.get(header) || '').split(',')) {
+      const host = value.trim().toLowerCase();
+      if (host) hosts.add(host);
+    }
   }
-  return [...origins];
+  hosts.add(request.nextUrl.host.toLowerCase());
+  return hosts.has(parsed.host.toLowerCase());
 }
 
 async function proxy(request: NextRequest, segments: string[], method: 'GET' | 'POST') {
@@ -43,7 +45,7 @@ async function proxy(request: NextRequest, segments: string[], method: 'GET' | '
   if (!allowed) return NextResponse.json({ error: 'Marketplace route is not allowed' }, { status: 404 });
   if (method === 'POST') {
     const origin = request.headers.get('origin');
-    if (origin && !expectedOrigins(request).includes(origin)) return NextResponse.json({ error: 'Cross-origin marketplace mutation rejected' }, { status: 403 });
+    if (origin && !allowsMutationOrigin(request, origin)) return NextResponse.json({ error: 'Cross-origin marketplace mutation rejected' }, { status: 403 });
   }
   const session = request.cookies.get(SESSION_COOKIE)?.value;
   if ((sessionGet.has(path) || sessionPost.has(path) || protectedArtifact || isLinkDecision || pluginRequestActionPattern.test(path)) && !session) return NextResponse.json({ error: 'Marketplace sign-in required' }, { status: 401 });
