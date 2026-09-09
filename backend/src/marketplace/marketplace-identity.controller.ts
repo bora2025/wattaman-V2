@@ -51,7 +51,7 @@ export class MarketplaceIdentityController {
   startLink(@Body() body: { label?: string }) { return this.link.start(body?.label); }
 
   @Post('link/poll')
-  pollLink(@Body() body: { requestId?: string }) { return this.link.poll(String(body?.requestId || '')); }
+  pollLink(@Body() body: { requestId?: string }) { return this.link.poll(body?.requestId); }
 
   @Get('link/status')
   linkStatus() { return this.link.status(); }

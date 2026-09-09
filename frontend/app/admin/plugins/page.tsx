@@ -39,7 +39,7 @@ interface UpdateStatus {
 
 interface PluginExtensions { navigation: Array<{ pluginId: string; id: string; label: string; href: string; permission?: string }>; pages?: Array<{ pluginId: string; id: string; title: string; routePath: string; kind: string }> }
 interface PluginPreview { packageSha256: string; plugin: { id: string; name: string; description: string; version: string; publisher: string; requiresCore: string; capabilities: string[]; permissions: string[]; dependencies: Record<string, string>; migrations: Array<{ id: string; destructive: boolean }> } }
-interface MarketplaceLinkStatus { linked: boolean; accountEmailMasked?: string; scope?: string; expiresAt?: string }
+interface MarketplaceLinkStatus { linked: boolean; accountEmailMasked?: string; scope?: string; expiresAt?: string; pending?: { requestId: string; startedAt: string; expiresAt: string } | null }
 interface CatalogProduct {
   id: string; name: string; description: string; license: string; paid: boolean;
   publisher: { slug: string; displayName: string };
@@ -141,17 +141,37 @@ export default function PluginsPage() {
       const requestId = String(result.requestId || '');
       if (!/^[0-9a-f-]{36}$/i.test(requestId)) throw new Error('Marketplace returned an invalid link request');
       window.open(`/marketplace/link/${encodeURIComponent(requestId)}`, '_blank', 'noopener,noreferrer');
-      const deadline = Date.now() + 15 * 60 * 1000;
-      while (Date.now() < deadline) {
-        await new Promise((resolve) => setTimeout(resolve, 3000));
-        const pollResponse = await apiFetch('/api/admin/marketplace/link/poll', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ requestId: result.requestId }) });
-        const pollResult = await pollResponse.json().catch(() => ({}));
-        if (!pollResponse.ok) throw new Error(pollResult.message || 'Linking failed');
-        if (pollResult.status === 'linked') { await loadLinkStatus(); await loadCatalog(); await loadOrders(); break; }
-        if (pollResult.status === 'denied') throw new Error('The marketplace account owner denied this link request.');
-        if (pollResult.status === 'expired') throw new Error('The link request expired before it was approved.');
-      }
+      await awaitApproval();
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Linking failed'); }
+    finally { setLinking(false); }
+  }
+
+  /**
+   * Polls until the account owner answers.
+   *
+   * The request id is deliberately not passed: the school recorded it when linking started, so a
+   * reload of this page resumes the same request instead of stranding an approval that can never
+   * be exchanged. Every call re-reads it server-side, which is also why this can be resumed from a
+   * fresh page load with no state of its own.
+   */
+  async function awaitApproval() {
+    const deadline = Date.now() + 15 * 60 * 1000;
+    while (Date.now() < deadline) {
+      const pollResponse = await apiFetch('/api/admin/marketplace/link/poll', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({}) });
+      const pollResult = await pollResponse.json().catch(() => ({}));
+      if (!pollResponse.ok) throw new Error(pollResult.message || 'Linking failed');
+      if (pollResult.status === 'linked') { await loadLinkStatus(); await loadCatalog(); await loadOrders(); return; }
+      if (pollResult.status === 'denied') throw new Error('The marketplace account owner denied this link request.');
+      if (pollResult.status === 'expired') throw new Error('The link request expired before it was approved.');
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+    }
+  }
+
+  /** Picks up an approval granted while this page was closed. */
+  async function resumeLink() {
+    setLinking(true); setError('');
+    try { await awaitApproval(); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : 'Linking failed'); }
     finally { setLinking(false); }
   }
 
@@ -306,8 +326,22 @@ export default function PluginsPage() {
                 </>
               ) : (
                 <div className="mt-4">
-                  <button className="btn btn-primary" disabled={linking} onClick={startLink}>{linking ? 'Waiting for approval…' : 'Link marketplace account'}</button>
-                  <p className="mt-2 text-xs text-slate-500">Opens the marketplace in a new tab, where the account owner reviews and approves the requested permissions.</p>
+                  {linkStatus?.pending ? (
+                    // An approval granted while this page was closed is still claimable, so offer to
+                    // finish it rather than starting again and asking the owner to approve twice.
+                    <>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button className="btn btn-primary" disabled={linking} onClick={resumeLink}>{linking ? 'Checking…' : 'Finish linking'}</button>
+                        <button className="btn" disabled={linking} onClick={startLink}>Start over</button>
+                      </div>
+                      <p className="mt-2 text-xs text-slate-500">A link request from {new Date(linkStatus.pending.startedAt).toLocaleString()} is still waiting. If the account owner has approved it, finishing completes the link without asking them again.</p>
+                    </>
+                  ) : (
+                    <>
+                      <button className="btn btn-primary" disabled={linking} onClick={startLink}>{linking ? 'Waiting for approval…' : 'Link marketplace account'}</button>
+                      <p className="mt-2 text-xs text-slate-500">Opens the marketplace in a new tab, where the account owner reviews and approves the requested permissions.</p>
+                    </>
+                  )}
                 </div>
               )}
             </section>

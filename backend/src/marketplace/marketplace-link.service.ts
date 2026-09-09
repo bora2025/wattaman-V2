@@ -30,19 +30,32 @@ export class MarketplaceLinkService {
     const signature = await this.keys.sign({ installationId, requestedScope: REQUESTED_SCOPE, ts });
     const result = await this.postJson(config, `/v1/installations/${installationId}/marketplace-links`, { installationId, requestedScope: REQUESTED_SCOPE, ts, signature, label });
     if (result.status !== 201) throw new BadGatewayException(errorMessage(result.body));
+    // Persisted before the browser is told about it, so an approval can still be claimed if the
+    // admin page is reloaded or closed while the owner is deciding.
+    await this.prisma.marketplacePendingLink.upsert({
+      where: { id: 'singleton' },
+      create: { id: 'singleton', requestId: result.body.requestId, scope: REQUESTED_SCOPE, expiresAt: new Date(result.body.expiresAt) },
+      update: { requestId: result.body.requestId, scope: REQUESTED_SCOPE, startedAt: new Date(), expiresAt: new Date(result.body.expiresAt) },
+    });
     return { requestId: result.body.requestId, approvalUrl: result.body.approvalUrl, expiresAt: result.body.expiresAt };
   }
 
-  async poll(requestId: string) {
-    if (!requestId) throw new BadRequestException('requestId is required');
+  /** `requestId` is optional: with none, the pending request recorded by `start()` is resumed. */
+  async poll(requestId?: string) {
+    const pending = requestId?.trim()
+      ? requestId.trim()
+      : (await this.prisma.marketplacePendingLink.findUnique({ where: { id: 'singleton' } }))?.requestId;
+    if (!pending) throw new BadRequestException('No marketplace link is awaiting approval');
+    requestId = pending;
     const config = this.requireConfig();
     const installationId = await this.installationId();
     const ts = String(Math.floor(Date.now() / 1000));
     const signature = await this.keys.sign({ installationId, requestId, ts });
     const result = await this.postJson(config, `/v1/installations/${installationId}/marketplace-links/${requestId}/exchange`, { installationId, requestId, ts, signature });
     if (result.status === 202) return { status: 'pending' as const };
-    if (result.status === 403) return { status: 'denied' as const };
-    if (result.status === 410) return { status: 'expired' as const };
+    // Denied and expired are final answers, so the pending record stops being useful.
+    if (result.status === 403) { await this.clearPending(); return { status: 'denied' as const }; }
+    if (result.status === 410) { await this.clearPending(); return { status: 'expired' as const }; }
     if (result.status !== 200) throw new BadGatewayException(errorMessage(result.body));
     const body = result.body as { sessionToken: string; expiresAt: string; accountId: string; accountEmail?: string; scope: string; grantId: string };
     await this.tokenStore.write(body.sessionToken);
@@ -58,13 +71,26 @@ export class MarketplaceLinkService {
         scope: body.scope, linkedAt: now, expiresAt: new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000), sessionExpiresAt: new Date(body.expiresAt), revokedAt: null,
       },
     });
+    // The request is spent; leaving it would make a later resume attempt fail with "already
+    // exchanged" rather than reporting the link it successfully established.
+    await this.prisma.marketplacePendingLink.deleteMany({ where: { id: 'singleton' } });
     return { status: 'linked' as const, accountEmailMasked: maskEmail(body.accountEmail), scope: body.scope };
   }
 
   async status() {
-    const link = await this.prisma.marketplaceProxyLink.findUnique({ where: { id: 'singleton' } });
-    if (!link || link.revokedAt) return { linked: false as const };
-    return { linked: true as const, accountEmailMasked: link.accountEmailMasked, scope: link.scope, linkedAt: link.linkedAt, expiresAt: link.expiresAt };
+    const [link, pending] = await Promise.all([
+      this.prisma.marketplaceProxyLink.findUnique({ where: { id: 'singleton' } }),
+      this.prisma.marketplacePendingLink.findUnique({ where: { id: 'singleton' } }),
+    ]);
+    // Reported even once linked, so a stale record left by an interrupted relink is visible rather
+    // than silently absent.
+    const awaiting = pending ? { requestId: pending.requestId, startedAt: pending.startedAt, expiresAt: pending.expiresAt } : null;
+    if (!link || link.revokedAt) return { linked: false as const, pending: awaiting };
+    return { linked: true as const, accountEmailMasked: link.accountEmailMasked, scope: link.scope, linkedAt: link.linkedAt, expiresAt: link.expiresAt, pending: awaiting };
+  }
+
+  private async clearPending() {
+    await this.prisma.marketplacePendingLink.deleteMany({ where: { id: 'singleton' } });
   }
 
   async revoke() {

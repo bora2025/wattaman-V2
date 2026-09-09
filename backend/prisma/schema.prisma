@@ -1403,6 +1403,26 @@ model PluginInstallation {
   @@index([publisher])
 }
 
+/// The marketplace link request currently awaiting the account owner's approval.
+///
+/// Without this, the request id existed only inside the browser callback that opened the consent
+/// tab: reloading the school admin page destroyed it, and an approval granted afterwards could
+/// never be exchanged -- the grant existed marketplace-side while the school had no way to claim
+/// it. A singleton because one installation links to one account at a time.
+///
+/// Holds no secret. The id is useless without this installation's Ed25519 key, which signs every
+/// exchange attempt.
+model MarketplacePendingLink {
+  id        String   @id @default("singleton")
+  requestId String
+  scope     String?
+  startedAt DateTime @default(now())
+  /// The marketplace's own deadline for *approval*. An approved request never expires, so this
+  /// bounds how long we keep waiting for an answer, not how long we may exchange one.
+  expiresAt DateTime
+  updatedAt DateTime @updatedAt
+}
+
 model MarketplaceProxyLink {
   id                 String    @id @default("singleton")
   grantId            String
