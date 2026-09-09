@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
+import { DatabaseModule } from './database/database.module';
 import { SchoolBillingAccessGuard } from './marketplace/school-billing-access.guard';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -43,6 +44,11 @@ import { runsBackgroundJobs } from './config/environment';
 
 @Module({
   imports: [
+    // SchoolBillingAccessGuard is registered below as a global APP_GUARD, so Nest resolves its
+    // dependencies from this module's own injector. Without DatabaseModule here its PrismaService
+    // cannot be found and the whole application fails to start -- feature modules importing
+    // DatabaseModule themselves does not help a provider declared at this level.
+    DatabaseModule,
     // Rate limiting: max 300 requests per 60 seconds per IP
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 300 }]),
     ScheduleModule.forRoot({
