@@ -1422,6 +1422,19 @@ model MarketplaceRegistration {
   updatedAt      DateTime @updatedAt
 }
 
+/// Last verified control-plane billing state. Network failures never overwrite a verified ACTIVE
+/// state with SUSPENDED, so a marketplace outage cannot lock a school.
+model MarketplaceSchoolControl {
+  id              String   @id @default("singleton")
+  access          String   @default("ACTIVE")
+  reason          String?
+  warningsJson    String   @default("[]")
+  lastVerifiedAt  DateTime?
+  lastAttemptAt   DateTime?
+  lastError       String?
+  updatedAt       DateTime @updatedAt
+}
+
 /// The marketplace link request currently awaiting the account owner's approval.
 ///
 /// Without this, the request id existed only inside the browser callback that opened the consent

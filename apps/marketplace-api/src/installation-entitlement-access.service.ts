@@ -30,6 +30,10 @@ export class InstallationEntitlementAccessService {
     return { entitlements: entitlements.map((entitlement) => ({ pluginId: entitlement.pluginId, status: entitlement.status, signedToken: entitlement.signedToken })) };
   }
 
+  async authenticateControl(params: { installationId: string; ts: string; signature: string }, now = new Date()) {
+    return this.authenticate(params, { installationId: params.installationId, ts: params.ts }, now, true);
+  }
+
   async authorizeDownload(params: { installationId: string; sha256: string; pluginId: string; ts: string; signature: string }, now = new Date()) {
     const { registrationId } = await this.authenticate(params, { installationId: params.installationId, sha256: params.sha256, ts: params.ts }, now);
     const entitlement = await this.prisma.installationEntitlement.findUnique({ where: { installationId_pluginId: { installationId: registrationId, pluginId: params.pluginId } } });
@@ -39,7 +43,7 @@ export class InstallationEntitlementAccessService {
     return { registrationId };
   }
 
-  private async authenticate(raw: { installationId: string; ts: string; signature: string }, payload: Record<string, unknown>, now: Date) {
+  private async authenticate(raw: { installationId: string; ts: string; signature: string }, payload: Record<string, unknown>, now: Date, allowInactiveSchool = false) {
     const input = requestInput.parse(raw);
     const tsMillis = Number(input.ts) * 1000;
     if (!Number.isFinite(tsMillis) || Math.abs(now.getTime() - tsMillis) > FRESHNESS_WINDOW_MS) throw new HttpError(401, 'Request timestamp is outside the freshness window');
@@ -49,7 +53,7 @@ export class InstallationEntitlementAccessService {
     });
     const activeKey = registration?.keys[0];
     if (!registration || !activeKey) throw new HttpError(404, 'Installation is not registered');
-    if (registration.school && registration.school.status !== 'ACTIVE') throw new HttpError(403, 'Customer school is not active');
+    if (!allowInactiveSchool && registration.school && registration.school.status !== 'ACTIVE') throw new HttpError(403, 'Customer school is not active');
     const bytes = Buffer.from(canonicalJson(payload));
     let valid: boolean;
     try {

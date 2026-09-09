@@ -92,6 +92,77 @@ export class SchoolBillingService {
     return { schoolId: school.id, schoolName: school.name, schoolCurrency: school.currency, billingPlan: school.billingPlan, outstandingMinor, invoices: school.invoices, notifications: school.billingNotifications };
   }
 
+  /** Customer-safe billing view. Ownership is derived from the authenticated marketplace
+   * account's linked installations; callers cannot choose an arbitrary school id. Delivery
+   * diagnostics and operator-only notes are deliberately excluded. */
+  async customerBilling(accountId: string) {
+    const schools = await this.prisma.customerSchool.findMany({
+      where: { installation: { is: { accountId } } },
+      select: {
+        id: true, name: true, status: true, currency: true,
+        billingPlan: { select: { id: true, slug: true, name: true, currency: true, amountMinor: true, billingInterval: true, dueDays: true } },
+        invoices: {
+          select: {
+            id: true, invoiceNumber: true, status: true, currency: true, amountMinor: true, paidMinor: true,
+            description: true, periodStart: true, periodEnd: true, dueAt: true, issuedAt: true, paidAt: true,
+            payments: { select: { id: true, provider: true, amountMinor: true, receivedAt: true }, orderBy: { receivedAt: 'desc' } },
+          },
+          orderBy: { issuedAt: 'desc' },
+        },
+        billingNotifications: {
+          select: { id: true, invoiceId: true, type: true, subject: true, message: true, createdAt: true, sentAt: true },
+          orderBy: { createdAt: 'desc' }, take: 30,
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+    return schools.map((school) => ({
+      schoolId: school.id,
+      schoolName: school.name,
+      schoolStatus: school.status,
+      schoolCurrency: school.currency,
+      billingPlan: school.billingPlan,
+      outstandingMinor: school.invoices
+        .filter((invoice) => invoice.status !== 'VOID')
+        .reduce((sum, invoice) => sum + invoice.amountMinor - invoice.paidMinor, 0),
+      invoices: school.invoices,
+      notifications: school.billingNotifications,
+    }));
+  }
+
+  async installationControl(registrationId: string, now = new Date()) {
+    const school = await this.prisma.customerSchool.findFirst({
+      where: { installation: { id: registrationId } },
+      select: {
+        id: true, name: true, status: true, suspendedReason: true,
+        invoices: { where: { status: { in: ['ISSUED', 'PARTIALLY_PAID'] } }, select: {
+          id: true, invoiceNumber: true, currency: true, amountMinor: true, paidMinor: true, dueAt: true,
+          notifications: { where: { type: 'OVERDUE' }, select: { createdAt: true }, orderBy: { createdAt: 'asc' }, take: 1 },
+        }, orderBy: { dueAt: 'asc' } },
+      },
+    });
+    if (!school) return { managed: false, access: 'ACTIVE', checkedAt: now.toISOString(), warnings: [] };
+    const graceMs = 3 * 24 * 60 * 60 * 1000;
+    // The grace clock begins only when the durable final OVERDUE notice is created. A delayed
+    // alert job therefore cannot shorten the customer's promised three-day warning window.
+    const overdue = school.invoices.filter((invoice) => invoice.dueAt.getTime() < now.getTime() && invoice.notifications[0]);
+    const blocking = overdue.filter((invoice) => invoice.notifications[0].createdAt.getTime() + graceMs <= now.getTime());
+    const lifecycleBlocked = school.status === 'SUSPENDED' || school.status === 'TERMINATED';
+    return {
+      managed: true,
+      schoolId: school.id,
+      schoolName: school.name,
+      access: lifecycleBlocked || blocking.length ? 'SUSPENDED' : 'ACTIVE',
+      reason: lifecycleBlocked ? (school.suspendedReason || `School is ${school.status.toLowerCase()}`) : blocking.length ? 'Platform invoice remains unpaid three days after the final notice' : null,
+      checkedAt: now.toISOString(),
+      warnings: overdue.map((invoice) => ({
+        invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber, currency: invoice.currency,
+        outstandingMinor: invoice.amountMinor - invoice.paidMinor, dueAt: invoice.dueAt.toISOString(),
+        suspendAt: new Date(invoice.notifications[0].createdAt.getTime() + graceMs).toISOString(), final: true,
+      })),
+    };
+  }
+
   async issuePlanInvoice(schoolId: string, operatorId: string, value: unknown, context: PlatformActionContext) {
     const input = planInvoiceInput.parse(value);
     const school = await this.prisma.customerSchool.findUnique({ where: { id: schoolId }, include: { billingPlan: true } });

@@ -91,6 +91,7 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   const schoolPluginRequests = new SchoolPluginRequestService(prisma, config, commerce);
   const schoolProvisioning = new SchoolProvisioningService(prisma);
   const schoolBilling = new SchoolBillingService(prisma, transactionalEmail);
+  app.locals.schoolBilling = schoolBilling;
   const upload = multer({ storage: multer.memoryStorage(), limits: { files: 1, fileSize: config.maxArtifactBytes, fields: 10 } });
   const metrics = createMetricsRegistry(prisma);
   app.disable('x-powered-by');
@@ -203,6 +204,9 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   app.get('/v1/customer/entitlements', requireCommerceSession, async (request: ScopedRequest, response, next) => {
     try { response.json(await customerMarketplace.entitlements(request.accountId!)); } catch (error) { next(error); }
   });
+  app.get('/v1/customer/school-billing', requireSession, async (request: ScopedRequest, response, next) => {
+    try { response.json(await schoolBilling.customerBilling(request.accountId!)); } catch (error) { next(error); }
+  });
   app.get('/v1/customer/plugin-requests', requireCommerceSession, async (request: ScopedRequest, response, next) => {
     try { response.json(await schoolPluginRequests.customerRequests(request.accountId!)); } catch (error) { next(error); }
   });
@@ -254,6 +258,14 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
       response.json(await entitlementAccess.getAll({
         installationId: request.params.installationId, ts: String(request.query.ts || ''), signature: String(request.query.signature || ''),
       }));
+    } catch (error) { next(error); }
+  });
+  app.get('/v1/installations/:installationId/school-control', async (request, response, next) => {
+    try {
+      const authenticated = await entitlementAccess.authenticateControl({
+        installationId: request.params.installationId, ts: String(request.query.ts || ''), signature: String(request.query.signature || ''),
+      });
+      response.json(await schoolBilling.installationControl(authenticated.registrationId));
     } catch (error) { next(error); }
   });
   app.get('/v1/installations/:installationId/entitlements/:pluginId', async (request, response, next) => {

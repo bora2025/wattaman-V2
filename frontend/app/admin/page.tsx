@@ -28,6 +28,12 @@ interface DashboardData {
   details: DetailRow[]
   filters: { classes: { id: string; name: string }[]; departments: { id: string; name: string }[] }
 }
+interface PlatformBillingControl {
+  access: string
+  reason?: string | null
+  warningsJson: string
+  lastVerifiedAt?: string | null
+}
 type StatusFilter = 'all' | 'present' | 'absent' | 'late' | 'permission'
 
 const roleLabels: Record<string, string> = {
@@ -81,6 +87,7 @@ function DashboardContent() {
   const { t } = useLanguage()
   const router = useRouter()
   const [data, setData] = useState<DashboardData | null>(null)
+  const [billingControl, setBillingControl] = useState<PlatformBillingControl | null>(null)
   const [prevData, setPrevData] = useState<DashboardData | null>(null) // previous day for delta
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState('')
@@ -98,6 +105,12 @@ function DashboardContent() {
   const [agoStr, setAgoStr] = useState('')
   // Per-class real-time progress
   interface ClassProgressRow { classId: string; className: string; total: number; present: number; late: number; absent: number; permission: number; scanned: number; pctPresent: number; pctScanned: number }
+
+  useEffect(() => {
+    apiFetch('/api/admin/marketplace/billing-control')
+      .then(async response => response.ok ? setBillingControl(await response.json()) : undefined)
+      .catch(() => undefined)
+  }, [])
   const [classProgress, setClassProgress] = useState<ClassProgressRow[]>([])
   const [classProgressLoading, setClassProgressLoading] = useState(false)
   const [classProgressFlash, setClassProgressFlash] = useState<Record<string, number>>({}) // classId -> timestamp of last update for flash highlight
@@ -468,6 +481,7 @@ function DashboardContent() {
 
         {/* ── Modern Hero Panel ── */}
         <div className="page-body">
+          {billingControl && (billingControl.access === 'SUSPENDED' || JSON.parse(billingControl.warningsJson || '[]').length > 0) && <div role="alert" className={`mb-5 rounded-2xl border p-5 ${billingControl.access === 'SUSPENDED' ? 'border-red-300 bg-red-50 text-red-900' : 'border-amber-300 bg-amber-50 text-amber-950'}`}><h2 className="font-bold">{billingControl.access === 'SUSPENDED' ? 'School access suspended' : 'Final platform billing notice'}</h2><p className="mt-1 text-sm">{billingControl.reason || 'A Wattanam Marketplace invoice is overdue. Payment is required within three days of the final notice to prevent suspension.'}</p>{JSON.parse(billingControl.warningsJson || '[]').map((warning: { invoiceId: string; invoiceNumber: string; currency: string; outstandingMinor: number; suspendAt: string }) => <p key={warning.invoiceId} className="mt-2 text-sm font-semibold">Invoice {warning.invoiceNumber}: {(warning.outstandingMinor / 100).toFixed(2)} {warning.currency} outstanding · suspension {new Date(warning.suspendAt).toLocaleString()}</p>)}</div>}
           <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 text-white shadow-xl">
             {/* decorative blobs */}
             <div aria-hidden className="absolute -top-16 -right-16 w-64 h-64 rounded-full bg-white/10 blur-3xl" />
