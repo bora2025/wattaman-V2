@@ -220,10 +220,26 @@ export class AuthService {
     return this.prisma.user.createMany({ data: hashedUsers });
   }
 
+  /**
+   * Photos are stored inline as data URLs rather than in object storage, so an unvalidated value
+   * is both a stored-content risk and an unbounded row. Anything that is not a small raster image
+   * is refused: a `data:text/html` or SVG payload would otherwise sit in a column that UIs render
+   * straight into an `img` src.
+   */
+  private validatePhoto(photo: string): string | null {
+    const value = (photo || '').trim();
+    if (!value) return null; // Clearing the photo is legitimate.
+    const match = /^data:image\/(png|jpeg|jpg|webp);base64,([A-Za-z0-9+/=]+)$/.exec(value);
+    if (!match) throw new BadRequestException('Photo must be a base64 PNG, JPEG, or WebP data URL');
+    // ~1.5 MB of image. Large enough for a portrait, small enough that a row stays sane.
+    if (value.length > 2_000_000) throw new BadRequestException('Photo must be smaller than about 1.5 MB');
+    return value;
+  }
+
   async updateUserPhoto(userId: string, photo: string) {
     return this.prisma.user.update({
       where: { id: userId },
-      data: { photo },
+      data: { photo: this.validatePhoto(photo) },
       select: { id: true, email: true, name: true, role: true, photo: true },
     });
   }

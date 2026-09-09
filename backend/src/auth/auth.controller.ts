@@ -213,9 +213,24 @@ export class AuthController {
     return this.authService.bulkRegister(body.users);
   }
 
+  /** Your own photo. No id in the path, so there is nothing to point at somebody else. */
   @UseGuards(JwtAuthGuard)
+  @Post('profile/photo')
+  async updateOwnPhoto(@Body() body: { photo?: string }, @Request() req: any) {
+    return this.authService.updateUserPhoto(req.user.userId, body?.photo ?? '');
+  }
+
+  /**
+   * Changing *someone else's* photo. This previously carried only JwtAuthGuard, so any signed-in
+   * account — a student or parent included — could overwrite any other user's photo by naming
+   * their id, a Super Admin's among them. Self-service now has its own route above, leaving this
+   * one for administrators acting on people they may manage.
+   */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SUPER_ADMIN')
   @Put('users/:id/photo')
-  async updateUserPhoto(@Param('id') id: string, @Body() body: { photo: string }) {
+  async updateUserPhoto(@Param('id') id: string, @Body() body: { photo: string }, @Request() req: any) {
+    await this.assertCanManageTarget(req.user?.role, id);
     return this.authService.updateUserPhoto(id, body.photo);
   }
 

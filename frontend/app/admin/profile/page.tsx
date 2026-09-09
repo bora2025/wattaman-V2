@@ -11,9 +11,38 @@ interface CurrentUser {
   email: string | null;
   name: string;
   role: string;
+  photo: string | null;
 }
 
 const MINIMUM_LENGTH = 12;
+
+/** Downscaled before upload, not after: the photo is stored inline in the user row, so shrinking it
+ * in the browser is what keeps that row small rather than relying on the server to refuse. */
+const MAX_PHOTO_EDGE = 512;
+
+function toSquareJpeg(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Could not read that file'));
+    reader.onload = () => {
+      const image = new Image();
+      image.onerror = () => reject(new Error('That file is not an image this browser can read'));
+      image.onload = () => {
+        // Centre-cropped to a square so the avatar is not distorted by a wide or tall original.
+        const edge = Math.min(image.width, image.height);
+        const size = Math.min(edge, MAX_PHOTO_EDGE);
+        const canvas = document.createElement('canvas');
+        canvas.width = size; canvas.height = size;
+        const context = canvas.getContext('2d');
+        if (!context) return reject(new Error('This browser cannot process images'));
+        context.drawImage(image, (image.width - edge) / 2, (image.height - edge) / 2, edge, edge, 0, 0, size, size);
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      image.src = String(reader.result);
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 /**
  * The signed-in administrator's own account.
@@ -31,6 +60,8 @@ export default function AdminProfilePage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoError, setPhotoError] = useState('');
 
   useEffect(() => {
     apiFetch('/api/auth/me')
@@ -38,6 +69,32 @@ export default function AdminProfilePage() {
       .then(value => value && setUser(value))
       .catch(() => undefined);
   }, []);
+
+  async function savePhoto(photo: string) {
+    setPhotoBusy(true); setPhotoError('');
+    try {
+      const response = await apiFetch('/api/auth/profile/photo', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ photo }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.message || 'Could not save the photo');
+      setUser(current => (current ? { ...current, photo: result.photo ?? null } : current));
+    } catch (cause) {
+      setPhotoError(cause instanceof Error ? cause.message : 'Could not save the photo');
+    } finally { setPhotoBusy(false); }
+  }
+
+  async function choosePhoto(file: File | undefined) {
+    if (!file) return;
+    setPhotoError('');
+    try {
+      await savePhoto(await toSquareJpeg(file));
+    } catch (cause) {
+      setPhotoError(cause instanceof Error ? cause.message : 'Could not read that image');
+    }
+  }
 
   async function changePassword(event: FormEvent) {
     event.preventDefault();
@@ -79,7 +136,30 @@ export default function AdminProfilePage() {
           <div className="page-body space-y-6">
             <section className="card p-6">
               <h2 className="font-semibold text-slate-800">Signed in as</h2>
-              <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-3">
+
+              <div className="mt-4 flex flex-wrap items-center gap-5">
+                {user?.photo
+                  ? <img src={user.photo} alt="" className="h-24 w-24 rounded-full object-cover ring-1 ring-slate-200" />
+                  : <div aria-hidden="true" className="flex h-24 w-24 items-center justify-center rounded-full bg-slate-100 text-2xl font-semibold text-slate-400">
+                      {(user?.name || '?').trim().charAt(0).toUpperCase()}
+                    </div>}
+                <div>
+                  <div className="flex flex-wrap gap-2">
+                    <label className={`btn btn-secondary cursor-pointer ${photoBusy ? 'pointer-events-none opacity-50' : ''}`}>
+                      {photoBusy ? 'Saving…' : user?.photo ? 'Change photo' : 'Upload photo'}
+                      <input className="sr-only" type="file" accept="image/png,image/jpeg,image/webp" disabled={photoBusy}
+                        onChange={event => { choosePhoto(event.target.files?.[0]); event.target.value = ''; }} />
+                    </label>
+                    {user?.photo && <button className="btn btn-secondary" disabled={photoBusy} onClick={() => savePhoto('')}>Remove</button>}
+                  </div>
+                  <p className="mt-2 text-xs text-slate-500">
+                    PNG, JPEG, or WebP. Cropped to a square and reduced to {MAX_PHOTO_EDGE}px in your browser before it is saved.
+                  </p>
+                  {photoError && <p role="alert" className="mt-2 text-xs text-red-700">{photoError}</p>}
+                </div>
+              </div>
+
+              <dl className="mt-6 grid gap-4 border-t border-slate-100 pt-4 text-sm sm:grid-cols-3">
                 <Item label="Name" value={user?.name ?? '—'} />
                 <Item label="Email" value={user?.email ?? '—'} />
                 <Item label="Role" value={user?.role ?? '—'} />
