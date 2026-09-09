@@ -134,7 +134,13 @@ export default function PluginsPage() {
       const response = await apiFetch('/api/admin/marketplace/link/start', { method: 'POST' });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.message || `Could not start linking (${response.status})`);
-      window.open(result.approvalUrl, '_blank', 'noopener,noreferrer');
+      // The approval UI belongs to this school frontend. The marketplace service returns an API
+      // origin for machine-to-machine calls and intentionally has no browser page at this path.
+      // Keeping this same-origin also ensures account credentials/session cookies only pass
+      // through the frontend's allowlisted server-side marketplace proxy.
+      const requestId = String(result.requestId || '');
+      if (!/^[0-9a-f-]{36}$/i.test(requestId)) throw new Error('Marketplace returned an invalid link request');
+      window.open(`/marketplace/link/${encodeURIComponent(requestId)}`, '_blank', 'noopener,noreferrer');
       const deadline = Date.now() + 15 * 60 * 1000;
       while (Date.now() < deadline) {
         await new Promise((resolve) => setTimeout(resolve, 3000));
