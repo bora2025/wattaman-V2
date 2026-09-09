@@ -60,6 +60,7 @@ export const adminNav = [
   { label: 'Licensing', href: '/admin/licensing', icon: 'certificate' },
   { label: 'Audit Logs', href: '/admin/audit', icon: 'clipboard' },
   { label: 'nav.settings', href: '/admin/settings', icon: 'settings' },
+  { label: 'My Profile', href: '/admin/profile', icon: 'users' },
   { label: 'Appearance', href: '/admin/appearance', icon: 'paint', section: 'Appearance' },
   { label: 'Posts', href: '/admin/appearance/posts', icon: 'edit' },
   { label: 'About', href: '/admin/appearance/about', icon: 'users' },

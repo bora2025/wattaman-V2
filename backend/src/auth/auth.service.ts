@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import type { StringValue } from 'ms';
 import * as bcrypt from 'bcryptjs';
@@ -241,6 +241,42 @@ export class AuthService {
     // Revoke all existing refresh tokens so old sessions cannot continue.
     await this.prisma.refreshToken.deleteMany({ where: { userId } });
     return { ok: true };
+  }
+
+  /**
+   * Changes the signed-in user's own password.
+   *
+   * Separate from `resetUserPassword`, which an administrator uses on someone else and which
+   * deliberately takes no current password — an admin resetting a teacher's password does not know
+   * it. Doing the same to your own account would mean a stolen session is enough to take the
+   * account permanently, so this proves the person at the keyboard knows the existing password
+   * before it changes.
+   *
+   * The minimum matches `ConfirmPasswordResetDto`, so a password chosen here is held to the same
+   * standard as one chosen through an emailed reset link.
+   */
+  async changeOwnPassword(userId: string, currentPassword: string, newPassword: string) {
+    if (typeof newPassword !== 'string' || newPassword.length < 12) {
+      throw new BadRequestException('New password must be at least 12 characters');
+    }
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { id: true, password: true } });
+    if (!user) throw new UnauthorizedException('Invalid credentials');
+    if (!(await bcrypt.compare(currentPassword || '', user.password))) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+    if (await bcrypt.compare(newPassword, user.password)) {
+      throw new BadRequestException('New password must differ from the current one');
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 12);
+    await this.prisma.user.update({ where: { id: userId }, data: { password: hashed } });
+    // Everything signed in elsewhere stops, and any unspent reset link is consumed: a link issued
+    // before this point would otherwise let its holder set a password of their own afterwards.
+    const revoked = await this.prisma.refreshToken.deleteMany({ where: { userId } });
+    await this.prisma.passwordResetToken.updateMany({
+      where: { userId, consumedAt: null }, data: { consumedAt: new Date() },
+    });
+    return { ok: true, revokedSessions: revoked.count };
   }
 
   async deleteUser(userId: string) {

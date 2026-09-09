@@ -180,6 +180,14 @@ export class AuthController {
     return req.user;
   }
 
+  /** Changing your own password, unlike an administrator resetting someone else's, requires the
+   * current one — otherwise a stolen session is enough to take the account permanently. */
+  @UseGuards(JwtAuthGuard)
+  @Post('password/change')
+  async changeOwnPassword(@Body() body: { currentPassword?: string; newPassword?: string }, @Request() req: any) {
+    return this.authService.changeOwnPassword(req.user.userId, body?.currentPassword || '', body?.newPassword || '');
+  }
+
   @SkipThrottle()
   @UseGuards(JwtAuthGuard)
   @Get('me')
