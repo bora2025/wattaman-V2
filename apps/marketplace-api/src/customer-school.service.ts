@@ -135,7 +135,7 @@ export class CustomerSchoolService {
         installation: {
           select: {
             id: true, installationId: true, label: true, lastSeenAt: true, createdAt: true,
-            account: { select: { id: true, displayName: true, email: true } },
+            account: { select: { id: true, displayName: true, email: true, mfaEnabled: true, lockedUntil: true, mfaRecoveryCodes: { select: { usedAt: true } } } },
             keys: { select: { id: true, keyFingerprint: true, createdAt: true, revokedAt: true }, orderBy: { createdAt: 'desc' } },
             grant: { select: { id: true, scope: true, consentedAt: true, expiresAt: true, revokedAt: true, revokedReason: true } },
             _count: { select: { entitlements: true, orders: true } },
@@ -162,7 +162,16 @@ export class CustomerSchoolService {
         ? {
           ...installation,
           account: installation.account
-            ? { id: installation.account.id, displayName: installation.account.displayName, email: maskEmail(installation.account.email) }
+            ? {
+              id: installation.account.id,
+              displayName: installation.account.displayName,
+              email: maskEmail(installation.account.email),
+              // Status only. An operator seeing "no second factor" knows the owner cannot approve a
+              // link yet; nothing here helps anyone sign in as them.
+              mfaEnabled: installation.account.mfaEnabled,
+              locked: Boolean(installation.account.lockedUntil),
+              recoveryCodesRemaining: installation.account.mfaRecoveryCodes.filter((code) => !code.usedAt).length,
+            }
             : null,
         }
         : null,

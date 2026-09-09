@@ -67,6 +67,9 @@ export class PlatformDirectoryService {
       select: {
         id: true, displayName: true, email: true, emailVerifiedAt: true, mfaEnabled: true,
         failedLoginCount: true, lockedUntil: true, createdAt: true, updatedAt: true,
+        // Only whether codes remain, never the codes: support needs to know if the owner is locked
+        // out, not anything that would help sign in as them.
+        mfaRecoveryCodes: { select: { usedAt: true } },
         installations: {
           select: { id: true, installationId: true, label: true, lastSeenAt: true, createdAt: true },
           orderBy: { createdAt: 'desc' }, take: 50,
@@ -82,7 +85,12 @@ export class PlatformDirectoryService {
       },
     });
     if (!account) throw new HttpError(404, 'Customer account not found');
-    return { ...account, email: maskEmail(account.email) };
+    const { mfaRecoveryCodes, ...rest } = account;
+    return {
+      ...rest,
+      email: maskEmail(account.email),
+      recoveryCodesRemaining: mfaRecoveryCodes.filter((code) => !code.usedAt).length,
+    };
   }
 
   async installations(query: unknown) {

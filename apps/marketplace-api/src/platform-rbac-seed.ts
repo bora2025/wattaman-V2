@@ -75,7 +75,7 @@ export const PLATFORM_ROLES: Array<{ key: string; displayName: string; descripti
   {
     key: 'customer_support', displayName: 'Customer Support',
     description: 'Customer/school/request/support views and limited corrections. Sensitive values masked; no release publication.',
-    permissions: ['platform.dashboard.read', 'customers.read', 'schools.read', 'plugin_requests.read', 'support.read', 'support.manage'],
+    permissions: ['platform.dashboard.read', 'customers.read', 'customers.manage', 'schools.read', 'plugin_requests.read', 'support.read', 'support.manage'],
   },
   {
     key: 'finance_operator', displayName: 'Finance Operator',

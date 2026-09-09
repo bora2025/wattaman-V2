@@ -24,6 +24,7 @@ import { PlatformExportService } from './platform-export.service';
 import { PlatformOperatorReadService } from './platform-operator-read.service';
 import { CustomerSchoolService } from './customer-school.service';
 import { SchoolDiscoveryService } from './school-discovery.service';
+import { CustomerAccountService } from './customer-account.service';
 import { platformOpenApi } from './platform-openapi';
 import { SchoolPluginRequestService } from './school-plugin-request.service';
 import { SchoolProvisioningService } from './school-provisioning.service';
@@ -86,6 +87,7 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   const platformOperators = new PlatformOperatorReadService(prisma);
   const customerSchools = new CustomerSchoolService(prisma);
   const schoolDiscovery = new SchoolDiscoveryService(prisma);
+  const customerAccounts = new CustomerAccountService(prisma);
   const schoolPluginRequests = new SchoolPluginRequestService(prisma, config, commerce);
   const schoolProvisioning = new SchoolProvisioningService(prisma);
   const schoolBilling = new SchoolBillingService(prisma, transactionalEmail);
@@ -362,6 +364,11 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
 
   app.get('/platform/v1/customers', requirePlatformOperator, P('customers.read'), async (request, response, next) => {
     try { response.json(await platformDirectory.customers(request.query)); } catch (error) { next(error); }
+  });
+  // Clears a customer's second factor so its owner can enrol a new one. It returns no secret --
+  // the owner sees the replacement and the operator never does (see CustomerAccountService).
+  app.post('/platform/v1/customers/:accountId/mfa/reset', requirePlatformOperator, P('customers.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await customerAccounts.resetMfa(String(request.params.accountId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
   });
   app.get('/platform/v1/customers/:accountId', requirePlatformOperator, P('customers.read'), async (request, response, next) => {
     try { response.json(await platformDirectory.customer(String(request.params.accountId))); } catch (error) { next(error); }

@@ -30,6 +30,7 @@ const sessionGetDetail = /^(operators|customers|schools|installations|publishers
 const ID = '[0-9a-f-]{36}';
 const sessionPostPatterns = [
   new RegExp(`^plugin-requests/${ID}/(assign|start-review|request-information|approve|reject|fulfill|exception-proposals|exception-decisions)$`),
+  new RegExp(`^customers/${ID}/mfa/reset$`),
   /^schools$/,
   /^schools\/provisioning-requests$/,
   new RegExp(`^schools/provisioning-requests/${ID}/(submit|approve|cancel|retry)$`),
