@@ -14,7 +14,22 @@ describe('InstallationRegistrationService', () => {
   beforeEach(() => {
     keyDir = mkdtempSync(path.join(os.tmpdir(), 'wattanam-installation-registration-'));
     process.env = { ...originalEnvironment, MARKETPLACE_URL: 'https://marketplace.example.com', INSTALLATION_KEY_DIR: keyDir };
-    prisma = { installation: { findUnique: jest.fn().mockResolvedValue({ installationId: 'school-public-id' }) } };
+    // A tiny in-memory stand-in for the two singleton rows status() now reads, so these tests
+    // exercise the real derivation rather than a mock that always answers the same way.
+    const singletons: Record<string, any> = {};
+    const store = (name: string) => ({
+      findUnique: jest.fn(async () => singletons[name] ?? null),
+      create: jest.fn(async ({ data }: any) => (singletons[name] = { registeredAt: new Date(), revokedAt: null, ...data })),
+      upsert: jest.fn(async ({ create, update }: any) => (singletons[name] = singletons[name]
+        ? { ...singletons[name], ...update }
+        : { registeredAt: new Date(), revokedAt: null, ...create })),
+      deleteMany: jest.fn(async () => { delete singletons[name]; return { count: 1 }; }),
+    });
+    prisma = {
+      installation: { findUnique: jest.fn().mockResolvedValue({ installationId: 'school-public-id' }) },
+      marketplaceRegistration: store('registration'),
+      marketplaceProxyLink: store('proxyLink'),
+    };
     keys = new InstallationKeyService();
     service = new InstallationRegistrationService(prisma, keys);
   });
@@ -107,6 +122,57 @@ describe('InstallationRegistrationService', () => {
     await service.rotateKey();
     const rotated = await new InstallationKeyService().ensureKeyPair();
     expect(rotated.fingerprint).not.toBe(before.fingerprint);
+  });
+
+  it('reports itself unregistered when nothing local says otherwise', async () => {
+    await keys.ensureKeyPair();
+    const status = await service.status();
+    expect(status).toMatchObject({ registered: false, registrationInferred: false, registeredAt: null });
+  });
+
+  it('records the registration once the marketplace accepts it', async () => {
+    jest.spyOn(global, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ challengeId: 'challenge-1', nonce: 'n'.repeat(64), purpose: 'register', expiresAt: '2099-01-01T00:00:00.000Z' }), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ installationId: 'school-public-id', accountId: null, keyFingerprint: 'fp' }), { status: 201 }));
+
+    await service.register(undefined, 'Bora School', `wtn_enr_${'a'.repeat(64)}`);
+
+    const status = await service.status();
+    expect(status).toMatchObject({ registered: true, registrationInferred: false });
+    expect(status.registeredAt).toBeTruthy();
+  });
+
+  it('does not record a registration the marketplace rejected', async () => {
+    jest.spyOn(global, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ challengeId: 'challenge-1', nonce: 'n'.repeat(64), purpose: 'register', expiresAt: '2099-01-01T00:00:00.000Z' }), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: 'Enrollment token is not valid' }), { status: 400 }));
+
+    await expect(service.register(undefined, 'Bora School', `wtn_enr_${'b'.repeat(64)}`)).rejects.toThrow('not valid');
+    await expect(service.status()).resolves.toMatchObject({ registered: false });
+  });
+
+  // Every school that registered before this record existed still has to read as registered, and
+  // a live marketplace link is only obtainable by one that is.
+  it('infers registration from an active marketplace link, and says the detail is not local', async () => {
+    await prisma.marketplaceProxyLink.create({
+      data: {
+        id: 'singleton', grantId: 'grant-1', accountId: 'account-1', scope: 'catalog:browse',
+        linkedAt: new Date(), expiresAt: new Date(Date.now() + 86_400_000), sessionExpiresAt: new Date(Date.now() + 3_600_000),
+      },
+    });
+    const status = await service.status();
+    expect(status).toMatchObject({ registered: true, registrationInferred: true, registeredAt: null });
+  });
+
+  it('stops inferring registration once the link is revoked', async () => {
+    await prisma.marketplaceProxyLink.create({
+      data: {
+        id: 'singleton', grantId: 'grant-1', accountId: 'account-1', scope: 'catalog:browse',
+        linkedAt: new Date(), expiresAt: new Date(Date.now() + 86_400_000), sessionExpiresAt: new Date(Date.now() + 3_600_000),
+        revokedAt: new Date(),
+      },
+    });
+    await expect(service.status()).resolves.toMatchObject({ registered: false });
   });
 
   it('reports local key status without requiring the marketplace to be reachable', async () => {

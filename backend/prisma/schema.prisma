@@ -1403,6 +1403,25 @@ model PluginInstallation {
   @@index([publisher])
 }
 
+/// What this school knows about its own marketplace registration.
+///
+/// `status()` is deliberately local-only -- a marketplace outage must never make the licensing
+/// screen hang -- but without this it could only report that a keypair exists on disk, which says
+/// nothing about whether the marketplace ever accepted it. The licensing page was left showing
+/// "Register with the marketplace" to schools that had registered long ago.
+///
+/// Written by this school when its own registration succeeds, so recording it needs no network
+/// call. Holds no secret: the fingerprint is a public-key digest.
+model MarketplaceRegistration {
+  id             String   @id @default("singleton")
+  installationId String
+  keyFingerprint String
+  accountId      String?
+  label          String?
+  registeredAt   DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
 /// The marketplace link request currently awaiting the account owner's approval.
 ///
 /// Without this, the request id existed only inside the browser callback that opened the consent

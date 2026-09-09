@@ -12,6 +12,10 @@ interface InstallationStatus {
   keyFingerprint: string | null;
   marketplaceConfigured: boolean;
   entitlementKeysConfigured: boolean;
+  registered: boolean;
+  registeredAt: string | null;
+  registeredAccountId: string | null;
+  registrationInferred: boolean;
 }
 
 interface EntitlementRecord {
@@ -33,6 +37,7 @@ export default function LicensingPage() {
   const [entitlements, setEntitlements] = useState<EntitlementRecord[]>([]);
   const [accountId, setAccountId] = useState('');
   const [label, setLabel] = useState('');
+  const [enrollmentToken, setEnrollmentToken] = useState('');
   const [offlinePluginId, setOfflinePluginId] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -66,9 +71,18 @@ export default function LicensingPage() {
   }
 
   function register() {
-    if (!accountId.trim()) return setError('Enter the marketplace account ID that owns this school licence.');
+    // Either identifies this school to the marketplace: an enrollment token was minted by a
+    // platform operator against a named customer school, and is the path for a school the operator
+    // provisioned. An account ID is the self-serve path.
+    if (!accountId.trim() && !enrollmentToken.trim()) {
+      return setError('Enter the enrollment token issued for this school, or the marketplace account ID that owns its licence.');
+    }
     return run('register', '/api/admin/marketplace/installation/register',
-      { accountId: accountId.trim(), ...(label.trim() ? { label: label.trim() } : {}) },
+      {
+        ...(accountId.trim() ? { accountId: accountId.trim() } : {}),
+        ...(enrollmentToken.trim() ? { enrollmentToken: enrollmentToken.trim() } : {}),
+        ...(label.trim() ? { label: label.trim() } : {}),
+      },
       'This installation is now registered with the marketplace.');
   }
 
@@ -135,11 +149,26 @@ export default function LicensingPage() {
             </section>
 
             <section className="card p-6">
-              <h2 className="font-semibold text-slate-800">Register with the marketplace</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Registration proves this server holds the private key before the marketplace will bind it to your account. If this installation is already registered, use <em>Rotate signing key</em> instead — the marketplace will say so.
-              </p>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <h2 className="font-semibold text-slate-800">{status?.registered ? 'Marketplace registration' : 'Register with the marketplace'}</h2>
+              {status?.registered ? (
+                <p className="mt-1 text-sm text-slate-500">
+                  This installation is registered with the marketplace{status.registeredAt ? ` since ${new Date(status.registeredAt).toLocaleDateString()}` : ''}.{' '}
+                  {status.registrationInferred
+                    ? 'It registered before this school kept a local record, so only the fact is known here — the marketplace holds the rest.'
+                    : 'Registering again is not needed; use Rotate signing key to replace its key.'}
+                </p>
+              ) : (
+                <p className="mt-1 text-sm text-slate-500">
+                  Registration proves this server holds the private key before the marketplace will bind it to a customer school.
+                </p>
+              )}
+              {!status?.registered && <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <label className="text-sm sm:col-span-2">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Enrollment token</span>
+                  <input value={enrollmentToken} onChange={(event) => setEnrollmentToken(event.target.value)} placeholder="wtn_enr_…"
+                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs" />
+                  <span className="mt-1 block text-xs font-normal text-slate-500">Issued by the platform operator for this school. Shown once, and spent when registration succeeds.</span>
+                </label>
                 <label className="text-sm">
                   <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Marketplace account ID</span>
                   <input value={accountId} onChange={(event) => setAccountId(event.target.value)} placeholder="00000000-0000-0000-0000-000000000000"
@@ -150,11 +179,11 @@ export default function LicensingPage() {
                   <input value={label} onChange={(event) => setLabel(event.target.value)} placeholder="Main campus"
                     className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
                 </label>
-              </div>
+              </div>}
               <div className="mt-4 flex flex-wrap gap-3">
-                <button className="btn btn-primary" disabled={!!busy || !status?.marketplaceConfigured} onClick={register}>
+                {!status?.registered && <button className="btn btn-primary" disabled={!!busy || !status?.marketplaceConfigured} onClick={register}>
                   {busy === 'register' ? 'Registering…' : 'Register this installation'}
-                </button>
+                </button>}
                 <button className="btn btn-secondary" disabled={!!busy || !status?.marketplaceConfigured || !status?.hasLocalKey} onClick={rotate}>
                   {busy === 'rotate' ? 'Rotating…' : 'Rotate signing key'}
                 </button>

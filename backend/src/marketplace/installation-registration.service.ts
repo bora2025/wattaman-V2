@@ -16,11 +16,24 @@ export class InstallationRegistrationService {
   async status() {
     const installation = await this.installationId();
     const key = await this.keys.ensureKeyPair().catch(() => null);
+    const [record, proxyLink] = await Promise.all([
+      this.prisma.marketplaceRegistration.findUnique({ where: { id: 'singleton' } }),
+      this.prisma.marketplaceProxyLink.findUnique({ where: { id: 'singleton' } }),
+    ]);
+    // A live marketplace link is only obtainable by a registered installation, so it proves
+    // registration for schools that registered before this record existed.
+    const linked = Boolean(proxyLink && !proxyLink.revokedAt);
     return {
       installationId: installation,
       hasLocalKey: !!key,
       keyFingerprint: key?.fingerprint ?? null,
       marketplaceConfigured: !!readMarketplaceIdentityConfig(),
+      registered: Boolean(record) || linked,
+      registeredAt: record?.registeredAt ?? null,
+      registeredAccountId: record?.accountId ?? null,
+      // True when registration is inferred from a link rather than recorded, so the screen can say
+      // so instead of implying it holds details it does not have.
+      registrationInferred: !record && linked,
     };
   }
 
@@ -48,11 +61,20 @@ export class InstallationRegistrationService {
     const signature = await this.keys.sign({ installationId, challengeId: challenge.challengeId, nonce: challenge.nonce, purpose: 'register' });
     // Both are omitted rather than sent empty: the marketplace input schema is strict, and an
     // empty string fails its uuid check instead of reading as "not supplied".
-    return this.postJson(config, '/v1/installations/register', {
+    const result = await this.postJson(config, '/v1/installations/register', {
       installationId, label, publicKeyPem, challengeId: challenge.challengeId, signature,
       ...(account ? { accountId: account } : {}),
       ...(token ? { enrollmentToken: token } : {}),
     });
+    // Recorded only after the marketplace accepted it, so the licensing screen never claims a
+    // registration that failed.
+    const fingerprint = fingerprintOf(publicKeyPem);
+    await this.prisma.marketplaceRegistration.upsert({
+      where: { id: 'singleton' },
+      create: { id: 'singleton', installationId, keyFingerprint: fingerprint, accountId: result?.accountId ?? account ?? null, label },
+      update: { installationId, keyFingerprint: fingerprint, accountId: result?.accountId ?? account ?? null, label, registeredAt: new Date() },
+    });
+    return result;
   }
 
   async rotateKey() {
@@ -66,6 +88,13 @@ export class InstallationRegistrationService {
     const signature = await this.keys.sign({ installationId, challengeId: challenge.challengeId, nonce: challenge.nonce, purpose: 'rotate', newKeyFingerprint });
     const result = await this.postJson(config, `/v1/installations/${installationId}/keys/rotate`, { challengeId: challenge.challengeId, signature, newPublicKeyPem });
     await this.keys.replaceKeyPair(newPrivateKeyPem);
+    // A rotation only succeeds for a registered installation, so this both refreshes the recorded
+    // fingerprint and establishes the record for a school that registered before it existed.
+    await this.prisma.marketplaceRegistration.upsert({
+      where: { id: 'singleton' },
+      create: { id: 'singleton', installationId, keyFingerprint: newKeyFingerprint },
+      update: { keyFingerprint: newKeyFingerprint },
+    });
     return result;
   }
 
