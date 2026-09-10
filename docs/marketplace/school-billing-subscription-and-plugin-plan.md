@@ -1,6 +1,33 @@
 # Billing a Customer School: Subscription and Plugins on One Bill
 
-Status: plan, not implemented. Written 2026-09-10.
+Status: **implemented**, 2026-09-10. All five increments are in `main` with their live drills.
+Written 2026-09-10.
+
+## What changed between the plan and the work
+
+Three things are worth recording, because the plan as written was wrong about them.
+
+1. **Fact 5 was wrong.** The plan said no paid order line writes a `PublisherRevenueEntry`. It does:
+   `recordOrderRevenue` has always written one, and the grep behind the claim searched for
+   `.create` and missed an `.upsert`. The real hole was narrower and still worth closing -- nothing
+   *called* it automatically, so a publisher's earnings depended on an operator hitting an admin
+   endpoint per order.
+
+2. **Increment 5's timing moved.** The plan said to write the revenue entry "in the same
+   transaction that fulfils an order line". For a purchase on credit those are different moments:
+   the licence is granted weeks before the money arrives. Revenue is now recorded in the
+   transaction that marks an order PAID, because a publisher's share of cash not yet collected is
+   not earned.
+
+3. **A third bug surfaced that the plan did not know about.** All three `pg_advisory_xact_lock`
+   calls used `$queryRaw`, which tries to deserialize a `void` result and fails against a real
+   database every time. `voidInvoice`, the payment lock, and the school-provisioning lock had
+   therefore never worked outside the unit tests, whose doubles mocked `$queryRaw` and so accepted
+   what the real client refuses. Found by the first live drill, on its first run.
+
+The plan's own recommendation on credit was followed; the fallback in Increment 3 was not built.
+Increment 2 additionally refuses to backfill billing anchors, so no existing school starts being
+invoiced automatically on a guessed anniversary -- the console warns where one is missing instead.
 
 ## Context
 
