@@ -34,7 +34,7 @@ export const adminNav = [
   { label: 'Finance Dashboard', href: '/admin/budget-report', icon: 'bar-chart', section: 'Finance' },
   { label: 'nav.feeManagement', href: '/admin/fees', icon: 'money' },
   { label: 'Salary Management', href: '/admin/salary', icon: 'money' },
-  { label: 'Platform Billing', href: '/admin/platform-billing', icon: 'money' },
+  { label: 'Platform Billing', href: '/admin/platform-billing', icon: 'money', badgeKey: 'platform-billing' as const },
 
   // ── Reports ──
   { label: 'nav.studentReport', href: '/admin/reports', icon: 'chart', section: 'nav.section.reports' },

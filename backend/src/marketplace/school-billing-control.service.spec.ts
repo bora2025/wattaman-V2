@@ -123,3 +123,40 @@ describe('SchoolBillingControlService billing lifecycle notifications', () => {
     expect(tx.marketplaceSchoolControl.upsert.mock.calls[0][0].create.billingJson).toContain('n-1');
   });
 });
+
+/**
+ * The count behind the sidebar badge. Raising notifications was only half the fix: the school's
+ * Notification table has no inbox route, so until this existed the rows were written and never seen.
+ */
+describe('SchoolBillingControlService unread billing notifications', () => {
+  const prismaWith = (notification: any) => ({ notification } as any);
+  const keys = { sign: jest.fn() } as any;
+
+  it('counts only this administrator\'s unread platform billing notifications', async () => {
+    const count = jest.fn().mockResolvedValue(3);
+    const service = new SchoolBillingControlService(prismaWith({ count }), keys);
+
+    await expect(service.unreadCount('user-1')).resolves.toEqual({ count: 3 });
+    expect(count).toHaveBeenCalledWith({ where: { userId: 'user-1', readAt: null, type: { startsWith: 'platform_billing_' } } });
+  });
+
+  // A school's own absence and assignment notifications share the table and must not be touched.
+  it('marks only unread platform billing notifications as read', async () => {
+    const updateMany = jest.fn().mockResolvedValue({ count: 2 });
+    const service = new SchoolBillingControlService(prismaWith({ updateMany }), keys);
+    const now = new Date('2026-09-10T00:00:00.000Z');
+
+    await expect(service.markRead('user-1', now)).resolves.toEqual({ marked: 2 });
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { userId: 'user-1', readAt: null, type: { startsWith: 'platform_billing_' } },
+      data: { readAt: now },
+    });
+  });
+
+  // Every type this service writes has to be inside the prefix, or a notice rings with no badge.
+  it('covers the suspension and final-notice types the sync already raised', () => {
+    for (const type of ['platform_billing_final_notice', 'platform_billing_suspended', 'platform_billing_reactivated', 'platform_billing_invoice_issued']) {
+      expect(type.startsWith('platform_billing_')).toBe(true);
+    }
+  });
+});

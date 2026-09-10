@@ -8,6 +8,9 @@ type Warning = { invoiceId: string; invoiceNumber: string; currency: string; out
 type BillingNotification = { id: string; invoiceId?: string | null; type: string; subject?: string | null; message?: string | null; createdAt?: string };
 type BillingSummary = { schoolName?: string; marketplaceUrl?: string; billingPlan?: unknown; outstandingMinor?: number; invoices?: unknown[]; notifications?: BillingNotification[] };
 
+/** Shared by every notification this service raises, so one unread count covers the lot. */
+const NOTIFICATION_TYPE_PREFIX = 'platform_billing_';
+
 /** OVERDUE is absent deliberately — see the sync's comment where these are raised. */
 const NOTIFIED_TYPES = new Set(['INVOICE_ISSUED', 'DUE_SOON', 'PAYMENT_RECEIVED']);
 
@@ -89,6 +92,22 @@ export class SchoolBillingControlService {
       this.logger.warn(`School billing control sync failed: ${message}`);
       return { configured: true, unavailable: true };
     }
+  }
+
+  /**
+   * Unread platform-billing notifications for one administrator, which is what puts the badge on
+   * the Platform Billing nav item. Without it the notifications raised above sit in a table with no
+   * inbox: the billing page renders them, but nothing tells anybody to go and look at it.
+   */
+  async unreadCount(userId: string) {
+    const count = await this.prisma.notification.count({ where: { userId, readAt: null, type: { startsWith: NOTIFICATION_TYPE_PREFIX } } });
+    return { count };
+  }
+
+  /** Called when an administrator opens the billing page -- seeing the notices is what clears them. */
+  async markRead(userId: string, now = new Date()) {
+    const result = await this.prisma.notification.updateMany({ where: { userId, readAt: null, type: { startsWith: NOTIFICATION_TYPE_PREFIX } }, data: { readAt: now } });
+    return { marked: result.count };
   }
 
   async status() {

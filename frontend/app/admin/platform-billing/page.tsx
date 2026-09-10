@@ -28,6 +28,9 @@ export default function PlatformBillingPage() {
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body.message || `Could not load platform billing (${response.status})`);
     setState(body);
+    // Reading this page is what clears the sidebar badge. Failing to mark them read must not fail
+    // the page -- the balance below is the part that matters.
+    apiFetch('/api/admin/marketplace/billing-control/mark-read', { method: 'POST' }).catch(() => {});
   }, []);
   useEffect(() => { load().catch(cause => setError(cause.message)); }, [load]);
 

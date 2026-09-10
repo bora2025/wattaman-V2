@@ -21,7 +21,7 @@ interface NavItem {
   /** If set, renders a section header above this item */
   section?: string;
   /** If set, displays an unread badge driven by /api/<key>/unread-count. */
-  badgeKey?: 'messages' | 'announcements' | 'class-registrations';
+  badgeKey?: 'messages' | 'announcements' | 'class-registrations' | 'platform-billing';
 }
 
 interface SidebarProps {
@@ -150,7 +150,8 @@ export default function Sidebar({ title, subtitle, navItems, accentColor = 'indi
   const needMessages = navItems.some(n => n.badgeKey === 'messages');
   const needAnnouncements = navItems.some(n => n.badgeKey === 'announcements');
   const needClassRegistrations = navItems.some(n => n.badgeKey === 'class-registrations');
-  const [unread, setUnread] = useState<{ messages: number; announcements: number; 'class-registrations': number }>({ messages: 0, announcements: 0, 'class-registrations': 0 });
+  const needPlatformBilling = navItems.some(n => n.badgeKey === 'platform-billing');
+  const [unread, setUnread] = useState<{ messages: number; announcements: number; 'class-registrations': number; 'platform-billing': number }>({ messages: 0, announcements: 0, 'class-registrations': 0, 'platform-billing': 0 });
   useEffect(() => {
     let active = true;
     const apiBase = process.env.NEXT_PUBLIC_API_URL ?? '';
@@ -160,6 +161,10 @@ export default function Sidebar({ title, subtitle, navItems, accentColor = 'indi
         if (needMessages) reqs.push(fetch(`${apiBase}/api/messages/unread-count`, { credentials: 'include' }));
         if (needAnnouncements) reqs.push(fetch(`${apiBase}/api/announcements/unread-count`, { credentials: 'include' }));
         if (needClassRegistrations) reqs.push(fetch(`${apiBase}/api/class-registrations/unread-count`, { credentials: 'include' }));
+        // Deliberately not /api/platform-billing/... -- this count lives with the billing control
+        // surface, which is the one path the suspension guard keeps open while a school is locked
+        // out. A badge that vanished exactly when the bill went unpaid would be the wrong badge.
+        if (needPlatformBilling) reqs.push(fetch(`${apiBase}/api/admin/marketplace/billing-control/unread-count`, { credentials: 'include' }));
         const results = await Promise.all(reqs);
         let i = 0;
         let next = { ...unread };
@@ -172,17 +177,20 @@ export default function Sidebar({ title, subtitle, navItems, accentColor = 'indi
         if (needClassRegistrations) {
           const r = results[i++]; if (r.ok) next['class-registrations'] = (await r.json()).count ?? 0;
         }
+        if (needPlatformBilling) {
+          const r = results[i++]; if (r.ok) next['platform-billing'] = (await r.json()).count ?? 0;
+        }
         if (active) setUnread(next);
       } catch { /* silent */ }
     };
-    if (needMessages || needAnnouncements || needClassRegistrations) {
+    if (needMessages || needAnnouncements || needClassRegistrations || needPlatformBilling) {
       tick();
       const id = setInterval(tick, 30_000);
       return () => { active = false; clearInterval(id); };
     }
     return () => { active = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [needMessages, needAnnouncements, needClassRegistrations]);
+  }, [needMessages, needAnnouncements, needClassRegistrations, needPlatformBilling]);
 
   // Plugin nav: fetched once per session, filtered server-side to what this
   // user's role is actually granted (PluginExtensionsService.listForPrincipal).
