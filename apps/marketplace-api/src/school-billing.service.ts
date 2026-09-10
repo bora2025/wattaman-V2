@@ -6,17 +6,38 @@ import { PlatformActionContext } from './platform-context';
 import { DisabledTransactionalEmailService, TransactionalEmailService } from './transactional-email.service';
 
 const reason = z.string().trim().min(3).max(5000);
+
+/**
+ * CREDIT exists in the database enum but is deliberately not accepted here yet. A credit note has
+ * to be a negative amount, and every balance in this service -- the outstanding sum, the dunning
+ * sweep, the suspension gate -- currently assumes invoice totals are positive. Making them signed
+ * is its own piece of work, not a line kind smuggled in with this one.
+ */
+const invoiceLineInput = z.object({
+  kind: z.enum(['SUBSCRIPTION', 'PLUGIN', 'ADJUSTMENT']).default('ADJUSTMENT'),
+  description: z.string().trim().min(3).max(2000),
+  quantity: z.number().int().positive().max(10_000).default(1),
+  unitAmountMinor: z.number().int().positive().max(2_000_000_000),
+  periodStart: z.coerce.date().optional(),
+  periodEnd: z.coerce.date().optional(),
+}).strict();
+
 const invoiceInput = z.object({
   currency: z.string().regex(/^[A-Z]{3}$/),
-  amountMinor: z.number().int().positive().max(2_000_000_000),
+  // Optional only when `lines` is given, in which case the lines are the source of truth and this
+  // is a client-supplied check value. The refine below keeps the old single-amount form working.
+  amountMinor: z.number().int().positive().max(2_000_000_000).optional(),
   description: z.string().trim().min(3).max(2000),
   dueAt: z.coerce.date(),
   periodStart: z.coerce.date().optional(),
   periodEnd: z.coerce.date().optional(),
+  lines: z.array(invoiceLineInput).min(1).max(100).optional(),
   idempotencyKey: z.string().min(16).max(200),
   internalReason: reason,
 }).strict().refine((value) => !value.periodStart || !value.periodEnd || value.periodEnd > value.periodStart, {
   message: 'periodEnd must be after periodStart', path: ['periodEnd'],
+}).refine((value) => value.amountMinor !== undefined || (value.lines && value.lines.length > 0), {
+  message: 'Provide amountMinor, lines, or both', path: ['amountMinor'],
 });
 
 const paymentInput = z.object({
@@ -45,10 +66,16 @@ const paymentSubmissionInput = z.object({
 }).strict();
 const paymentSubmissionDecision = z.object({ internalReason: reason, rejectionReason: z.string().trim().min(3).max(2000).optional() }).strict();
 
+const LINE_SELECT = {
+  id: true, position: true, kind: true, description: true, quantity: true,
+  unitAmountMinor: true, amountMinor: true, taxMinor: true, periodStart: true, periodEnd: true,
+} as const;
+
 const INVOICE_SELECT = {
   id: true, invoiceNumber: true, customerSchoolId: true, status: true, currency: true, amountMinor: true, paidMinor: true,
   description: true, periodStart: true, periodEnd: true, dueAt: true, issuedAt: true, paidAt: true,
   voidedAt: true, voidReason: true, createdAt: true,
+  lines: { select: LINE_SELECT, orderBy: { position: 'asc' as const } },
   payments: {
     select: { id: true, provider: true, providerReference: true, amountMinor: true, receivedAt: true, note: true, createdAt: true },
     orderBy: { receivedAt: 'desc' as const },
@@ -126,6 +153,7 @@ export class SchoolBillingService {
           select: {
             id: true, invoiceNumber: true, status: true, currency: true, amountMinor: true, paidMinor: true,
             description: true, periodStart: true, periodEnd: true, dueAt: true, issuedAt: true, paidAt: true,
+            lines: { select: LINE_SELECT, orderBy: { position: 'asc' } },
             payments: { select: { id: true, provider: true, amountMinor: true, receivedAt: true }, orderBy: { receivedAt: 'desc' } },
             paymentSubmissions: { select: { id: true, provider: true, providerReference: true, amountMinor: true, note: true, status: true, reviewedAt: true, rejectionReason: true, createdAt: true }, orderBy: { createdAt: 'desc' } },
           },
@@ -199,6 +227,7 @@ export class SchoolBillingService {
         invoices: { where: { status: { in: ['ISSUED', 'PARTIALLY_PAID'] } }, select: {
           id: true, invoiceNumber: true, status: true, currency: true, amountMinor: true, paidMinor: true,
           description: true, issuedAt: true, paidAt: true, dueAt: true,
+          lines: { select: LINE_SELECT, orderBy: { position: 'asc' } },
           notifications: { where: { type: 'OVERDUE' }, select: { createdAt: true }, orderBy: { createdAt: 'asc' }, take: 1 },
         }, orderBy: { dueAt: 'asc' } },
       },
@@ -237,25 +266,41 @@ export class SchoolBillingService {
     const input = planInvoiceInput.parse(value);
     const school = await this.prisma.customerSchool.findUnique({ where: { id: schoolId }, include: { billingPlan: true } });
     if (!school?.billingPlan || !school.billingPlan.active) throw new HttpError(409, 'Assign an active central billing plan first');
+    const plan = school.billingPlan;
     const start = input.periodStart;
-    const end = new Date(start);
-    if (school.billingPlan.billingInterval === 'MONTHLY') end.setUTCMonth(end.getUTCMonth() + 1);
-    else end.setUTCFullYear(end.getUTCFullYear() + 1);
-    const dueAt = new Date(); dueAt.setUTCDate(dueAt.getUTCDate() + school.billingPlan.dueDays);
+    const end = periodEndFor(start, plan.billingInterval);
+    // Derived from the period, not from today. Computing it from now() meant back-issuing an old
+    // invoice handed it a full fresh grace period, so a January invoice raised in March was not
+    // late at all.
+    const dueAt = new Date(start.getTime() + plan.dueDays * 86_400_000);
+    const description = `${plan.name} (${plan.billingInterval.toLowerCase()})`;
     return this.issueInvoice(schoolId, operatorId, {
-      currency: school.billingPlan.currency, amountMinor: school.billingPlan.amountMinor,
-      description: `${school.billingPlan.name} (${school.billingPlan.billingInterval.toLowerCase()})`,
-      periodStart: start, periodEnd: end, dueAt, idempotencyKey: input.idempotencyKey, internalReason: input.internalReason,
-    }, context, new Date(), school.billingPlan);
+      currency: plan.currency, amountMinor: plan.amountMinor, description,
+      periodStart: start, periodEnd: end, dueAt,
+      lines: [{ kind: 'SUBSCRIPTION', description, quantity: 1, unitAmountMinor: plan.amountMinor, periodStart: start, periodEnd: end }],
+      idempotencyKey: input.idempotencyKey, internalReason: input.internalReason,
+    }, context, new Date(), plan, periodKeyFor(plan.id, start));
   }
 
-  async issueInvoice(schoolId: string, operatorId: string, value: unknown, context: PlatformActionContext, now = new Date(), plan?: { id: string; slug: string }) {
+  async issueInvoice(
+    schoolId: string, operatorId: string, value: unknown, context: PlatformActionContext,
+    now = new Date(), plan?: { id: string; slug: string }, periodKey?: string,
+  ) {
     const input = invoiceInput.parse(value);
-    const { internalReason, ...fields } = input;
+    const { internalReason, lines: inputLines, amountMinor: statedTotal, ...fields } = input;
+    // An invoice with no explicit lines still gets one, so every invoice from here on has a
+    // breakdown and the read paths never have to handle a line-less special case.
+    const lines = inputLines?.length
+      ? inputLines
+      : [{ kind: 'ADJUSTMENT' as const, description: input.description, quantity: 1, unitAmountMinor: statedTotal!, periodStart: input.periodStart, periodEnd: input.periodEnd }];
+    const amountMinor = lines.reduce((sum, line) => safeMinorTotal(sum, line.quantity * line.unitAmountMinor), 0);
+    if (statedTotal !== undefined && statedTotal !== amountMinor) {
+      throw new HttpError(409, `Invoice total ${statedTotal} does not match the sum of its lines (${amountMinor})`);
+    }
     const result = await this.prisma.$transaction(async (tx) => {
       const existing = await tx.schoolInvoice.findUnique({ where: { idempotencyKey: input.idempotencyKey }, select: INVOICE_SELECT });
       if (existing) {
-        if (existing.customerSchoolId !== schoolId || existing.currency !== input.currency || existing.amountMinor !== input.amountMinor || existing.description !== input.description) {
+        if (existing.customerSchoolId !== schoolId || existing.currency !== input.currency || existing.amountMinor !== amountMinor || existing.description !== input.description) {
           throw new HttpError(409, 'Idempotency key is already used for a different invoice');
         }
         return existing;
@@ -266,9 +311,14 @@ export class SchoolBillingService {
       if (school.currency && school.currency !== input.currency) throw new HttpError(409, `Invoice currency must be ${school.currency}`);
       const invoice = await tx.schoolInvoice.create({
         data: {
-          ...fields, customerSchoolId: schoolId, createdByOperatorId: operatorId,
+          ...fields, amountMinor, customerSchoolId: schoolId, createdByOperatorId: operatorId,
           invoiceNumber: `WTN-${now.getUTCFullYear()}-${randomBytes(5).toString('hex').toUpperCase()}`,
-          issuedAt: now, billingPlanId: plan?.id, billingPlanSlug: plan?.slug,
+          issuedAt: now, billingPlanId: plan?.id, billingPlanSlug: plan?.slug, periodKey,
+          lines: { create: lines.map((line, position) => ({
+            position, kind: line.kind, description: line.description, quantity: line.quantity,
+            unitAmountMinor: line.unitAmountMinor, amountMinor: line.quantity * line.unitAmountMinor,
+            periodStart: line.periodStart, periodEnd: line.periodEnd, billingPlanId: line.kind === 'SUBSCRIPTION' ? plan?.id : undefined,
+          })) },
         },
         select: INVOICE_SELECT,
       });
@@ -282,7 +332,14 @@ export class SchoolBillingService {
         deduplicationKey: `invoice-issued:${invoice.id}`,
       } });
       return invoice;
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }).catch((error: unknown) => {
+      // The database refuses a second live invoice for one plan period. Reaching here means two
+      // operators (or two clicks) raced; saying so is more use than a unique-constraint dump.
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002' && periodKey) {
+        throw new HttpError(409, 'This school has already been invoiced for that billing period');
+      }
+      throw error;
+    });
     await this.deliverPending(result.id, now);
     return result;
   }
@@ -331,7 +388,7 @@ export class SchoolBillingService {
   async recordPayment(schoolId: string, invoiceId: string, operatorId: string, value: unknown, context: PlatformActionContext, now = new Date()) {
     const input = paymentInput.parse(value);
     const payment = await this.prisma.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('school-invoice'), hashtext(${invoiceId}))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('school-invoice'), hashtext(${invoiceId}))`;
       const duplicate = await tx.schoolPayment.findUnique({
         where: { provider_providerReference: { provider: input.provider, providerReference: input.providerReference } },
       });
@@ -377,13 +434,14 @@ export class SchoolBillingService {
   async voidInvoice(schoolId: string, invoiceId: string, operatorId: string, value: unknown, context: PlatformActionContext, now = new Date()) {
     const input = voidInput.parse(value);
     return this.prisma.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('school-invoice'), hashtext(${invoiceId}))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('school-invoice'), hashtext(${invoiceId}))`;
       const invoice = await tx.schoolInvoice.findUnique({ where: { id: invoiceId } });
       if (!invoice || invoice.customerSchoolId !== schoolId) throw new HttpError(404, 'School invoice not found');
       if (invoice.status === 'VOID') return { id: invoice.id, status: invoice.status };
       if (invoice.paidMinor !== 0) throw new HttpError(409, 'An invoice with payments cannot be voided');
       const updated = await tx.schoolInvoice.update({
-        where: { id: invoiceId }, data: { status: 'VOID', voidedAt: now, voidReason: input.internalReason },
+        // Clearing periodKey releases the period guard, so a voided month can be invoiced again.
+        where: { id: invoiceId }, data: { status: 'VOID', voidedAt: now, voidReason: input.internalReason, periodKey: null },
         select: { id: true, status: true, voidedAt: true },
       });
       await this.audit(tx, operatorId, context, 'school_invoice_voided', schoolId, input.internalReason, { invoiceId });
@@ -397,6 +455,26 @@ export class SchoolBillingService {
       reason: reasonValue, metadata, correlationId: context.correlationId, ip: context.ip, userAgent: context.userAgent,
     } });
   }
+}
+
+/** One plan period, as the database sees it. Null for one-off invoices and cleared on void. */
+function periodKeyFor(planId: string, periodStart: Date) {
+  return `${planId}:${periodStart.toISOString()}`;
+}
+
+function periodEndFor(start: Date, interval: 'MONTHLY' | 'ANNUAL') {
+  const end = new Date(start);
+  if (interval === 'MONTHLY') end.setUTCMonth(end.getUTCMonth() + 1);
+  else end.setUTCFullYear(end.getUTCFullYear() + 1);
+  return end;
+}
+
+/** Mirrors commerce.service.ts: a total that leaves safe-integer range is a bug, not a big number. */
+function safeMinorTotal(sum: number, amount: number) {
+  if (!Number.isSafeInteger(amount) || amount <= 0) throw new HttpError(409, 'Invalid invoice line amount');
+  const result = sum + amount;
+  if (!Number.isSafeInteger(result) || result > 2_000_000_000) throw new HttpError(409, 'Invoice total exceeds the supported range');
+  return result;
 }
 
 function escapeHtml(value: string) {

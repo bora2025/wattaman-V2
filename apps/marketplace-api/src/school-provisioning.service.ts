@@ -161,7 +161,7 @@ export class SchoolProvisioningService {
   }
 
   private lock(tx: Prisma.TransactionClient, id: string) {
-    return tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('school-provisioning'), hashtext(${id}))`;
+    return tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('school-provisioning'), hashtext(${id}))`;
   }
 
   private audit(tx: Prisma.TransactionClient, operatorId: string, context: PlatformActionContext, action: string, targetId: string, internalReason: string, metadata?: Prisma.InputJsonValue) {

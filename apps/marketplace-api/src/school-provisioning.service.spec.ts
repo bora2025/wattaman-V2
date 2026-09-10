@@ -5,7 +5,7 @@ const context = { correlationId: 'correlation-1', ip: '203.0.113.7', userAgent: 
 describe('SchoolProvisioningService', () => {
   it('requires a different operator to approve infrastructure creation', async () => {
     const tx = {
-      $queryRaw: jest.fn(),
+      $executeRaw: jest.fn(),
       schoolProvisioningRequest: { findUnique: jest.fn().mockResolvedValue({ id: 'request-1', status: 'PENDING_APPROVAL', requestedByOperatorId: 'operator-1' }) },
     };
     const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
@@ -29,7 +29,7 @@ describe('SchoolProvisioningService', () => {
   it('returns an expired failed request to approval and clears stale approval', async () => {
     const updated = { id: 'request-1', status: 'PENDING_APPROVAL' };
     const tx = {
-      $queryRaw: jest.fn(),
+      $executeRaw: jest.fn(),
       schoolProvisioningRequest: {
         findUnique: jest.fn().mockResolvedValue({ status: 'FAILED_RETRYABLE', approvalExpiresAt: new Date('2026-01-01') }),
         update: jest.fn().mockResolvedValue(updated),

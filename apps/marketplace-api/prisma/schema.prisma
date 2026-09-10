@@ -148,6 +148,13 @@ enum SchoolBillingInterval {
   ANNUAL
 }
 
+enum SchoolInvoiceLineKind {
+  SUBSCRIPTION
+  PLUGIN
+  ADJUSTMENT
+  CREDIT
+}
+
 enum SchoolBillingNotificationType {
   INVOICE_ISSUED
   DUE_SOON
@@ -580,6 +587,7 @@ model SchoolBillingPlan {
   updatedAt       DateTime              @updatedAt
   schools         CustomerSchool[]
   invoices        SchoolInvoice[]
+  invoiceLines    SchoolInvoiceLine[]
 
   @@index([active, slug])
 }
@@ -599,8 +607,14 @@ model CustomerSchoolDomain {
   @@index([customerSchoolId, isPrimary])
 }
 
-/// Platform service invoices owed by a customer school. These are separate from plugin orders
-/// and never contain student fees or any other school operational data.
+/// Platform service invoices owed by a customer school. They carry the central subscription and,
+/// once a plugin is bought on account rather than paid for outright, its purchase lines too -- see
+/// docs/marketplace/school-billing-subscription-and-plugin-plan.md. They never contain student fees
+/// or any other school operational data.
+///
+/// `amountMinor` is the sum of `lines`, verified in the transaction that writes them. It stays
+/// stored rather than derived because the dunning sweep, the suspension gate, and the school-side
+/// sync all read it on every pass.
 model SchoolInvoice {
   id                  String              @id @default(uuid())
   invoiceNumber       String              @unique
@@ -629,9 +643,46 @@ model SchoolInvoice {
   billingPlan         SchoolBillingPlan? @relation(fields: [billingPlanId], references: [id], onDelete: SetNull)
   notifications       SchoolBillingNotification[]
   paymentSubmissions  SchoolPaymentSubmission[]
+  lines               SchoolInvoiceLine[]
 
+  /// Identifies the plan period this invoice covers, so the database refuses a second invoice for
+  /// the same one -- deduplication used to rest entirely on a client-generated idempotency key, and
+  /// the console mints a fresh one per click, so double-clicking billed a school twice for one
+  /// month with two independent suspension clocks. Null for one-off invoices, and set back to null
+  /// when an invoice is voided, which frees the period to be billed again.
+  periodKey           String?
+
+  @@unique([customerSchoolId, periodKey])
   @@index([customerSchoolId, issuedAt])
   @@index([status, dueAt])
+}
+
+/// One chargeable item on a school invoice. Lines are immutable once written: corrections are
+/// further lines (ADJUSTMENT, CREDIT) or a void and reissue, never an edit, so an invoice a
+/// customer has already received cannot change value underneath them.
+model SchoolInvoiceLine {
+  id                String                @id @default(uuid())
+  invoiceId         String
+  position          Int
+  kind              SchoolInvoiceLineKind
+  description       String
+  quantity          Int                   @default(1)
+  unitAmountMinor   Int
+  amountMinor       Int
+  /// Reserved for VAT. Nothing computes it yet; it exists from the first version because adding a
+  /// tax column to invoices customers have already received is far more expensive than carrying it.
+  taxMinor          Int                   @default(0)
+  periodStart       DateTime?
+  periodEnd         DateTime?
+  billingPlanId     String?
+  sourceOrderLineId String?               @unique
+  createdAt         DateTime              @default(now())
+  invoice           SchoolInvoice         @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  billingPlan       SchoolBillingPlan?    @relation(fields: [billingPlanId], references: [id], onDelete: SetNull)
+  sourceOrderLine   MarketplaceOrderLine? @relation(fields: [sourceOrderLineId], references: [id], onDelete: Restrict)
+
+  @@unique([invoiceId, position])
+  @@index([invoiceId])
 }
 
 /// Customer-declared payment evidence. It never changes invoice balances until a finance
@@ -921,6 +972,7 @@ model MarketplaceOrderLine {
   price          ProductPrice             @relation(fields: [priceId], references: [id], onDelete: Restrict)
   entitlement    InstallationEntitlement?
   revenueEntries PublisherRevenueEntry[]
+  invoiceLine    SchoolInvoiceLine?
 }
 
 model MarketplacePayment {

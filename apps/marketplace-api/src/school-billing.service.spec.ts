@@ -80,7 +80,7 @@ describe('SchoolBillingService', () => {
 
   it('records a partial payment and advances invoice status', async () => {
     const tx = {
-      $queryRaw: jest.fn(),
+      $executeRaw: jest.fn(),
       schoolPayment: {
         findUnique: jest.fn().mockResolvedValue(null),
         create: jest.fn().mockResolvedValue({ id: 'payment-1', provider: 'manual', providerReference: 'BANK-001', amountMinor: 4000 }),
@@ -122,7 +122,7 @@ describe('SchoolBillingService', () => {
 
   it('rejects a payment greater than the remaining balance', async () => {
     const tx = {
-      $queryRaw: jest.fn(), schoolPayment: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn() },
+      $executeRaw: jest.fn(), schoolPayment: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn() },
       schoolInvoice: { findUnique: jest.fn().mockResolvedValue({ id: 'invoice-1', customerSchoolId: 'school-1', status: 'PARTIALLY_PAID', amountMinor: 10000, paidMinor: 8000 }) },
     };
     const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
@@ -134,7 +134,7 @@ describe('SchoolBillingService', () => {
 
   it('refuses to void an invoice that has received money', async () => {
     const tx = {
-      $queryRaw: jest.fn(),
+      $executeRaw: jest.fn(),
       schoolInvoice: { findUnique: jest.fn().mockResolvedValue({ id: 'invoice-1', customerSchoolId: 'school-1', status: 'PARTIALLY_PAID', paidMinor: 100 }), update: jest.fn() },
     };
     const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
@@ -142,5 +142,160 @@ describe('SchoolBillingService', () => {
       internalReason: 'Invoice entered in error.',
     }, context, now)).rejects.toMatchObject({ status: 409 });
     expect(tx.schoolInvoice.update).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Invoice lines. A school invoice used to be one description and one amount, so a bill could not
+ * show a subscription and a plugin purchase side by side.
+ */
+describe('SchoolBillingService invoice lines', () => {
+  function harness(school: Record<string, unknown> = {}) {
+    const tx = {
+      schoolInvoice: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockImplementation(({ data }: any) => ({ id: 'invoice-1', invoiceNumber: 'WTN-2026-AAAA', ...data, payments: [], lines: [] })) },
+      customerSchool: { findUnique: jest.fn().mockResolvedValue({ id: 'school-1', name: 'Bora School', status: 'ACTIVE', currency: 'USD', contactEmail: 'owner@bora.example', ...school }) },
+      platformAuditEvent: { create: jest.fn() },
+      schoolBillingNotification: { create: jest.fn() },
+    };
+    const prisma = { $transaction: jest.fn((work: any) => work(tx)), schoolBillingNotification: { findMany: jest.fn().mockResolvedValue([]) } } as any;
+    return { tx, prisma };
+  }
+  const lineData = (tx: any) => tx.schoolInvoice.create.mock.calls[0][0].data.lines.create;
+
+  it('totals an invoice from its lines', async () => {
+    const { tx, prisma } = harness();
+    await new SchoolBillingService(prisma).issueInvoice('school-1', 'operator-1', {
+      currency: 'USD', description: 'September charges', dueAt: '2026-10-01T00:00:00.000Z',
+      lines: [
+        { kind: 'SUBSCRIPTION', description: 'Standard (monthly)', unitAmountMinor: 5000 },
+        { kind: 'PLUGIN', description: 'Attendance Pro', quantity: 2, unitAmountMinor: 6000 },
+      ],
+      idempotencyKey: 'invoice-idempotency-0002', internalReason: 'September billing run.',
+    }, context, now);
+
+    expect(tx.schoolInvoice.create.mock.calls[0][0].data.amountMinor).toBe(17000);
+    expect(lineData(tx)).toEqual([
+      expect.objectContaining({ position: 0, kind: 'SUBSCRIPTION', amountMinor: 5000, quantity: 1 }),
+      expect.objectContaining({ position: 1, kind: 'PLUGIN', amountMinor: 12000, quantity: 2 }),
+    ]);
+  });
+
+  // The client may state a total; it is a check value, never the source of truth.
+  it('refuses a stated total that disagrees with the lines', async () => {
+    const { prisma } = harness();
+    await expect(new SchoolBillingService(prisma).issueInvoice('school-1', 'operator-1', {
+      currency: 'USD', amountMinor: 9900, description: 'September charges', dueAt: '2026-10-01T00:00:00.000Z',
+      lines: [{ kind: 'SUBSCRIPTION', description: 'Standard (monthly)', unitAmountMinor: 5000 }],
+      idempotencyKey: 'invoice-idempotency-0003', internalReason: 'September billing run.',
+    }, context, now)).rejects.toThrow(/does not match the sum of its lines/);
+  });
+
+  // Every read path can then assume a breakdown exists, with no line-less special case.
+  it('gives a single-amount invoice one line so no invoice is line-less', async () => {
+    const { tx, prisma } = harness();
+    await new SchoolBillingService(prisma).issueInvoice('school-1', 'operator-1', {
+      currency: 'USD', amountMinor: 12000, description: 'Setup fee', dueAt: '2026-10-01T00:00:00.000Z',
+      idempotencyKey: 'invoice-idempotency-0004', internalReason: 'One-off onboarding work.',
+    }, context, now);
+
+    expect(lineData(tx)).toEqual([expect.objectContaining({ position: 0, kind: 'ADJUSTMENT', description: 'Setup fee', amountMinor: 12000 })]);
+  });
+
+  it('refuses an invoice in a currency the school is not billed in', async () => {
+    const { prisma } = harness({ currency: 'KHR' });
+    await expect(new SchoolBillingService(prisma).issueInvoice('school-1', 'operator-1', {
+      currency: 'USD', amountMinor: 5000, description: 'Standard (monthly)', dueAt: '2026-10-01T00:00:00.000Z',
+      idempotencyKey: 'invoice-idempotency-0005', internalReason: 'September billing run.',
+    }, context, now)).rejects.toThrow(/must be KHR/);
+  });
+});
+
+describe('SchoolBillingService plan invoices', () => {
+  type Plan = { id: string; slug: string; name: string; currency: string; amountMinor: number; billingInterval: 'MONTHLY' | 'ANNUAL'; dueDays: number; active: boolean };
+  const plan: Plan = { id: 'plan-1', slug: 'standard', name: 'Standard', currency: 'USD', amountMinor: 5000, billingInterval: 'MONTHLY', dueDays: 14, active: true };
+
+  function harness(billingPlan: Plan | null = plan) {
+    const tx = {
+      schoolInvoice: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockImplementation(({ data }: any) => ({ id: 'invoice-1', invoiceNumber: 'WTN-2026-AAAA', ...data, payments: [], lines: [] })) },
+      customerSchool: { findUnique: jest.fn().mockResolvedValue({ id: 'school-1', name: 'Bora School', status: 'ACTIVE', currency: 'USD', contactEmail: 'owner@bora.example' }) },
+      platformAuditEvent: { create: jest.fn() },
+      schoolBillingNotification: { create: jest.fn() },
+    };
+    const prisma = {
+      customerSchool: { findUnique: jest.fn().mockResolvedValue({ id: 'school-1', billingPlan }) },
+      $transaction: jest.fn((work: any) => work(tx)),
+      schoolBillingNotification: { findMany: jest.fn().mockResolvedValue([]) },
+    } as any;
+    return { tx, prisma };
+  }
+
+  /**
+   * The bug this closes: dueAt was computed from now(), so back-issuing January's invoice in March
+   * dated it from March and quietly handed a late invoice a full fresh grace period.
+   */
+  it('dates the invoice from the period it covers, not from today', async () => {
+    const { tx, prisma } = harness();
+    await new SchoolBillingService(prisma).issuePlanInvoice('school-1', 'operator-1', {
+      periodStart: '2026-01-01T00:00:00.000Z', idempotencyKey: 'plan-invoice-000000001', internalReason: 'January billing run.',
+    }, context);
+
+    const data = tx.schoolInvoice.create.mock.calls[0][0].data;
+    expect(data.dueAt.toISOString()).toBe('2026-01-15T00:00:00.000Z');
+    expect(data.periodEnd.toISOString()).toBe('2026-02-01T00:00:00.000Z');
+  });
+
+  // The period guard the database enforces: one live invoice per school per plan period.
+  it('stamps the period so a second invoice for it cannot be stored', async () => {
+    const { tx, prisma } = harness();
+    await new SchoolBillingService(prisma).issuePlanInvoice('school-1', 'operator-1', {
+      periodStart: '2026-09-01T00:00:00.000Z', idempotencyKey: 'plan-invoice-000000002', internalReason: 'September billing run.',
+    }, context);
+
+    expect(tx.schoolInvoice.create.mock.calls[0][0].data.periodKey).toBe('plan-1:2026-09-01T00:00:00.000Z');
+  });
+
+  it('carries the subscription as a line of its own', async () => {
+    const { tx, prisma } = harness();
+    await new SchoolBillingService(prisma).issuePlanInvoice('school-1', 'operator-1', {
+      periodStart: '2026-09-01T00:00:00.000Z', idempotencyKey: 'plan-invoice-000000003', internalReason: 'September billing run.',
+    }, context);
+
+    expect(tx.schoolInvoice.create.mock.calls[0][0].data.lines.create).toEqual([
+      expect.objectContaining({ kind: 'SUBSCRIPTION', description: 'Standard (monthly)', amountMinor: 5000, billingPlanId: 'plan-1' }),
+    ]);
+  });
+
+  it('spans a year for an annual plan', async () => {
+    const { tx, prisma } = harness({ ...plan, billingInterval: 'ANNUAL' });
+    await new SchoolBillingService(prisma).issuePlanInvoice('school-1', 'operator-1', {
+      periodStart: '2026-09-01T00:00:00.000Z', idempotencyKey: 'plan-invoice-000000004', internalReason: 'Annual billing run.',
+    }, context);
+
+    expect(tx.schoolInvoice.create.mock.calls[0][0].data.periodEnd.toISOString()).toBe('2027-09-01T00:00:00.000Z');
+  });
+
+  it('refuses to invoice a school with no active plan', async () => {
+    const { prisma } = harness(null);
+    await expect(new SchoolBillingService(prisma).issuePlanInvoice('school-1', 'operator-1', {
+      periodStart: '2026-09-01T00:00:00.000Z', idempotencyKey: 'plan-invoice-000000005', internalReason: 'September billing run.',
+    }, context)).rejects.toThrow(/active central billing plan/);
+  });
+});
+
+describe('SchoolBillingService voiding', () => {
+  // periodKey is nullable precisely so that voiding a month releases it to be billed again.
+  it('releases the billing period when an invoice is voided', async () => {
+    const tx = {
+      $executeRaw: jest.fn(),
+      schoolInvoice: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'invoice-1', customerSchoolId: 'school-1', status: 'ISSUED', paidMinor: 0 }),
+        update: jest.fn().mockResolvedValue({ id: 'invoice-1', status: 'VOID', voidedAt: now }),
+      },
+      platformAuditEvent: { create: jest.fn() },
+    };
+    const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
+    await new SchoolBillingService(prisma).voidInvoice('school-1', 'invoice-1', 'operator-1', { internalReason: 'Issued against the wrong school.' }, context, now);
+
+    expect(tx.schoolInvoice.update.mock.calls[0][0].data).toMatchObject({ status: 'VOID', periodKey: null });
   });
 });
