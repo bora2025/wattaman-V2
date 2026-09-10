@@ -36,6 +36,7 @@ const sessionPostPatterns = [
   new RegExp(`^schools/provisioning-requests/${ID}/(submit|approve|cancel|retry)$`),
   /^schools\/adoptions\/discover$/,
   /^school-billing-plans$/,
+  new RegExp(`^school-billing-plans/${ID}$`),
   /^school-billing-alerts\/dispatch$/,
   new RegExp(`^schools/${ID}/(update|enrollment-tokens|adopt-installation|infrastructure)$`),
   new RegExp(`^schools/${ID}/(suspend|reactivate|terminate|domains)$`),
@@ -43,6 +44,7 @@ const sessionPostPatterns = [
   new RegExp(`^schools/${ID}/invoices$`),
   new RegExp(`^schools/${ID}/(billing-plan|plan-invoices)$`),
   new RegExp(`^schools/${ID}/invoices/${ID}/(payments|void)$`),
+  new RegExp(`^schools/${ID}/payment-submissions/${ID}/(approve|reject)$`),
   new RegExp(`^schools/${ID}/enrollment-tokens/${ID}/revoke$`),
 ];
 const matchesSessionPost = (path: string) => sessionPostPatterns.some((pattern) => pattern.test(path));
@@ -80,12 +82,12 @@ function sessionCookieOptions(expiresAt?: string) {
   };
 }
 
-async function proxy(request: NextRequest, segments: string[], method: 'GET' | 'POST') {
+async function proxy(request: NextRequest, segments: string[], method: 'GET' | 'POST' | 'PATCH') {
   const path = segments.join('/');
   const allowed = method === 'GET' ? sessionGet.has(path) || sessionGetDetail.test(path) : publicPost.has(path) || sessionPost.has(path) || matchesSessionPost(path);
   if (!allowed) return NextResponse.json({ error: 'Route is not allowed' }, { status: 404 });
 
-  if (method === 'POST') {
+  if (method !== 'GET') {
     const origin = request.headers.get('origin');
     if (origin && !expectedOrigins(request).includes(origin)) {
       return NextResponse.json({ error: 'Cross-origin mutation rejected' }, { status: 403 });
@@ -99,7 +101,7 @@ async function proxy(request: NextRequest, segments: string[], method: 'GET' | '
   const target = new URL(`/platform/v1/${path}`, marketplaceUrl());
   if (method === 'GET') request.nextUrl.searchParams.forEach((value, key) => target.searchParams.append(key, value));
 
-  let body = method === 'POST' ? await request.text() : undefined;
+  let body = method !== 'GET' ? await request.text() : undefined;
   // The browser never holds the token, so it can't send it — fill it in server-side for the two
   // routes whose upstream contract takes the token in the body rather than the header.
   if (method === 'POST' && session && (path === 'auth/sessions/revoke' || path === 'auth/sessions/refresh')) {
@@ -115,11 +117,11 @@ async function proxy(request: NextRequest, segments: string[], method: 'GET' | '
       headers: {
         accept: 'application/json',
         ...(session ? { authorization: `Bearer ${session}` } : {}),
-        ...(method === 'POST' ? { 'content-type': 'application/json' } : {}),
+        ...(method !== 'GET' ? { 'content-type': 'application/json' } : {}),
         // Forwarded so the audit row the API writes carries the same id the browser used.
         ...(request.headers.get('x-correlation-id') ? { 'x-correlation-id': request.headers.get('x-correlation-id')! } : {}),
       },
-      ...(method === 'POST' ? { body } : {}),
+      ...(method !== 'GET' ? { body } : {}),
     });
   } catch {
     return NextResponse.json({ error: 'Marketplace API is unavailable' }, { status: 502 });
@@ -162,5 +164,10 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pat
 
 export async function POST(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   try { return await proxy(request, (await context.params).path, 'POST'); }
+  catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : 'Unavailable' }, { status: 503 }); }
+}
+
+export async function PATCH(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
+  try { return await proxy(request, (await context.params).path, 'PATCH'); }
   catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : 'Unavailable' }, { status: 503 }); }
 }

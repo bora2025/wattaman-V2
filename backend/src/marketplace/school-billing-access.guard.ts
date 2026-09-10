@@ -1,7 +1,10 @@
 import { CanActivate, ExecutionContext, HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 
-const ALLOWED_WHILE_SUSPENDED = ['/health', '/health/ready', '/version', '/admin/marketplace/billing-control'];
+// A suspended school must still be able to authenticate, sign out, and reach the one recovery
+// surface that explains the debt. Blocking /auth made an expired administrator session
+// unrecoverable: the person who could resolve the bill could no longer sign in.
+const ALLOWED_WHILE_SUSPENDED = ['/health', '/health/ready', '/version', '/auth', '/admin/marketplace/billing-control'];
 
 @Injectable()
 export class SchoolBillingAccessGuard implements CanActivate {

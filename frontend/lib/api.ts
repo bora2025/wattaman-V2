@@ -61,6 +61,12 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
     }
   }
 
+  // Preserve the response for callers, but move administrators to the only recovery screen when
+  // the school has been centrally suspended for an unpaid platform invoice.
+  if (res.status === 402 && typeof window !== 'undefined' && window.location.pathname !== '/admin/platform-billing') {
+    window.location.href = '/admin/platform-billing';
+  }
+
   return res;
 }
 

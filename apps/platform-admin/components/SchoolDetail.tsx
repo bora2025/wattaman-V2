@@ -15,7 +15,7 @@ interface School {
 
 interface Usage { measuredAt: string; source: string; lastSeenAt: string | null; counts: { entitlements: number; orders: number; downloads: number; pluginRequests: number } }
 interface Plan { id: string; slug: string; name: string; currency: string; amountMinor: number; billingInterval: string; dueDays: number; active: boolean }
-interface Billing { schoolCurrency: string | null; billingPlan: Plan | null; outstandingMinor: number; invoices: Array<{ id: string; invoiceNumber: string; status: string; currency: string; amountMinor: number; paidMinor: number; description: string; dueAt: string; issuedAt: string; payments: Array<{ id: string; provider: string; providerReference: string; amountMinor: number; receivedAt: string }> }>; notifications: Array<{ id: string; type: string; status: string; subject: string; recipientEmail: string | null; createdAt: string; failureMessage: string | null }> }
+interface Billing { schoolCurrency: string | null; billingPlan: Plan | null; outstandingMinor: number; invoices: Array<{ id: string; invoiceNumber: string; status: string; currency: string; amountMinor: number; paidMinor: number; description: string; dueAt: string; issuedAt: string; payments: Array<{ id: string; provider: string; providerReference: string; amountMinor: number; receivedAt: string }>; paymentSubmissions: Array<{ id: string; provider: string; providerReference: string; amountMinor: number; note?: string; status: string; createdAt: string; rejectionReason?: string }> }>; notifications: Array<{ id: string; type: string; status: string; subject: string; recipientEmail: string | null; createdAt: string; failureMessage: string | null }> }
 
 export default function SchoolDetail({ schoolId, notice }: { schoolId: string; notice?: 'enrollment-required' | 'adopted' }) {
   const [school, setSchool] = useState<School | null>(null);
@@ -94,6 +94,17 @@ export default function SchoolDetail({ schoolId, notice }: { schoolId: string; n
     finally { setBusy(false); }
   }
 
+  async function reviewSubmission(submissionId: string, approve: boolean) {
+    const rejectionReason = approve ? undefined : window.prompt('Reason shown to the customer');
+    if (!approve && !rejectionReason) return;
+    setBusy(true); setError('');
+    try {
+      await platformJson(`schools/${schoolId}/payment-submissions/${submissionId}/${approve ? 'approve' : 'reject'}`, { method: 'POST', body: JSON.stringify({ internalReason: reason, ...(rejectionReason ? { rejectionReason } : {}) }) });
+      setBilling(await platformJson<Billing>(`schools/${schoolId}/billing`));
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not review payment submission'); }
+    finally { setBusy(false); }
+  }
+
   async function assignCentralPlan() {
     if (!selectedPlanId) return;
     setBusy(true); setError('');
@@ -135,9 +146,11 @@ export default function SchoolDetail({ schoolId, notice }: { schoolId: string; n
   if (error && !school) return <p role="alert" className="rounded-lg bg-red-50 p-4 text-sm text-red-700">{error}</p>;
   if (!school) return <p className="text-sm text-slate-500">Loading…</p>;
   const liveToken = school.enrollmentTokens.find(item => !item.consumedAt && !item.revokedAt && new Date(item.expiresAt) > new Date());
+  const paymentSubmissions = billing?.invoices.flatMap(invoice => (invoice.paymentSubmissions || []).map(submission => ({ invoice, submission }))) || [];
 
   return <div className="space-y-4">
     <div><Link className="text-sm text-indigo-700 hover:underline" href="/schools">← Customer schools</Link><h1 className="mt-2 text-xl font-bold">{school.name}</h1><p className="font-mono text-xs text-slate-500">{school.slug}</p></div>
+    {paymentSubmissions.length > 0 && <section className="pa-card space-y-3"><div><h2 className="font-semibold">Customer payment submissions</h2><p className="text-xs text-slate-500">Verify the provider reference independently. Approval writes the payment ledger.</p></div>{paymentSubmissions.map(({ invoice, submission }) => <article key={submission.id} className="rounded-lg border p-3 text-sm"><strong>{invoice.invoiceNumber}</strong> · {submission.provider} / {submission.providerReference}<div>{(submission.amountMinor / 100).toFixed(2)} {invoice.currency} · {submission.status.toLowerCase()}</div>{submission.note && <p className="text-slate-600">{submission.note}</p>}{submission.rejectionReason && <p className="text-red-700">{submission.rejectionReason}</p>}{canManageBilling && submission.status === 'PENDING' && <div className="mt-2 flex gap-2"><button className="pa-btn-primary" disabled={busy || reason.trim().length < 3} onClick={() => reviewSubmission(submission.id, true)}>Approve</button><button className="pa-btn-secondary" disabled={busy || reason.trim().length < 3} onClick={() => reviewSubmission(submission.id, false)}>Reject</button></div>}</article>)}</section>}
     {notice === 'enrollment-required' && <p role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">The Railway deployment was recorded, but it has not registered with this marketplace. Create an enrollment token below, configure it in the school API, and complete signed registration.</p>}
     {notice === 'adopted' && <p role="status" className="rounded-lg border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-900">The existing Railway school was adopted successfully. Confirm the installation identity below.</p>}
     <section className="pa-card"><dl className="grid gap-4 text-sm md:grid-cols-3">

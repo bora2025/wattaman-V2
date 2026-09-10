@@ -35,8 +35,15 @@ const planInput = z.object({
   billingInterval: z.enum(['MONTHLY', 'ANNUAL']), dueDays: z.number().int().min(1).max(90).default(14),
   active: z.boolean().default(true), internalReason: reason,
 }).strict();
+const planUpdateInput = planInput.partial().extend({ internalReason: reason }).strict();
 const assignPlanInput = z.object({ planId: z.string().uuid(), internalReason: reason }).strict();
 const planInvoiceInput = z.object({ periodStart: z.coerce.date(), idempotencyKey: z.string().min(16).max(200), internalReason: reason }).strict();
+const paymentSubmissionInput = z.object({
+  invoiceId: z.string().uuid(), provider: z.string().trim().toLowerCase().regex(/^[a-z0-9][a-z0-9._-]{1,39}$/),
+  providerReference: z.string().trim().min(3).max(200), amountMinor: z.number().int().positive().max(2_000_000_000),
+  note: z.string().trim().max(2000).optional(),
+}).strict();
+const paymentSubmissionDecision = z.object({ internalReason: reason, rejectionReason: z.string().trim().min(3).max(2000).optional() }).strict();
 
 const INVOICE_SELECT = {
   id: true, invoiceNumber: true, customerSchoolId: true, status: true, currency: true, amountMinor: true, paidMinor: true,
@@ -46,6 +53,7 @@ const INVOICE_SELECT = {
     select: { id: true, provider: true, providerReference: true, amountMinor: true, receivedAt: true, note: true, createdAt: true },
     orderBy: { receivedAt: 'desc' as const },
   },
+  paymentSubmissions: { select: { id: true, provider: true, providerReference: true, amountMinor: true, note: true, status: true, reviewedAt: true, rejectionReason: true, createdAt: true }, orderBy: { createdAt: 'desc' as const } },
 } as const;
 
 export class SchoolBillingService {
@@ -61,6 +69,19 @@ export class SchoolBillingService {
     return this.prisma.$transaction(async (tx) => {
       const plan = await tx.schoolBillingPlan.create({ data });
       await this.audit(tx, operatorId, context, 'school_billing_plan_created', plan.id, internalReason, { slug: plan.slug, currency: plan.currency, amountMinor: plan.amountMinor, billingInterval: plan.billingInterval });
+      return plan;
+    });
+  }
+
+  async updatePlan(planId: string, operatorId: string, value: unknown, context: PlatformActionContext) {
+    const input = planUpdateInput.parse(value);
+    const { internalReason, ...data } = input;
+    if (Object.keys(data).length === 0) throw new HttpError(400, 'At least one plan field must be changed');
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.schoolBillingPlan.findUnique({ where: { id: planId } });
+      if (!existing) throw new HttpError(404, 'Billing plan not found');
+      const plan = await tx.schoolBillingPlan.update({ where: { id: planId }, data });
+      await this.audit(tx, operatorId, context, 'school_billing_plan_updated', plan.id, internalReason, { before: existing, after: plan });
       return plan;
     });
   }
@@ -106,6 +127,7 @@ export class SchoolBillingService {
             id: true, invoiceNumber: true, status: true, currency: true, amountMinor: true, paidMinor: true,
             description: true, periodStart: true, periodEnd: true, dueAt: true, issuedAt: true, paidAt: true,
             payments: { select: { id: true, provider: true, amountMinor: true, receivedAt: true }, orderBy: { receivedAt: 'desc' } },
+            paymentSubmissions: { select: { id: true, provider: true, providerReference: true, amountMinor: true, note: true, status: true, reviewedAt: true, rejectionReason: true, createdAt: true }, orderBy: { createdAt: 'desc' } },
           },
           orderBy: { issuedAt: 'desc' },
         },
@@ -130,13 +152,53 @@ export class SchoolBillingService {
     }));
   }
 
+  async submitPayment(accountId: string, value: unknown) {
+    const input = paymentSubmissionInput.parse(value);
+    const invoice = await this.prisma.schoolInvoice.findFirst({
+      where: { id: input.invoiceId, school: { installation: { is: { accountId } } } },
+      select: { id: true, status: true, amountMinor: true, paidMinor: true },
+    });
+    if (!invoice) throw new HttpError(404, 'School invoice not found');
+    if (invoice.status === 'PAID' || invoice.status === 'VOID') throw new HttpError(409, 'This invoice cannot receive a payment submission');
+    if (input.amountMinor > invoice.amountMinor - invoice.paidMinor) throw new HttpError(409, 'Submitted amount exceeds the outstanding balance');
+    try { return await this.prisma.schoolPaymentSubmission.create({ data: { ...input, accountId } }); }
+    catch (error: any) { if (error?.code === 'P2002') throw new HttpError(409, 'This payment reference was already submitted'); throw error; }
+  }
+
+  async decidePaymentSubmission(schoolId: string, submissionId: string, operatorId: string, approve: boolean, value: unknown, context: PlatformActionContext, now = new Date()) {
+    const input = paymentSubmissionDecision.parse(value);
+    const submission = await this.prisma.schoolPaymentSubmission.findFirst({ where: { id: submissionId, invoice: { customerSchoolId: schoolId } } });
+    if (!submission) throw new HttpError(404, 'Payment submission not found');
+    if (submission.status !== 'PENDING') throw new HttpError(409, 'Payment submission was already reviewed');
+    if (!approve && !input.rejectionReason) throw new HttpError(400, 'A rejection reason is required');
+    if (approve) {
+      await this.recordPayment(schoolId, submission.invoiceId, operatorId, {
+        provider: submission.provider, providerReference: submission.providerReference, amountMinor: submission.amountMinor,
+        note: submission.note, receivedAt: now, internalReason: input.internalReason,
+      }, context, now);
+    }
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.schoolPaymentSubmission.update({
+        where: { id: submission.id }, data: { status: approve ? 'APPROVED' : 'REJECTED', reviewedByOperatorId: operatorId, reviewedAt: now, rejectionReason: approve ? null : input.rejectionReason },
+      });
+      await this.audit(tx, operatorId, context, approve ? 'school_payment_submission_approved' : 'school_payment_submission_rejected', schoolId, input.internalReason, { submissionId, invoiceId: submission.invoiceId, rejectionReason: input.rejectionReason || null });
+      return updated;
+    });
+  }
+
   async installationControl(registrationId: string, now = new Date()) {
     const school = await this.prisma.customerSchool.findFirst({
       where: { installation: { id: registrationId } },
       select: {
-        id: true, name: true, status: true, suspendedReason: true,
+        id: true, name: true, status: true, suspendedReason: true, currency: true,
+        billingPlan: { select: { name: true, currency: true, amountMinor: true, billingInterval: true, dueDays: true } },
+        billingNotifications: {
+          select: { id: true, invoiceId: true, type: true, subject: true, message: true, createdAt: true },
+          orderBy: { createdAt: 'desc' }, take: 30,
+        },
         invoices: { where: { status: { in: ['ISSUED', 'PARTIALLY_PAID'] } }, select: {
-          id: true, invoiceNumber: true, currency: true, amountMinor: true, paidMinor: true, dueAt: true,
+          id: true, invoiceNumber: true, status: true, currency: true, amountMinor: true, paidMinor: true,
+          description: true, issuedAt: true, paidAt: true, dueAt: true,
           notifications: { where: { type: 'OVERDUE' }, select: { createdAt: true }, orderBy: { createdAt: 'asc' }, take: 1 },
         }, orderBy: { dueAt: 'asc' } },
       },
@@ -160,6 +222,14 @@ export class SchoolBillingService {
         outstandingMinor: invoice.amountMinor - invoice.paidMinor, dueAt: invoice.dueAt.toISOString(),
         suspendAt: new Date(invoice.notifications[0].createdAt.getTime() + graceMs).toISOString(), final: true,
       })),
+      billing: {
+        schoolName: school.name,
+        currency: school.currency,
+        billingPlan: school.billingPlan,
+        outstandingMinor: school.invoices.reduce((sum, invoice) => sum + invoice.amountMinor - invoice.paidMinor, 0),
+        invoices: school.invoices.map(({ notifications: _notifications, ...invoice }) => invoice),
+        notifications: school.billingNotifications,
+      },
     };
   }
 
@@ -260,7 +330,7 @@ export class SchoolBillingService {
 
   async recordPayment(schoolId: string, invoiceId: string, operatorId: string, value: unknown, context: PlatformActionContext, now = new Date()) {
     const input = paymentInput.parse(value);
-    return this.prisma.$transaction(async (tx) => {
+    const payment = await this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('school-invoice'), hashtext(${invoiceId}))`;
       const duplicate = await tx.schoolPayment.findUnique({
         where: { provider_providerReference: { provider: input.provider, providerReference: input.providerReference } },
@@ -291,8 +361,17 @@ export class SchoolBillingService {
         invoiceId, paymentId: payment.id, provider: payment.provider, providerReference: payment.providerReference,
         amountMinor: payment.amountMinor, resultingPaidMinor: nextPaid,
       });
+      const school = await tx.customerSchool.findUnique({ where: { id: schoolId }, select: { name: true, contactEmail: true } });
+      if (school) await tx.schoolBillingNotification.create({ data: {
+        customerSchoolId: schoolId, invoiceId, type: 'PAYMENT_RECEIVED', recipientEmail: school.contactEmail,
+        subject: `Payment received for ${invoice.invoiceNumber}`,
+        message: `${school.name}: ${(payment.amountMinor / 100).toFixed(2)} ${invoice.currency} was received for invoice ${invoice.invoiceNumber}. ${paid ? 'The invoice is paid in full.' : `${(invoice.amountMinor - nextPaid) / 100} ${invoice.currency} remains due.`}`,
+        deduplicationKey: `payment-received:${payment.id}`,
+      } });
       return payment;
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    await this.deliverPending(invoiceId, now);
+    return payment;
   }
 
   async voidInvoice(schoolId: string, invoiceId: string, operatorId: string, value: unknown, context: PlatformActionContext, now = new Date()) {

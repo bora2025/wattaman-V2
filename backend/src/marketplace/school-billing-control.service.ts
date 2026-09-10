@@ -5,6 +5,7 @@ import { InstallationKeyService } from './installation-key.service';
 import { readMarketplaceIdentityConfig } from './marketplace-identity-config';
 
 type Warning = { invoiceId: string; invoiceNumber: string; currency: string; outstandingMinor: number; dueAt: string; suspendAt: string; final: boolean };
+type BillingSummary = { schoolName?: string; marketplaceUrl?: string; billingPlan?: unknown; outstandingMinor?: number; invoices?: unknown[]; notifications?: unknown[] };
 
 @Injectable()
 export class SchoolBillingControlService {
@@ -24,14 +25,14 @@ export class SchoolBillingControlService {
     try {
       const response = await fetch(url, { redirect: 'error', signal: AbortSignal.timeout(config.requestTimeoutMs), headers: { accept: 'application/json' } });
       if (!response.ok) throw new Error(`Marketplace responded with ${response.status}`);
-      const body = await response.json() as { access?: string; reason?: string | null; warnings?: Warning[] };
+      const body = await response.json() as { access?: string; reason?: string | null; warnings?: Warning[]; billing?: BillingSummary };
       if (!['ACTIVE', 'SUSPENDED'].includes(String(body.access)) || !Array.isArray(body.warnings)) throw new Error('Marketplace returned invalid school control state');
       await this.prisma.$transaction(async (tx) => {
         const previous = await tx.marketplaceSchoolControl.findUnique({ where: { id: 'singleton' } });
         await tx.marketplaceSchoolControl.upsert({
           where: { id: 'singleton' },
-          create: { id: 'singleton', access: body.access!, reason: body.reason || null, warningsJson: JSON.stringify(body.warnings), lastVerifiedAt: now, lastAttemptAt: now },
-          update: { access: body.access!, reason: body.reason || null, warningsJson: JSON.stringify(body.warnings), lastVerifiedAt: now, lastAttemptAt: now, lastError: null },
+          create: { id: 'singleton', access: body.access!, reason: body.reason || null, warningsJson: JSON.stringify(body.warnings), billingJson: JSON.stringify(body.billing || {}), lastVerifiedAt: now, lastAttemptAt: now },
+          update: { access: body.access!, reason: body.reason || null, warningsJson: JSON.stringify(body.warnings), billingJson: JSON.stringify(body.billing || {}), lastVerifiedAt: now, lastAttemptAt: now, lastError: null },
         });
         const admins = await tx.user.findMany({ where: { role: { in: ['SUPER_ADMIN', 'ADMIN'] } }, select: { id: true } });
         const previousWarnings = new Set<string>(previous ? safeWarnings(previous.warningsJson).map(item => item.invoiceId) : []);
@@ -58,9 +59,17 @@ export class SchoolBillingControlService {
     }
   }
 
-  status() { return this.prisma.marketplaceSchoolControl.findUnique({ where: { id: 'singleton' } }); }
+  async status() {
+    const state = await this.prisma.marketplaceSchoolControl.findUnique({ where: { id: 'singleton' } });
+    if (!state) return null;
+    return { ...state, warnings: safeJson(state.warningsJson, []), billing: safeJson(state.billingJson, {}), marketplaceUrl: readMarketplaceIdentityConfig()?.marketplaceUrl || null };
+  }
 }
 
 function safeWarnings(value: string): Warning[] {
   try { const result = JSON.parse(value); return Array.isArray(result) ? result : []; } catch { return []; }
+}
+
+function safeJson<T>(value: string, fallback: T): T {
+  try { return JSON.parse(value) as T; } catch { return fallback; }
 }

@@ -162,6 +162,12 @@ enum SchoolBillingNotificationStatus {
   SKIPPED
 }
 
+enum SchoolPaymentSubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum SchoolProvisioningStatus {
   DRAFT
   PENDING_APPROVAL
@@ -622,9 +628,32 @@ model SchoolInvoice {
   billingPlanSlug     String?
   billingPlan         SchoolBillingPlan? @relation(fields: [billingPlanId], references: [id], onDelete: SetNull)
   notifications       SchoolBillingNotification[]
+  paymentSubmissions  SchoolPaymentSubmission[]
 
   @@index([customerSchoolId, issuedAt])
   @@index([status, dueAt])
+}
+
+/// Customer-declared payment evidence. It never changes invoice balances until a finance
+/// operator verifies and approves it, preserving the payment ledger as the source of truth.
+model SchoolPaymentSubmission {
+  id                   String                        @id @default(uuid())
+  invoiceId            String
+  accountId            String
+  provider              String
+  providerReference     String
+  amountMinor           Int
+  note                  String?
+  status                SchoolPaymentSubmissionStatus @default(PENDING)
+  reviewedByOperatorId String?
+  reviewedAt            DateTime?
+  rejectionReason       String?
+  createdAt             DateTime                      @default(now())
+  updatedAt             DateTime                      @updatedAt
+  invoice               SchoolInvoice                 @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+
+  @@unique([accountId, provider, providerReference])
+  @@index([invoiceId, status, createdAt])
 }
 
 model SchoolBillingNotification {

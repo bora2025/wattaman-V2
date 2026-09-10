@@ -1429,6 +1429,7 @@ model MarketplaceSchoolControl {
   access          String   @default("ACTIVE")
   reason          String?
   warningsJson    String   @default("[]")
+  billingJson     String   @default("{}")
   lastVerifiedAt  DateTime?
   lastAttemptAt   DateTime?
   lastError       String?

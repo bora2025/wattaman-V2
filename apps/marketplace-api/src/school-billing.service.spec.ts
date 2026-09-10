@@ -4,6 +4,14 @@ const context = { correlationId: 'billing-correlation', ip: '203.0.113.10', user
 const now = new Date('2026-09-07T00:00:00.000Z');
 
 describe('SchoolBillingService', () => {
+  it('archives a plan without rewriting historical invoices', async () => {
+    const existing = { id: '11111111-1111-4111-8111-111111111111', slug: 'standard', active: true };
+    const tx = { schoolBillingPlan: { findUnique: jest.fn().mockResolvedValue(existing), update: jest.fn().mockResolvedValue({ ...existing, active: false }) }, platformAuditEvent: { create: jest.fn() } };
+    const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
+    await expect(new SchoolBillingService(prisma).updatePlan(existing.id, 'operator-1', { active: false, internalReason: 'Replaced by the 2027 catalogue.' }, context)).resolves.toMatchObject({ active: false });
+    expect(tx.platformAuditEvent.create.mock.calls[0][0].data.action).toBe('school_billing_plan_updated');
+  });
+
   it('calculates outstanding balance from non-void invoices', async () => {
     const prisma = { customerSchool: { findUnique: jest.fn().mockResolvedValue({
       id: 'school-1', name: 'Bora School', status: 'ACTIVE', currency: 'USD',
@@ -78,16 +86,38 @@ describe('SchoolBillingService', () => {
         create: jest.fn().mockResolvedValue({ id: 'payment-1', provider: 'manual', providerReference: 'BANK-001', amountMinor: 4000 }),
       },
       schoolInvoice: {
-        findUnique: jest.fn().mockResolvedValue({ id: 'invoice-1', customerSchoolId: 'school-1', status: 'ISSUED', amountMinor: 10000, paidMinor: 0 }),
+        findUnique: jest.fn().mockResolvedValue({ id: 'invoice-1', invoiceNumber: 'WTN-1', currency: 'USD', customerSchoolId: 'school-1', status: 'ISSUED', amountMinor: 10000, paidMinor: 0 }),
         update: jest.fn(),
       },
+      customerSchool: { findUnique: jest.fn().mockResolvedValue({ name: 'Bora School', contactEmail: 'owner@bora.example' }) },
+      schoolBillingNotification: { create: jest.fn() },
       platformAuditEvent: { create: jest.fn() },
     };
-    const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
+    const prisma = { $transaction: jest.fn((work: any) => work(tx)), schoolBillingNotification: { findMany: jest.fn().mockResolvedValue([]) } } as any;
     await new SchoolBillingService(prisma).recordPayment('school-1', 'invoice-1', 'operator-1', {
       provider: 'manual', providerReference: 'BANK-001', amountMinor: 4000, internalReason: 'Bank receipt verified.',
     }, context, now);
     expect(tx.schoolInvoice.update.mock.calls[0][0].data).toMatchObject({ paidMinor: 4000, status: 'PARTIALLY_PAID' });
+  });
+
+  it('accepts customer payment evidence only for an invoice owned by that account', async () => {
+    const prisma = {
+      schoolInvoice: { findFirst: jest.fn().mockResolvedValue({ id: '11111111-1111-4111-8111-111111111111', status: 'ISSUED', amountMinor: 10000, paidMinor: 0 }) },
+      schoolPaymentSubmission: { create: jest.fn().mockResolvedValue({ id: 'submission-1', status: 'PENDING' }) },
+    } as any;
+    await expect(new SchoolBillingService(prisma).submitPayment('account-1', {
+      invoiceId: '11111111-1111-4111-8111-111111111111', provider: 'bank-transfer', providerReference: 'BANK-100', amountMinor: 10000,
+    })).resolves.toMatchObject({ status: 'PENDING' });
+    expect(prisma.schoolInvoice.findFirst.mock.calls[0][0].where.school.installation.is.accountId).toBe('account-1');
+  });
+
+  it('does not approve customer evidence until the verified payment ledger write succeeds', async () => {
+    const submission = { id: '22222222-2222-4222-8222-222222222222', invoiceId: 'invoice-1', status: 'PENDING', provider: 'bank-transfer', providerReference: 'BANK-101', amountMinor: 10000, note: null };
+    const prisma = { schoolPaymentSubmission: { findFirst: jest.fn().mockResolvedValue(submission), update: jest.fn() } } as any;
+    const service = new SchoolBillingService(prisma);
+    jest.spyOn(service, 'recordPayment').mockRejectedValue(new Error('ledger unavailable'));
+    await expect(service.decidePaymentSubmission('school-1', submission.id, 'operator-1', true, { internalReason: 'Bank settlement independently verified.' }, context, now)).rejects.toThrow('ledger unavailable');
+    expect(prisma.schoolPaymentSubmission.update).not.toHaveBeenCalled();
   });
 
   it('rejects a payment greater than the remaining balance', async () => {

@@ -207,6 +207,9 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   app.get('/v1/customer/school-billing', requireSession, async (request: ScopedRequest, response, next) => {
     try { response.json(await schoolBilling.customerBilling(request.accountId!)); } catch (error) { next(error); }
   });
+  app.post('/v1/customer/school-billing/payment-submissions', requireSession, async (request: ScopedRequest, response, next) => {
+    try { response.status(201).json(await schoolBilling.submitPayment(request.accountId!, request.body)); } catch (error) { next(error); }
+  });
   app.get('/v1/customer/plugin-requests', requireCommerceSession, async (request: ScopedRequest, response, next) => {
     try { response.json(await schoolPluginRequests.customerRequests(request.accountId!)); } catch (error) { next(error); }
   });
@@ -474,6 +477,9 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   app.post('/platform/v1/school-billing-plans', requirePlatformOperator, P('school_billing.manage'), async (request: PlatformRequest, response, next) => {
     try { response.status(201).json(await schoolBilling.createPlan(request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
   });
+  app.patch('/platform/v1/school-billing-plans/:planId', requirePlatformOperator, P('school_billing.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await schoolBilling.updatePlan(String(request.params.planId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
   app.post('/platform/v1/schools/:schoolId/billing-plan', requirePlatformOperator, P('school_billing.manage'), async (request: PlatformRequest, response, next) => {
     try { response.json(await schoolBilling.assignPlan(String(request.params.schoolId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
   });
@@ -488,6 +494,12 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   });
   app.post('/platform/v1/schools/:schoolId/invoices/:invoiceId/payments', requirePlatformOperator, P('school_billing.manage'), async (request: PlatformRequest, response, next) => {
     try { response.status(201).json(await schoolBilling.recordPayment(String(request.params.schoolId), String(request.params.invoiceId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/schools/:schoolId/payment-submissions/:submissionId/approve', requirePlatformOperator, P('school_billing.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await schoolBilling.decidePaymentSubmission(String(request.params.schoolId), String(request.params.submissionId), request.operatorId!, true, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/schools/:schoolId/payment-submissions/:submissionId/reject', requirePlatformOperator, P('school_billing.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await schoolBilling.decidePaymentSubmission(String(request.params.schoolId), String(request.params.submissionId), request.operatorId!, false, request.body, actionContext(request))); } catch (error) { next(error); }
   });
   app.post('/platform/v1/schools/:schoolId/invoices/:invoiceId/void', requirePlatformOperator, P('school_billing.manage'), async (request: PlatformRequest, response, next) => {
     try { response.json(await schoolBilling.voidInvoice(String(request.params.schoolId), String(request.params.invoiceId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
