@@ -28,11 +28,56 @@ interface DashboardData {
   details: DetailRow[]
   filters: { classes: { id: string; name: string }[]; departments: { id: string; name: string }[] }
 }
+interface PlatformBillingInvoice { id: string; invoiceNumber: string; status: string; currency: string; amountMinor: number; paidMinor: number; dueAt: string }
 interface PlatformBillingControl {
   access: string
   reason?: string | null
   warningsJson: string
   lastVerifiedAt?: string | null
+  billing?: { currency?: string; outstandingMinor?: number; invoices?: PlatformBillingInvoice[] }
+}
+interface BillingBanner { tone: 'danger' | 'warning' | 'notice'; title: string; body: string; lines: string[] }
+
+/**
+ * What the dashboard says about the platform bill.
+ *
+ * The banner used to appear only on suspension or on the final notice, which is three days before
+ * lock-out -- so an ordinary unpaid invoice was invisible here for its whole life and the first
+ * thing an administrator saw was a countdown. The third tier is the quiet one: it states the
+ * balance and the nearest due date without alarm, which is the point at which saying something is
+ * still useful.
+ */
+function billingBanner(control: PlatformBillingControl | null): BillingBanner | null {
+  if (!control) return null
+  let warnings: Array<{ invoiceId: string; invoiceNumber: string; currency: string; outstandingMinor: number; suspendAt: string }> = []
+  try { warnings = JSON.parse(control.warningsJson || '[]') } catch { warnings = [] }
+  if (control.access === 'SUSPENDED') return {
+    tone: 'danger', title: 'School access suspended',
+    body: control.reason || 'A Wattanam Marketplace invoice is unpaid. Settle it to restore access.',
+    lines: warnings.map(w => `Invoice ${w.invoiceNumber}: ${(w.outstandingMinor / 100).toFixed(2)} ${w.currency} outstanding`),
+  }
+  if (warnings.length > 0) return {
+    tone: 'warning', title: 'Final platform billing notice',
+    body: control.reason || 'Payment is required within three days of the final notice to prevent suspension.',
+    lines: warnings.map(w => `Invoice ${w.invoiceNumber}: ${(w.outstandingMinor / 100).toFixed(2)} ${w.currency} outstanding · suspension ${new Date(w.suspendAt).toLocaleString()}`),
+  }
+  const outstanding = control.billing?.outstandingMinor || 0
+  if (outstanding <= 0) return null
+  const currency = control.billing?.currency || control.billing?.invoices?.[0]?.currency || 'USD'
+  // The invoice that runs out first is the one worth naming; the rest are on the billing page.
+  const open = (control.billing?.invoices || []).filter(invoice => invoice.amountMinor > invoice.paidMinor && invoice.status !== 'VOID')
+    .sort((a, b) => new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime())
+  return {
+    tone: 'notice', title: 'Platform invoice outstanding',
+    body: `${(outstanding / 100).toFixed(2)} ${currency} is owed on your Wattanam subscription.`,
+    lines: open.slice(0, 3).map(invoice => `Invoice ${invoice.invoiceNumber}: ${((invoice.amountMinor - invoice.paidMinor) / 100).toFixed(2)} ${invoice.currency} due ${new Date(invoice.dueAt).toLocaleDateString()}`),
+  }
+}
+
+const billingTones: Record<BillingBanner['tone'], string> = {
+  danger: 'border-red-300 bg-red-50 text-red-900',
+  warning: 'border-amber-300 bg-amber-50 text-amber-950',
+  notice: 'border-slate-300 bg-white text-slate-800',
 }
 type StatusFilter = 'all' | 'present' | 'absent' | 'late' | 'permission'
 
@@ -111,6 +156,7 @@ function DashboardContent() {
       .then(async response => response.ok ? setBillingControl(await response.json()) : undefined)
       .catch(() => undefined)
   }, [])
+  const banner = useMemo(() => billingBanner(billingControl), [billingControl])
   const [classProgress, setClassProgress] = useState<ClassProgressRow[]>([])
   const [classProgressLoading, setClassProgressLoading] = useState(false)
   const [classProgressFlash, setClassProgressFlash] = useState<Record<string, number>>({}) // classId -> timestamp of last update for flash highlight
@@ -481,7 +527,7 @@ function DashboardContent() {
 
         {/* ── Modern Hero Panel ── */}
         <div className="page-body">
-          {billingControl && (billingControl.access === 'SUSPENDED' || JSON.parse(billingControl.warningsJson || '[]').length > 0) && <div role="alert" className={`mb-5 rounded-2xl border p-5 ${billingControl.access === 'SUSPENDED' ? 'border-red-300 bg-red-50 text-red-900' : 'border-amber-300 bg-amber-50 text-amber-950'}`}><h2 className="font-bold">{billingControl.access === 'SUSPENDED' ? 'School access suspended' : 'Final platform billing notice'}</h2><p className="mt-1 text-sm">{billingControl.reason || 'A Wattanam Marketplace invoice is overdue. Payment is required within three days of the final notice to prevent suspension.'}</p>{JSON.parse(billingControl.warningsJson || '[]').map((warning: { invoiceId: string; invoiceNumber: string; currency: string; outstandingMinor: number; suspendAt: string }) => <p key={warning.invoiceId} className="mt-2 text-sm font-semibold">Invoice {warning.invoiceNumber}: {(warning.outstandingMinor / 100).toFixed(2)} {warning.currency} outstanding · suspension {new Date(warning.suspendAt).toLocaleString()}</p>)}</div>}
+          {banner && <div role={banner.tone === 'notice' ? undefined : 'alert'} className={`mb-5 rounded-2xl border p-5 ${billingTones[banner.tone]}`}><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-bold">{banner.title}</h2><p className="mt-1 text-sm">{banner.body}</p>{banner.lines.map(line => <p key={line} className="mt-2 text-sm font-semibold">{line}</p>)}</div><Link href="/admin/platform-billing" className="rounded-lg border border-current px-4 py-2 text-sm font-semibold">View billing</Link></div></div>}
           <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 text-white shadow-xl">
             {/* decorative blobs */}
             <div aria-hidden className="absolute -top-16 -right-16 w-64 h-64 rounded-full bg-white/10 blur-3xl" />
