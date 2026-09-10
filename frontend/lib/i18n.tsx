@@ -128,6 +128,13 @@ const en: Record<string, string> = {
   // Login
   'login.welcome': 'Welcome back',
   'login.subtitle': 'Sign in to your account',
+  // Lock screen, for a school suspended over an unpaid platform bill (app/suspended)
+  'suspended.title': 'Service paused',
+  'suspended.message': "This school's Wattanam service is paused because a platform invoice is unpaid.",
+  'suspended.contactAdmin': 'Please contact your school administrator. Nothing has been deleted: everything will be as you left it once the bill is paid.',
+  'suspended.adminHint': 'Pay the bill on the Platform billing page. Access returns automatically once Wattanam finance confirms the payment.',
+  'suspended.openBilling': 'Open Platform billing',
+  'suspended.autoReturn': 'This page checks every minute and takes you back as soon as the service resumes.',
   'login.signingIn': 'Signing in…',
   'login.invalidCredentials': 'Invalid email or password',
   'login.error': 'Something went wrong. Please try again.',
@@ -1058,6 +1065,13 @@ const kh: Record<string, string> = {
   // Login
   'login.welcome': 'សូមស្វាគមន៍',
   'login.subtitle': 'ចូលគណនីរបស់អ្នក',
+  // Lock screen, for a school suspended over an unpaid platform bill (app/suspended)
+  'suspended.title': 'សេវាកម្មត្រូវបានផ្អាក',
+  'suspended.message': 'សេវាកម្ម Wattanam របស់សាលានេះត្រូវបានផ្អាក ដោយសារវិក្កយបត្រវេទិកាមិនទាន់បានបង់។',
+  'suspended.contactAdmin': 'សូមទាក់ទងអ្នកគ្រប់គ្រងសាលារបស់អ្នក។ គ្មានទិន្នន័យណាមួយត្រូវបានលុបទេ៖ អ្វីៗទាំងអស់នឹងនៅដដែល នៅពេលវិក្កយបត្រត្រូវបានបង់។',
+  'suspended.adminHint': 'សូមបង់វិក្កយបត្រនៅទំព័រ ការទូទាត់វេទិកា។ ការចូលប្រើនឹងត្រឡប់មកវិញដោយស្វ័យប្រវត្តិ នៅពេលផ្នែកហិរញ្ញវត្ថុ Wattanam បញ្ជាក់ការបង់ប្រាក់។',
+  'suspended.openBilling': 'បើកទំព័រការទូទាត់វេទិកា',
+  'suspended.autoReturn': 'ទំព័រនេះពិនិត្យរៀងរាល់មួយនាទី ហើយនឹងនាំអ្នកត្រឡប់ទៅវិញភ្លាមៗ នៅពេលសេវាកម្មដំណើរការឡើងវិញ។',
   'login.signingIn': 'កំពុងចូល...',
   'login.invalidCredentials': 'អ៊ីមែល ឬពាក្យសម្ងាត់មិនត្រឹមត្រូវ',
   'login.error': 'មានបញ្ហាកើតឡើង សូមព្យាយាមម្តងទៀត។',

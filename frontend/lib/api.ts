@@ -4,6 +4,8 @@
  * Automatically retries with a token refresh on 401.
  */
 
+import { lockDestination, storedRole } from './school-lock';
+
 /** Returns the backend base URL, falling back to '' (relative) for local dev. */
 function getApiBase(): string {
   return process.env.NEXT_PUBLIC_API_URL ?? '';
@@ -61,10 +63,13 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
     }
   }
 
-  // Preserve the response for callers, but move administrators to the only recovery screen when
-  // the school has been centrally suspended for an unpaid platform invoice.
-  if (res.status === 402 && typeof window !== 'undefined' && window.location.pathname !== '/admin/platform-billing') {
-    window.location.href = '/admin/platform-billing';
+  // Preserve the response for callers, but move people off a school that has been centrally
+  // suspended for an unpaid platform invoice: administrators to the one screen where they can pay,
+  // everyone else to the lock screen. The billing page only admits administrators, so sending a
+  // teacher there bounced them to sign-in, and signing in sent them straight back.
+  if (res.status === 402 && typeof window !== 'undefined') {
+    const destination = lockDestination(storedRole());
+    if (window.location.pathname !== destination) window.location.href = destination;
   }
 
   return res;

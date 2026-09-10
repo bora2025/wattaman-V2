@@ -3,6 +3,7 @@ import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../database/prisma.service';
 import { InstallationKeyService } from './installation-key.service';
 import { readMarketplaceIdentityConfig } from './marketplace-identity-config';
+import { evaluateSchoolAccess } from './school-access.service';
 import { schoolPaymentSignedPayload } from './school-payment-signing';
 
 type Warning = { invoiceId: string; invoiceNumber: string; currency: string; outstandingMinor: number; dueAt: string; suspendAt: string; final: boolean };
@@ -91,8 +92,41 @@ export class SchoolBillingControlService {
       const message = error instanceof Error ? error.message : String(error);
       await this.prisma.marketplaceSchoolControl.upsert({ where: { id: 'singleton' }, create: { id: 'singleton', lastAttemptAt: now, lastError: message }, update: { lastAttemptAt: now, lastError: message } });
       this.logger.warn(`School billing control sync failed: ${message}`);
+      await this.noticeOutageUnlock(now).catch(() => undefined);
       return { configured: true, unavailable: true };
     }
+  }
+
+  /**
+   * While the school is locked, or while a payment it reported awaits confirmation, check every five
+   * minutes instead of hourly -- otherwise a school finance has just cleared can stay locked for up to
+   * an hour. Minutes 5 to 55 only: the hourly sync already runs at minute 0, and two syncs at once
+   * would race each other's notifications. An active school with nothing pending costs nothing extra.
+   */
+  @Cron('5-55/5 * * * *')
+  async syncWhileLocked(now = new Date()) {
+    const state = await this.prisma.marketplaceSchoolControl.findUnique({ where: { id: 'singleton' }, select: { access: true, billingJson: true } });
+    if (!state || (state.access !== 'SUSPENDED' && !hasPendingPayment(state.billingJson))) return { skipped: true };
+    return this.sync(now);
+  }
+
+  /**
+   * After seven days without a successful sync the lock lifts (evaluateSchoolAccess). Say so once: to
+   * the administrators, who would otherwise watch a lock vanish with the bill still unpaid, and to
+   * Wattanam operations in the log -- a school out of contact for a week is an incident on our side.
+   */
+  private async noticeOutageUnlock(now: Date) {
+    const state = await this.prisma.marketplaceSchoolControl.findUnique({ where: { id: 'singleton' }, select: { access: true, reason: true, lastVerifiedAt: true } });
+    if (!state?.lastVerifiedAt || !evaluateSchoolAccess(state, now).lockLiftedByOutage) return;
+    this.logger.error(`No successful billing sync since ${state.lastVerifiedAt.toISOString()}; the billing lock is lifted until the marketplace answers again`);
+    const already = await this.prisma.notification.findFirst({ where: { type: 'platform_billing_outage_unlocked', sentAt: { gt: state.lastVerifiedAt } }, select: { id: true } });
+    if (already) return;
+    const admins = await this.prisma.user.findMany({ where: { role: { in: ['SUPER_ADMIN', 'ADMIN'] } }, select: { id: true } });
+    if (admins.length === 0) return;
+    await this.prisma.notification.createMany({ data: admins.map(admin => ({
+      userId: admin.id, type: 'platform_billing_outage_unlocked',
+      message: 'Wattanam could not be reached for seven days, so the billing lock has been lifted until contact is restored. The unpaid balance still stands.',
+    })) });
   }
 
   /**
@@ -155,7 +189,12 @@ export class SchoolBillingControlService {
   async status() {
     const state = await this.prisma.marketplaceSchoolControl.findUnique({ where: { id: 'singleton' } });
     if (!state) return null;
-    return { ...state, warnings: safeJson(state.warningsJson, []), billing: safeJson(state.billingJson, {}), marketplaceUrl: readMarketplaceIdentityConfig()?.marketplaceUrl || null };
+    return {
+      ...state,
+      // So the billing page does not show a lock the outage rule has already lifted.
+      lockLiftedByOutage: evaluateSchoolAccess(state, new Date()).lockLiftedByOutage,
+      warnings: safeJson(state.warningsJson, []), billing: safeJson(state.billingJson, {}), marketplaceUrl: readMarketplaceIdentityConfig()?.marketplaceUrl || null,
+    };
   }
 }
 
@@ -165,6 +204,14 @@ function safeWarnings(value: string): Warning[] {
 
 function safeJson<T>(value: string, fallback: T): T {
   try { return JSON.parse(value) as T; } catch { return fallback; }
+}
+
+/** Whether the synced bill shows a payment this school reported that finance has not yet decided. */
+function hasPendingPayment(billingJson: string): boolean {
+  const billing = safeJson<{ invoices?: Array<{ paymentSubmissions?: Array<{ status?: string }> } | null> }>(billingJson, {});
+  return Array.isArray(billing.invoices) && billing.invoices.some(
+    (invoice) => Array.isArray(invoice?.paymentSubmissions) && invoice!.paymentSubmissions!.some((submission) => submission?.status === 'PENDING'),
+  );
 }
 
 /** Ids already surfaced, read back out of the previously stored billing summary so a notification

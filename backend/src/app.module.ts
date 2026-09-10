@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { DatabaseModule } from './database/database.module';
 import { SchoolBillingAccessGuard } from './marketplace/school-billing-access.guard';
+import { SchoolAccessModule } from './marketplace/school-access.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
@@ -40,15 +41,17 @@ import { PluginsModule } from './plugins/plugins.module';
 import { UpdatesModule } from './updates/updates.module';
 import { MarketplaceModule } from './marketplace/marketplace.module';
 import { ObservabilityModule } from './observability/observability.module';
+import { DataExportModule } from './data-export/data-export.module';
 import { runsBackgroundJobs } from './config/environment';
 
 @Module({
   imports: [
     // SchoolBillingAccessGuard is registered below as a global APP_GUARD, so Nest resolves its
-    // dependencies from this module's own injector. Without DatabaseModule here its PrismaService
-    // cannot be found and the whole application fails to start -- feature modules importing
-    // DatabaseModule themselves does not help a provider declared at this level.
+    // dependencies from this module's own injector. Without SchoolAccessModule (and DatabaseModule
+    // beneath it) here, its SchoolAccessService cannot be found and the whole application fails to
+    // start -- feature modules importing them themselves does not help a provider declared at this level.
     DatabaseModule,
+    SchoolAccessModule,
     // Rate limiting: max 300 requests per 60 seconds per IP
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 300 }]),
     ScheduleModule.forRoot({
@@ -90,6 +93,7 @@ import { runsBackgroundJobs } from './config/environment';
     UpdatesModule,
     MarketplaceModule,
     ObservabilityModule,
+    DataExportModule,
   ],
   controllers: [AppController],
   providers: [

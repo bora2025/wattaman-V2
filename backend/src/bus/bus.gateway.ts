@@ -1,3 +1,4 @@
+import { UseGuards } from '@nestjs/common';
 import {
   WebSocketGateway,
   WebSocketServer,
@@ -13,12 +14,16 @@ import { JwtService } from '@nestjs/jwt';
 import { WsException } from '@nestjs/websockets';
 import { authenticateSocket, requireSocketUser } from '../common/socket-auth';
 import { getCorsOriginsForGateway } from '../config/environment';
+import { SchoolAccessService } from '../marketplace/school-access.service';
+import { SchoolAccessWsGuard, disconnectIfSuspended } from '../marketplace/school-access.ws-guard';
 
 @WebSocketGateway({ namespace: '/bus', cors: { origin: getCorsOriginsForGateway(), credentials: true } })
+// Every message obeys the billing lock, including location-update from a socket opened before it.
+@UseGuards(SchoolAccessWsGuard)
 export class BusGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
 
-  constructor(private busService: BusService, private readonly jwt: JwtService) {}
+  constructor(private busService: BusService, private readonly jwt: JwtService, private readonly schoolAccess: SchoolAccessService) {}
 
   async handleConnection(client: Socket) {
     try {
@@ -27,6 +32,7 @@ export class BusGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.disconnect(true);
       return;
     }
+    if (await disconnectIfSuspended(this.schoolAccess, client)) return;
     console.log(`Bus WS client connected: ${client.id}`);
   }
 

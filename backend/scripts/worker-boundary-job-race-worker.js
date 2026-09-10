@@ -21,7 +21,8 @@ async function main() {
 
   const prisma = new PrismaClient({ datasourceUrl: databaseUrl });
   await prisma.$connect();
-  const jobs = new PluginJobsService(prisma);
+  // The drill is about the advisory lock between workers, not the billing lock: treat the school as open.
+  const jobs = new PluginJobsService(prisma, { isSuspended: async () => false });
 
   let ran = false;
   await jobs.run('drill-plugin', 'overlap-job', async () => {

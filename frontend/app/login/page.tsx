@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useLanguage } from '../../lib/i18n';
 import { getInstallationStatus } from '../../lib/installation';
+import { fetchSchoolAccess, homeForRole, lockDestination } from '../../lib/school-lock';
 
 function LoginContent() {
   const [email, setEmail] = useState('');
@@ -47,30 +48,21 @@ function LoginContent() {
         const role = data.user?.role;
         if (role) localStorage.setItem('role', role);
 
+        // On a school locked for an unpaid platform bill, returnTo would lead straight back to a
+        // page that refuses them. Administrators go to the bill; everyone else to the lock screen.
+        const lock = await fetchSchoolAccess();
+        if (lock?.access === 'SUSPENDED') {
+          router.push(lockDestination(role));
+          return;
+        }
+
         // Check for returnTo query param (e.g. from AuthGuard redirect)
         const returnTo = searchParams.get('returnTo');
         // Only allow safe relative paths
         if (returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//')) {
           router.push(returnTo);
         } else {
-          const adminRoles = ['ADMIN', 'SUPER_ADMIN', 'SCHOOL_ADMIN', 'DEPARTMENT_ADMIN', 'OFFICE_ADMIN'];
-          const teacherRoles = ['TEACHER'];
-          const studentRoles = ['STUDENT'];
-          const parentRoles = ['PARENT'];
-          const wattamanRoles = ['WATTAMAN'];
-          const reporterRoles = ['WATTAMAN_REPORTER'];
-          const classAdminRoles = ['CLASS_ADMIN'];
-          const accounterRoles = ['ACCOUNTER'];
-          let dest = '/employee';
-          if (adminRoles.includes(role)) dest = '/admin';
-          else if (classAdminRoles.includes(role)) dest = '/admin/classes';
-          else if (teacherRoles.includes(role)) dest = '/teacher';
-          else if (studentRoles.includes(role)) dest = '/student';
-          else if (parentRoles.includes(role)) dest = '/parent';
-          else if (wattamanRoles.includes(role)) dest = '/wattaman';
-          else if (reporterRoles.includes(role)) dest = '/reporter';
-          else if (accounterRoles.includes(role)) dest = '/accounter';
-          router.push(dest);
+          router.push(homeForRole(role));
         }
       } else {
         setError(t('login.invalidCredentials'));

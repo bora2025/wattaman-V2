@@ -1,3 +1,4 @@
+import { UseGuards } from '@nestjs/common';
 import {
   WebSocketGateway,
   SubscribeMessage,
@@ -11,6 +12,8 @@ import { WsException } from '@nestjs/websockets';
 import { OnGatewayConnection } from '@nestjs/websockets';
 import { authenticateSocket, requireSocketUser } from '../common/socket-auth';
 import { getCorsOriginsForGateway } from '../config/environment';
+import { SchoolAccessService } from '../marketplace/school-access.service';
+import { SchoolAccessWsGuard, disconnectIfSuspended } from '../marketplace/school-access.ws-guard';
 
 @WebSocketGateway({
   cors: {
@@ -18,18 +21,22 @@ import { getCorsOriginsForGateway } from '../config/environment';
     credentials: true,
   },
 })
+// Every message obeys the billing lock; global guards never reach a gateway.
+@UseGuards(SchoolAccessWsGuard)
 export class MessagesGateway implements OnGatewayConnection {
   @WebSocketServer()
   server: Server;
 
-  constructor(private readonly jwt: JwtService) {}
+  constructor(private readonly jwt: JwtService, private readonly schoolAccess: SchoolAccessService) {}
 
   async handleConnection(client: Socket) {
     try {
       await authenticateSocket(this.jwt, client);
     } catch {
       client.disconnect(true);
+      return;
     }
+    await disconnectIfSuspended(this.schoolAccess, client);
   }
 
   @SubscribeMessage('joinUser')

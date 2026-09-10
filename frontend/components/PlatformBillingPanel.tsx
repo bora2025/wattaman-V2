@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../lib/api';
 import { imageFileToDataUrl } from '../lib/image-upload';
+import { storedRole } from '../lib/school-lock';
 
 type InvoiceLine = { id: string; kind: string; description: string; quantity: number; amountMinor: number };
 type SubmissionSummary = { id: string; status: string; providerReference: string; amountMinor: number; createdAt: string; rejectionReason?: string | null };
@@ -13,6 +14,8 @@ type Notice = { id: string; subject: string; message: string; createdAt: string;
 type PaymentAccount = { id: string; label: string; bankName: string; accountName: string; accountNumber: string; currency: string; qrImage?: string | null; instructions?: string | null };
 type BillingState = {
   access: string; reason?: string | null; lastVerifiedAt?: string | null; lastAttemptAt?: string | null; lastError?: string | null;
+  /** The stored access is still SUSPENDED, but seven days without a sync have lifted the lock. */
+  lockLiftedByOutage?: boolean;
   warnings: Array<{ invoiceId: string; invoiceNumber: string; currency: string; outstandingMinor: number; suspendAt: string }>;
   billing: { schoolName?: string; currency?: string; outstandingMinor?: number; billingPlan?: { name: string; amountMinor: number; currency: string; billingInterval: string }; invoices?: Invoice[]; notifications?: Notice[]; paymentMethods?: PaymentAccount[] };
 };
@@ -127,7 +130,10 @@ export default function PlatformBillingPanel({ variant = 'page' }: { variant?: '
   const nextDue = invoices.filter(isOpen).sort((a, b) => new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime())[0];
   // The same four tiers as the dashboard banner. Green is kept for "nothing owed": an open bill
   // used to show green "Account active" beside a balance, which reads as paid.
-  const standing = state.access === 'SUSPENDED' ? 'suspended' : warnings.length ? 'final' : outstanding > 0 ? 'due' : 'clear';
+  // The stored access still reads SUSPENDED after seven days without a sync have lifted the lock; the
+  // page follows what the school is actually living with, and says why below.
+  const locked = state.access === 'SUSPENDED' && !state.lockLiftedByOutage;
+  const standing = locked ? 'suspended' : warnings.length ? 'final' : outstanding > 0 ? 'due' : 'clear';
   // Only a billing suspension lifts itself when the invoice is paid. One an operator imposed on the
   // school does not, and telling that school to pay would send it the wrong way.
   const billingSuspension = standing === 'suspended' && warnings.length > 0;
@@ -141,8 +147,12 @@ export default function PlatformBillingPanel({ variant = 'page' }: { variant?: '
   }[standing];
   // h2 directly under the standalone page's h1; h3 inside Licensing, under the card's own h2.
   const StatusHeading = variant === 'section' ? 'h3' : 'h2';
+  // A school's records stay its own while it is locked, and only the SUPER_ADMIN may take them out --
+  // the download route admits nobody else. Read at render time: this only renders after the bill has
+  // loaded in the browser, so there is no server render for it to disagree with.
+  const canDownloadRecords = standing === 'suspended' && storedRole() === 'SUPER_ADMIN';
 
-  const status = <div className={`rounded-2xl border p-5 ${tone}`}><div className="flex flex-wrap justify-between gap-3"><div><StatusHeading className="font-bold">{title}</StatusHeading><p className="mt-1 text-sm">{summary}</p>{warnings.map(warning => <p key={warning.invoiceId} className="mt-2 text-sm font-semibold">Invoice {warning.invoiceNumber}: {money(warning.outstandingMinor, warning.currency)} outstanding{standing === 'final' ? ` · suspension on ${new Date(warning.suspendAt).toLocaleString()}` : ''}</p>)}{billingSuspension && <p className="mt-3 text-sm">To restore access, pay the balance and submit the bank or payment reference in your <Link className="font-semibold underline" href="/marketplace">marketplace account</Link>. Access returns automatically once Wattanam finance approves the payment; press Sync now to check.</p>}{standing === 'suspended' && !billingSuspension && <p className="mt-3 text-sm">This suspension was not caused by an unpaid invoice. Contact Wattanam support to restore access.</p>}</div><div className="text-right"><div className="text-xs uppercase text-slate-500">Outstanding</div><div className="text-xl font-bold">{money(state.billing?.outstandingMinor, currency)}</div></div></div>{state.lastVerifiedAt && <p className="mt-3 text-xs text-slate-500">Verified with the marketplace {new Date(state.lastVerifiedAt).toLocaleString()}</p>}{state.lastError && <p className="mt-2 text-sm text-red-700">Last sync error: {state.lastError}</p>}</div>;
+  const status = <div className={`rounded-2xl border p-5 ${tone}`}><div className="flex flex-wrap justify-between gap-3"><div><StatusHeading className="font-bold">{title}</StatusHeading><p className="mt-1 text-sm">{summary}</p>{warnings.map(warning => <p key={warning.invoiceId} className="mt-2 text-sm font-semibold">Invoice {warning.invoiceNumber}: {money(warning.outstandingMinor, warning.currency)} outstanding{standing === 'final' ? ` · suspension on ${new Date(warning.suspendAt).toLocaleString()}` : ''}</p>)}{billingSuspension && <p className="mt-3 text-sm">To restore access, pay the balance and tell us under How to pay below. Access returns automatically within minutes of Wattanam finance confirming the payment; press Sync now to check sooner.</p>}{standing === 'suspended' && !billingSuspension && <p className="mt-3 text-sm">This suspension was not caused by an unpaid invoice. Contact Wattanam support to restore access.</p>}{state.lockLiftedByOutage && <p className="mt-3 text-sm">Wattanam has not been reachable for more than seven days, so the billing lock is lifted until contact is restored. The balance shown is the last one received.</p>}</div><div className="text-right"><div className="text-xs uppercase text-slate-500">Outstanding</div><div className="text-xl font-bold">{money(state.billing?.outstandingMinor, currency)}</div></div></div>{canDownloadRecords && <div className="mt-4 rounded-xl border border-red-200 bg-white p-4 print:hidden"><h3 className="text-sm font-semibold text-slate-800">Download your school&apos;s records</h3><p className="mt-1 text-xs text-slate-600">Your records stay yours while access is suspended. Each download is recorded in the audit log.</p><div className="mt-3 flex flex-wrap gap-2"><a className="btn btn-secondary" href="/api/admin/data-export/students.csv">Students (CSV)</a><a className="btn btn-secondary" href="/api/admin/data-export/attendance.csv">Attendance (CSV)</a><a className="btn btn-secondary" href="/api/admin/data-export/grades.csv">Grades (CSV)</a></div></div>}{state.lastVerifiedAt && <p className="mt-3 text-xs text-slate-500">Verified with the marketplace {new Date(state.lastVerifiedAt).toLocaleString()}</p>}{state.lastError && <p className="mt-2 text-sm text-red-700">Last sync error: {state.lastError}</p>}</div>;
 
   const plan = state.billing?.billingPlan
     ? <p>{state.billing.billingPlan.name} · {money(state.billing.billingPlan.amountMinor, state.billing.billingPlan.currency)} / {state.billing.billingPlan.billingInterval.toLowerCase()}</p>

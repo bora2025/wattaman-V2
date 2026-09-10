@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../database/prisma.service';
 import { NotificationService } from '../notification/notification.service';
+import { SchoolAccessService } from '../marketplace/school-access.service';
 
 @Injectable()
 export class DigestService {
@@ -10,6 +11,7 @@ export class DigestService {
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationService,
+    private schoolAccess: SchoolAccessService,
   ) {}
 
   /** Runs every day at 07:00 server time. */
@@ -25,6 +27,11 @@ export class DigestService {
   }
 
   private async runDigest(frequency: 'DAILY' | 'WEEKLY', windowMs: number) {
+    // A school locked for an unpaid platform bill gets no service, and that includes these emails.
+    if (await this.schoolAccess.isSuspended()) {
+      this.logger.log(`Skipping the ${frequency} digest: school access is suspended for an unpaid platform bill`);
+      return;
+    }
     const since = new Date(Date.now() - windowMs);
     const prefs = await this.prisma.notificationPreference.findMany({
       where: { digestFrequency: frequency, emailEnabled: true },
