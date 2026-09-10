@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import AuthGuard from '../../../components/AuthGuard';
+import PlatformBillingPanel from '../../../components/PlatformBillingPanel';
 import Sidebar from '../../../components/Sidebar';
 import { adminNav } from '../../../lib/admin-nav';
 import { apiFetch } from '../../../lib/api';
@@ -123,7 +124,7 @@ export default function LicensingPage() {
         <div className="page-content">
           <div className="h-14 lg:hidden" />
           <div className="page-header">
-            <div className="flex flex-wrap items-start justify-between gap-3"><div><h1 className="text-2xl font-bold text-slate-800">Licensing</h1><p className="mt-1 text-sm text-slate-500">Bind this installation to your marketplace account and review plugin licence status.</p></div><a className="btn btn-primary" href="/marketplace">Browse marketplace</a></div>
+            <div className="flex flex-wrap items-start justify-between gap-3"><div><h1 className="text-2xl font-bold text-slate-800">Licensing</h1><p className="mt-1 text-sm text-slate-500">Your platform subscription, this installation’s marketplace identity, and plugin licence status.</p></div><a className="btn btn-primary" href="/marketplace">Browse marketplace</a></div>
           </div>
           <div className="page-body space-y-6">
             {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
@@ -134,6 +135,10 @@ export default function LicensingPage() {
                 <strong>The marketplace is not configured for this installation.</strong> Set <code className="font-mono">MARKETPLACE_URL</code> to register this school and check plugin licences. The school keeps operating normally without it.
               </div>
             )}
+
+            {/* The platform bill, live. It reads only the billing-control endpoint, which the suspension
+                guard keeps open -- so this card still loads when everything else on the page is refused. */}
+            <PlatformBillingPanel variant="section" />
 
             <section className="card p-6">
               <h2 className="font-semibold text-slate-800">Installation identity</h2>
