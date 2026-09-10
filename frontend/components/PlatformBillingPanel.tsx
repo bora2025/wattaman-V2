@@ -7,10 +7,12 @@ import { apiFetch } from '../lib/api';
 type InvoiceLine = { id: string; kind: string; description: string; quantity: number; amountMinor: number };
 type Invoice = { id: string; invoiceNumber: string; status: string; currency: string; amountMinor: number; paidMinor: number; description: string; issuedAt: string; dueAt: string; paidAt?: string | null; lines?: InvoiceLine[] };
 type Notice = { id: string; subject: string; message: string; createdAt: string; type: string };
+/** A Wattanam receiving account, synced from the marketplace with the rest of the bill. */
+type PaymentAccount = { id: string; label: string; bankName: string; accountName: string; accountNumber: string; currency: string; qrImage?: string | null; instructions?: string | null };
 type BillingState = {
   access: string; reason?: string | null; lastVerifiedAt?: string | null; lastAttemptAt?: string | null; lastError?: string | null;
   warnings: Array<{ invoiceId: string; invoiceNumber: string; currency: string; outstandingMinor: number; suspendAt: string }>;
-  billing: { schoolName?: string; currency?: string; outstandingMinor?: number; billingPlan?: { name: string; amountMinor: number; currency: string; billingInterval: string }; invoices?: Invoice[]; notifications?: Notice[] };
+  billing: { schoolName?: string; currency?: string; outstandingMinor?: number; billingPlan?: { name: string; amountMinor: number; currency: string; billingInterval: string }; invoices?: Invoice[]; notifications?: Notice[]; paymentMethods?: PaymentAccount[] };
 };
 
 /** How often the panel re-reads this school's synced billing state. Cheap: it is a read of the
@@ -131,6 +133,16 @@ export default function PlatformBillingPanel({ variant = 'page' }: { variant?: '
       ? <ul className="space-y-0.5">{invoice.lines!.map(line => <li key={line.id}>{line.description}{line.quantity > 1 ? ` × ${line.quantity}` : ''} <span className="text-slate-500">— {money(line.amountMinor, invoice.currency)}</span></li>)}</ul>
       : invoice.description}</td><td>{new Date(invoice.dueAt).toLocaleDateString()}</td><td>{isOverdue(invoice) ? <span className="font-semibold text-red-700">overdue</span> : invoice.status.toLowerCase().replaceAll('_', ' ')}</td><td className="text-right font-semibold">{money(invoice.amountMinor - invoice.paidMinor, invoice.currency)}</td></tr>)}</tbody></table></div>;
 
+  const accounts = state.billing?.paymentMethods || [];
+  // Shown whenever something is owed -- including to a suspended school, which needs it most.
+  const howToPay = outstanding > 0 && accounts.length > 0 ? <div className="space-y-3">
+    <p className="text-sm text-slate-600">Pay into one of these accounts{nextDue ? <> and put <strong className="font-mono">{nextDue.invoiceNumber}</strong> in the transfer remark</> : null}, so finance can match the transfer to this bill. Then submit the bank reference in your <Link className="font-semibold text-indigo-700 underline" href="/marketplace">marketplace account</Link>.</p>
+    <div className="grid gap-3 md:grid-cols-2">{accounts.map(account => <div key={account.id} className="flex gap-4 rounded-xl border bg-white p-4 text-sm">
+      <div className="min-w-0 flex-1"><strong>{account.label}</strong><div className="text-slate-600">{account.bankName}</div><div className="text-slate-600">{account.accountName}</div><div className="mt-1 font-mono text-base">{account.accountNumber}</div>{account.instructions && <p className="mt-2 text-xs text-slate-500">{account.instructions}</p>}</div>
+      {account.qrImage && <figure className="shrink-0 text-center"><img src={account.qrImage} alt={'QR code to pay ' + account.label} className="h-32 w-32 rounded-lg border bg-white object-contain" /><figcaption className="mt-1 text-xs text-slate-500">Scan with your bank app</figcaption></figure>}
+    </div>)}</div>
+  </div> : null;
+
   const shownNotices = variant === 'section' ? notices.slice(0, 3) : notices;
   const noticeList = notices.length === 0 ? <p className="text-sm text-slate-500">No billing notifications.</p> : <div className="space-y-2">{shownNotices.map(notice => <article key={notice.id} className="rounded-xl border p-3 text-sm"><div className="flex justify-between gap-3"><strong>{notice.subject}</strong><time className="text-xs text-slate-500">{new Date(notice.createdAt).toLocaleString()}</time></div><p className="mt-1 text-slate-700">{notice.message}</p></article>)}{shownNotices.length < notices.length && <Link className="text-sm font-semibold text-indigo-700" href="/admin/platform-billing">All {notices.length} billing notifications →</Link>}</div>;
 
@@ -139,6 +151,7 @@ export default function PlatformBillingPanel({ variant = 'page' }: { variant?: '
       {status}
       <div className="mt-5 border-t border-slate-100 pt-4"><h3 className="text-sm font-semibold text-slate-700">Plan</h3><div className="mt-2">{plan}</div></div>
       <div className="mt-5 border-t border-slate-100 pt-4"><h3 className="text-sm font-semibold text-slate-700">Invoices</h3><div className="mt-2">{invoiceTable}</div></div>
+      {howToPay && <div className="mt-5 border-t border-slate-100 pt-4"><h3 className="text-sm font-semibold text-slate-700">How to pay</h3><div className="mt-2">{howToPay}</div></div>}
       <div className="mt-5 border-t border-slate-100 pt-4"><h3 className="text-sm font-semibold text-slate-700">Recent billing notifications</h3><div className="mt-2">{noticeList}</div></div>
       <div className="mt-4">{freshness}</div>
     </Frame>;
@@ -150,6 +163,7 @@ export default function PlatformBillingPanel({ variant = 'page' }: { variant?: '
     {status}
     <section className="rounded-2xl border bg-white p-5"><h2 className="font-semibold">Plan</h2><div className="mt-2">{plan}</div></section>
     <section className="rounded-2xl border bg-white p-5"><div className="flex justify-between"><h2 className="font-semibold">Invoices</h2><button className="text-sm font-semibold text-indigo-700 print:hidden" onClick={() => window.print()}>Print / save PDF</button></div><div className="mt-3">{invoiceTable}</div></section>
+    {howToPay && <section className="rounded-2xl border bg-white p-5"><h2 className="font-semibold">How to pay</h2><div className="mt-3">{howToPay}</div></section>}
     <section className="rounded-2xl border bg-white p-5"><h2 className="font-semibold">Billing notifications</h2><div className="mt-3">{noticeList}</div></section>
   </div>;
 }

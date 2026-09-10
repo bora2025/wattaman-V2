@@ -20,6 +20,7 @@ const sessionGet = new Set([
   'orders', 'entitlements', 'advisories', 'audit-events', 'operations/health', 'exports', 'plugin-requests',
   'schools/provisioning-requests',
   'school-billing-plans',
+  'school-payment-methods',
 ]);
 const sessionGetDetail = /^(operators|customers|schools|installations|publishers|plugins|submissions|orders|plugin-requests)\/[0-9a-zA-Z._-]+$|^schools\/[0-9a-f-]{36}\/(usage|billing)$|^schools\/provisioning-requests\/[0-9a-f-]{36}$/;
 /**
@@ -37,6 +38,8 @@ const sessionPostPatterns = [
   /^schools\/adoptions\/discover$/,
   /^school-billing-plans$/,
   new RegExp(`^school-billing-plans/${ID}$`),
+  /^school-payment-methods$/,
+  new RegExp(`^school-payment-methods/${ID}$`),
   /^school-billing-alerts\/dispatch$/,
   /^school-billing-cycle\/run$/,
   new RegExp(`^schools/${ID}/(update|enrollment-tokens|adopt-installation|infrastructure)$`),

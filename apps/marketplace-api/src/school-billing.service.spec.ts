@@ -25,7 +25,7 @@ describe('SchoolBillingService', () => {
   });
 
   it('returns customer-safe billing only through the authenticated account relation', async () => {
-    const prisma = { customerSchool: { findMany: jest.fn().mockResolvedValue([{
+    const prisma = { schoolPaymentMethod: { findMany: jest.fn().mockResolvedValue([]) }, customerSchool: { findMany: jest.fn().mockResolvedValue([{
       id: 'school-1', name: 'Bora School', status: 'ACTIVE', currency: 'USD', billingPlan: null,
       invoices: [
         { id: 'invoice-1', amountMinor: 10000, paidMinor: 2500, status: 'PARTIALLY_PAID', payments: [] },
@@ -47,14 +47,14 @@ describe('SchoolBillingService', () => {
       id: 'invoice-1', invoiceNumber: 'WTN-2026-OVERDUE', currency: 'USD', amountMinor: 10000, paidMinor: 0,
       dueAt: new Date('2026-09-01T00:00:00.000Z'), notifications: [{ createdAt: new Date('2026-09-04T00:00:00.000Z') }],
     };
-    const prisma = { customerSchool: { findFirst: jest.fn().mockResolvedValue({ id: 'school-1', name: 'Bora School', status: 'ACTIVE', suspendedReason: null, invoices: [invoice] }) } } as any;
+    const prisma = { schoolPaymentMethod: { findMany: jest.fn().mockResolvedValue([]) }, customerSchool: { findFirst: jest.fn().mockResolvedValue({ id: 'school-1', name: 'Bora School', status: 'ACTIVE', suspendedReason: null, invoices: [invoice] }) } } as any;
     const service = new SchoolBillingService(prisma);
     await expect(service.installationControl('registration-1', new Date('2026-09-06T23:59:59.000Z'))).resolves.toMatchObject({ access: 'ACTIVE' });
     await expect(service.installationControl('registration-1', new Date('2026-09-07T00:00:00.000Z'))).resolves.toMatchObject({ access: 'SUSPENDED' });
   });
 
   it('never starts suspension grace before a final overdue notice exists', async () => {
-    const prisma = { customerSchool: { findFirst: jest.fn().mockResolvedValue({
+    const prisma = { schoolPaymentMethod: { findMany: jest.fn().mockResolvedValue([]) }, customerSchool: { findFirst: jest.fn().mockResolvedValue({
       id: 'school-1', name: 'Bora School', status: 'ACTIVE', suspendedReason: null,
       invoices: [{ id: 'invoice-1', invoiceNumber: 'WTN-1', currency: 'USD', amountMinor: 10000, paidMinor: 0, dueAt: new Date('2026-01-01'), notifications: [] }],
     }) } } as any;

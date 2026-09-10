@@ -480,6 +480,17 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   app.patch('/platform/v1/school-billing-plans/:planId', requirePlatformOperator, P('school_billing.manage'), async (request: PlatformRequest, response, next) => {
     try { response.json(await schoolBilling.updatePlan(String(request.params.planId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
   });
+  // Where Wattanam receives manual payments. Reading needs school_billing.read; changing where money
+  // goes needs school_billing.manage and is audited, QR changes included.
+  app.get('/platform/v1/school-payment-methods', requirePlatformOperator, P('school_billing.read'), async (_request, response, next) => {
+    try { response.json(await schoolBilling.paymentMethods()); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/school-payment-methods', requirePlatformOperator, P('school_billing.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.status(201).json(await schoolBilling.createPaymentMethod(request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+  app.patch('/platform/v1/school-payment-methods/:methodId', requirePlatformOperator, P('school_billing.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await schoolBilling.updatePaymentMethod(String(request.params.methodId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
   app.post('/platform/v1/schools/:schoolId/billing-plan', requirePlatformOperator, P('school_billing.manage'), async (request: PlatformRequest, response, next) => {
     try { response.json(await schoolBilling.assignPlan(String(request.params.schoolId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
   });

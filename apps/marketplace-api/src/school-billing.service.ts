@@ -1,10 +1,11 @@
 import { Prisma, PrismaClient } from '@prisma/client';
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { z } from 'zod';
 import { HttpError } from './http-error';
 import { PlatformActionContext } from './platform-context';
 import { DisabledTransactionalEmailService, TransactionalEmailService } from './transactional-email.service';
 import { recordSaleEntries } from './publisher-governance.service';
+import { MAX_QR_IMAGE_BYTES, MAX_RECEIPT_IMAGE_BYTES, validateImageDataUrl } from './payment-image';
 
 const reason = z.string().trim().min(3).max(5000);
 
@@ -71,8 +72,31 @@ const paymentSubmissionInput = z.object({
   invoiceId: z.string().uuid(), provider: z.string().trim().toLowerCase().regex(/^[a-z0-9][a-z0-9._-]{1,39}$/),
   providerReference: z.string().trim().min(3).max(200), amountMinor: z.number().int().positive().max(2_000_000_000),
   note: z.string().trim().max(2000).optional(),
+  /** Which receiving account the money went into. Optional so older clients keep working. */
+  paymentMethodId: z.string().uuid().optional(),
+  /** The customer's transfer receipt; its bytes are checked in submitPayment, this only bounds the text. */
+  receiptImage: z.string().max(260_000).optional(),
 }).strict();
 const paymentSubmissionDecision = z.object({ internalReason: reason, rejectionReason: z.string().trim().min(3).max(2000).optional() }).strict();
+
+const paymentMethodInput = z.object({
+  label: z.string().trim().min(2).max(120),
+  bankName: z.string().trim().min(2).max(120),
+  accountName: z.string().trim().min(2).max(160),
+  accountNumber: z.string().trim().regex(/^[0-9A-Za-z][0-9A-Za-z -]{3,39}$/, 'Account number may contain letters, digits, spaces and dashes'),
+  currency: z.string().regex(/^[A-Z]{3}$/),
+  qrImage: z.string().max(170_000).nullable().optional(),
+  instructions: z.string().trim().max(1000).nullable().optional(),
+  active: z.boolean().default(true),
+  position: z.number().int().min(0).max(1000).default(0),
+  internalReason: reason,
+}).strict();
+const paymentMethodUpdateInput = paymentMethodInput.partial().extend({ internalReason: reason }).strict();
+
+/** What a payer is shown. Everything here is meant to be handed out; nothing operator-only. */
+const CUSTOMER_PAYMENT_METHOD_SELECT = {
+  id: true, label: true, bankName: true, accountName: true, accountNumber: true, currency: true, qrImage: true, instructions: true,
+} as const;
 
 const LINE_SELECT = {
   id: true, position: true, kind: true, description: true, quantity: true,
@@ -88,7 +112,11 @@ const INVOICE_SELECT = {
     select: { id: true, provider: true, providerReference: true, amountMinor: true, receivedAt: true, note: true, createdAt: true },
     orderBy: { receivedAt: 'desc' as const },
   },
-  paymentSubmissions: { select: { id: true, provider: true, providerReference: true, amountMinor: true, note: true, status: true, reviewedAt: true, rejectionReason: true, createdAt: true }, orderBy: { createdAt: 'desc' as const } },
+  paymentSubmissions: { select: {
+    id: true, provider: true, providerReference: true, amountMinor: true, note: true, status: true, reviewedAt: true, rejectionReason: true, createdAt: true,
+    // The reviewer needs to know which statement to check, and to see the customer's receipt.
+    paymentMethod: { select: { label: true, bankName: true, accountNumber: true, currency: true } }, receiptImage: true,
+  }, orderBy: { createdAt: 'desc' as const } },
 } as const;
 
 export class SchoolBillingService {
@@ -96,6 +124,44 @@ export class SchoolBillingService {
 
   plans() {
     return this.prisma.schoolBillingPlan.findMany({ orderBy: [{ active: 'desc' }, { amountMinor: 'asc' }] });
+  }
+
+  /** Every receiving account, archived ones included, for the operator console. */
+  paymentMethods() {
+    return this.prisma.schoolPaymentMethod.findMany({ orderBy: [{ active: 'desc' }, { currency: 'asc' }, { position: 'asc' }, { createdAt: 'asc' }] });
+  }
+
+  async createPaymentMethod(operatorId: string, value: unknown, context: PlatformActionContext) {
+    const input = paymentMethodInput.parse(value);
+    const { internalReason, ...data } = input;
+    if (data.qrImage) validateImageDataUrl(data.qrImage, MAX_QR_IMAGE_BYTES, 'QR code');
+    return this.prisma.$transaction(async (tx) => {
+      const method = await tx.schoolPaymentMethod.create({ data });
+      await this.audit(tx, operatorId, context, 'school_payment_method_created', method.id, internalReason, describePaymentMethod(method), 'SchoolPaymentMethod');
+      return method;
+    });
+  }
+
+  async updatePaymentMethod(methodId: string, operatorId: string, value: unknown, context: PlatformActionContext) {
+    const input = paymentMethodUpdateInput.parse(value);
+    const { internalReason, ...data } = input;
+    if (Object.keys(data).length === 0) throw new HttpError(400, 'At least one payment method field must be changed');
+    if (data.qrImage) validateImageDataUrl(data.qrImage, MAX_QR_IMAGE_BYTES, 'QR code');
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.schoolPaymentMethod.findUnique({ where: { id: methodId } });
+      if (!existing) throw new HttpError(404, 'Payment method not found');
+      const method = await tx.schoolPaymentMethod.update({ where: { id: methodId }, data });
+      await this.audit(tx, operatorId, context, 'school_payment_method_updated', method.id, internalReason, { before: describePaymentMethod(existing), after: describePaymentMethod(method) }, 'SchoolPaymentMethod');
+      return method;
+    });
+  }
+
+  /** Active receiving accounts in the given currencies, in the operator's chosen order. */
+  private activePaymentMethods(currencies: string[], take = 10) {
+    return this.prisma.schoolPaymentMethod.findMany({
+      where: { active: true, currency: { in: currencies } }, select: CUSTOMER_PAYMENT_METHOD_SELECT,
+      orderBy: [{ position: 'asc' }, { createdAt: 'asc' }], take,
+    });
   }
 
   async createPlan(operatorId: string, value: unknown, context: PlatformActionContext) {
@@ -174,7 +240,7 @@ export class SchoolBillingService {
             description: true, periodStart: true, periodEnd: true, dueAt: true, issuedAt: true, paidAt: true,
             lines: { select: LINE_SELECT, orderBy: { position: 'asc' } },
             payments: { select: { id: true, provider: true, amountMinor: true, receivedAt: true }, orderBy: { receivedAt: 'desc' } },
-            paymentSubmissions: { select: { id: true, provider: true, providerReference: true, amountMinor: true, note: true, status: true, reviewedAt: true, rejectionReason: true, createdAt: true }, orderBy: { createdAt: 'desc' } },
+            paymentSubmissions: { select: { id: true, provider: true, providerReference: true, amountMinor: true, note: true, status: true, reviewedAt: true, rejectionReason: true, createdAt: true, paymentMethod: { select: { label: true, bankName: true, accountNumber: true } } }, orderBy: { createdAt: 'desc' } },
           },
           orderBy: { issuedAt: 'desc' },
         },
@@ -185,7 +251,10 @@ export class SchoolBillingService {
       },
       orderBy: { name: 'asc' },
     });
+    // One query for every currency these schools are billed in; each school then sees only its own.
+    const methods = await this.activePaymentMethods([...new Set(schools.map(billedCurrency).filter((currency): currency is string => !!currency))]);
     return schools.map((school) => ({
+      paymentMethods: methods.filter((method) => method.currency === billedCurrency(school)),
       schoolId: school.id,
       schoolName: school.name,
       schoolStatus: school.status,
@@ -206,12 +275,21 @@ export class SchoolBillingService {
     const input = paymentSubmissionInput.parse(value);
     const invoice = await this.prisma.schoolInvoice.findFirst({
       where: { id: input.invoiceId, school: { installation: { is: { accountId } } } },
-      select: { id: true, status: true, amountMinor: true, paidMinor: true },
+      select: { id: true, status: true, amountMinor: true, paidMinor: true, currency: true },
     });
     if (!invoice) throw new HttpError(404, 'School invoice not found');
     if (invoice.status === 'PAID' || invoice.status === 'VOID') throw new HttpError(409, 'This invoice cannot receive a payment submission');
     if (input.amountMinor > invoice.amountMinor - invoice.paidMinor) throw new HttpError(409, 'Submitted amount exceeds the outstanding balance');
-    try { return await this.prisma.schoolPaymentSubmission.create({ data: { ...input, accountId } }); }
+    if (input.paymentMethodId) {
+      const method = await this.prisma.schoolPaymentMethod.findUnique({ where: { id: input.paymentMethodId }, select: { active: true, currency: true } });
+      // An archived account may no longer be one finance watches; another currency cannot settle this invoice.
+      if (!method || !method.active) throw new HttpError(409, 'That payment account is no longer accepting payments');
+      if (method.currency !== invoice.currency) throw new HttpError(409, `That account takes ${method.currency}; this invoice is in ${invoice.currency}`);
+    }
+    if (input.receiptImage) validateImageDataUrl(input.receiptImage, MAX_RECEIPT_IMAGE_BYTES, 'Receipt image');
+    // Selected explicitly so the receipt is not echoed back: the customer already has it, and it is
+    // by far the heaviest field on the row.
+    try { return await this.prisma.schoolPaymentSubmission.create({ data: { ...input, accountId }, select: { id: true, invoiceId: true, provider: true, providerReference: true, amountMinor: true, note: true, status: true, paymentMethodId: true, createdAt: true } }); }
     catch (error: any) { if (error?.code === 'P2002') throw new HttpError(409, 'This payment reference was already submitted'); throw error; }
   }
 
@@ -224,7 +302,9 @@ export class SchoolBillingService {
     if (approve) {
       await this.recordPayment(schoolId, submission.invoiceId, operatorId, {
         provider: submission.provider, providerReference: submission.providerReference, amountMinor: submission.amountMinor,
-        note: submission.note, receivedAt: now, internalReason: input.internalReason,
+        // The stored note is null when the customer left it empty, and recordPayment accepts a string
+        // or nothing -- never null -- so passing it on made confirming most payments fail validation.
+        note: submission.note ?? undefined, receivedAt: now, internalReason: input.internalReason,
       }, context, now);
     }
     return this.prisma.$transaction(async (tx) => {
@@ -255,6 +335,10 @@ export class SchoolBillingService {
       },
     });
     if (!school) return { managed: false, access: 'ACTIVE', checkedAt: now.toISOString(), warnings: [] };
+    // The school shows these beside its bill. Capped, because each carries a QR image and the whole
+    // summary is re-synced into the school's own database every hour.
+    const currency = billedCurrency(school);
+    const paymentMethods = await this.activePaymentMethods(currency ? [currency] : [], 5);
     const graceMs = 3 * 24 * 60 * 60 * 1000;
     // The grace clock begins only when the durable final OVERDUE notice is created. A delayed
     // alert job therefore cannot shorten the customer's promised three-day warning window.
@@ -276,6 +360,7 @@ export class SchoolBillingService {
       billing: {
         schoolName: school.name,
         currency: school.currency,
+        paymentMethods,
         billingPlan: school.billingPlan,
         outstandingMinor: school.invoices.reduce((sum, invoice) => sum + invoice.amountMinor - invoice.paidMinor, 0),
         invoices: school.invoices.map(({ notifications: _notifications, ...invoice }) => invoice),
@@ -577,9 +662,9 @@ export class SchoolBillingService {
     console.warn(JSON.stringify({ level: 'warn', message, ...detail }));
   }
 
-  private audit(tx: Prisma.TransactionClient, operatorId: string | null, context: PlatformActionContext, action: string, schoolId: string, reasonValue: string, metadata: Prisma.InputJsonValue) {
+  private audit(tx: Prisma.TransactionClient, operatorId: string | null, context: PlatformActionContext, action: string, schoolId: string, reasonValue: string, metadata: Prisma.InputJsonValue, targetType = 'CustomerSchool') {
     return tx.platformAuditEvent.create({ data: {
-      operatorId, action, success: true, targetType: 'CustomerSchool', targetId: schoolId,
+      operatorId, action, success: true, targetType, targetId: schoolId,
       reason: reasonValue, metadata, correlationId: context.correlationId, ip: context.ip, userAgent: context.userAgent,
     } });
   }
@@ -652,6 +737,24 @@ function safeMinorTotal(sum: number, amount: number) {
   const result = sum + amount;
   if (!Number.isSafeInteger(result) || result > 2_000_000_000) throw new HttpError(409, 'Invoice total exceeds the supported range');
   return result;
+}
+
+/** The currency a school is billed in: its own, or failing that its plan's. */
+function billedCurrency(school: { currency: string | null; billingPlan?: { currency: string } | null }) {
+  return school.currency || school.billingPlan?.currency || null;
+}
+
+/**
+ * The audit view of a receiving account. The QR image is too large for an audit row, so it is
+ * recorded by hash -- enough to show that the code customers scan was replaced, which is the change
+ * most worth seeing, since it redirects where money goes.
+ */
+function describePaymentMethod(method: { label: string; bankName: string; accountName: string; accountNumber: string; currency: string; qrImage: string | null; instructions: string | null; active: boolean; position: number }) {
+  return {
+    label: method.label, bankName: method.bankName, accountName: method.accountName, accountNumber: method.accountNumber,
+    currency: method.currency, active: method.active, position: method.position, hasInstructions: !!method.instructions,
+    qrImageSha256: method.qrImage ? createHash('sha256').update(method.qrImage).digest('hex').slice(0, 16) : null,
+  };
 }
 
 function escapeHtml(value: string) {

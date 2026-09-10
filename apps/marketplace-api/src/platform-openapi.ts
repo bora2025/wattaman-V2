@@ -84,6 +84,8 @@ export function platformOpenApi(baseUrl: string) {
       '/platform/v1/schools/{schoolId}/billing': path('get', { summary: 'Finance get school billing ledger', permission: 'school_billing.read' }),
       '/platform/v1/school-billing-plans': { get: operation({ summary: 'Finance list central school prices', permission: 'school_billing.read' }), post: operation({ summary: 'Finance create central school price', permission: 'school_billing.manage' }) },
       '/platform/v1/school-billing-plans/{planId}': { patch: operation({ summary: 'Finance update or archive a central school price', permission: 'school_billing.manage' }) },
+      '/platform/v1/school-payment-methods': { get: operation({ summary: 'Finance list the bank accounts that receive school payments', permission: 'school_billing.read' }), post: operation({ summary: 'Finance add a bank account that receives school payments', permission: 'school_billing.manage' }) },
+      '/platform/v1/school-payment-methods/{methodId}': { patch: operation({ summary: 'Finance update or archive a school payment receiving account', permission: 'school_billing.manage' }) },
       '/platform/v1/schools/{schoolId}/billing-plan': path('post', { summary: 'Finance assign central price to school', permission: 'school_billing.manage' }),
       '/platform/v1/schools/{schoolId}/plan-invoices': path('post', { summary: 'Finance invoice school from central price', permission: 'school_billing.manage' }),
       '/platform/v1/school-billing-alerts/dispatch': path('post', { summary: 'Finance dispatch due and overdue school alerts', permission: 'school_billing.manage' }),

@@ -723,9 +723,41 @@ model SchoolPaymentSubmission {
   createdAt             DateTime                      @default(now())
   updatedAt             DateTime                      @updatedAt
   invoice               SchoolInvoice                 @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  /// Which of Wattanam's receiving accounts the customer says they paid into, so finance knows
+  /// which bank statement to check before confirming the money arrived.
+  paymentMethodId       String?
+  paymentMethod         SchoolPaymentMethod?          @relation(fields: [paymentMethodId], references: [id], onDelete: Restrict)
+  /// The customer's transfer receipt as a PNG/JPEG/WebP data URL. Evidence for the reviewer only:
+  /// it never moves a balance -- only an approved submission's ledger payment does that.
+  receiptImage          String?
 
   @@unique([accountId, provider, providerReference])
   @@index([invoiceId, status, createdAt])
+}
+
+/// Where Wattanam receives manual payments: a bank account and, where the bank issued one, the QR
+/// code a customer scans to pay into it. Shown to customer schools beside every open invoice in the
+/// same currency. None of this is secret -- it exists to be handed to payers -- but changing it
+/// redirects money, so every change is an audited operator action and methods are archived, never
+/// deleted, because past submissions name the account they were paid into.
+model SchoolPaymentMethod {
+  id            String                    @id @default(uuid())
+  label         String
+  bankName      String
+  accountName   String
+  accountNumber String
+  currency      String
+  /// The bank-issued receiving QR (KHQR / ABA Pay and the like) as a PNG/JPEG/WebP data URL,
+  /// validated by its bytes rather than its declared type.
+  qrImage       String?
+  instructions  String?
+  active        Boolean                   @default(true)
+  position      Int                       @default(0)
+  createdAt     DateTime                  @default(now())
+  updatedAt     DateTime                  @updatedAt
+  submissions   SchoolPaymentSubmission[]
+
+  @@index([active, currency, position])
 }
 
 model SchoolBillingNotification {
