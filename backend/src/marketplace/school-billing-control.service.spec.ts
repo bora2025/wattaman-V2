@@ -40,3 +40,86 @@ describe('SchoolBillingControlService', () => {
     expect(prisma.marketplaceSchoolControl.upsert.mock.calls[0][0].update).not.toHaveProperty('access');
   });
 });
+
+describe('SchoolBillingControlService billing lifecycle notifications', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  const NOTIFICATIONS = [
+    { id: 'n-1', invoiceId: 'invoice-1', type: 'INVOICE_ISSUED', subject: 'Wattanam invoice WTN-1 issued' },
+    { id: 'n-2', invoiceId: 'invoice-1', type: 'DUE_SOON', subject: 'Wattanam invoice due soon: WTN-1' },
+    { id: 'n-3', invoiceId: 'invoice-1', type: 'PAYMENT_RECEIVED', subject: 'Payment received for WTN-1' },
+  ];
+
+  function harness(previous: any, notifications = NOTIFICATIONS, warnings: any[] = []) {
+    const tx = {
+      marketplaceSchoolControl: { findUnique: jest.fn().mockResolvedValue(previous), upsert: jest.fn() },
+      user: { findMany: jest.fn().mockResolvedValue([{ id: 'admin-1' }]) },
+      notification: { createMany: jest.fn() },
+    };
+    const prisma = {
+      installation: { findUnique: jest.fn().mockResolvedValue({ installationId: 'installation-1' }) },
+      $transaction: jest.fn((work: any) => work(tx)),
+    } as any;
+    jest.spyOn(global, 'fetch').mockResolvedValue({ ok: true, json: async () => ({
+      access: 'ACTIVE', reason: null, warnings,
+      billing: { schoolName: 'Bora School', outstandingMinor: 0, invoices: [], notifications },
+    }) } as any);
+    return { tx, prisma, keys: { sign: jest.fn().mockResolvedValue('signature') } as any };
+  }
+
+  const types = (tx: any) => tx.notification.createMany.mock.calls.flatMap((call: any) => call[0].data.map((row: any) => row.type));
+
+  /** The gap this closes: with email delivery switched off, these records were the only trace that
+   * a bill existed, and nothing surfaced them until the final notice three days before lock-out. */
+  it('raises a notification for each new invoice lifecycle record', async () => {
+    const { tx, prisma, keys } = harness({ access: 'ACTIVE', warningsJson: '[]', billingJson: '{}', lastVerifiedAt: new Date('2026-09-09T00:00:00.000Z') });
+    await new SchoolBillingControlService(prisma, keys).sync(new Date('2026-09-10T00:00:00.000Z'));
+
+    expect(types(tx)).toEqual([
+      'platform_billing_invoice_issued',
+      'platform_billing_due_soon',
+      'platform_billing_payment_received',
+    ]);
+    expect(tx.notification.createMany.mock.calls[0][0].data[0].message).toBe('Wattanam invoice WTN-1 issued');
+  });
+
+  // The marketplace keeps returning the same records on every hourly sync.
+  it('does not ring again for records already surfaced', async () => {
+    const previous = {
+      access: 'ACTIVE', warningsJson: '[]', lastVerifiedAt: new Date('2026-09-09T00:00:00.000Z'),
+      billingJson: JSON.stringify({ notifications: NOTIFICATIONS }),
+    };
+    const { tx, prisma, keys } = harness(previous);
+    await new SchoolBillingControlService(prisma, keys).sync(new Date('2026-09-10T00:00:00.000Z'));
+    expect(tx.notification.createMany).not.toHaveBeenCalled();
+  });
+
+  it('rings only for the record that is actually new', async () => {
+    const previous = {
+      access: 'ACTIVE', warningsJson: '[]', lastVerifiedAt: new Date('2026-09-09T00:00:00.000Z'),
+      billingJson: JSON.stringify({ notifications: [NOTIFICATIONS[0]] }),
+    };
+    const { tx, prisma, keys } = harness(previous);
+    await new SchoolBillingControlService(prisma, keys).sync(new Date('2026-09-10T00:00:00.000Z'));
+    expect(types(tx)).toEqual(['platform_billing_due_soon', 'platform_billing_payment_received']);
+  });
+
+  // Otherwise one overdue invoice rings twice, which teaches people to ignore both.
+  it('leaves OVERDUE to the final-notice path rather than duplicating it', async () => {
+    const warnings = [{ invoiceId: 'invoice-1', invoiceNumber: 'WTN-1', currency: 'USD', outstandingMinor: 1000, dueAt: '2026-09-01T00:00:00.000Z', suspendAt: '2026-09-13T00:00:00.000Z', final: true }];
+    const notifications = [{ id: 'n-9', invoiceId: 'invoice-1', type: 'OVERDUE', subject: 'Overdue Wattanam invoice WTN-1' }];
+    const { tx, prisma, keys } = harness({ access: 'ACTIVE', warningsJson: '[]', billingJson: '{}', lastVerifiedAt: new Date('2026-09-09T00:00:00.000Z') }, notifications, warnings);
+    await new SchoolBillingControlService(prisma, keys).sync(new Date('2026-09-10T00:00:00.000Z'));
+
+    expect(types(tx)).toEqual(['platform_billing_final_notice']);
+  });
+
+  // A school syncing for the first time should not have its back catalogue dumped into the bell.
+  it('records history silently on the first successful sync', async () => {
+    const { tx, prisma, keys } = harness(null);
+    await new SchoolBillingControlService(prisma, keys).sync(new Date('2026-09-10T00:00:00.000Z'));
+
+    expect(tx.notification.createMany).not.toHaveBeenCalled();
+    expect(tx.marketplaceSchoolControl.upsert.mock.calls[0][0].create.billingJson).toContain('n-1');
+  });
+});
