@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { verify } from 'node:crypto';
+import { createHash, verify } from 'node:crypto';
 import { z } from 'zod';
 import { HttpError } from './http-error';
 import { canonicalJson } from './signing';
@@ -34,6 +34,15 @@ export class InstallationEntitlementAccessService {
     return this.authenticate(params, { installationId: params.installationId, ts: params.ts }, now, true);
   }
 
+  /**
+   * A school telling us it paid. The signature covers every field it sends, so nothing between the
+   * school and here can change the amount, the reference, or the receipt it attached. A suspended
+   * school is let through, as for the bill sync: it is exactly the school that needs to pay.
+   */
+  async authenticateSchoolPayment(params: { installationId: string; ts: string; signature: string }, body: Record<string, unknown>, now = new Date()) {
+    return this.authenticate(params, schoolPaymentSignedPayload(params.installationId, params.ts, body), now, true);
+  }
+
   async authorizeDownload(params: { installationId: string; sha256: string; pluginId: string; ts: string; signature: string }, now = new Date()) {
     const { registrationId } = await this.authenticate(params, { installationId: params.installationId, sha256: params.sha256, ts: params.ts }, now);
     const entitlement = await this.prisma.installationEntitlement.findUnique({ where: { installationId_pluginId: { installationId: registrationId, pluginId: params.pluginId } } });
@@ -64,4 +73,25 @@ export class InstallationEntitlementAccessService {
     if (!valid) throw new HttpError(401, 'Signature is invalid');
     return { registrationId: registration.id };
   }
+}
+
+/**
+ * The exact payload a school signs when it tells us it paid. It must stay identical to
+ * schoolPaymentSignedPayload in backend/src/marketplace/school-payment-signing.ts, or every
+ * submission fails verification -- scripts/school-payment-from-school-live-drill.js signs with the
+ * school's code and verifies with this one to catch any drift.
+ *
+ * The receipt is covered by its SHA-256 rather than inline: that binds the image just as firmly
+ * without canonicalising a couple of hundred kilobytes into the signed bytes. Every field signs as a
+ * string, so the two apps' canonical-JSON implementations cannot disagree about nulls or numbers.
+ */
+export function schoolPaymentSignedPayload(installationId: string, ts: string, body: Record<string, unknown>) {
+  const text = (value: unknown) => (value === undefined || value === null ? '' : String(value));
+  return {
+    purpose: 'school-payment-submission', installationId, ts,
+    invoiceId: text(body.invoiceId), provider: text(body.provider), providerReference: text(body.providerReference),
+    amountMinor: text(body.amountMinor), paymentMethodId: text(body.paymentMethodId), note: text(body.note),
+    submittedBy: text(body.submittedBy),
+    receiptSha256: typeof body.receiptImage === 'string' ? createHash('sha256').update(body.receiptImage).digest('hex') : '',
+  };
 }

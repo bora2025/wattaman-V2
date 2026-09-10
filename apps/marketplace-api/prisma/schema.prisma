@@ -190,6 +190,11 @@ enum SchoolPaymentSubmissionStatus {
   REJECTED
 }
 
+enum SchoolPaymentSubmissionSource {
+  PORTAL
+  SCHOOL
+}
+
 enum SchoolProvisioningStatus {
   DRAFT
   PENDING_APPROVAL
@@ -711,7 +716,9 @@ model SchoolInvoiceLine {
 model SchoolPaymentSubmission {
   id                   String                        @id @default(uuid())
   invoiceId            String
-  accountId            String
+  /// Null when the school's own admin panel sent it and the school has no marketplace account -- a
+  /// school an operator provisioned with an enrollment token may never have one.
+  accountId            String?
   provider              String
   providerReference     String
   amountMinor           Int
@@ -730,8 +737,18 @@ model SchoolPaymentSubmission {
   /// The customer's transfer receipt as a PNG/JPEG/WebP data URL. Evidence for the reviewer only:
   /// it never moves a balance -- only an approved submission's ledger payment does that.
   receiptImage          String?
+  /// PORTAL when a customer submitted it in the marketplace portal; SCHOOL when the school's own
+  /// admin panel sent it, signed with the school's installation key.
+  source                     SchoolPaymentSubmissionSource @default(PORTAL)
+  installationRegistrationId String?
+  installationRegistration   InstallationRegistration?     @relation(fields: [installationRegistrationId], references: [id], onDelete: SetNull)
+  /// Who sent it, as the school stated it. For the reviewer to read, never for authorisation.
+  submittedBy                String?
 
   @@unique([accountId, provider, providerReference])
+  // One transfer reference per invoice, whichever door it came through. The account-scoped rule
+  // above cannot see school-sent rows, whose account may be null.
+  @@unique([invoiceId, provider, providerReference])
   @@index([invoiceId, status, createdAt])
 }
 
@@ -896,6 +913,7 @@ model InstallationRegistration {
   grantRequests    InstallationMarketplaceGrantRequest[]
   grant            InstallationMarketplaceGrant?
   pluginRequests   SchoolPluginRequest[]
+  paymentSubmissions SchoolPaymentSubmission[]
 }
 
 model InstallationRegistrationKey {

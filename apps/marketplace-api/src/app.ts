@@ -271,6 +271,15 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
       response.json(await schoolBilling.installationControl(authenticated.registrationId));
     } catch (error) { next(error); }
   });
+  // The school's own admin panel reporting a payment, signed with its installation key. No
+  // marketplace session: the key is the proof of which school is speaking.
+  app.post('/v1/installations/:installationId/school-billing/payment-submissions', async (request, response, next) => {
+    try {
+      const { ts, signature, ...submission } = (request.body && typeof request.body === 'object' ? request.body : {}) as Record<string, unknown>;
+      const authenticated = await entitlementAccess.authenticateSchoolPayment({ installationId: request.params.installationId, ts: String(ts ?? ''), signature: String(signature ?? '') }, submission);
+      response.status(201).json(await schoolBilling.submitPaymentFromSchool(authenticated.registrationId, submission));
+    } catch (error) { next(error); }
+  });
   app.get('/v1/installations/:installationId/entitlements/:pluginId', async (request, response, next) => {
     try {
       response.json(await entitlementAccess.getOne({

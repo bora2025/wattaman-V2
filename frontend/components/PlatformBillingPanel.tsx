@@ -3,9 +3,11 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../lib/api';
+import { imageFileToDataUrl } from '../lib/image-upload';
 
 type InvoiceLine = { id: string; kind: string; description: string; quantity: number; amountMinor: number };
-type Invoice = { id: string; invoiceNumber: string; status: string; currency: string; amountMinor: number; paidMinor: number; description: string; issuedAt: string; dueAt: string; paidAt?: string | null; lines?: InvoiceLine[] };
+type SubmissionSummary = { id: string; status: string; providerReference: string; amountMinor: number; createdAt: string; rejectionReason?: string | null };
+type Invoice = { id: string; invoiceNumber: string; status: string; currency: string; amountMinor: number; paidMinor: number; description: string; issuedAt: string; dueAt: string; paidAt?: string | null; lines?: InvoiceLine[]; paymentSubmissions?: SubmissionSummary[] };
 type Notice = { id: string; subject: string; message: string; createdAt: string; type: string };
 /** A Wattanam receiving account, synced from the marketplace with the rest of the bill. */
 type PaymentAccount = { id: string; label: string; bankName: string; accountName: string; accountNumber: string; currency: string; qrImage?: string | null; instructions?: string | null };
@@ -35,6 +37,15 @@ export function money(amountMinor = 0, currency = 'USD') {
  * that fails keeps the last good figures on screen and says they may be stale, rather than
  * replacing a correct balance with an error.
  */
+/** The latest payment the school submitted against an invoice, as the reviewer left it. */
+function submissionNote(invoice: Invoice) {
+  const latest = invoice.paymentSubmissions?.[0];
+  if (!latest) return null;
+  if (latest.status === 'PENDING') return <div className="text-xs font-medium text-indigo-700">Payment {latest.providerReference} submitted — awaiting confirmation</div>;
+  if (latest.status === 'REJECTED') return <div className="text-xs text-red-700">Payment {latest.providerReference} not accepted{latest.rejectionReason ? `: ${latest.rejectionReason}` : ''}</div>;
+  return null;
+}
+
 export default function PlatformBillingPanel({ variant = 'page' }: { variant?: 'page' | 'section' }) {
   // null = still loading; 'unsynced' = this school has never completed a marketplace sync.
   const [state, setState] = useState<BillingState | 'unsynced' | null>(null);
@@ -44,6 +55,16 @@ export default function PlatformBillingPanel({ variant = 'page' }: { variant?: '
   const [refreshedAt, setRefreshedAt] = useState<Date | null>(null);
   const hasState = useRef(false);
   const markedRead = useRef(false);
+  // The "tell us you paid" form. Declared here with the other hooks, ahead of the early returns; its
+  // defaults come from the loaded bill at render time.
+  const [payInvoiceId, setPayInvoiceId] = useState('');
+  const [payMethodId, setPayMethodId] = useState('');
+  const [payAmount, setPayAmount] = useState('');
+  const [payReference, setPayReference] = useState('');
+  const [payNote, setPayNote] = useState('');
+  const [payReceipt, setPayReceipt] = useState('');
+  const [payBusy, setPayBusy] = useState(false);
+  const [payMessage, setPayMessage] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null);
 
   const load = useCallback(async () => {
     const response = await apiFetch('/api/admin/marketplace/billing-control');
@@ -131,16 +152,73 @@ export default function PlatformBillingPanel({ variant = 'page' }: { variant?: '
       // Several lines: they are the description. The headline alone ("Standard (monthly)") read
       // as the whole bill beside a balance that also carried a plugin.
       ? <ul className="space-y-0.5">{invoice.lines!.map(line => <li key={line.id}>{line.description}{line.quantity > 1 ? ` × ${line.quantity}` : ''} <span className="text-slate-500">— {money(line.amountMinor, invoice.currency)}</span></li>)}</ul>
-      : invoice.description}</td><td>{new Date(invoice.dueAt).toLocaleDateString()}</td><td>{isOverdue(invoice) ? <span className="font-semibold text-red-700">overdue</span> : invoice.status.toLowerCase().replaceAll('_', ' ')}</td><td className="text-right font-semibold">{money(invoice.amountMinor - invoice.paidMinor, invoice.currency)}</td></tr>)}</tbody></table></div>;
+      : invoice.description}</td><td>{new Date(invoice.dueAt).toLocaleDateString()}</td><td>{isOverdue(invoice) ? <span className="font-semibold text-red-700">overdue</span> : invoice.status.toLowerCase().replaceAll('_', ' ')}{submissionNote(invoice)}</td><td className="text-right font-semibold">{money(invoice.amountMinor - invoice.paidMinor, invoice.currency)}</td></tr>)}</tbody></table></div>;
 
   const accounts = state.billing?.paymentMethods || [];
+  const openInvoices = invoices.filter(isOpen);
+  const payInvoice = openInvoices.find((invoice) => invoice.id === payInvoiceId) || nextDue;
+  const chosenMethodId = payMethodId || (accounts.length === 1 ? accounts[0].id : '');
+  const shownAmount = payAmount !== '' ? payAmount : (payInvoice ? ((payInvoice.amountMinor - payInvoice.paidMinor) / 100).toFixed(2) : '');
+
+  async function pickReceipt(file?: File) {
+    if (!file) return;
+    try { setPayReceipt(await imageFileToDataUrl(file, { maxDimension: 1200, maxBytes: 150 * 1024 })); }
+    catch (cause) { setPayMessage({ tone: 'error', text: cause instanceof Error ? cause.message : 'Could not read that image' }); }
+  }
+
+  /**
+   * Sends the payment through this school's own backend, which signs it with the installation key --
+   * no marketplace account or second sign-in needed. On success the backend has already re-synced,
+   * so reloading shows the payment as awaiting confirmation.
+   */
+  async function submitPayment(event: React.FormEvent) {
+    event.preventDefault(); setPayMessage(null);
+    const amountMinor = Math.round(Number(shownAmount) * 100);
+    if (!payInvoice) return setPayMessage({ tone: 'error', text: 'There is no open invoice to pay.' });
+    if (!chosenMethodId) return setPayMessage({ tone: 'error', text: 'Choose the account you paid into, so finance knows which bank statement to check.' });
+    if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0) return setPayMessage({ tone: 'error', text: 'Enter the amount you paid.' });
+    if (payReference.trim().length < 3) return setPayMessage({ tone: 'error', text: 'Enter the transaction reference from your bank receipt.' });
+    setPayBusy(true);
+    try {
+      const response = await apiFetch('/api/admin/marketplace/billing-control/payment-submissions', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          invoiceId: payInvoice.id, paymentMethodId: chosenMethodId, amountMinor, providerReference: payReference.trim(),
+          ...(payNote.trim() ? { note: payNote.trim() } : {}), ...(payReceipt ? { receiptImage: payReceipt } : {}),
+        }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(Array.isArray(body.message) ? body.message.join('. ') : body.message || 'The payment could not be submitted');
+      setPayReference(''); setPayNote(''); setPayReceipt(''); setPayAmount('');
+      setPayMessage({ tone: 'ok', text: 'Submitted. Wattanam finance will confirm it against the bank statement, and this bill updates when they do.' });
+      await load();
+    } catch (cause) { setPayMessage({ tone: 'error', text: cause instanceof Error ? cause.message : 'The payment could not be submitted' }); }
+    finally { setPayBusy(false); }
+  }
+
+  // Any edit clears the last message, so an error about a field the admin has since fixed does not linger.
+  const paymentForm = payInvoice ? <form className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm" onSubmit={submitPayment} onChange={() => setPayMessage(null)} aria-labelledby="tell-us-you-paid">
+    <h4 id="tell-us-you-paid" className="font-semibold text-slate-800">Tell us you paid</h4>
+    <p className="mt-1 text-xs text-slate-500">After transferring, enter the transaction reference from your bank receipt. Attaching the receipt screenshot helps finance confirm it faster.</p>
+    <div className="mt-3 grid gap-3 md:grid-cols-2">
+      {openInvoices.length > 1 && <select className="rounded-lg border px-3 py-2" aria-label="Invoice you paid" value={payInvoice.id} onChange={(event) => { setPayInvoiceId(event.target.value); setPayAmount(''); }}>{openInvoices.map((invoice) => <option key={invoice.id} value={invoice.id}>{invoice.invoiceNumber} · {money(invoice.amountMinor - invoice.paidMinor, invoice.currency)}</option>)}</select>}
+      {accounts.length > 1 && <select className="rounded-lg border px-3 py-2" aria-label="Account you paid into" value={chosenMethodId} onChange={(event) => setPayMethodId(event.target.value)}><option value="">Account you paid into…</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.label} · {account.accountNumber}</option>)}</select>}
+      <label className="text-xs text-slate-600">Amount paid<input className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" inputMode="decimal" value={shownAmount} onChange={(event) => setPayAmount(event.target.value)} /></label>
+      <label className="text-xs text-slate-600">Bank transaction reference<input className="mt-1 w-full rounded-lg border px-3 py-2 font-mono text-sm" placeholder="From your bank receipt" value={payReference} onChange={(event) => setPayReference(event.target.value)} /></label>
+      <label className="text-xs text-slate-600 md:col-span-2">Note for finance (optional)<textarea className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" value={payNote} onChange={(event) => setPayNote(event.target.value)} maxLength={2000} /></label>
+      <div className="flex flex-wrap items-start gap-3 md:col-span-2"><label className="btn btn-secondary cursor-pointer">{payReceipt ? 'Replace receipt screenshot' : 'Attach receipt screenshot (optional)'}<input className="sr-only" type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => { pickReceipt(event.target.files?.[0]); event.target.value = ''; }} /></label>{payReceipt && <><img src={payReceipt} alt="Receipt to be submitted" className="max-h-32 rounded border bg-white object-contain" /><button type="button" className="btn btn-secondary btn-sm" onClick={() => setPayReceipt('')}>Remove</button></>}</div>
+    </div>
+    {payMessage && <p role={payMessage.tone === 'error' ? 'alert' : 'status'} className={`mt-3 text-sm ${payMessage.tone === 'error' ? 'text-red-700' : 'text-emerald-700'}`}>{payMessage.text}</p>}
+    <button className="btn btn-primary mt-3" disabled={payBusy}>{payBusy ? 'Submitting…' : 'Submit payment for confirmation'}</button>
+  </form> : null;
   // Shown whenever something is owed -- including to a suspended school, which needs it most.
   const howToPay = outstanding > 0 && accounts.length > 0 ? <div className="space-y-3">
-    <p className="text-sm text-slate-600">Pay into one of these accounts{nextDue ? <> and put <strong className="font-mono">{nextDue.invoiceNumber}</strong> in the transfer remark</> : null}, so finance can match the transfer to this bill. Then submit the bank reference in your <Link className="font-semibold text-indigo-700 underline" href="/marketplace">marketplace account</Link>.</p>
+    <p className="text-sm text-slate-600">Pay into one of these accounts{nextDue ? <> and put <strong className="font-mono">{nextDue.invoiceNumber}</strong> in the transfer remark</> : null}, so finance can match the transfer to this bill. Then tell us below, and Wattanam finance confirms it against the bank statement.</p>
     <div className="grid gap-3 md:grid-cols-2">{accounts.map(account => <div key={account.id} className="flex gap-4 rounded-xl border bg-white p-4 text-sm">
       <div className="min-w-0 flex-1"><strong>{account.label}</strong><div className="text-slate-600">{account.bankName}</div><div className="text-slate-600">{account.accountName}</div><div className="mt-1 font-mono text-base">{account.accountNumber}</div>{account.instructions && <p className="mt-2 text-xs text-slate-500">{account.instructions}</p>}</div>
       {account.qrImage && <figure className="shrink-0 text-center"><img src={account.qrImage} alt={'QR code to pay ' + account.label} className="h-32 w-32 rounded-lg border bg-white object-contain" /><figcaption className="mt-1 text-xs text-slate-500">Scan with your bank app</figcaption></figure>}
     </div>)}</div>
+    {paymentForm}
   </div> : null;
 
   const shownNotices = variant === 'section' ? notices.slice(0, 3) : notices;

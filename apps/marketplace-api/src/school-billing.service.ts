@@ -92,6 +92,8 @@ const paymentMethodInput = z.object({
   internalReason: reason,
 }).strict();
 const paymentMethodUpdateInput = paymentMethodInput.partial().extend({ internalReason: reason }).strict();
+/** What the school's own admin panel sends: the portal's fields, plus who sent it. */
+const schoolPaymentSubmissionInput = paymentSubmissionInput.extend({ submittedBy: z.string().trim().min(1).max(200).optional() }).strict();
 
 /** What a payer is shown. Everything here is meant to be handed out; nothing operator-only. */
 const CUSTOMER_PAYMENT_METHOD_SELECT = {
@@ -115,7 +117,7 @@ const INVOICE_SELECT = {
   paymentSubmissions: { select: {
     id: true, provider: true, providerReference: true, amountMinor: true, note: true, status: true, reviewedAt: true, rejectionReason: true, createdAt: true,
     // The reviewer needs to know which statement to check, and to see the customer's receipt.
-    paymentMethod: { select: { label: true, bankName: true, accountNumber: true, currency: true } }, receiptImage: true,
+    paymentMethod: { select: { label: true, bankName: true, accountNumber: true, currency: true } }, receiptImage: true, source: true, submittedBy: true,
   }, orderBy: { createdAt: 'desc' as const } },
 } as const;
 
@@ -273,8 +275,33 @@ export class SchoolBillingService {
 
   async submitPayment(accountId: string, value: unknown) {
     const input = paymentSubmissionInput.parse(value);
+    return this.createSubmission(input, { school: { installation: { is: { accountId } } } }, { accountId, source: 'PORTAL' });
+  }
+
+  /**
+   * A submission sent by the school's own admin panel, signed with its installation key -- the same
+   * proof of identity it uses to fetch its bill -- so no marketplace account or second sign-in is
+   * needed. That matters: a school an operator provisioned with an enrollment token may never have
+   * a marketplace account, and it still has to be able to say it paid.
+   */
+  async submitPaymentFromSchool(registrationId: string, value: unknown) {
+    const { submittedBy, ...input } = schoolPaymentSubmissionInput.parse(value);
+    const registration = await this.prisma.installationRegistration.findUnique({ where: { id: registrationId }, select: { id: true, accountId: true, customerSchoolId: true } });
+    if (!registration?.customerSchoolId) throw new HttpError(409, 'This installation is not linked to a customer school');
+    // Scoped to the school the signing key belongs to: one school cannot report a payment against
+    // another school's invoice.
+    return this.createSubmission(input, { customerSchoolId: registration.customerSchoolId }, {
+      accountId: registration.accountId, installationRegistrationId: registration.id, source: 'SCHOOL', submittedBy: submittedBy ?? null,
+    });
+  }
+
+  private async createSubmission(
+    input: z.infer<typeof paymentSubmissionInput>,
+    invoiceScope: Prisma.SchoolInvoiceWhereInput,
+    origin: { accountId: string | null; source: 'PORTAL' | 'SCHOOL'; installationRegistrationId?: string; submittedBy?: string | null },
+  ) {
     const invoice = await this.prisma.schoolInvoice.findFirst({
-      where: { id: input.invoiceId, school: { installation: { is: { accountId } } } },
+      where: { id: input.invoiceId, ...invoiceScope },
       select: { id: true, status: true, amountMinor: true, paidMinor: true, currency: true },
     });
     if (!invoice) throw new HttpError(404, 'School invoice not found');
@@ -289,7 +316,7 @@ export class SchoolBillingService {
     if (input.receiptImage) validateImageDataUrl(input.receiptImage, MAX_RECEIPT_IMAGE_BYTES, 'Receipt image');
     // Selected explicitly so the receipt is not echoed back: the customer already has it, and it is
     // by far the heaviest field on the row.
-    try { return await this.prisma.schoolPaymentSubmission.create({ data: { ...input, accountId }, select: { id: true, invoiceId: true, provider: true, providerReference: true, amountMinor: true, note: true, status: true, paymentMethodId: true, createdAt: true } }); }
+    try { return await this.prisma.schoolPaymentSubmission.create({ data: { ...input, ...origin }, select: { id: true, invoiceId: true, provider: true, providerReference: true, amountMinor: true, note: true, status: true, paymentMethodId: true, source: true, createdAt: true } }); }
     catch (error: any) { if (error?.code === 'P2002') throw new HttpError(409, 'This payment reference was already submitted'); throw error; }
   }
 
@@ -330,6 +357,8 @@ export class SchoolBillingService {
           id: true, invoiceNumber: true, status: true, currency: true, amountMinor: true, paidMinor: true,
           description: true, issuedAt: true, paidAt: true, dueAt: true,
           lines: { select: LINE_SELECT, orderBy: { position: 'asc' } },
+          // So the school can show "submitted, awaiting confirmation" beside the invoice it paid.
+          paymentSubmissions: { select: { id: true, status: true, providerReference: true, amountMinor: true, createdAt: true, rejectionReason: true }, orderBy: { createdAt: 'desc' }, take: 5 },
           notifications: { where: { type: 'OVERDUE' }, select: { createdAt: true }, orderBy: { createdAt: 'asc' }, take: 1 },
         }, orderBy: { dueAt: 'asc' } },
       },

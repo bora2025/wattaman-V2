@@ -1,8 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadGatewayException, BadRequestException, HttpException, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../database/prisma.service';
 import { InstallationKeyService } from './installation-key.service';
 import { readMarketplaceIdentityConfig } from './marketplace-identity-config';
+import { schoolPaymentSignedPayload } from './school-payment-signing';
 
 type Warning = { invoiceId: string; invoiceNumber: string; currency: string; outstandingMinor: number; dueAt: string; suspendAt: string; final: boolean };
 type BillingNotification = { id: string; invoiceId?: string | null; type: string; subject?: string | null; message?: string | null; createdAt?: string };
@@ -110,6 +111,47 @@ export class SchoolBillingControlService {
     return { marked: result.count };
   }
 
+  /**
+   * The school telling the marketplace it paid, signed with its installation key -- the same proof
+   * of identity the hourly sync uses -- so an administrator needs no marketplace account and no
+   * second sign-in. The signature covers every field, the receipt by its hash, so the request cannot
+   * be replayed with a different amount or reference. Afterwards the bill is re-synced, so the
+   * payment shows as awaiting confirmation straight away rather than at the next hour.
+   */
+  async submitPayment(value: unknown, user: { userId: string; role: string }) {
+    const config = readMarketplaceIdentityConfig();
+    if (!config) throw new ServiceUnavailableException('Marketplace integration is not configured for this school');
+    const installation = await this.prisma.installation.findUnique({ where: { id: 'singleton' }, select: { installationId: true } });
+    if (!installation) throw new BadRequestException('This school has not completed installation');
+    const input = parsePaymentSubmission(value);
+    const admin = await this.prisma.user.findUnique({ where: { id: user.userId }, select: { name: true } });
+    const submission = {
+      invoiceId: input.invoiceId, provider: 'bank-transfer', providerReference: input.providerReference, amountMinor: input.amountMinor,
+      ...(input.paymentMethodId ? { paymentMethodId: input.paymentMethodId } : {}),
+      ...(input.note ? { note: input.note } : {}),
+      ...(input.receiptImage ? { receiptImage: input.receiptImage } : {}),
+      submittedBy: `${admin?.name || 'School administrator'} (${user.role})`,
+    };
+    const ts = String(Math.floor(Date.now() / 1000));
+    const signature = await this.keys.sign(schoolPaymentSignedPayload(installation.installationId, ts, submission));
+    let response: Response;
+    try {
+      response = await fetch(new URL(`/v1/installations/${installation.installationId}/school-billing/payment-submissions`, config.marketplaceUrl), {
+        method: 'POST', redirect: 'error', signal: AbortSignal.timeout(config.requestTimeoutMs),
+        headers: { 'content-type': 'application/json', accept: 'application/json' }, body: JSON.stringify({ ...submission, ts, signature }),
+      });
+    } catch {
+      throw new BadGatewayException('The marketplace could not be reached, so the payment was not submitted. Try again shortly.');
+    }
+    const body = (await response.json().catch(() => ({}))) as { error?: string };
+    // A refusal the school can act on -- a reference already used, an amount over the balance -- is
+    // passed through with its message. A signature refusal or a server fault is not theirs to fix.
+    if (response.status >= 400 && response.status < 500 && response.status !== 401) throw new HttpException(body.error || 'The marketplace refused this payment submission', response.status);
+    if (!response.ok) throw new BadGatewayException(body.error || 'The marketplace could not record this payment submission');
+    await this.sync().catch(() => undefined);
+    return body;
+  }
+
   async status() {
     const state = await this.prisma.marketplaceSchoolControl.findUnique({ where: { id: 'singleton' } });
     if (!state) return null;
@@ -132,4 +174,19 @@ function safeNotificationIds(value: string): string[] {
   return Array.isArray(billing.notifications)
     ? billing.notifications.map((item) => item?.id).filter((id): id is string => typeof id === 'string')
     : [];
+}
+
+/** Light checks with messages an administrator can act on. The marketplace validates authoritatively. */
+function parsePaymentSubmission(value: unknown) {
+  const body = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
+  const text = (key: string) => (typeof body[key] === 'string' ? (body[key] as string).trim() : '');
+  const invoiceId = text('invoiceId');
+  const providerReference = text('providerReference');
+  const amountMinor = body.amountMinor;
+  if (!invoiceId) throw new BadRequestException('Choose the invoice you paid');
+  if (typeof amountMinor !== 'number' || !Number.isSafeInteger(amountMinor) || amountMinor <= 0) throw new BadRequestException('Enter the amount you paid');
+  if (providerReference.length < 3) throw new BadRequestException('Enter the transaction reference from your bank receipt');
+  const receiptImage = typeof body.receiptImage === 'string' && body.receiptImage ? body.receiptImage : undefined;
+  if (receiptImage && !/^data:image\/(png|jpeg|webp);base64,/.test(receiptImage)) throw new BadRequestException('The receipt must be a PNG, JPEG or WebP image');
+  return { invoiceId, providerReference, amountMinor, paymentMethodId: text('paymentMethodId') || undefined, note: text('note') || undefined, receiptImage };
 }
