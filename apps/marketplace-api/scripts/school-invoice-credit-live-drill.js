@@ -89,6 +89,11 @@ async function main() {
   const settled = await prisma.marketplaceOrder.findUnique({ where: { id: order.id } });
   check('paying the invoice marks the order paid', settled.status === 'PAID', settled.status);
 
+  // 4b. And the publisher earns their share at that moment -- not when the licence was granted.
+  const revenue = await prisma.publisherRevenueEntry.findMany({ where: { publisherId: publisher.id, type: 'SALE' } });
+  check('the publisher share is recorded when the money arrives', revenue.length === 1 && revenue[0].grossMinor === 12000, `entries=${revenue.length}`);
+  check('the platform fee is taken out of the publisher net', revenue[0] && revenue[0].feeMinor === 1800 && revenue[0].netMinor === 10200, revenue[0] ? `fee=${revenue[0].feeMinor} net=${revenue[0].netMinor}` : 'none');
+
   // 5. Voiding an invoice withdraws the licence it granted. A fresh purchase, since the first
   //    invoice is now paid and cannot be voided.
   const order2 = await commerce.createOrder({

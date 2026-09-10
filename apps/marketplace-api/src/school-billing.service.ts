@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { HttpError } from './http-error';
 import { PlatformActionContext } from './platform-context';
 import { DisabledTransactionalEmailService, TransactionalEmailService } from './transactional-email.service';
+import { recordSaleEntries } from './publisher-governance.service';
 
 const reason = z.string().trim().min(3).max(5000);
 
@@ -512,10 +513,14 @@ export class SchoolBillingService {
         const billedOrderLines = await tx.schoolInvoiceLine.findMany({ where: { invoiceId, kind: 'PLUGIN', sourceOrderLineId: { not: null } }, select: { sourceOrderLineId: true } });
         const orderLineIds = billedOrderLines.map((line) => line.sourceOrderLineId!).filter(Boolean);
         if (orderLineIds.length) {
-          await tx.marketplaceOrder.updateMany({
+          const closing = await tx.marketplaceOrder.findMany({
             where: { settlementMode: 'INVOICE', status: 'PENDING', lines: { some: { id: { in: orderLineIds } } } },
-            data: { status: 'PAID' },
+            select: { id: true, currency: true, lines: { select: { id: true, unitPriceMinor: true, plugin: { select: { publisherId: true } } } } },
           });
+          await tx.marketplaceOrder.updateMany({ where: { id: { in: closing.map((order) => order.id) } }, data: { status: 'PAID' } });
+          // A plugin bought on account is licensed before the money arrives, but the publisher's
+          // share is only earned once it does -- which is here.
+          for (const order of closing) await recordSaleEntries(tx, order);
         }
       }
       await this.audit(tx, operatorId, context, 'school_payment_recorded', schoolId, input.internalReason, {

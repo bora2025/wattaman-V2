@@ -54,6 +54,7 @@ describe('marketplace commerce invariants', () => {
     const line = {
       id: 'line-1', pluginId: 'official.attendance', unitPriceMinor: 2500, entitlement: null,
       price: { amountMinor: 2500, licensedMajor: 1, licenseDays: 365, updatesDays: 180 },
+      plugin: { publisherId: 'publisher-1' },
     };
     const tx = {
       marketplacePayment: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'payment-1', orderId: ids.order, status: 'SUCCEEDED', amountMinor: 2500 }) },
@@ -62,6 +63,7 @@ describe('marketplace commerce invariants', () => {
         update: jest.fn().mockResolvedValue({}),
       },
       installationEntitlement: { upsert: jest.fn().mockResolvedValue({ id: 'entitlement-1' }) },
+      publisherRevenueEntry: { upsert: jest.fn().mockResolvedValue({ id: 'revenue-1' }) },
       schoolPluginRequest: { findUnique: jest.fn().mockResolvedValue(null), update: jest.fn() },
       platformAuditEvent: { create: jest.fn() },
     };
@@ -77,6 +79,7 @@ describe('marketplace commerce invariants', () => {
     const line = {
       id: 'line-1', pluginId: 'official.attendance', unitPriceMinor: 2500, entitlement: null,
       price: { amountMinor: 2500, licensedMajor: 1, licenseDays: 365, updatesDays: 180 },
+      plugin: { publisherId: 'publisher-1' },
     };
     const tx = {
       marketplacePayment: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'payment-1', orderId: ids.order, status: 'SUCCEEDED', amountMinor: 2500 }) },
@@ -85,6 +88,7 @@ describe('marketplace commerce invariants', () => {
         update: jest.fn().mockResolvedValue({}),
       },
       installationEntitlement: { upsert: jest.fn().mockResolvedValue({ id: 'entitlement-1' }) },
+      publisherRevenueEntry: { upsert: jest.fn().mockResolvedValue({ id: 'revenue-1' }) },
       schoolPluginRequest: {
         findUnique: jest.fn().mockResolvedValue({ id: 'request-1', status: 'APPROVED' }),
         update: jest.fn().mockResolvedValue({}),
@@ -103,7 +107,7 @@ describe('marketplace commerce invariants', () => {
       marketplacePayment: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn() },
       marketplaceOrder: { findUnique: jest.fn().mockResolvedValue({
         id: ids.order, accountId: ids.account, installationId: ids.installation, status: 'PENDING', totalMinor: 2600,
-        account: {}, installation: { installationId: 'school-public-id' }, lines: [{ id: 'line-1', pluginId: 'official.attendance', unitPriceMinor: 2500, entitlement: null, price: { amountMinor: 2500 } }],
+        account: {}, installation: { installationId: 'school-public-id' }, lines: [{ id: 'line-1', pluginId: 'official.attendance', unitPriceMinor: 2500, entitlement: null, price: { amountMinor: 2500 }, plugin: { publisherId: 'publisher-1' } }],
       }) },
     };
     const service = new CommerceService(prismaWith(tx), config());
@@ -119,6 +123,7 @@ describe('marketplace commerce invariants', () => {
         lines: [{ entitlement: { id: 'entitlement-1' } }],
       }), update: jest.fn() },
       installationEntitlement: { upsert: jest.fn() },
+      publisherRevenueEntry: { upsert: jest.fn() },
     };
     const service = new CommerceService(prismaWith(tx), config());
     await expect(service.settleManualPayment({ orderId: ids.order, providerReference: 'invoice-2026-001' }))
@@ -262,6 +267,7 @@ describe('CommerceService invoice settlement', () => {
       installationRegistration: { findUnique: jest.fn().mockResolvedValue({ id: INSTALLATION, installationId: 'install-abc', accountId: ACCOUNT, school }) },
       productPrice: { findMany: jest.fn().mockResolvedValue([{ id: PRICE, pluginId: 'plugin-1', currency: 'USD', amountMinor: 12000, licensedMajor: 1, licenseDays: 3650, updatesDays: 365, validFrom: new Date('2020-01-01'), validUntil: null, plugin: { id: 'plugin-1', isPaid: true, status: 'APPROVED' } }]) },
       installationEntitlement: { upsert: jest.fn().mockResolvedValue({ id: 'entitlement-1' }) },
+      publisherRevenueEntry: { upsert: jest.fn().mockResolvedValue({ id: 'revenue-1' }) },
     };
     const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
     return { tx, prisma };
@@ -329,5 +335,64 @@ describe('CommerceService invoice settlement', () => {
     const { prisma } = harness(null);
     await expect(new CommerceService(prisma, config).createOrder(order('INVOICE')))
       .rejects.toThrow(/not linked to a customer school/);
+  });
+});
+
+/**
+ * The publisher's share, recorded with the money.
+ *
+ * recordOrderRevenue existed but nothing called it: an operator had to hit an admin endpoint per
+ * order, so a third party's earnings depended on somebody remembering. Both settlement paths now
+ * write the entry in the same transaction that marks the order paid.
+ */
+describe('CommerceService publisher revenue', () => {
+  const ACCOUNT = '11111111-1111-4111-8111-111111111111';
+  const ORDER = '44444444-4444-4444-8444-444444444444';
+
+  function harness() {
+    const line = {
+      id: 'order-line-1', pluginId: 'plugin-1', unitPriceMinor: 10000, entitlement: null,
+      price: { amountMinor: 10000, licensedMajor: 1, licenseDays: 3650, updatesDays: 365 },
+      plugin: { publisherId: 'publisher-1' },
+    };
+    const tx = {
+      marketplacePayment: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'payment-1', orderId: ORDER, status: 'SUCCEEDED', amountMinor: 10000 }) },
+      marketplaceOrder: {
+        findUnique: jest.fn().mockResolvedValue({ id: ORDER, accountId: ACCOUNT, installationId: 'registration-1', status: 'PENDING', currency: 'USD', totalMinor: 10000, account: {}, installation: { installationId: 'install-abc' }, lines: [line] }),
+        update: jest.fn().mockResolvedValue({}),
+      },
+      installationEntitlement: { upsert: jest.fn().mockResolvedValue({ id: 'entitlement-1' }) },
+      publisherRevenueEntry: { upsert: jest.fn().mockResolvedValue({ id: 'revenue-1' }) },
+      schoolPluginRequest: { findUnique: jest.fn().mockResolvedValue(null) },
+    };
+    const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
+    return { tx, prisma };
+  }
+
+  it('records the publisher share when a payment settles an order', async () => {
+    const { tx, prisma } = harness();
+    await new CommerceService(prisma, config()).settleManualPayment({ orderId: ORDER, providerReference: 'bank-ref-1' });
+
+    const entry = tx.publisherRevenueEntry.upsert.mock.calls[0][0];
+    expect(entry.create).toMatchObject({ publisherId: 'publisher-1', orderLineId: 'order-line-1', type: 'SALE', currency: 'USD', grossMinor: 10000 });
+  });
+
+  // 15% of 10000 minor units, the same rate the manual endpoint has always defaulted to.
+  it('takes the platform fee out of the publisher net', async () => {
+    const { tx, prisma } = harness();
+    await new CommerceService(prisma, config()).settleManualPayment({ orderId: ORDER, providerReference: 'bank-ref-2' });
+
+    expect(tx.publisherRevenueEntry.upsert.mock.calls[0][0].create).toMatchObject({ feeMinor: 1500, netMinor: 8500 });
+  });
+
+  // The unique index behind this upsert is what stops a retried webhook paying a publisher twice.
+  it('writes the entry as an upsert keyed on the order line, so a retry cannot double-pay', async () => {
+    const { tx, prisma } = harness();
+    await new CommerceService(prisma, config()).settleManualPayment({ orderId: ORDER, providerReference: 'bank-ref-3' });
+
+    expect(tx.publisherRevenueEntry.upsert.mock.calls[0][0]).toMatchObject({
+      where: { orderLineId_type: { orderLineId: 'order-line-1', type: 'SALE' } },
+      update: {},
+    });
   });
 });

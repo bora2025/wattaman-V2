@@ -118,11 +118,12 @@ describe('authenticated payment webhooks', () => {
         findUnique: jest.fn().mockResolvedValue({
           id: event.data.orderId, accountId: 'customer-1', installationId: 'installation-row-1', status: 'PENDING', totalMinor: 2500,
           account: {}, installation: { installationId: 'school-public-id' },
-          lines: [{ id: 'line-1', pluginId: 'official.attendance', unitPriceMinor: 2500, entitlement: null, price: { amountMinor: 2500, licensedMajor: 1, licenseDays: 365, updatesDays: 180 } }],
+          lines: [{ id: 'line-1', pluginId: 'official.attendance', unitPriceMinor: 2500, entitlement: null, price: { amountMinor: 2500, licensedMajor: 1, licenseDays: 365, updatesDays: 180 }, plugin: { publisherId: 'publisher-1' } }],
         }),
         update: jest.fn().mockResolvedValue({}),
       },
       installationEntitlement: { upsert: jest.fn().mockResolvedValue({ id: 'entitlement-1' }) },
+      publisherRevenueEntry: { upsert: jest.fn().mockResolvedValue({ id: 'revenue-1' }) },
       schoolPluginRequest: { findUnique: jest.fn().mockResolvedValue(null), update: jest.fn() },
       platformAuditEvent: { create: jest.fn() },
     };

@@ -193,16 +193,11 @@ export class PublisherGovernanceService {
     });
   }
 
-  async recordOrderRevenue(orderId: string, feeBasisPoints = 1500) {
+  async recordOrderRevenue(orderId: string, feeBasisPoints = DEFAULT_FEE_BASIS_POINTS) {
     return this.prisma.$transaction(async (tx) => {
       const order = await tx.marketplaceOrder.findUnique({ where: { id: orderId }, include: { lines: { include: { plugin: true } } } });
       if (!order || order.status !== 'PAID') throw new HttpError(409, 'Only paid orders can enter the publisher ledger');
-      const entries = [];
-      for (const line of order.lines) {
-        const feeMinor = Math.floor(line.unitPriceMinor * feeBasisPoints / 10_000);
-        entries.push(await tx.publisherRevenueEntry.upsert({ where: { orderLineId_type: { orderLineId: line.id, type: 'SALE' } }, update: {}, create: { publisherId: line.plugin.publisherId, orderLineId: line.id, type: 'SALE', currency: order.currency, grossMinor: line.unitPriceMinor, feeMinor, taxMinor: 0, netMinor: line.unitPriceMinor - feeMinor, description: `Sale ${order.id}`, createdBy: 'system' } }));
-      }
-      return entries;
+      return recordSaleEntries(tx, order, feeBasisPoints);
     });
   }
 
@@ -299,6 +294,42 @@ async function requirePublisherRole(tx: any, publisherId: string, accountId: str
 async function requireAnyReviewer(tx: any, accountId: string) {
   const member = await tx.publisherMember.findFirst({ where: { accountId, role: 'REVIEWER', verifiedAt: { not: null }, suspendedAt: null, publisher: { slug: 'wattanam', status: 'VERIFIED' } } });
   if (!member) throw new HttpError(403, 'Reviewer role is not authorized');
+}
+
+/** Wattanam's share of a sale, in basis points. 1500 = 15%, which is what the manual endpoint has
+ *  always defaulted to; the automatic path uses the same number so nothing silently reprices. */
+export const DEFAULT_FEE_BASIS_POINTS = 1500;
+
+/**
+ * Writes the publisher's share of a paid order into the ledger.
+ *
+ * Extracted so the manual admin endpoint and the two automatic paths -- an immediate order settling,
+ * and a school invoice carrying a plugin being paid -- all write the same entry through the same
+ * code. The upsert on (orderLineId, SALE) is what makes it safe to call more than once; the unique
+ * index behind it means a retried webhook cannot pay a publisher twice.
+ *
+ * Called only once an order is PAID, deliberately. A plugin bought on the school's account is
+ * licensed before the money arrives, but the publisher's share is not earned until it does.
+ */
+export async function recordSaleEntries(
+  tx: Prisma.TransactionClient,
+  order: { id: string; currency: string; lines: Array<{ id: string; unitPriceMinor: number; plugin: { publisherId: string } }> },
+  feeBasisPoints = DEFAULT_FEE_BASIS_POINTS,
+) {
+  const entries = [];
+  for (const line of order.lines) {
+    const feeMinor = Math.floor(line.unitPriceMinor * feeBasisPoints / 10_000);
+    entries.push(await tx.publisherRevenueEntry.upsert({
+      where: { orderLineId_type: { orderLineId: line.id, type: 'SALE' } },
+      update: {},
+      create: {
+        publisherId: line.plugin.publisherId, orderLineId: line.id, type: 'SALE', currency: order.currency,
+        grossMinor: line.unitPriceMinor, feeMinor, taxMinor: 0, netMinor: line.unitPriceMinor - feeMinor,
+        description: `Sale ${order.id}`, createdBy: 'system',
+      },
+    }));
+  }
+  return entries;
 }
 
 function sumEntries(entries: Array<{ grossMinor: number; feeMinor: number; taxMinor: number; netMinor: number }>) {

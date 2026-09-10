@@ -1,6 +1,7 @@
 import { Prisma, PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { MarketplaceConfig } from './config';
+import { recordSaleEntries } from './publisher-governance.service';
 import { issueEntitlement } from './entitlement';
 import { HttpError } from './http-error';
 
@@ -87,7 +88,7 @@ export class CommerceService {
       const priorPayment = await tx.marketplacePayment.findUnique({ where: { provider_providerRef: { provider: input.provider, providerRef: input.providerReference } } });
       if (priorPayment && priorPayment.orderId !== input.orderId) throw new HttpError(409, 'Payment reference belongs to another order');
       const order = await tx.marketplaceOrder.findUnique({
-        where: { id: input.orderId }, include: { account: true, installation: true, lines: { include: { price: true, entitlement: true } } },
+        where: { id: input.orderId }, include: { account: true, installation: true, lines: { include: { price: true, entitlement: true, plugin: { select: { publisherId: true } } } } },
       });
       if (!order) throw new HttpError(404, 'Order not found');
       if (order.status === 'PAID') return fulfillmentResult(order, priorPayment?.id);
@@ -102,6 +103,10 @@ export class CommerceService {
       if (payment.status !== 'SUCCEEDED' || payment.amountMinor !== order.totalMinor) throw new HttpError(409, 'Payment does not settle the order total');
       const entitlementIds = await this.fulfilOrderLines(tx, order, now);
       await tx.marketplaceOrder.update({ where: { id: order.id }, data: { status: 'PAID' } });
+      // The publisher's share, recorded with the money rather than by an operator remembering to
+      // call an endpoint per order. Idempotent on (orderLineId, SALE), so a retried webhook cannot
+      // pay a publisher twice.
+      await recordSaleEntries(tx, order);
       const linkedRequest = await tx.schoolPluginRequest.findUnique({ where: { orderId: order.id } });
       if (linkedRequest) {
         if (linkedRequest.status !== 'APPROVED') throw new HttpError(409, `Linked plugin request cannot be fulfilled from ${linkedRequest.status}`);
