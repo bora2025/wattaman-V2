@@ -148,6 +148,13 @@ enum SchoolBillingInterval {
   ANNUAL
 }
 
+/// Who raised an invoice. A scheduled run is not a person, and recording that as a null operator
+/// alone would be ambiguous with an operator record that was later deleted.
+enum SchoolInvoiceOrigin {
+  OPERATOR
+  SCHEDULED
+}
+
 enum SchoolInvoiceLineKind {
   SUBSCRIPTION
   PLUGIN
@@ -567,6 +574,10 @@ model CustomerSchool {
   invoices            SchoolInvoice[]
   billingPlanId       String?
   billingPlan         SchoolBillingPlan?        @relation(fields: [billingPlanId], references: [id], onDelete: SetNull)
+  /// The instant the subscription renews from, set when a plan is assigned. Without it "monthly"
+  /// means nothing more precise than "whenever somebody last clicked the button", and the recurring
+  /// billing run has no way to say which periods it owes a school.
+  billingAnchorAt     DateTime?
   billingNotifications SchoolBillingNotification[]
 
   @@index([status, createdAt])
@@ -632,11 +643,13 @@ model SchoolInvoice {
   voidedAt            DateTime?
   voidReason           String?
   idempotencyKey      String              @unique
-  createdByOperatorId String
+  /// Null when the recurring billing run raised this invoice; see `origin`.
+  createdByOperatorId String?
+  origin              SchoolInvoiceOrigin @default(OPERATOR)
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
   school              CustomerSchool      @relation(fields: [customerSchoolId], references: [id], onDelete: Restrict)
-  createdBy           PlatformOperator    @relation("SchoolInvoiceCreator", fields: [createdByOperatorId], references: [id], onDelete: Restrict)
+  createdBy           PlatformOperator?   @relation("SchoolInvoiceCreator", fields: [createdByOperatorId], references: [id], onDelete: Restrict)
   payments            SchoolPayment[]
   billingPlanId       String?
   billingPlanSlug     String?

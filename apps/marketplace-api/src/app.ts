@@ -489,6 +489,9 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   app.post('/platform/v1/school-billing-alerts/dispatch', requirePlatformOperator, P('school_billing.manage'), async (_request, response, next) => {
     try { response.json(await schoolBilling.dispatchDueAlerts()); } catch (error) { next(error); }
   });
+  app.post('/platform/v1/school-billing-cycle/run', requirePlatformOperator, P('school_billing.manage'), async (_request, response, next) => {
+    try { response.json(await schoolBilling.runBillingCycle()); } catch (error) { next(error); }
+  });
   app.post('/platform/v1/schools/:schoolId/invoices', requirePlatformOperator, P('school_billing.manage'), async (request: PlatformRequest, response, next) => {
     try { response.status(201).json(await schoolBilling.issueInvoice(String(request.params.schoolId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
   });

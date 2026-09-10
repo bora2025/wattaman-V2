@@ -299,3 +299,147 @@ describe('SchoolBillingService voiding', () => {
     expect(tx.schoolInvoice.update.mock.calls[0][0].data).toMatchObject({ status: 'VOID', periodKey: null });
   });
 });
+
+/**
+ * The recurring billing run. Before this, a monthly plan meant a person clicking once per school
+ * per month, forever, and remembering which schools they had already done.
+ */
+describe('SchoolBillingService recurring billing cycle', () => {
+  const plan = { id: 'plan-1', slug: 'standard', name: 'Standard', currency: 'USD', amountMinor: 5000, billingInterval: 'MONTHLY', dueDays: 14, active: true };
+
+  function harness(schools: Array<Record<string, unknown>>, existingPeriodKeys: string[] = []) {
+    const created: any[] = [];
+    const tx = {
+      schoolInvoice: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockImplementation(({ data }: any) => { created.push(data); return { id: `invoice-${created.length}`, invoiceNumber: 'WTN-X', ...data, payments: [], lines: [] }; }),
+      },
+      customerSchool: { findUnique: jest.fn().mockResolvedValue({ id: 'school-1', name: 'Bora School', status: 'ACTIVE', currency: 'USD', contactEmail: 'owner@bora.example' }) },
+      platformAuditEvent: { create: jest.fn() },
+      schoolBillingNotification: { create: jest.fn() },
+    };
+    const prisma = {
+      customerSchool: {
+        findMany: jest.fn().mockResolvedValue(schools),
+        findUnique: jest.fn().mockResolvedValue({ id: 'school-1', billingPlan: plan }),
+      },
+      schoolInvoice: { findFirst: jest.fn().mockImplementation(({ where }: any) => (existingPeriodKeys.includes(where.periodKey) ? { id: 'existing' } : null)) },
+      $transaction: jest.fn((work: any) => work(tx)),
+      schoolBillingNotification: { findMany: jest.fn().mockResolvedValue([]) },
+    } as any;
+    return { prisma, created };
+  }
+
+  const school = (over: Record<string, unknown> = {}) => ({ id: 'school-1', name: 'Bora School', billingAnchorAt: new Date('2026-01-15T00:00:00.000Z'), billingPlan: plan, ...over });
+
+  it('issues every period that has started and none that has not', async () => {
+    const { prisma, created } = harness([school()]);
+    const result = await new SchoolBillingService(prisma).runBillingCycle(new Date('2026-03-20T00:00:00.000Z'));
+
+    // Jan 15, Feb 15, Mar 15 have started. Apr 15 has not.
+    expect(result.issued).toBe(3);
+    expect(created.map((data) => data.periodStart.toISOString())).toEqual([
+      '2026-01-15T00:00:00.000Z', '2026-02-15T00:00:00.000Z', '2026-03-15T00:00:00.000Z',
+    ]);
+  });
+
+  // Running twice must not bill twice: this runs hourly and on every boot.
+  it('skips a period that has already been invoiced', async () => {
+    const { prisma, created } = harness([school()], ['plan-1:2026-01-15T00:00:00.000Z', 'plan-1:2026-02-15T00:00:00.000Z']);
+    const result = await new SchoolBillingService(prisma).runBillingCycle(new Date('2026-03-20T00:00:00.000Z'));
+
+    expect(result.alreadyBilled).toBe(2);
+    expect(created.map((data) => data.periodStart.toISOString())).toEqual(['2026-03-15T00:00:00.000Z']);
+  });
+
+  it('marks what it raised as scheduled rather than attributing it to a person', async () => {
+    const { prisma, created } = harness([school()]);
+    await new SchoolBillingService(prisma).runBillingCycle(new Date('2026-01-20T00:00:00.000Z'));
+
+    expect(created[0].origin).toBe('SCHEDULED');
+    expect(created[0].createdByOperatorId).toBeNull();
+  });
+
+  /**
+   * A 31st-of-the-month anchor is where naive period arithmetic breaks: adding one month to
+   * 31 January gives 3 March in JavaScript, and repeating that walks the anniversary forward a few
+   * days every year. Each period is derived from the anchor directly instead.
+   */
+  it('keeps a month-end anniversary pinned instead of drifting', async () => {
+    const { prisma, created } = harness([school({ billingAnchorAt: new Date('2026-01-31T00:00:00.000Z') })]);
+    await new SchoolBillingService(prisma).runBillingCycle(new Date('2026-04-05T00:00:00.000Z'));
+
+    expect(created.map((data) => data.periodStart.toISOString().slice(0, 10))).toEqual([
+      '2026-01-31', '2026-02-28', '2026-03-31',
+    ]);
+  });
+
+  it('bills an annual plan once a year, not twelve times', async () => {
+    const annual = { ...plan, billingInterval: 'ANNUAL' };
+    const { prisma, created } = harness([school({ billingPlan: annual })]);
+    (prisma.customerSchool.findUnique as jest.Mock).mockResolvedValue({ id: 'school-1', billingPlan: annual });
+    await new SchoolBillingService(prisma).runBillingCycle(new Date('2027-06-01T00:00:00.000Z'));
+
+    expect(created.map((data) => data.periodStart.toISOString().slice(0, 10))).toEqual(['2026-01-15', '2027-01-15']);
+  });
+
+  // Only ACTIVE schools with an active plan and an anchor are selected -- a suspended school has
+  // lost access to the panel where it would see a bill, so accruing one silently is a trap.
+  it('asks only for active schools that have an anchor and an active plan', async () => {
+    const { prisma } = harness([]);
+    await new SchoolBillingService(prisma).runBillingCycle(new Date('2026-03-20T00:00:00.000Z'));
+
+    expect(prisma.customerSchool.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { status: 'ACTIVE', billingAnchorAt: { not: null }, billingPlan: { is: { active: true } } },
+    }));
+  });
+
+  it('keeps going when one school fails', async () => {
+    const { prisma } = harness([school(), school({ id: 'school-2' })]);
+    (prisma.$transaction as jest.Mock).mockRejectedValueOnce(new Error('deadlock'));
+    const result = await new SchoolBillingService(prisma).runBillingCycle(new Date('2026-01-20T00:00:00.000Z'));
+
+    expect(result.failed).toBe(1);
+    expect(result.issued).toBe(1);
+  });
+});
+
+describe('SchoolBillingService billing anchor', () => {
+  function harness(school: Record<string, unknown>) {
+    const tx = {
+      schoolBillingPlan: { findUnique: jest.fn().mockResolvedValue({ id: 'plan-1', slug: 'standard', currency: 'USD', billingInterval: 'MONTHLY', active: true }) },
+      customerSchool: { findUnique: jest.fn().mockResolvedValue({ id: 'school-1', status: 'ACTIVE', currency: 'USD', ...school }), update: jest.fn().mockImplementation(({ data }: any) => ({ id: 'school-1', ...data })) },
+      platformAuditEvent: { create: jest.fn() },
+    };
+    const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
+    return { tx, prisma };
+  }
+
+  it('anchors a school that has never been billed', async () => {
+    const { tx, prisma } = harness({ billingAnchorAt: null });
+    await new SchoolBillingService(prisma).assignPlan('school-1', 'operator-1', {
+      planId: '11111111-1111-4111-8111-111111111111', billingAnchorAt: '2026-09-01T00:00:00.000Z', internalReason: 'New customer.',
+    }, context);
+
+    expect(tx.customerSchool.update.mock.calls[0][0].data.billingAnchorAt.toISOString()).toBe('2026-09-01T00:00:00.000Z');
+  });
+
+  // Changing plan changes the price from the next period; it does not restart the billing year.
+  it('keeps the existing anniversary when a plan is changed', async () => {
+    const existing = new Date('2026-03-05T00:00:00.000Z');
+    const { tx, prisma } = harness({ billingAnchorAt: existing });
+    await new SchoolBillingService(prisma).assignPlan('school-1', 'operator-1', {
+      planId: '11111111-1111-4111-8111-111111111111', billingAnchorAt: '2026-09-01T00:00:00.000Z', internalReason: 'Upgraded plan.',
+    }, context);
+
+    expect(tx.customerSchool.update.mock.calls[0][0].data.billingAnchorAt.toISOString()).toBe(existing.toISOString());
+  });
+
+  // A mistyped year would have the run raise a dozen invoices to a real customer.
+  it('refuses an anchor far in the past', async () => {
+    const { prisma } = harness({ billingAnchorAt: null });
+    await expect(new SchoolBillingService(prisma).assignPlan('school-1', 'operator-1', {
+      planId: '11111111-1111-4111-8111-111111111111', billingAnchorAt: '2019-01-01T00:00:00.000Z', internalReason: 'Typo.',
+    }, context)).rejects.toThrow(/more than one monthly period in the past/);
+  });
+});

@@ -57,7 +57,12 @@ const planInput = z.object({
   active: z.boolean().default(true), internalReason: reason,
 }).strict();
 const planUpdateInput = planInput.partial().extend({ internalReason: reason }).strict();
-const assignPlanInput = z.object({ planId: z.string().uuid(), internalReason: reason }).strict();
+const assignPlanInput = z.object({
+  planId: z.string().uuid(),
+  /** Where the subscription renews from. Defaults to the start of today, UTC. */
+  billingAnchorAt: z.coerce.date().optional(),
+  internalReason: reason,
+}).strict();
 const planInvoiceInput = z.object({ periodStart: z.coerce.date(), idempotencyKey: z.string().min(16).max(200), internalReason: reason }).strict();
 const paymentSubmissionInput = z.object({
   invoiceId: z.string().uuid(), provider: z.string().trim().toLowerCase().regex(/^[a-z0-9][a-z0-9._-]{1,39}$/),
@@ -118,12 +123,23 @@ export class SchoolBillingService {
     return this.prisma.$transaction(async (tx) => {
       const plan = await tx.schoolBillingPlan.findUnique({ where: { id: input.planId } });
       if (!plan || !plan.active) throw new HttpError(409, 'Billing plan is not active');
-      const school = await tx.customerSchool.findUnique({ where: { id: schoolId }, select: { id: true, status: true, currency: true } });
+      const school = await tx.customerSchool.findUnique({ where: { id: schoolId }, select: { id: true, status: true, currency: true, billingAnchorAt: true } });
       if (!school) throw new HttpError(404, 'Customer school not found');
       if (school.status === 'TERMINATED') throw new HttpError(409, 'A terminated school cannot be assigned a billing plan');
       if (school.currency && school.currency !== plan.currency) throw new HttpError(409, `School currency must be ${plan.currency}`);
-      const updated = await tx.customerSchool.update({ where: { id: schoolId }, data: { billingPlanId: plan.id, plan: plan.slug, currency: plan.currency }, select: { id: true, billingPlanId: true, plan: true, currency: true } });
-      await this.audit(tx, operatorId, context, 'school_billing_plan_assigned', schoolId, input.internalReason, { planId: plan.id, planSlug: plan.slug });
+      // A school already being billed keeps its anniversary: changing plan should change the price
+      // from the next period, not restart the billing year. Only a school with no anchor gets one.
+      const anchor = school.billingAnchorAt ?? input.billingAnchorAt ?? startOfUtcDay(new Date());
+      // The range check applies only to an anchor being set now. An existing anniversary is a fact
+      // about a school already being billed -- six months of history is normal, and rejecting it
+      // would make a long-standing customer unable to change plan at all.
+      if (!school.billingAnchorAt) assertUsableAnchor(anchor, plan.billingInterval);
+      const updated = await tx.customerSchool.update({
+        where: { id: schoolId },
+        data: { billingPlanId: plan.id, plan: plan.slug, currency: plan.currency, billingAnchorAt: anchor },
+        select: { id: true, billingPlanId: true, plan: true, currency: true, billingAnchorAt: true },
+      });
+      await this.audit(tx, operatorId, context, 'school_billing_plan_assigned', schoolId, input.internalReason, { planId: plan.id, planSlug: plan.slug, billingAnchorAt: anchor.toISOString() });
       return updated;
     });
   }
@@ -131,13 +147,13 @@ export class SchoolBillingService {
   async billing(schoolId: string) {
     const school = await this.prisma.customerSchool.findUnique({
       where: { id: schoolId },
-      select: { id: true, name: true, status: true, currency: true, billingPlan: true, invoices: { select: INVOICE_SELECT, orderBy: { issuedAt: 'desc' } }, billingNotifications: { orderBy: { createdAt: 'desc' }, take: 30 } },
+      select: { id: true, name: true, status: true, currency: true, billingPlan: true, billingAnchorAt: true, invoices: { select: INVOICE_SELECT, orderBy: { issuedAt: 'desc' } }, billingNotifications: { orderBy: { createdAt: 'desc' }, take: 30 } },
     });
     if (!school) throw new HttpError(404, 'Customer school not found');
     const outstandingMinor = school.invoices
       .filter((invoice) => invoice.status !== 'VOID')
       .reduce((sum, invoice) => sum + invoice.amountMinor - invoice.paidMinor, 0);
-    return { schoolId: school.id, schoolName: school.name, schoolCurrency: school.currency, billingPlan: school.billingPlan, outstandingMinor, invoices: school.invoices, notifications: school.billingNotifications };
+    return { schoolId: school.id, schoolName: school.name, schoolCurrency: school.currency, billingPlan: school.billingPlan, billingAnchorAt: school.billingAnchorAt, outstandingMinor, invoices: school.invoices, notifications: school.billingNotifications };
   }
 
   /** Customer-safe billing view. Ownership is derived from the authenticated marketplace
@@ -262,7 +278,7 @@ export class SchoolBillingService {
     };
   }
 
-  async issuePlanInvoice(schoolId: string, operatorId: string, value: unknown, context: PlatformActionContext) {
+  async issuePlanInvoice(schoolId: string, operatorId: string | null, value: unknown, context: PlatformActionContext, origin: 'OPERATOR' | 'SCHEDULED' = 'OPERATOR') {
     const input = planInvoiceInput.parse(value);
     const school = await this.prisma.customerSchool.findUnique({ where: { id: schoolId }, include: { billingPlan: true } });
     if (!school?.billingPlan || !school.billingPlan.active) throw new HttpError(409, 'Assign an active central billing plan first');
@@ -279,12 +295,54 @@ export class SchoolBillingService {
       periodStart: start, periodEnd: end, dueAt,
       lines: [{ kind: 'SUBSCRIPTION', description, quantity: 1, unitAmountMinor: plan.amountMinor, periodStart: start, periodEnd: end }],
       idempotencyKey: input.idempotencyKey, internalReason: input.internalReason,
-    }, context, new Date(), plan, periodKeyFor(plan.id, start));
+    }, context, new Date(), plan, periodKeyFor(plan.id, start), origin);
+  }
+
+  /**
+   * The recurring subscription run.
+   *
+   * Until this existed a monthly plan meant a person clicking once per school per month, forever,
+   * and remembering which schools they had already done. It is deliberately shaped like
+   * `dispatchDueAlerts`: safe to call repeatedly, safe across restarts, and safe with two replicas
+   * running it at once -- the period unique index is what makes the last of those true, so a race
+   * ends in one invoice and a skip rather than two invoices.
+   *
+   * Only ACTIVE schools accrue. A suspended school has already lost access to the panel where it
+   * would see a bill, and silently growing a debt it cannot look at is not billing, it is a trap.
+   */
+  async runBillingCycle(now = new Date()) {
+    const schools = await this.prisma.customerSchool.findMany({
+      where: { status: 'ACTIVE', billingAnchorAt: { not: null }, billingPlan: { is: { active: true } } },
+      select: { id: true, name: true, billingAnchorAt: true, billingPlan: { select: { id: true, billingInterval: true } } },
+      take: 500,
+    });
+    const result = { inspected: schools.length, issued: 0, alreadyBilled: 0, failed: 0 };
+    for (const school of schools) {
+      const plan = school.billingPlan!;
+      for (const periodStart of duePeriods(school.billingAnchorAt!, plan.billingInterval, now)) {
+        const periodKey = periodKeyFor(plan.id, periodStart);
+        const existing = await this.prisma.schoolInvoice.findFirst({ where: { customerSchoolId: school.id, periodKey }, select: { id: true } });
+        if (existing) { result.alreadyBilled += 1; continue; }
+        try {
+          await this.issuePlanInvoice(school.id, null, {
+            periodStart, idempotencyKey: `scheduled:${periodKey}:${school.id}`,
+            internalReason: `Scheduled ${plan.billingInterval.toLowerCase()} billing run for the period beginning ${periodStart.toISOString().slice(0, 10)}.`,
+          }, { correlationId: `billing-cycle-${now.toISOString()}` }, 'SCHEDULED');
+          result.issued += 1;
+        } catch (error) {
+          // One school's failure must not stop the run for every other school.
+          result.failed += 1;
+          this.log('school billing cycle invoice failed', { schoolId: school.id, periodKey, error: error instanceof Error ? error.message : String(error) });
+        }
+      }
+    }
+    return result;
   }
 
   async issueInvoice(
-    schoolId: string, operatorId: string, value: unknown, context: PlatformActionContext,
+    schoolId: string, operatorId: string | null, value: unknown, context: PlatformActionContext,
     now = new Date(), plan?: { id: string; slug: string }, periodKey?: string,
+    origin: 'OPERATOR' | 'SCHEDULED' = 'OPERATOR',
   ) {
     const input = invoiceInput.parse(value);
     const { internalReason, lines: inputLines, amountMinor: statedTotal, ...fields } = input;
@@ -313,7 +371,7 @@ export class SchoolBillingService {
         data: {
           ...fields, amountMinor, customerSchoolId: schoolId, createdByOperatorId: operatorId,
           invoiceNumber: `WTN-${now.getUTCFullYear()}-${randomBytes(5).toString('hex').toUpperCase()}`,
-          issuedAt: now, billingPlanId: plan?.id, billingPlanSlug: plan?.slug, periodKey,
+          issuedAt: now, billingPlanId: plan?.id, billingPlanSlug: plan?.slug, periodKey, origin,
           lines: { create: lines.map((line, position) => ({
             position, kind: line.kind, description: line.description, quantity: line.quantity,
             unitAmountMinor: line.unitAmountMinor, amountMinor: line.quantity * line.unitAmountMinor,
@@ -449,7 +507,11 @@ export class SchoolBillingService {
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 
-  private audit(tx: Prisma.TransactionClient, operatorId: string, context: PlatformActionContext, action: string, schoolId: string, reasonValue: string, metadata: Prisma.InputJsonValue) {
+  private log(message: string, detail: Record<string, unknown>) {
+    console.warn(JSON.stringify({ level: 'warn', message, ...detail }));
+  }
+
+  private audit(tx: Prisma.TransactionClient, operatorId: string | null, context: PlatformActionContext, action: string, schoolId: string, reasonValue: string, metadata: Prisma.InputJsonValue) {
     return tx.platformAuditEvent.create({ data: {
       operatorId, action, success: true, targetType: 'CustomerSchool', targetId: schoolId,
       reason: reasonValue, metadata, correlationId: context.correlationId, ip: context.ip, userAgent: context.userAgent,
@@ -460,6 +522,55 @@ export class SchoolBillingService {
 /** One plan period, as the database sees it. Null for one-off invoices and cleared on void. */
 function periodKeyFor(planId: string, periodStart: Date) {
   return `${planId}:${periodStart.toISOString()}`;
+}
+
+function startOfUtcDay(value: Date) {
+  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
+}
+
+/**
+ * An anchor far in the past would have the billing run raise every period since, which for a
+ * mistyped year is dozens of invoices to a real customer. Refusing it at the point somebody types
+ * it is far better than defending against it in the run, where the damage is already a decision
+ * the run has to un-make.
+ */
+function assertUsableAnchor(anchor: Date, interval: 'MONTHLY' | 'ANNUAL', now = new Date()) {
+  const earliest = new Date(now);
+  const latest = new Date(now);
+  if (interval === 'MONTHLY') { earliest.setUTCMonth(earliest.getUTCMonth() - 1); latest.setUTCMonth(latest.getUTCMonth() + 1); }
+  else { earliest.setUTCFullYear(earliest.getUTCFullYear() - 1); latest.setUTCFullYear(latest.getUTCFullYear() + 1); }
+  if (anchor < earliest) throw new HttpError(409, `Billing anchor is more than one ${interval.toLowerCase()} period in the past`);
+  if (anchor > latest) throw new HttpError(409, `Billing anchor is more than one ${interval.toLowerCase()} period in the future`);
+}
+
+/**
+ * Every period that has started on or before `now`, counted forward from the anchor.
+ *
+ * Counted from the anchor rather than by repeatedly adding an interval to the previous result, so
+ * a 31st-of-the-month anchor does not walk backwards: adding a month to 31 January gives 3 March
+ * in JavaScript, and doing that repeatedly drifts the anniversary a few days every year. Deriving
+ * period n directly from the anchor keeps it pinned, and a month with too few days clamps to its
+ * last day for that period only.
+ */
+function duePeriods(anchor: Date, interval: 'MONTHLY' | 'ANNUAL', now: Date, limit = 12): Date[] {
+  const periods: Date[] = [];
+  for (let index = 0; periods.length < limit; index += 1) {
+    const start = addPeriods(anchor, interval, index);
+    if (start.getTime() > now.getTime()) break;
+    periods.push(start);
+  }
+  return periods;
+}
+
+function addPeriods(anchor: Date, interval: 'MONTHLY' | 'ANNUAL', count: number) {
+  const day = anchor.getUTCDate();
+  const monthsForward = interval === 'MONTHLY' ? count : count * 12;
+  const year = anchor.getUTCFullYear();
+  const month = anchor.getUTCMonth() + monthsForward;
+  // Day 0 of the following month is the last day of this one, which is how a 31st anchor lands on
+  // the 28th or 30th in a short month without spilling into the next.
+  const daysInTargetMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(year, month, Math.min(day, daysInTargetMonth), anchor.getUTCHours(), anchor.getUTCMinutes(), anchor.getUTCSeconds(), anchor.getUTCMilliseconds()));
 }
 
 function periodEndFor(start: Date, interval: 'MONTHLY' | 'ANNUAL') {

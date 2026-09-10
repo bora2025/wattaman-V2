@@ -87,6 +87,7 @@ export function platformOpenApi(baseUrl: string) {
       '/platform/v1/schools/{schoolId}/billing-plan': path('post', { summary: 'Finance assign central price to school', permission: 'school_billing.manage' }),
       '/platform/v1/schools/{schoolId}/plan-invoices': path('post', { summary: 'Finance invoice school from central price', permission: 'school_billing.manage' }),
       '/platform/v1/school-billing-alerts/dispatch': path('post', { summary: 'Finance dispatch due and overdue school alerts', permission: 'school_billing.manage' }),
+      '/platform/v1/school-billing-cycle/run': path('post', { summary: 'Finance run the recurring subscription billing cycle', permission: 'school_billing.manage' }),
       '/platform/v1/schools/{schoolId}/invoices': path('post', { summary: 'Finance issue school invoice', permission: 'school_billing.manage' }),
       '/platform/v1/schools/{schoolId}/invoices/{invoiceId}/payments': path('post', { summary: 'Finance record school payment', permission: 'school_billing.manage' }),
       '/platform/v1/schools/{schoolId}/invoices/{invoiceId}/void': path('post', { summary: 'Finance void unpaid school invoice', permission: 'school_billing.manage' }),

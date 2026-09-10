@@ -38,6 +38,7 @@ const sessionPostPatterns = [
   /^school-billing-plans$/,
   new RegExp(`^school-billing-plans/${ID}$`),
   /^school-billing-alerts\/dispatch$/,
+  /^school-billing-cycle\/run$/,
   new RegExp(`^schools/${ID}/(update|enrollment-tokens|adopt-installation|infrastructure)$`),
   new RegExp(`^schools/${ID}/(suspend|reactivate|terminate|domains)$`),
   new RegExp(`^schools/${ID}/domains/${ID}/(verify|remove)$`),
