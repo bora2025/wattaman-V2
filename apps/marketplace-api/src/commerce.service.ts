@@ -9,6 +9,9 @@ const orderInput = z.object({
   currency: z.string().regex(/^[A-Z]{3}$/),
   priceIds: z.array(z.string().uuid()).min(1).max(50).refine((ids) => new Set(ids).size === ids.length, 'Duplicate prices are not allowed'),
   idempotencyKey: z.string().min(16).max(200),
+  /** INVOICE bills the school's next subscription invoice and grants the entitlement now, on
+   *  credit. See docs/decisions/school-invoice-plugin-credit-2026-09-10.md. */
+  settlementMode: z.enum(['IMMEDIATE', 'INVOICE']).default('IMMEDIATE'),
 }).strict();
 
 const settlementInput = z.object({
@@ -33,7 +36,7 @@ export class CommerceService {
       if (existing) return existing;
       const [account, installation, prices] = await Promise.all([
         tx.marketplaceAccount.findUnique({ where: { id: input.accountId }, select: { id: true } }),
-        tx.installationRegistration.findUnique({ where: { id: input.installationId }, select: { id: true, accountId: true, school: { select: { status: true } } } }),
+        tx.installationRegistration.findUnique({ where: { id: input.installationId }, select: { id: true, installationId: true, accountId: true, school: { select: { id: true, status: true, currency: true, billingAnchorAt: true, billingPlan: { select: { id: true, active: true, currency: true } } } } } }),
         tx.productPrice.findMany({ where: { id: { in: input.priceIds } }, include: { plugin: { select: { id: true, isPaid: true, status: true } } } }),
       ]);
       if (!account || !installation) throw new HttpError(404, 'Account or installation not found');
@@ -47,13 +50,24 @@ export class CommerceService {
         if (!price.plugin.isPaid || price.plugin.status !== 'APPROVED') throw new HttpError(409, 'Product is not available for purchase');
       }
       const totalMinor = ordered.reduce((sum, price) => safeMinorTotal(sum, price.amountMinor), 0);
-      return tx.marketplaceOrder.create({
+      if (input.settlementMode === 'INVOICE') assertInvoiceable(installation.school, input.currency);
+      const order = await tx.marketplaceOrder.create({
         data: {
           accountId: input.accountId, installationId: input.installationId, currency: input.currency, totalMinor,
-          idempotencyKey: input.idempotencyKey,
+          idempotencyKey: input.idempotencyKey, settlementMode: input.settlementMode,
           lines: { create: ordered.map((price) => ({ pluginId: price.pluginId, priceId: price.id, unitPriceMinor: price.amountMinor })) },
         }, include: { lines: true },
       });
+      if (input.settlementMode !== 'INVOICE') return order;
+      // Bought on account: the entitlement is granted now and the charge lands on the school's next
+      // subscription invoice. The order stays PENDING because no money has arrived -- settlementMode
+      // is what says the difference between "not paid yet" and "not paid, and that is the deal".
+      const withPrices = await tx.marketplaceOrder.findUniqueOrThrow({
+        where: { id: order.id },
+        include: { installation: { select: { installationId: true } }, lines: { include: { price: true, entitlement: true } } },
+      });
+      await this.fulfilOrderLines(tx, withPrices, now);
+      return order;
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 
@@ -86,30 +100,7 @@ export class CommerceService {
         ? await tx.marketplacePayment.update({ where: { id: priorPayment.id }, data: { status: 'SUCCEEDED', amountMinor: order.totalMinor } })
         : await tx.marketplacePayment.create({ data: { orderId: order.id, provider: input.provider, providerRef: input.providerReference, status: 'SUCCEEDED', amountMinor: order.totalMinor } });
       if (payment.status !== 'SUCCEEDED' || payment.amountMinor !== order.totalMinor) throw new HttpError(409, 'Payment does not settle the order total');
-      const entitlementIds: string[] = [];
-      for (const line of order.lines) {
-        if (line.entitlement) { entitlementIds.push(line.entitlement.id); continue; }
-        const expiresAt = addDays(now, line.price.licenseDays);
-        const updatesThrough = addDays(now, Math.min(line.price.updatesDays, line.price.licenseDays));
-        const offlineRecheckAfter = addDays(now, Math.min(30, line.price.licenseDays));
-        const token = issueEntitlement({
-          installationId: order.installation.installationId, customerId: order.accountId, productId: line.pluginId,
-          licensedMajorRange: `^${line.price.licensedMajor}.0.0`, notBefore: now.toISOString(), expiresAt: expiresAt.toISOString(),
-          updatesThrough: updatesThrough.toISOString(), offlineRecheckAfter: offlineRecheckAfter.toISOString(), features: [], issuer: this.config.publicBaseUrl,
-        }, this.config.entitlementPrivateKey, this.config.entitlementKeyId, now);
-        const entitlement = await tx.installationEntitlement.upsert({
-          where: { installationId_pluginId: { installationId: order.installationId, pluginId: line.pluginId } },
-          create: {
-            installationId: order.installationId, pluginId: line.pluginId, orderLineId: line.id, tokenId: token.payload.tokenId,
-            expiresAt, updatesThrough, offlineUntil: offlineRecheckAfter, signedToken: token as unknown as Prisma.InputJsonValue,
-          },
-          update: {
-            status: 'ACTIVE', orderLineId: line.id, tokenId: token.payload.tokenId, revokedAt: null, revokedReason: null,
-            expiresAt, updatesThrough, offlineUntil: offlineRecheckAfter, signedToken: token as unknown as Prisma.InputJsonValue,
-          },
-        });
-        entitlementIds.push(entitlement.id);
-      }
+      const entitlementIds = await this.fulfilOrderLines(tx, order, now);
       await tx.marketplaceOrder.update({ where: { id: order.id }, data: { status: 'PAID' } });
       const linkedRequest = await tx.schoolPluginRequest.findUnique({ where: { orderId: order.id } });
       if (linkedRequest) {
@@ -126,6 +117,48 @@ export class CommerceService {
         } });
       }
       return { orderId: order.id, status: 'PAID' as const, paymentId: payment.id, entitlementIds };
+  }
+
+  /**
+   * Mints the entitlement for every line of an order that does not already have one.
+   *
+   * Shared by both settlement modes on purpose. An immediate order reaches it once money has
+   * settled; an invoice order reaches it at approval, on credit. Two implementations of "grant the
+   * thing they bought" would drift, and the one that drifted would be the one granting licences.
+   *
+   * Lines that already carry an entitlement are returned untouched, which is what makes a retried
+   * webhook and a later settlement of an already-granted invoice order both safe.
+   */
+  private async fulfilOrderLines(
+    tx: Prisma.TransactionClient,
+    order: { id: string; accountId: string; installationId: string; installation: { installationId: string }; lines: Array<{ id: string; pluginId: string; price: { licenseDays: number; updatesDays: number; licensedMajor: number }; entitlement: { id: string } | null }> },
+    now: Date,
+  ): Promise<string[]> {
+    const entitlementIds: string[] = [];
+    for (const line of order.lines) {
+      if (line.entitlement) { entitlementIds.push(line.entitlement.id); continue; }
+      const expiresAt = addDays(now, line.price.licenseDays);
+      const updatesThrough = addDays(now, Math.min(line.price.updatesDays, line.price.licenseDays));
+      const offlineRecheckAfter = addDays(now, Math.min(30, line.price.licenseDays));
+      const token = issueEntitlement({
+        installationId: order.installation.installationId, customerId: order.accountId, productId: line.pluginId,
+        licensedMajorRange: `^${line.price.licensedMajor}.0.0`, notBefore: now.toISOString(), expiresAt: expiresAt.toISOString(),
+        updatesThrough: updatesThrough.toISOString(), offlineRecheckAfter: offlineRecheckAfter.toISOString(), features: [], issuer: this.config.publicBaseUrl,
+      }, this.config.entitlementPrivateKey, this.config.entitlementKeyId, now);
+      const entitlement = await tx.installationEntitlement.upsert({
+        where: { installationId_pluginId: { installationId: order.installationId, pluginId: line.pluginId } },
+        create: {
+          installationId: order.installationId, pluginId: line.pluginId, orderLineId: line.id, tokenId: token.payload.tokenId,
+          expiresAt, updatesThrough, offlineUntil: offlineRecheckAfter, signedToken: token as unknown as Prisma.InputJsonValue,
+        },
+        update: {
+          status: 'ACTIVE', orderLineId: line.id, tokenId: token.payload.tokenId, revokedAt: null, revokedReason: null,
+          expiresAt, updatesThrough, offlineUntil: offlineRecheckAfter, signedToken: token as unknown as Prisma.InputJsonValue,
+        },
+      });
+      entitlementIds.push(entitlement.id);
+    }
+    return entitlementIds;
   }
 
   async refundOrder(value: unknown, now = new Date()) {
@@ -201,6 +234,24 @@ function safeMinorTotal(sum: number, amount: number) {
 }
 
 function addDays(value: Date, days: number) { return new Date(value.getTime() + days * 86_400_000); }
+
+/**
+ * What bounds buying on credit. A school with no next invoice has nothing to bill to, and a plugin
+ * priced in another currency cannot join an invoice without an exchange rate -- which carries tax
+ * and accounting consequences belonging to a decision nobody has made. Both are refused with the
+ * reason named, never worked around silently.
+ */
+function assertInvoiceable(
+  school: { status: string; currency: string | null; billingAnchorAt: Date | null; billingPlan: { active: boolean; currency: string } | null } | null,
+  orderCurrency: string,
+) {
+  if (!school) throw new HttpError(409, 'This installation is not linked to a customer school, so it cannot be billed on account');
+  if (school.status !== 'ACTIVE') throw new HttpError(403, 'Customer school is not active');
+  if (!school.billingPlan?.active) throw new HttpError(409, 'This school has no active billing plan, so there is no invoice to bill to');
+  if (!school.billingAnchorAt) throw new HttpError(409, 'This school has no billing anniversary set, so no invoice will be raised to carry the charge');
+  const schoolCurrency = school.currency || school.billingPlan.currency;
+  if (schoolCurrency !== orderCurrency) throw new HttpError(409, `This school is billed in ${schoolCurrency} and the price is in ${orderCurrency}; it cannot be added to that invoice`);
+}
 
 function fulfillmentResult(order: { id: string; lines: Array<{ entitlement: { id: string } | null }> }, paymentId?: string) {
   if (!paymentId || order.lines.some((line) => !line.entitlement)) throw new HttpError(409, 'Paid order fulfillment is incomplete');

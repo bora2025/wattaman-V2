@@ -223,6 +223,7 @@ describe('SchoolBillingService plan invoices', () => {
     };
     const prisma = {
       customerSchool: { findUnique: jest.fn().mockResolvedValue({ id: 'school-1', billingPlan }) },
+      marketplaceOrderLine: { findMany: jest.fn().mockResolvedValue([]) },
       $transaction: jest.fn((work: any) => work(tx)),
       schoolBillingNotification: { findMany: jest.fn().mockResolvedValue([]) },
     } as any;
@@ -288,7 +289,7 @@ describe('SchoolBillingService voiding', () => {
     const tx = {
       $executeRaw: jest.fn(),
       schoolInvoice: {
-        findUnique: jest.fn().mockResolvedValue({ id: 'invoice-1', customerSchoolId: 'school-1', status: 'ISSUED', paidMinor: 0 }),
+        findUnique: jest.fn().mockResolvedValue({ id: 'invoice-1', invoiceNumber: 'WTN-1', customerSchoolId: 'school-1', status: 'ISSUED', paidMinor: 0, lines: [] }),
         update: jest.fn().mockResolvedValue({ id: 'invoice-1', status: 'VOID', voidedAt: now }),
       },
       platformAuditEvent: { create: jest.fn() },
@@ -324,6 +325,7 @@ describe('SchoolBillingService recurring billing cycle', () => {
         findUnique: jest.fn().mockResolvedValue({ id: 'school-1', billingPlan: plan }),
       },
       schoolInvoice: { findFirst: jest.fn().mockImplementation(({ where }: any) => (existingPeriodKeys.includes(where.periodKey) ? { id: 'existing' } : null)) },
+      marketplaceOrderLine: { findMany: jest.fn().mockResolvedValue([]) },
       $transaction: jest.fn((work: any) => work(tx)),
       schoolBillingNotification: { findMany: jest.fn().mockResolvedValue([]) },
     } as any;
@@ -441,5 +443,126 @@ describe('SchoolBillingService billing anchor', () => {
     await expect(new SchoolBillingService(prisma).assignPlan('school-1', 'operator-1', {
       planId: '11111111-1111-4111-8111-111111111111', billingAnchorAt: '2019-01-01T00:00:00.000Z', internalReason: 'Typo.',
     }, context)).rejects.toThrow(/more than one monthly period in the past/);
+  });
+});
+
+/**
+ * Buying a plugin on the school's invoice. The entitlement is granted at approval and the charge
+ * lands on the next subscription invoice -- credit, bounded by the rules below.
+ * See docs/decisions/school-invoice-plugin-credit-2026-09-10.md.
+ */
+describe('SchoolBillingService plugin charges on the school invoice', () => {
+  const plan = { id: 'plan-1', slug: 'standard', name: 'Standard', currency: 'USD', amountMinor: 5000, billingInterval: 'MONTHLY', dueDays: 14, active: true };
+
+  function harness(unbilled: Array<Record<string, unknown>> = []) {
+    const tx = {
+      schoolInvoice: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockImplementation(({ data }: any) => ({ id: 'invoice-1', invoiceNumber: 'WTN-2026-AAAA', ...data, payments: [], lines: [] })) },
+      customerSchool: { findUnique: jest.fn().mockResolvedValue({ id: 'school-1', name: 'Bora School', status: 'ACTIVE', currency: 'USD', contactEmail: 'owner@bora.example' }) },
+      platformAuditEvent: { create: jest.fn() },
+      schoolBillingNotification: { create: jest.fn() },
+    };
+    const prisma = {
+      customerSchool: { findUnique: jest.fn().mockResolvedValue({ id: 'school-1', billingPlan: plan }) },
+      marketplaceOrderLine: { findMany: jest.fn().mockResolvedValue(unbilled) },
+      $transaction: jest.fn((work: any) => work(tx)),
+      schoolBillingNotification: { findMany: jest.fn().mockResolvedValue([]) },
+    } as any;
+    return { tx, prisma };
+  }
+
+  const LINE_A = '22222222-2222-4222-8222-222222222222';
+  const LINE_B = '33333333-3333-4333-8333-333333333333';
+  const orderLine = (id: string, name: string, unitPriceMinor: number) => ({ id, unitPriceMinor, plugin: { name } });
+
+  it('adds unbilled plugin purchases to the next subscription invoice', async () => {
+    const { tx, prisma } = harness([orderLine(LINE_A, 'Attendance Pro', 12000), orderLine(LINE_B, 'Report Builder', 8000)]);
+    await new SchoolBillingService(prisma).issuePlanInvoice('school-1', 'operator-1', {
+      periodStart: '2026-09-01T00:00:00.000Z', idempotencyKey: 'plan-invoice-000000010', internalReason: 'September billing run.',
+    }, context);
+
+    const data = tx.schoolInvoice.create.mock.calls[0][0].data;
+    expect(data.amountMinor).toBe(25000);
+    expect(data.lines.create.map((line: any) => [line.kind, line.description, line.amountMinor])).toEqual([
+      ['SUBSCRIPTION', 'Standard (monthly)', 5000],
+      ['PLUGIN', 'Attendance Pro (plugin licence)', 12000],
+      ['PLUGIN', 'Report Builder (plugin licence)', 8000],
+    ]);
+  });
+
+  // The link is what makes a purchase billable exactly once; the column is unique.
+  it('records which purchase each plugin line came from', async () => {
+    const { tx, prisma } = harness([orderLine(LINE_A, 'Attendance Pro', 12000)]);
+    await new SchoolBillingService(prisma).issuePlanInvoice('school-1', 'operator-1', {
+      periodStart: '2026-09-01T00:00:00.000Z', idempotencyKey: 'plan-invoice-000000011', internalReason: 'September billing run.',
+    }, context);
+
+    expect(tx.schoolInvoice.create.mock.calls[0][0].data.lines.create[1].sourceOrderLineId).toBe(LINE_A);
+  });
+
+  it('collects only purchases made on account, in the school currency, that are not already billed', async () => {
+    const { prisma } = harness();
+    await new SchoolBillingService(prisma).issuePlanInvoice('school-1', 'operator-1', {
+      periodStart: '2026-09-01T00:00:00.000Z', idempotencyKey: 'plan-invoice-000000012', internalReason: 'September billing run.',
+    }, context);
+
+    expect(prisma.marketplaceOrderLine.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: {
+        invoiceLine: { is: null },
+        order: { is: { settlementMode: 'INVOICE', status: { not: 'CANCELLED' }, currency: 'USD', installation: { is: { customerSchoolId: 'school-1' } } } },
+      },
+    }));
+  });
+
+  it('bills only the subscription when nothing was bought on account', async () => {
+    const { tx, prisma } = harness([]);
+    await new SchoolBillingService(prisma).issuePlanInvoice('school-1', 'operator-1', {
+      periodStart: '2026-09-01T00:00:00.000Z', idempotencyKey: 'plan-invoice-000000013', internalReason: 'September billing run.',
+    }, context);
+
+    expect(tx.schoolInvoice.create.mock.calls[0][0].data.lines.create).toHaveLength(1);
+  });
+});
+
+describe('SchoolBillingService voiding an invoice that granted credit', () => {
+  function harness(lines: Array<Record<string, unknown>>, entitlement: Record<string, unknown> | null) {
+    const tx = {
+      $executeRaw: jest.fn(),
+      schoolInvoice: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'invoice-1', invoiceNumber: 'WTN-2026-AAAA', customerSchoolId: 'school-1', status: 'ISSUED', paidMinor: 0, lines }),
+        update: jest.fn().mockResolvedValue({ id: 'invoice-1', status: 'VOID', voidedAt: now }),
+      },
+      installationEntitlement: { findFirst: jest.fn().mockResolvedValue(entitlement), update: jest.fn() },
+      platformAuditEvent: { create: jest.fn() },
+    };
+    const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
+    return { tx, prisma };
+  }
+
+  // The other half of the credit deal: cancel the bill, cancel the licence it paid for.
+  it('revokes the entitlement a voided invoice paid for', async () => {
+    const { tx, prisma } = harness([{ id: 'line-1', description: 'Attendance Pro (plugin licence)', sourceOrderLineId: 'order-line-1' }], { id: 'entitlement-1' });
+    await new SchoolBillingService(prisma).voidInvoice('school-1', 'invoice-1', 'operator-1', { internalReason: 'Raised against the wrong school.' }, context, now);
+
+    expect(tx.installationEntitlement.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'entitlement-1' },
+      data: expect.objectContaining({ status: 'REVOKED', revokedReason: 'Invoice WTN-2026-AAAA was voided' }),
+    }));
+    expect(tx.platformAuditEvent.create.mock.calls[0][0].data.metadata.revokedEntitlements).toEqual(['entitlement-1']);
+  });
+
+  it('leaves a subscription-only invoice with nothing to revoke', async () => {
+    const { tx, prisma } = harness([], null);
+    await new SchoolBillingService(prisma).voidInvoice('school-1', 'invoice-1', 'operator-1', { internalReason: 'Duplicate.' }, context, now);
+
+    expect(tx.installationEntitlement.update).not.toHaveBeenCalled();
+  });
+
+  // An entitlement already revoked or expired is not resurrected only to be revoked again.
+  it('does nothing when the entitlement is no longer active', async () => {
+    const { tx, prisma } = harness([{ id: 'line-1', description: 'Attendance Pro (plugin licence)', sourceOrderLineId: 'order-line-1' }], null);
+    await new SchoolBillingService(prisma).voidInvoice('school-1', 'invoice-1', 'operator-1', { internalReason: 'Already refunded.' }, context, now);
+
+    expect(tx.installationEntitlement.update).not.toHaveBeenCalled();
+    expect(tx.schoolInvoice.update).toHaveBeenCalled();
   });
 });

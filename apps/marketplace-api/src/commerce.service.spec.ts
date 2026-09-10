@@ -6,6 +6,8 @@ const ids = {
   price: '00000000-0000-4000-8000-000000000003', order: '00000000-0000-4000-8000-000000000004',
 };
 
+const configFor = () => config();
+
 function config() {
   const key = generateKeyPairSync('ed25519').privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
   return { publicBaseUrl: 'https://marketplace.example', entitlementPrivateKey: key, entitlementKeyId: 'entitlement-1' } as any;
@@ -228,5 +230,104 @@ describe('marketplace refund, revocation, and expiry policy', () => {
     expect(prisma.installationEntitlement.updateMany).toHaveBeenCalledWith({
       where: { status: 'ACTIVE', expiresAt: { lt: now } }, data: { status: 'EXPIRED' },
     });
+  });
+});
+
+/**
+ * Buying on the school's account. The entitlement is granted at approval rather than at payment,
+ * which is credit -- see docs/decisions/school-invoice-plugin-credit-2026-09-10.md. Everything in
+ * this block is one of the bounds that decision put on it.
+ */
+describe('CommerceService invoice settlement', () => {
+  const ACCOUNT = '11111111-1111-4111-8111-111111111111';
+  const INSTALLATION = '22222222-2222-4222-8222-222222222222';
+  const PRICE = '33333333-3333-4333-8333-333333333333';
+  const config = configFor();
+
+  const activeSchool = { id: 'school-1', status: 'ACTIVE', currency: 'USD', billingAnchorAt: new Date('2026-01-15T00:00:00.000Z'), billingPlan: { id: 'plan-1', active: true, currency: 'USD' } };
+
+  function harness(school: unknown = activeSchool) {
+    const created = { id: 'order-1', lines: [{ id: 'order-line-1' }] };
+    const tx = {
+      marketplaceOrder: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue(created),
+        findUniqueOrThrow: jest.fn().mockResolvedValue({
+          id: 'order-1', accountId: ACCOUNT, installationId: INSTALLATION,
+          installation: { installationId: 'install-abc' },
+          lines: [{ id: 'order-line-1', pluginId: 'plugin-1', price: { licenseDays: 3650, updatesDays: 365, licensedMajor: 1 }, entitlement: null }],
+        }),
+      },
+      marketplaceAccount: { findUnique: jest.fn().mockResolvedValue({ id: ACCOUNT }) },
+      installationRegistration: { findUnique: jest.fn().mockResolvedValue({ id: INSTALLATION, installationId: 'install-abc', accountId: ACCOUNT, school }) },
+      productPrice: { findMany: jest.fn().mockResolvedValue([{ id: PRICE, pluginId: 'plugin-1', currency: 'USD', amountMinor: 12000, licensedMajor: 1, licenseDays: 3650, updatesDays: 365, validFrom: new Date('2020-01-01'), validUntil: null, plugin: { id: 'plugin-1', isPaid: true, status: 'APPROVED' } }]) },
+      installationEntitlement: { upsert: jest.fn().mockResolvedValue({ id: 'entitlement-1' }) },
+    };
+    const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
+    return { tx, prisma };
+  }
+
+  const order = (settlementMode: string) => ({
+    accountId: ACCOUNT, installationId: INSTALLATION, currency: 'USD', priceIds: [PRICE],
+    idempotencyKey: 'order-idempotency-00001', settlementMode,
+  });
+
+  it('grants the entitlement at approval when a school buys on account', async () => {
+    const { tx, prisma } = harness();
+    await new CommerceService(prisma, config).createOrder(order('INVOICE'), new Date('2026-09-10T00:00:00.000Z'));
+
+    expect(tx.marketplaceOrder.create.mock.calls[0][0].data.settlementMode).toBe('INVOICE');
+    expect(tx.installationEntitlement.upsert).toHaveBeenCalled();
+  });
+
+  // No money has arrived; settlementMode is what distinguishes "not paid yet" from "not paid, and
+  // that is the arrangement".
+  it('leaves the order pending, because nothing has been paid', async () => {
+    const { tx, prisma } = harness();
+    await new CommerceService(prisma, config).createOrder(order('INVOICE'), new Date('2026-09-10T00:00:00.000Z'));
+
+    expect(tx.marketplaceOrder.create.mock.calls[0][0].data.status).toBeUndefined();
+  });
+
+  it('still withholds the entitlement on an immediate order', async () => {
+    const { tx, prisma } = harness();
+    await new CommerceService(prisma, config).createOrder(order('IMMEDIATE'), new Date('2026-09-10T00:00:00.000Z'));
+
+    expect(tx.installationEntitlement.upsert).not.toHaveBeenCalled();
+  });
+
+  it('defaults to immediate settlement, so existing callers are unchanged', async () => {
+    const { tx, prisma } = harness();
+    const { settlementMode: _omitted, ...withoutMode } = order('IMMEDIATE');
+    await new CommerceService(prisma, config).createOrder(withoutMode, new Date('2026-09-10T00:00:00.000Z'));
+
+    expect(tx.marketplaceOrder.create.mock.calls[0][0].data.settlementMode).toBe('IMMEDIATE');
+    expect(tx.installationEntitlement.upsert).not.toHaveBeenCalled();
+  });
+
+  it('refuses credit to a school with no active billing plan', async () => {
+    const { prisma } = harness({ ...activeSchool, billingPlan: null });
+    await expect(new CommerceService(prisma, config).createOrder(order('INVOICE')))
+      .rejects.toThrow(/no active billing plan/);
+  });
+
+  // Without an anniversary the recurring run never raises an invoice, so there is nothing to bill.
+  it('refuses credit to a school with no billing anniversary', async () => {
+    const { prisma } = harness({ ...activeSchool, billingAnchorAt: null });
+    await expect(new CommerceService(prisma, config).createOrder(order('INVOICE')))
+      .rejects.toThrow(/no billing anniversary/);
+  });
+
+  // An exchange rate on an invoice has tax consequences nobody has decided. Refuse, do not convert.
+  it('refuses a price in a currency the school is not billed in', async () => {
+    const { prisma } = harness({ ...activeSchool, currency: 'KHR', billingPlan: { id: 'plan-1', active: true, currency: 'KHR' } });
+    await expect(new CommerceService(prisma, config).createOrder(order('INVOICE')))
+      .rejects.toThrow(/billed in KHR and the price is in USD/);
+  });
+
+  it('refuses credit to an installation with no customer school', async () => {
+    const { prisma } = harness(null);
+    await expect(new CommerceService(prisma, config).createOrder(order('INVOICE')))
+      .rejects.toThrow(/not linked to a customer school/);
   });
 });

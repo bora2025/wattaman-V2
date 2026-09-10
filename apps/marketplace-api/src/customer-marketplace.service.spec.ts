@@ -26,7 +26,16 @@ describe('CustomerMarketplaceService', () => {
     const prisma: any = { installationRegistration: { findUnique: jest.fn().mockResolvedValue({ id: ids.registration, accountId: ids.account }) } };
     const service = new CustomerMarketplaceService(prisma, commerce);
     await service.checkout(ids.account, { installationId: ids.publicInstallation, currency: 'USD', priceIds: [ids.price], idempotencyKey: 'customer-checkout-0001' });
-    expect(commerce.createOrder).toHaveBeenCalledWith({ accountId: ids.account, installationId: ids.registration, currency: 'USD', priceIds: [ids.price], idempotencyKey: 'customer-checkout-0001' });
+    // settlementMode defaults to IMMEDIATE: a customer who does not ask to be billed on account is
+    // still required to pay before the entitlement is minted.
+    expect(commerce.createOrder).toHaveBeenCalledWith({ accountId: ids.account, installationId: ids.registration, currency: 'USD', priceIds: [ids.price], idempotencyKey: 'customer-checkout-0001', settlementMode: 'IMMEDIATE' });
+  });
+
+  it('passes a request to be billed on account through to commerce', async () => {
+    const commerce: any = { createOrder: jest.fn().mockResolvedValue({ id: 'order-1' }) };
+    const prisma: any = { installationRegistration: { findUnique: jest.fn().mockResolvedValue({ id: ids.registration, accountId: ids.account }) } };
+    await new CustomerMarketplaceService(prisma, commerce).checkout(ids.account, { installationId: ids.publicInstallation, currency: 'USD', priceIds: [ids.price], idempotencyKey: 'customer-checkout-0003', settlementMode: 'INVOICE' });
+    expect(commerce.createOrder).toHaveBeenCalledWith(expect.objectContaining({ settlementMode: 'INVOICE' }));
   });
 
   it('rejects checkout for an installation owned by another account', async () => {

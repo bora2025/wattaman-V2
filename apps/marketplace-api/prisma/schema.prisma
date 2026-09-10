@@ -92,6 +92,14 @@ enum EntitlementStatus {
   REFUNDED
 }
 
+/// How a plugin order is paid for. IMMEDIATE is the original behaviour: the entitlement mints
+/// inside the payment transaction. INVOICE grants it at approval and bills it on the school's next
+/// subscription invoice -- see docs/decisions/school-invoice-plugin-credit-2026-09-10.md.
+enum OrderSettlementMode {
+  IMMEDIATE
+  INVOICE
+}
+
 enum OrderStatus {
   PENDING
   PAID
@@ -958,6 +966,7 @@ model MarketplaceOrder {
   accountId      String
   installationId String
   status         OrderStatus              @default(PENDING)
+  settlementMode OrderSettlementMode      @default(IMMEDIATE)
   currency       String
   totalMinor     Int
   idempotencyKey String                   @unique

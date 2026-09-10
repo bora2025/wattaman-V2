@@ -20,6 +20,8 @@ const invoiceLineInput = z.object({
   unitAmountMinor: z.number().int().positive().max(2_000_000_000),
   periodStart: z.coerce.date().optional(),
   periodEnd: z.coerce.date().optional(),
+  /** The plugin order line this charge came from. Unique, so one purchase cannot be billed twice. */
+  sourceOrderLineId: z.string().uuid().optional(),
 }).strict();
 
 const invoiceInput = z.object({
@@ -163,7 +165,7 @@ export class SchoolBillingService {
     const schools = await this.prisma.customerSchool.findMany({
       where: { installation: { is: { accountId } } },
       select: {
-        id: true, name: true, status: true, currency: true,
+        id: true, name: true, status: true, currency: true, billingAnchorAt: true,
         billingPlan: { select: { id: true, slug: true, name: true, currency: true, amountMinor: true, billingInterval: true, dueDays: true } },
         invoices: {
           select: {
@@ -188,6 +190,9 @@ export class SchoolBillingService {
       schoolStatus: school.status,
       schoolCurrency: school.currency,
       billingPlan: school.billingPlan,
+      // The customer needs this to know whether "add to my invoice" is available at checkout, and
+      // to be told why when it is not.
+      billingAnchorAt: school.billingAnchorAt,
       outstandingMinor: school.invoices
         .filter((invoice) => invoice.status !== 'VOID')
         .reduce((sum, invoice) => sum + invoice.amountMinor - invoice.paidMinor, 0),
@@ -290,12 +295,39 @@ export class SchoolBillingService {
     // late at all.
     const dueAt = new Date(start.getTime() + plan.dueDays * 86_400_000);
     const description = `${plan.name} (${plan.billingInterval.toLowerCase()})`;
+    // Everything bought on account since the last invoice rides along on this one. Collected here
+    // rather than at purchase time so a school receives one bill, not a bill per plugin.
+    const pluginLines = await this.unbilledPluginLines(schoolId, plan.currency);
     return this.issueInvoice(schoolId, operatorId, {
-      currency: plan.currency, amountMinor: plan.amountMinor, description,
+      currency: plan.currency, description,
       periodStart: start, periodEnd: end, dueAt,
-      lines: [{ kind: 'SUBSCRIPTION', description, quantity: 1, unitAmountMinor: plan.amountMinor, periodStart: start, periodEnd: end }],
+      lines: [
+        { kind: 'SUBSCRIPTION', description, quantity: 1, unitAmountMinor: plan.amountMinor, periodStart: start, periodEnd: end },
+        ...pluginLines.map((line) => ({ kind: 'PLUGIN' as const, description: line.description, quantity: 1, unitAmountMinor: line.unitPriceMinor, sourceOrderLineId: line.id })),
+      ],
       idempotencyKey: input.idempotencyKey, internalReason: input.internalReason,
     }, context, new Date(), plan, periodKeyFor(plan.id, start), origin);
+  }
+
+  /**
+   * Plugin purchases this school made on account and has not been billed for yet.
+   *
+   * "Not billed yet" is the absence of a SchoolInvoiceLine pointing at the order line, and that
+   * column is unique -- so a plugin cannot land on two invoices even if two billing runs race.
+   * A currency that does not match the school's is left behind rather than converted; it will keep
+   * being skipped, visibly, until somebody prices it properly or refunds it.
+   */
+  private async unbilledPluginLines(schoolId: string, currency: string) {
+    const lines = await this.prisma.marketplaceOrderLine.findMany({
+      where: {
+        invoiceLine: { is: null },
+        order: { is: { settlementMode: 'INVOICE', status: { not: 'CANCELLED' }, currency, installation: { is: { customerSchoolId: schoolId } } } },
+      },
+      select: { id: true, unitPriceMinor: true, plugin: { select: { name: true } } },
+      orderBy: { id: 'asc' },
+      take: 50,
+    });
+    return lines.map((line) => ({ id: line.id, unitPriceMinor: line.unitPriceMinor, description: `${line.plugin.name} (plugin licence)` }));
   }
 
   /**
@@ -376,6 +408,7 @@ export class SchoolBillingService {
             position, kind: line.kind, description: line.description, quantity: line.quantity,
             unitAmountMinor: line.unitAmountMinor, amountMinor: line.quantity * line.unitAmountMinor,
             periodStart: line.periodStart, periodEnd: line.periodEnd, billingPlanId: line.kind === 'SUBSCRIPTION' ? plan?.id : undefined,
+            sourceOrderLineId: line.sourceOrderLineId,
           })) },
         },
         select: INVOICE_SELECT,
@@ -472,6 +505,19 @@ export class SchoolBillingService {
         where: { id: invoiceId },
         data: { paidMinor: nextPaid, status: paid ? 'PAID' : 'PARTIALLY_PAID', paidAt: paid ? receivedAt : null },
       });
+      // A plugin bought on account leaves its order PENDING until the invoice carrying it is
+      // settled. Closing that loop here keeps the orders list honest: without it an order bought on
+      // credit and long since paid would sit as PENDING forever.
+      if (paid) {
+        const billedOrderLines = await tx.schoolInvoiceLine.findMany({ where: { invoiceId, kind: 'PLUGIN', sourceOrderLineId: { not: null } }, select: { sourceOrderLineId: true } });
+        const orderLineIds = billedOrderLines.map((line) => line.sourceOrderLineId!).filter(Boolean);
+        if (orderLineIds.length) {
+          await tx.marketplaceOrder.updateMany({
+            where: { settlementMode: 'INVOICE', status: 'PENDING', lines: { some: { id: { in: orderLineIds } } } },
+            data: { status: 'PAID' },
+          });
+        }
+      }
       await this.audit(tx, operatorId, context, 'school_payment_recorded', schoolId, input.internalReason, {
         invoiceId, paymentId: payment.id, provider: payment.provider, providerReference: payment.providerReference,
         amountMinor: payment.amountMinor, resultingPaidMinor: nextPaid,
@@ -493,16 +539,31 @@ export class SchoolBillingService {
     const input = voidInput.parse(value);
     return this.prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('school-invoice'), hashtext(${invoiceId}))`;
-      const invoice = await tx.schoolInvoice.findUnique({ where: { id: invoiceId } });
+      const invoice = await tx.schoolInvoice.findUnique({ where: { id: invoiceId }, include: { lines: { where: { kind: 'PLUGIN' }, select: { id: true, description: true, sourceOrderLineId: true } } } });
       if (!invoice || invoice.customerSchoolId !== schoolId) throw new HttpError(404, 'School invoice not found');
       if (invoice.status === 'VOID') return { id: invoice.id, status: invoice.status };
       if (invoice.paidMinor !== 0) throw new HttpError(409, 'An invoice with payments cannot be voided');
+      // The other half of buying on credit: a plugin granted against this invoice loses its licence
+      // when the invoice is cancelled. Suspension deliberately does not do this -- downloads and
+      // updates are already blocked while a school is suspended, and a school that settles its bill
+      // should find its plugins where it left them.
+      const revokedEntitlements: string[] = [];
+      for (const line of invoice.lines) {
+        if (!line.sourceOrderLineId) continue;
+        const entitlement = await tx.installationEntitlement.findFirst({ where: { orderLineId: line.sourceOrderLineId, status: 'ACTIVE' }, select: { id: true } });
+        if (!entitlement) continue;
+        await tx.installationEntitlement.update({
+          where: { id: entitlement.id },
+          data: { status: 'REVOKED', revokedAt: now, revokedReason: `Invoice ${invoice.invoiceNumber} was voided` },
+        });
+        revokedEntitlements.push(entitlement.id);
+      }
       const updated = await tx.schoolInvoice.update({
         // Clearing periodKey releases the period guard, so a voided month can be invoiced again.
         where: { id: invoiceId }, data: { status: 'VOID', voidedAt: now, voidReason: input.internalReason, periodKey: null },
         select: { id: true, status: true, voidedAt: true },
       });
-      await this.audit(tx, operatorId, context, 'school_invoice_voided', schoolId, input.internalReason, { invoiceId });
+      await this.audit(tx, operatorId, context, 'school_invoice_voided', schoolId, input.internalReason, { invoiceId, revokedEntitlements });
       return updated;
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }

@@ -7,6 +7,8 @@ import { HttpError } from './http-error';
 const checkoutInput = z.object({
   installationId: z.string().uuid(), currency: z.string().regex(/^[A-Z]{3}$/),
   priceIds: z.array(z.string().uuid()).min(1).max(50), idempotencyKey: z.string().min(16).max(200),
+  /** INVOICE bills the school's next subscription invoice; the entitlement is granted now. */
+  settlementMode: z.enum(['IMMEDIATE', 'INVOICE']).default('IMMEDIATE'),
 }).strict();
 
 export class CustomerMarketplaceService {
@@ -40,7 +42,7 @@ export class CustomerMarketplaceService {
     const installation = await this.prisma.installationRegistration.findUnique({ where: { installationId: input.installationId }, select: { id: true, accountId: true, school: { select: { status: true } } } });
     if (!installation || installation.accountId !== accountId) throw new HttpError(403, 'Installation is not registered to this account');
     if (installation.school && installation.school.status !== 'ACTIVE') throw new HttpError(403, 'Customer school is not active');
-    return this.commerce.createOrder({ accountId, installationId: installation.id, currency: input.currency, priceIds: input.priceIds, idempotencyKey: input.idempotencyKey });
+    return this.commerce.createOrder({ accountId, installationId: installation.id, currency: input.currency, priceIds: input.priceIds, idempotencyKey: input.idempotencyKey, settlementMode: input.settlementMode });
   }
 
   orders(accountId: string) {
