@@ -227,6 +227,18 @@
       @apply border-slate-300 focus:ring-indigo-500;
     }
   }
+  /* Referenced by 25 buttons across 9 files but never defined, so every one of them rendered as
+     padded plain text -- "Add to my school invoice" and "Sync now" among them, neither of which
+     looked clickable. It is the outline button, on a white ground so it still reads on tinted panels. */
+  .btn-secondary {
+    @apply btn border bg-white text-slate-700 hover:bg-slate-50;
+    border-color: var(--color-input-border);
+  }
+  @screen lg {
+    .btn-secondary {
+      @apply border-slate-300 focus:ring-indigo-500;
+    }
+  }
   .btn-sm {
     @apply px-3 py-1.5 text-xs;
     min-height: 36px;

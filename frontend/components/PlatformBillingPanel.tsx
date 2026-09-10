@@ -97,17 +97,39 @@ export default function PlatformBillingPanel({ variant = 'page' }: { variant?: '
   const notices = state.billing?.notifications || [];
   const warnings = state.warnings || [];
   const currency = state.billing?.currency || invoices[0]?.currency || 'USD';
-  const tone = state.access === 'SUSPENDED' ? 'border-red-300 bg-red-50' : warnings.length ? 'border-amber-300 bg-amber-50' : 'border-emerald-300 bg-emerald-50';
+  const outstanding = state.billing?.outstandingMinor || 0;
+  // "overdue" is derived here: the marketplace keeps an unpaid invoice ISSUED past its due date.
+  const isOpen = (invoice: Invoice) => invoice.status !== 'PAID' && invoice.status !== 'VOID' && invoice.amountMinor > invoice.paidMinor;
+  const isOverdue = (invoice: Invoice) => isOpen(invoice) && new Date(invoice.dueAt).getTime() < Date.now();
+  const nextDue = invoices.filter(isOpen).sort((a, b) => new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime())[0];
+  // The same four tiers as the dashboard banner. Green is kept for "nothing owed": an open bill
+  // used to show green "Account active" beside a balance, which reads as paid.
+  const standing = state.access === 'SUSPENDED' ? 'suspended' : warnings.length ? 'final' : outstanding > 0 ? 'due' : 'clear';
+  // Only a billing suspension lifts itself when the invoice is paid. One an operator imposed on the
+  // school does not, and telling that school to pay would send it the wrong way.
+  const billingSuspension = standing === 'suspended' && warnings.length > 0;
+  const tone = { suspended: 'border-red-300 bg-red-50', final: 'border-amber-300 bg-amber-50', due: 'border-indigo-200 bg-indigo-50', clear: 'border-emerald-300 bg-emerald-50' }[standing];
+  const title = { suspended: 'School access suspended', final: 'Final payment notice', due: 'Payment due', clear: 'Account active' }[standing];
+  const summary = {
+    suspended: state.reason || 'School access is suspended.',
+    final: 'Pay the overdue balance before the suspension date below, or the school will be locked out.',
+    due: nextDue ? `${isOverdue(nextDue) ? 'Overdue since' : 'Next payment due'} ${new Date(nextDue.dueAt).toLocaleDateString()}.` : 'An invoice is open on this subscription.',
+    clear: 'Nothing is owed on the platform subscription.',
+  }[standing];
   // h2 directly under the standalone page's h1; h3 inside Licensing, under the card's own h2.
   const StatusHeading = variant === 'section' ? 'h3' : 'h2';
 
-  const status = <div className={`rounded-2xl border p-5 ${tone}`}><div className="flex flex-wrap justify-between gap-3"><div><StatusHeading className="font-bold">{state.access === 'SUSPENDED' ? 'School access suspended' : warnings.length ? 'Final payment notice' : 'Account active'}</StatusHeading><p className="mt-1 text-sm">{state.reason || (warnings.length ? 'Pay the overdue balance before the suspension date.' : 'No blocking platform invoice was reported.')}</p></div><div className="text-right"><div className="text-xs uppercase text-slate-500">Outstanding</div><div className="text-xl font-bold">{money(state.billing?.outstandingMinor, currency)}</div></div></div>{state.lastVerifiedAt && <p className="mt-3 text-xs text-slate-500">Verified with the marketplace {new Date(state.lastVerifiedAt).toLocaleString()}</p>}{state.lastError && <p className="mt-2 text-sm text-red-700">Last sync error: {state.lastError}</p>}</div>;
+  const status = <div className={`rounded-2xl border p-5 ${tone}`}><div className="flex flex-wrap justify-between gap-3"><div><StatusHeading className="font-bold">{title}</StatusHeading><p className="mt-1 text-sm">{summary}</p>{warnings.map(warning => <p key={warning.invoiceId} className="mt-2 text-sm font-semibold">Invoice {warning.invoiceNumber}: {money(warning.outstandingMinor, warning.currency)} outstanding{standing === 'final' ? ` · suspension on ${new Date(warning.suspendAt).toLocaleString()}` : ''}</p>)}{billingSuspension && <p className="mt-3 text-sm">To restore access, pay the balance and submit the bank or payment reference in your <Link className="font-semibold underline" href="/marketplace">marketplace account</Link>. Access returns automatically once Wattanam finance approves the payment; press Sync now to check.</p>}{standing === 'suspended' && !billingSuspension && <p className="mt-3 text-sm">This suspension was not caused by an unpaid invoice. Contact Wattanam support to restore access.</p>}</div><div className="text-right"><div className="text-xs uppercase text-slate-500">Outstanding</div><div className="text-xl font-bold">{money(state.billing?.outstandingMinor, currency)}</div></div></div>{state.lastVerifiedAt && <p className="mt-3 text-xs text-slate-500">Verified with the marketplace {new Date(state.lastVerifiedAt).toLocaleString()}</p>}{state.lastError && <p className="mt-2 text-sm text-red-700">Last sync error: {state.lastError}</p>}</div>;
 
   const plan = state.billing?.billingPlan
     ? <p>{state.billing.billingPlan.name} · {money(state.billing.billingPlan.amountMinor, state.billing.billingPlan.currency)} / {state.billing.billingPlan.billingInterval.toLowerCase()}</p>
     : <p className="text-sm text-slate-500">No central billing plan assigned.</p>;
 
-  const invoiceTable = invoices.length === 0 ? <p className="text-sm text-slate-500">No open invoices.</p> : <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b"><th className="py-2">Invoice</th><th>Description</th><th>Due</th><th>Status</th><th className="text-right">Balance</th></tr></thead><tbody>{invoices.map(invoice => <tr key={invoice.id} className="border-b last:border-0"><td className="py-3 font-mono font-semibold">{invoice.invoiceNumber}</td><td>{invoice.description}{(invoice.lines?.length || 0) > 1 && <ul className="mt-1 space-y-0.5 text-xs text-slate-500">{invoice.lines!.map(line => <li key={line.id}>{line.description}{line.quantity > 1 ? ` × ${line.quantity}` : ''} — {money(line.amountMinor, invoice.currency)}</li>)}</ul>}</td><td>{new Date(invoice.dueAt).toLocaleDateString()}</td><td>{invoice.status.toLowerCase().replaceAll('_', ' ')}</td><td className="text-right font-semibold">{money(invoice.amountMinor - invoice.paidMinor, invoice.currency)}</td></tr>)}</tbody></table></div>;
+  const invoiceTable = invoices.length === 0 ? <p className="text-sm text-slate-500">No open invoices.</p> : <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b"><th className="py-2">Invoice</th><th>Description</th><th>Due</th><th>Status</th><th className="text-right">Balance</th></tr></thead><tbody>{invoices.map(invoice => <tr key={invoice.id} className="border-b last:border-0"><td className="py-3 font-mono font-semibold">{invoice.invoiceNumber}</td><td>{(invoice.lines?.length || 0) > 1
+      // Several lines: they are the description. The headline alone ("Standard (monthly)") read
+      // as the whole bill beside a balance that also carried a plugin.
+      ? <ul className="space-y-0.5">{invoice.lines!.map(line => <li key={line.id}>{line.description}{line.quantity > 1 ? ` × ${line.quantity}` : ''} <span className="text-slate-500">— {money(line.amountMinor, invoice.currency)}</span></li>)}</ul>
+      : invoice.description}</td><td>{new Date(invoice.dueAt).toLocaleDateString()}</td><td>{isOverdue(invoice) ? <span className="font-semibold text-red-700">overdue</span> : invoice.status.toLowerCase().replaceAll('_', ' ')}</td><td className="text-right font-semibold">{money(invoice.amountMinor - invoice.paidMinor, invoice.currency)}</td></tr>)}</tbody></table></div>;
 
   const shownNotices = variant === 'section' ? notices.slice(0, 3) : notices;
   const noticeList = notices.length === 0 ? <p className="text-sm text-slate-500">No billing notifications.</p> : <div className="space-y-2">{shownNotices.map(notice => <article key={notice.id} className="rounded-xl border p-3 text-sm"><div className="flex justify-between gap-3"><strong>{notice.subject}</strong><time className="text-xs text-slate-500">{new Date(notice.createdAt).toLocaleString()}</time></div><p className="mt-1 text-slate-700">{notice.message}</p></article>)}{shownNotices.length < notices.length && <Link className="text-sm font-semibold text-indigo-700" href="/admin/platform-billing">All {notices.length} billing notifications →</Link>}</div>;
