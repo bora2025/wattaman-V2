@@ -11,6 +11,7 @@ import { fetchSchoolAccess, homeForRole, lockDestination } from '../../lib/schoo
 function LoginContent() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -40,7 +41,7 @@ function LoginContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, ...(mfaCode.trim() ? { mfaCode: mfaCode.trim() } : {}) }),
       });
 
       if (res.ok) {
@@ -161,6 +162,11 @@ function LoginContent() {
                   )}
                 </button>
               </div>
+            </div>
+
+            <div>
+              <label className="block text-[15px] font-semibold mb-2" style={{ color: 'var(--color-text)' }}>MFA or recovery code <span className="font-normal text-slate-400">(if enabled)</span></label>
+              <input value={mfaCode} onChange={(event) => setMfaCode(event.target.value)} inputMode="numeric" autoComplete="one-time-code" placeholder="123456" maxLength={10} />
             </div>
 
             <div className="pt-5">
@@ -317,6 +323,11 @@ function LoginContent() {
                     )}
                   </button>
                 </div>
+              </div>
+
+              <div>
+                <label className="form-label">MFA or recovery code <span className="font-normal text-slate-400">(if enabled)</span></label>
+                <input value={mfaCode} onChange={(event) => setMfaCode(event.target.value)} inputMode="numeric" autoComplete="one-time-code" placeholder="123456" maxLength={10} />
               </div>
 
               <button

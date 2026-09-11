@@ -1,6 +1,6 @@
 # ADR-0015: Cross-Plugin Event Consistency
 
-Status: **Proposed** — drafted 2026-09-11 for Gate LC-0 (**LC0-008**). Awaiting product-owner approval.
+Status: **Accepted** — approved by product owner **Bora** on 2026-09-11 for **LC0-008**.
 
 ## Context
 
@@ -12,7 +12,7 @@ Plugin events today run on an in-process Node `EventEmitter` (`backend/src/plugi
 
 That is fine for hints, but not for what LC-1 found crossing future plugin boundaries, which is mostly direct writes. Deleting a class clears attendance, fees, exam attempts and parent requests (`classes.service.ts:237-244`), and deleting a user clears records in five plugins (`auth.service.ts:310-331`). LC-1 counts 22 undeclared feature-to-feature dependencies and one cycle across 10 plugins. Once the tables have separate owners, each of those writes becomes a message between plugins.
 
-## Decision (proposed)
+## Decision
 
 1. **Durable events go through a transactional outbox.** A plugin writes its event row in the same database transaction as the state change it describes. A dispatcher on the existing database-backed job runner delivers it at least once.
 2. **Consumers are idempotent.** Each consumer records the event IDs it has processed and ignores repeats.

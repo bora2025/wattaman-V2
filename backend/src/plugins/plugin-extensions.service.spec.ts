@@ -73,4 +73,31 @@ describe('PluginExtensionsService', () => {
     service.clear('wattanam.test');
     expect(service.list()).toMatchObject({ navigation: [], permissions: [], pages: [] });
   });
+
+  it('searches only active permission-granted providers and validates their namespace', async () => {
+    const service = new PluginExtensionsService(
+      { isGranted: jest.fn(async (pluginId: string) => pluginId === 'allowed') } as any,
+      { log: jest.fn() } as any,
+    );
+    const definition = (pluginId: string) => ({
+      method: 'GET' as const,
+      path: 'search',
+      permission: `${pluginId}.read`,
+      handler: jest.fn(async () => [
+        { id: 'one', title: 'Valid result', description: 'Found', href: `/plugins/${pluginId}/records/one` },
+        { id: 'escape', title: 'Invalid result', href: '/admin/users' },
+      ]),
+    });
+    service.registerRoute('allowed', new Set(['allowed.read']), definition('allowed'));
+    service.registerRoute('denied', new Set(['denied.read']), definition('denied'));
+
+    await expect(service.searchForPrincipal('student', { userId: 'u1', role: 'TEACHER' }))
+      .resolves.toEqual([{ pluginId: 'allowed', id: 'one', title: 'Valid result', description: 'Found', href: '/plugins/allowed/records/one' }]);
+  });
+
+  it('requires a bounded plugin search query', async () => {
+    const service = new PluginExtensionsService({} as any, {} as any);
+    await expect(service.searchForPrincipal(' ', { userId: 'u1', role: 'ADMIN' })).rejects.toThrow('between 2 and 100');
+    await expect(service.searchForPrincipal('x'.repeat(101), { userId: 'u1', role: 'ADMIN' })).rejects.toThrow('between 2 and 100');
+  });
 });

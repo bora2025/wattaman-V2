@@ -1,6 +1,6 @@
 # ADR-0013: Plugin Artifact Delivery
 
-Status: **Proposed** — drafted 2026-09-11 for Gate LC-0 (**LC0-006**). Awaiting product-owner approval.
+Status: **Accepted** — approved by product owner **Bora** on 2026-09-11 for **LC0-006**.
 
 ## Context
 
@@ -8,7 +8,7 @@ An installed plugin's code lives on the local filesystem under `PLUGIN_DIR` (`/d
 
 The backend can run as separate `api` and `worker` roles (`PROCESS_ROLE`, `config/environment.ts:89-90`), and plugin jobs execute in the worker. Separate Railway services cannot share a volume, so a database row saying a plugin is active does not guarantee the worker holds the same verified code. Under lean core, where every business feature is a plugin, that gap would affect every school.
 
-## Decision (proposed)
+## Decision
 
 1. **Artifacts are immutable and addressed by SHA-256 digest**, stored centrally by the marketplace and the update repository. A release's digest is part of its signed metadata.
 2. **Every runtime role keeps its own local, read-only cache.** Each API or worker instance downloads the artifact itself, verifies the signature and digest, and loads only a version that matches the registry.

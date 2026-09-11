@@ -41,6 +41,7 @@ export class HealthService {
       version: config.appVersion,
       commit: config.gitCommit?.slice(0, 12) || null,
       environment: config.nodeEnv,
+      distribution: config.distribution,
     };
   }
 

@@ -65,6 +65,7 @@ Publisher and repository private signing keys are secret-manager inputs, never s
 |---|---|---|---|
 | Core required | NODE_ENV, PORT, DATABASE_URL, JWT_SECRET, CORS_ORIGINS, PUBLIC_APP_URL | Platform/SRE | validate before startup; `PUBLIC_APP_URL` is the public gateway origin used in password-reset links; secrets never logged |
 | Release identity | APP_VERSION, GIT_COMMIT, RAILWAY_GIT_COMMIT_SHA | Release Engineering | immutable release metadata |
+| Distribution | WATTANAM_DISTRIBUTION | Platform/SRE | `legacy-full` (default) or `core`; any other value stops startup; production stays `legacy-full` until the lean-core LC-2 gate passes |
 | Authentication | COOKIE_SECURE, JWT_ACCESS_EXPIRY, JWT_REFRESH_EXPIRY | Security | secure production defaults; expiry changes reviewed |
 | Backup | BACKUP_DIR, BACKUP_RETENTION_DAYS | SRE | must resolve below persistent storage in production |
 | Plugin runtime | PLUGIN_DIR, PLUGIN_DATA_DIR, PLUGIN_SAFE_MODE, PLUGIN_MAX_PACKAGE_BYTES, PLUGIN_MAX_UNPACKED_BYTES, PLUGIN_STORAGE_MAX_FILE_BYTES | Plugin Platform | bounded values and persistent paths |

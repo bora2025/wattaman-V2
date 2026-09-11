@@ -32,9 +32,9 @@ The plan uses these Version 1 defaults. The product owner may replace a default 
 | DEC-001 | Core license | Proprietary commercial distribution; customer retains contractual data-export rights | proposed | E0 |
 | DEC-002 | Commercial model | Annual subscription for updates/support; installed core remains usable after expiry | proposed | E0 |
 | DEC-003 | Tenancy | One legal school organization per installation; campuses are children of that school, not tenants | proposed | A0 |
-| DEC-004 | Base product | Identity, roles, students, staff, academic structure, attendance, audit, installation, backup, plugin host | proposed | A0 |
+| DEC-004 | Base product | Replaced by ADR-0009: lean platform foundation only; school business features, including academic structure and attendance, are official plugins | replaced by LC0-002 (Bora, 2026-09-11) | A0 |
 | DEC-005 | Launch region | Cambodia first; Khmer and English; USD and KHR; `Asia/Phnom_Penh` default | proposed | A0 |
-| DEC-006 | Connectivity | Daily internet is optional; installation and signed package import work offline; paid rights use offline tokens | proposed | E0 |
+| DEC-006 | Connectivity | Daily internet is optional; offline package import is limited to the school's own recovery set; paid rights use signed offline tokens | amended by LC0-006 (Bora, 2026-09-11) | E0 |
 | DEC-007 | Publishing | Wattanam-only through Milestone E; invited verified publishers in F pilot; no open upload in V1 | proposed | F0 |
 | DEC-008 | Hosting | One Railway project per school is supported managed hosting; Docker Compose on Linux is supported self-hosting | proposed | B0 |
 | DEC-009 | Payments | Provider adapter with manual/offline invoice first, Stripe-compatible card adapter second | proposed | E1 |

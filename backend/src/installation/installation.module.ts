@@ -11,8 +11,8 @@ import { PluginPackageVerifier } from '../plugins/plugin-package';
 // PluginsModule's own PluginRuntimeService -- whose onApplicationBootstrap() hook queries the
 // PluginInstallation table unconditionally, which would crash install-cli.ts's standalone
 // NestFactory.createApplicationContext(InstallationModule, ...) against a database that hasn't
-// been migrated yet in the same invocation. Actually installing a verified package still goes
-// through the existing POST /plugins/install endpoint once setup completes.
+// been migrated yet in the same invocation. Production installation is initiated through the
+// marketplace after setup; this verifier is used only to validate deployment-CLI input.
 @Module({
   imports: [DatabaseModule],
   controllers: [InstallationController],
@@ -20,4 +20,3 @@ import { PluginPackageVerifier } from '../plugins/plugin-package';
   exports: [InstallationService, InstallationPreflightService],
 })
 export class InstallationModule {}
-

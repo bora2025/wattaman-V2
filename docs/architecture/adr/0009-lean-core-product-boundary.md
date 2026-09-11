@@ -1,6 +1,6 @@
 # ADR-0009: Lean Core Product Boundary
 
-Status: **Proposed** — drafted 2026-09-11 for Gate LC-0 (**LC0-001**, **LC0-002**). Awaiting product-owner approval; nothing here is accepted. Accepting it also replaces **DEC-004**.
+Status: **Accepted** — approved by product owner **Bora** on 2026-09-11 for **LC0-001** and **LC0-002**. This record replaces **DEC-004**.
 
 ## Context
 
@@ -22,7 +22,7 @@ LC-1 measured what that means in the current code (`docs/architecture/generated/
 
 179 references still run from core into feature code: module composition in `app.module.ts` and the mobile `App.tsx`, navigation arrays, dashboard API calls, and direct reads and deletes of feature tables. They are the LC-2 and LC-4 work list, not violations to fix before this decision.
 
-## Decision (proposed)
+## Decision
 
 **LC0-001 — Lean core plus plugin-first is the target distribution.**
 

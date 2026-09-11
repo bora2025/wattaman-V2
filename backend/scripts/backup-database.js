@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { backupDirectory, fail, installationSlug, postgresEnvironment, run, sha256, timestamp } = require('./db-toolkit');
+const { backupDirectory, fail, installationSlug, schemaLineage, postgresEnvironment, run, sha256, timestamp } = require('./db-toolkit');
 
 if (process.argv.includes('--help')) {
   process.stdout.write('Usage: node scripts/backup-database.js\nRequires DATABASE_URL; optional BACKUP_DIR and BACKUP_RETENTION_DAYS.\n');
@@ -32,6 +32,7 @@ try {
     sizeBytes: fs.statSync(archive).size,
     sha256: sha256(archive),
     installationSlug: installationSlug(environment),
+    schemaLineage: schemaLineage(environment),
     appVersion: process.env.APP_VERSION || null,
     postgresVersion: run('pg_dump', ['--version'], environment, true),
   };

@@ -8,6 +8,7 @@ import { DatabaseModule } from '../database/database.module';
 import { getJwtKeyId, getJwtSecret } from '../config/environment';
 import { NotificationModule } from '../notification/notification.module';
 import { PasswordResetService } from './password-reset.service';
+import { MfaService } from './mfa.service';
 
 @Module({
   imports: [
@@ -24,7 +25,7 @@ import { PasswordResetService } from './password-reset.service';
       }),
     }),
   ],
-  providers: [AuthService, PasswordResetService, JwtStrategy],
+  providers: [AuthService, PasswordResetService, MfaService, JwtStrategy],
   controllers: [AuthController],
   exports: [JwtModule],
 })

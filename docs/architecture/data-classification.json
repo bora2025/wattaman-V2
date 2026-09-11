@@ -433,6 +433,8 @@
       "fields": {
         "email": { "tier": 2, "categories": ["personal"], "thirdParty": ["email"] },
         "name": { "tier": 2, "categories": ["personal"], "thirdParty": ["email", "sms"], "note": "Interpolated into provider messages." },
+        "mfaRecoveryCodes": { "tier": 4, "categories": ["credential"], "note": "Single-use recovery-code hashes; plaintext codes are returned only during enrollment." },
+        "mfaSecretEncrypted": { "tier": 4, "categories": ["credential"], "note": "TOTP seed encrypted with AES-256-GCM at rest." },
         "password": { "tier": 4, "categories": ["credential"], "note": "bcrypt, cost 12." },
         "phone": { "tier": 2, "categories": ["personal"], "thirdParty": ["sms"] },
         "phoneNormalized": { "tier": 2, "categories": ["personal"] },

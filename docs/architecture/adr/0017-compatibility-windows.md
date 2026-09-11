@@ -1,6 +1,6 @@
 # ADR-0017: Compatibility Windows
 
-Status: **Proposed** — drafted 2026-09-11 for Gate LC-0 (**LC0-010**). Awaiting product-owner approval. The numbers below are recommendations, and they are the part of this record most worth changing.
+Status: **Accepted** — approved by product owner **Bora** on 2026-09-11 for **LC0-010**.
 
 ## Context
 
@@ -15,7 +15,7 @@ What the code enforces today:
 
 What is missing is a stated policy: how long each version stays supported, and what a school, a plugin or an app can rely on.
 
-## Decision (proposed)
+## Decision
 
 1. **Core.**
    - Core uses semantic versioning. It stays 0.x until the release that makes lean core the installation default (LC-7), which becomes 1.0.0. From then on, a breaking change to anything plugins use needs a new major.

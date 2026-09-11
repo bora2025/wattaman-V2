@@ -58,6 +58,21 @@ function installationSlug(environment) {
   return result.status === 0 ? String(result.stdout || '').trim() || null : null;
 }
 
+function schemaLineage(environment) {
+  const sql = 'SELECT "lineage" FROM "_wattanam_schema_lineage" WHERE "id" = \'singleton\' LIMIT 1';
+  const result = spawnSync('psql', ['--no-psqlrc', '--tuples-only', '--no-align', '--command', sql], {
+    env: environment, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  return result.status === 0 ? String(result.stdout || '').trim() || null : null;
+}
+
+function expectedSchemaLineage(distribution = process.env.WATTANAM_DISTRIBUTION) {
+  const value = String(distribution || 'legacy-full').trim().toLowerCase();
+  if (value === 'core') return 'wattanam-core-v1';
+  if (value === 'legacy-full') return 'wattanam-legacy-v1';
+  throw new Error(`WATTANAM_DISTRIBUTION must be core or legacy-full (got "${value}")`);
+}
+
 function sha256(file) {
   const hash = crypto.createHash('sha256');
   hash.update(fs.readFileSync(file));
@@ -132,7 +147,6 @@ function tar(args) {
 }
 
 module.exports = {
-  backupDirectory, fail, installationSlug, postgresEnvironment, run, sha256, timestamp,
+  backupDirectory, fail, installationSlug, schemaLineage, expectedSchemaLineage, postgresEnvironment, run, sha256, timestamp,
   pluginDirectory, pluginDataDirectory, walkDirectoryChecksums, verifyDirectoryChecksums, tar, safeRelativePath,
 };
-

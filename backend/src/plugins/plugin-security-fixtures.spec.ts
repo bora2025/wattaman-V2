@@ -99,7 +99,7 @@ describe('C-007 malicious-fixture suite: SSRF and secret access', () => {
   });
 
   it('the runtime context exposes no fetch/http/network/env/process/prisma surface a plugin could reach beyond its declared capabilities', async () => {
-    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'wattanam-ssrffixture-'));
+    const directory = await fs.mkdtemp(path.join(process.cwd(), '.tmp-wattanam-ssrffixture-'));
     const installedPath = path.join(directory, 'wattanam.ssrftest', '1.0.0');
     await fs.mkdir(path.join(installedPath, 'backend'), { recursive: true });
     await fs.writeFile(path.join(installedPath, 'backend', 'index.js'), `

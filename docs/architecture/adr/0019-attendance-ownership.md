@@ -1,6 +1,6 @@
 # ADR-0019: Attendance Ownership
 
-Status: **Proposed** — drafted 2026-09-11 for Gate LC-0 (**LC0-012**). Awaiting product-owner approval. 131 inventory items stay provisional until it is decided, more than for any other decision.
+Status: **Accepted** — approved by product owner **Bora** on 2026-09-11 for **LC0-012**.
 
 ## Context
 
@@ -15,7 +15,7 @@ Status: **Proposed** — drafted 2026-09-11 for Gate LC-0 (**LC0-012**). Awaitin
 
 The migration plan gives three of the four a clear owner. School-day attendance goes to Attendance. Staff attendance goes to Human Resources, with Attendance possibly providing a shared engine (10.1). Course-session attendance goes to Learning (10.1). For lesson attendance, section 4 says Attendance, even though the plan sends all other staff attendance to Human Resources.
 
-## Decision (proposed)
+## Decision
 
 1. **School-day attendance belongs to `wattanam.attendance`**. That includes scanning, corrections, sessions, holidays, student card aliases, absence alerts, and student attendance reports and exports.
 2. **Staff attendance belongs to `wattanam.human-resources`, with no dependency on Attendance.**

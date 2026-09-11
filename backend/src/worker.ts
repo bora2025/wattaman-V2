@@ -1,17 +1,16 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { readRuntimeConfig } from './config/environment';
+import { readWorkerStartupConfig } from './config/startup-config';
 import { readUpdateRepositoryConfig } from './updates/update-config';
 import { readNotificationProviderConfig } from './notification/notification-config';
 import { createServer } from 'node:http';
 import { PrismaService } from './database/prisma.service';
 
 async function bootstrap() {
-  const config = readRuntimeConfig();
-  if (config.processRole !== 'worker') throw new Error('Worker entrypoint requires PROCESS_ROLE=worker');
+  const config = readWorkerStartupConfig();
   readUpdateRepositoryConfig();
   readNotificationProviderConfig();
-  const app = await NestFactory.createApplicationContext(AppModule, {
+  const app = await NestFactory.createApplicationContext(AppModule.register(config.distribution), {
     logger: config.nodeEnv === 'production' ? ['error', 'warn'] : ['log', 'error', 'warn'],
   });
   const prisma = app.get(PrismaService);
@@ -47,7 +46,7 @@ async function bootstrap() {
   };
   process.once('SIGTERM', () => void shutdown('SIGTERM'));
   process.once('SIGINT', () => void shutdown('SIGINT'));
-  console.log(`Background worker started on health port ${config.workerPort}`);
+  console.log(`Background worker started on health port ${config.workerPort} (${config.distribution} distribution)`);
 }
 
 bootstrap().catch((error) => {

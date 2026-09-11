@@ -5,7 +5,14 @@ const test = require('node:test');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { safeRelativePath, walkDirectoryChecksums, verifyDirectoryChecksums, sha256 } = require('./db-toolkit');
+const { expectedSchemaLineage, safeRelativePath, walkDirectoryChecksums, verifyDirectoryChecksums, sha256 } = require('./db-toolkit');
+
+test('expectedSchemaLineage selects core and legacy restore boundaries', () => {
+  assert.equal(expectedSchemaLineage('core'), 'wattanam-core-v1');
+  assert.equal(expectedSchemaLineage('legacy-full'), 'wattanam-legacy-v1');
+  assert.equal(expectedSchemaLineage(undefined), 'wattanam-legacy-v1');
+  assert.throws(() => expectedSchemaLineage('unknown'), /must be core or legacy-full/);
+});
 
 function tempDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'wattanam-db-toolkit-'));

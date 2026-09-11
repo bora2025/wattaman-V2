@@ -3,6 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../database/prisma.service';
 import { NotificationService } from '../notification/notification.service';
 import { SchoolAccessService } from '../marketplace/school-access.service';
+import { getDistribution } from '../config/environment';
 
 @Injectable()
 export class DigestService {
@@ -43,7 +44,7 @@ export class DigestService {
       if (!p.user.email) continue;
       try {
         const [unreadMessages, announcements] = await Promise.all([
-          this.prisma.message.count({
+          getDistribution() === 'core' ? Promise.resolve(0) : this.prisma.message.count({
             where: { receiverId: p.userId, readAt: null, createdAt: { gte: since } },
           }),
           this.prisma.notification.count({

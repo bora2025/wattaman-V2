@@ -50,7 +50,18 @@ describe('HealthService', () => {
       version: '1.2.3',
       commit: '1234567890ab',
       environment: 'test',
+      distribution: 'legacy-full',
     });
+  });
+
+  it('reports the core distribution when an installation runs it', () => {
+    process.env = {
+      NODE_ENV: 'test',
+      DATABASE_URL: 'postgresql://localhost:5432/wattanam_test',
+      WATTANAM_DISTRIBUTION: 'core',
+    };
+
+    expect(new HealthService({} as any, {} as any).version().distribution).toBe('core');
   });
 
   it('combines migration, installation, and backup state for administrators', async () => {

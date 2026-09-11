@@ -28,6 +28,7 @@ services:
     environment:
       NODE_ENV: ${APP_NODE_ENV:-production}
       PROCESS_ROLE: ${PROCESS_ROLE:-combined}
+      WATTANAM_DISTRIBUTION: ${WATTANAM_DISTRIBUTION:-legacy-full}
       PORT: 3001
       APP_VERSION: ${APP_VERSION:-0.1.0}
       DATABASE_URL: postgresql://${POSTGRES_USER:-wattanam}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-wattanam}
@@ -126,6 +127,7 @@ services:
     environment:
       NODE_ENV: ${APP_NODE_ENV:-production}
       PROCESS_ROLE: worker
+      WATTANAM_DISTRIBUTION: ${WATTANAM_DISTRIBUTION:-legacy-full}
       WORKER_PORT: 3002
       APP_VERSION: ${APP_VERSION:-0.1.0}
       DATABASE_URL: postgresql://${POSTGRES_USER:-wattanam}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-wattanam}

@@ -6,7 +6,7 @@ Status: technical baseline. Commercial support windows require Product Owner app
 |---|---|---|
 | Node.js | 20.x LTS runtime images | API, web, and marketplace Dockerfiles |
 | PostgreSQL | 16.x (Compose) and 18.x (Railway) for school installations | Full custom backup/clean-restore acceptance on PostgreSQL 16 and Railway PostgreSQL 18 |
-| PostgreSQL client | 18.x in school API image | can dump supported PostgreSQL 16 and 18 servers; release restore drills remain version-matrix gates |
+| PostgreSQL client | 18.x in school API image | can dump supported PostgreSQL 16 and 18 servers; restore targets must support statements emitted by that client, so production recovery drills use a matching PostgreSQL 18 target and PostgreSQL 16 CI uses client 16 |
 | NestJS | 11.2.x (Express 5) | backend build, full test suite, and live e2e (A-009, 2026-08-29) |
 | Prisma | 5.22.x | both schema migrations and generated clients |
 | Next.js | 16.3.x (React 19.2.x) | standalone production build; live dev-server smoke test (A-009, 2026-08-29) |

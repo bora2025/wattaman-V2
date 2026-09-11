@@ -1,6 +1,6 @@
 # ADR-0011: Plugin UI Extension Model — Declarative UI v2
 
-Status: **Proposed** — drafted 2026-09-11 for Gate LC-0 (**LC0-004**). Awaiting product-owner approval.
+Status: **Accepted** — approved by product owner **Bora** on 2026-09-11 for **LC0-004**.
 
 ## Context
 
@@ -8,7 +8,7 @@ A plugin can contribute exactly one kind of page today: a `json-settings` page a
 
 Meanwhile 111 of the 136 frontend pages belong to future plugins, and many are far richer than a settings form: the timetable grid, score sheets and gradebook, camera/QR/USB scanning, the card designer, certificate and budget print views, and live bus tracking. Moving a module's backend while its pages stay compiled into `frontend/` would be feature flagging, not an installable plugin.
 
-## Decision (proposed)
+## Decision
 
 1. **The first production UI model is declarative UI v2**: a versioned component schema that the core frontend renders. It covers:
    - tables with sort, filter, pagination and row selection;

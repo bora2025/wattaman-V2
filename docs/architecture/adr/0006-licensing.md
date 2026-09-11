@@ -2,6 +2,11 @@
 
 Status: **Proposed** — implemented as the Version 1 default; formal acceptance is blocked on **DEC-001** at Gate **E0**.
 
+LC-0 amendment: **ADR-0016 was accepted by Bora on 2026-09-11.** Its whole-school billing lock
+and per-plugin entitlement rules supersede any consequence below that says core can never be
+restricted for nonpayment. Suspension still preserves billing recovery, administration required to
+recover, and customer data export.
+
 ## Context
 
 "Licensing" here means two related but distinct things, and this ADR covers both because A-003 names "licensing" as a single subject: (1) the legal distribution model for the core product itself, and (2) the technical entitlement mechanism that enforces which paid plugins/features an installation may use. DEC-013 (entitlement token format) is the technical half; DEC-001 (core license) is the legal half. They're recorded together here since they compose into one coherent story: the core product is licensed one way, official paid plugins are licensed and enforced a different, offline-tolerant way.
@@ -15,7 +20,9 @@ Status: **Proposed** — implemented as the Version 1 default; formal acceptance
 ## Consequences
 
 - **Subscription expiry degrades gracefully, it never destroys data.** Per §11.2's explicit rule, expiry ends *updates and support* after the grace period; it does not erase data or silently disable essential read/export behavior. This is a load-bearing product promise, not an incidental detail — it's what makes the entitlement model compatible with DEC-006's offline-first requirement (E-005: a marketplace outage or expiry leaves the school's cached entitlement/functionality untouched — verified fail-open on outage, fail-closed only on cryptographic trust failure).
-- **Core itself has no entitlement gate.** The base product (DEC-004's scope: identity, roles, students, staff, academic structure, attendance, audit, installation, backup, plugin host) never checks a license token to keep running — only *paid official plugins* are entitlement-gated. A school that never pays for anything still has a fully functional core system.
+- **Core and plugin entitlements remain distinct.** Paid plugins use their own signed entitlements.
+  The accepted platform-subscription billing lock may suspend school use after the notice and grace
+  workflow, while preserving recovery administration and data export, as defined by ADR-0016.
 - A refund or for-cause revocation stops future downloads/renewals; it is explicitly **not** the same action as a security emergency-disable, which is a distinct signed advisory process (D-006) — conflating the two would mean a routine refund could accidentally look like a security incident, or vice versa.
 - Because verification is local and offline-tolerant, a compromised entitlement private key is a serious incident (forged licenses for any installation) with no built-in "call home and revalidate everything" recovery — recovery relies on key rotation with an overlap window, the same mechanism already live-drilled for the repository key (`D-002`) but not yet drilled for the entitlement key (a gap [secrets-inventory.md](../../operations/secrets-inventory.md) already flags).
 

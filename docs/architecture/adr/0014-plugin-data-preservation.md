@@ -1,6 +1,6 @@
 # ADR-0014: Plugin Data Preservation
 
-Status: **Proposed** — drafted 2026-09-11 for Gate LC-0 (**LC0-007**). Awaiting product-owner approval.
+Status: **Accepted** — approved by product owner **Bora** on 2026-09-11 for **LC0-007**.
 
 ## Context
 
@@ -14,7 +14,7 @@ Everything around that is missing: no typed confirmation, no fresh backup at rem
 
 Under lean core the stakes rise. Without protection, uninstalling Attendance or Examination would become the easiest way to lose years of children's records, and 25 of the 82 models hold child data.
 
-## Decision (proposed)
+## Decision
 
 1. **Disable and uninstall preserve plugin data by default**: tables, settings, files and grant history.
 2. **Deletion is a separate purge operation**, available only after uninstall and only to a SUPER_ADMIN. A purge requires:

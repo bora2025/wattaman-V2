@@ -1,6 +1,6 @@
 # ADR-0016: Platform Billing Lock and Plugin Entitlements
 
-Status: **Proposed** — drafted 2026-09-11 for Gate LC-0 (**LC0-009**). Awaiting product-owner approval. Amends one consequence of [ADR-0006](./0006-licensing.md).
+Status: **Accepted** — approved by product owner **Bora** on 2026-09-11 for **LC0-009**. Amends one consequence of [ADR-0006](./0006-licensing.md).
 
 ## Context
 
@@ -24,7 +24,7 @@ Drafting this record surfaced four gaps between the code and lean-core plan 12.8
 3. **There is no clock-skew allowance.** A token whose `notBefore` is one second ahead of the school's clock is rejected (`entitlement-verification.ts:62`).
 4. **ADR-0006 is out of date.** It says "Core itself has no entitlement gate", and that "a school that never pays for anything still has a fully functional core system". The nonpayment lock the product owner approved contradicts both.
 
-## Decision (proposed)
+## Decision
 
 1. **Two separate state machines, never conflated.**
    - *Platform subscription* (whole school): `ACTIVE` → final notice → three days' grace → `SUSPENDED` → `ACTIVE` on payment, plus operator suspend and terminate. Effect: the whole-school lock under the nonpayment-lock policy.

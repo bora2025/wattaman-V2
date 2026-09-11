@@ -54,8 +54,9 @@ export class InstallDto {
   /**
    * Base64-encoded plugin package (.zip) contents, verified by InstallationPreflightService
    * (signature/manifest/checksums/core-compatibility) but never installed here -- actually
-   * installing a verified package still goes through the existing POST /plugins/install
-   * endpoint once setup completes.
+   * installing a verified package is deliberately not performed here. Production schools obtain
+   * plugins through the connected marketplace after setup; this field remains available to the
+   * deployment CLI for preflight compatibility checks only.
    */
   @IsOptional()
   @IsArray()
@@ -63,4 +64,3 @@ export class InstallDto {
   @MaxLength(70_000_000, { each: true })
   initialPlugins?: string[];
 }
-

@@ -1,4 +1,9 @@
-import { readUnattendedInstallInput, selectInstallDatabaseUrl, validateUnattendedInstallInput } from './install-cli';
+import {
+  readUnattendedInstallInput,
+  selectInstallDatabaseUrl,
+  selectInstallMigrationSchema,
+  validateUnattendedInstallInput,
+} from './install-cli';
 
 const valid: NodeJS.ProcessEnv = {
   NODE_ENV: 'test',
@@ -66,5 +71,12 @@ describe('unattended installation input', () => {
       DATABASE_URL: 'postgresql://production',
       INSTALL_DATABASE_URL: 'postgresql://validation',
     }, true)).toBe('postgresql://validation');
+  });
+
+  it('deploys the migration lineage selected by the installation distribution', () => {
+    expect(selectInstallMigrationSchema({ WATTANAM_DISTRIBUTION: 'core' })).toBe('prisma/core/schema.prisma');
+    expect(selectInstallMigrationSchema({ WATTANAM_DISTRIBUTION: 'legacy-full' })).toBe('prisma/schema.prisma');
+    expect(selectInstallMigrationSchema({})).toBe('prisma/schema.prisma');
+    expect(() => selectInstallMigrationSchema({ WATTANAM_DISTRIBUTION: 'unknown' })).toThrow('must be core or legacy-full');
   });
 });

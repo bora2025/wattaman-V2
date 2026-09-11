@@ -1,6 +1,6 @@
 # ADR-0018: Communication Plugin Scope
 
-Status: **Proposed** — drafted 2026-09-11 for Gate LC-0 (**LC0-011**). Awaiting product-owner approval. 46 inventory items stay provisional until it is decided.
+Status: **Accepted** — approved by product owner **Bora** on 2026-09-11 for **LC0-011**.
 
 ## Context
 
@@ -13,7 +13,7 @@ Communication today is four separate things:
 
 The lean-core plan's catalog puts all four in one Communication plugin, but it also says announcements "should be evolved into the Communication plugin or retained as a smaller standalone plugin through an explicit product decision; it must not be duplicated." Plugin IDs are immutable (plan section 9). Evolving `wattanam.announcements` into `wattanam.communication` therefore means adopting the same records a second time, this time plugin-to-plugin, which the migration toolkit does not cover.
 
-## Decision (proposed)
+## Decision
 
 1. **`wattanam.announcements` stays a standalone plugin** under its current ID. It is not renamed, merged or duplicated.
 2. **`wattanam.communication` owns direct messaging and posts**: messages, recipient rules, channel fan-out, the messaging realtime gateway, and news posts. The posts section of the public homepage becomes a Communication contribution to the core site shell.

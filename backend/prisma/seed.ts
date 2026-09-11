@@ -1,14 +1,25 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+import { getDistribution } from '../src/config/environment';
+import { SeedSectionName, seedSectionsForDistribution } from '../src/distribution/seed-composition';
 
 const prisma = new PrismaClient();
 
-async function main() {
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('Development seed data is disabled in production');
-  }
+async function seedCoreIdentity() {
+  await prisma.user.upsert({
+    where: { email: 'admin@test.com' },
+    update: {},
+    create: {
+      email: 'admin@test.com',
+      password: await bcrypt.hash('password', 10),
+      name: 'Admin',
+      role: 'ADMIN',
+    },
+  });
+  console.log('Core identity fixture seeded');
+}
 
-  // Create default departments
+async function seedLegacyBusinessDemo() {
   const departments = [
     { name: 'Human Resources', nameKh: 'ធនធានមនុស្ស', description: 'HR & personnel management' },
     { name: 'Finance', nameKh: 'ហិរញ្ញវត្ថុ', description: 'Accounting & finance' },
@@ -28,18 +39,10 @@ async function main() {
   }
   console.log('Departments seeded');
 
-  // Create users
-  const admin = await prisma.user.create({
-    data: {
-      email: 'admin@test.com',
-      password: await bcrypt.hash('password', 10),
-      name: 'Admin',
-      role: 'ADMIN',
-    },
-  });
-
-  const teacher = await prisma.user.create({
-    data: {
+  const teacher = await prisma.user.upsert({
+    where: { email: 'teacher@test.com' },
+    update: {},
+    create: {
       email: 'teacher@test.com',
       password: await bcrypt.hash('password', 10),
       name: 'Teacher',
@@ -47,8 +50,10 @@ async function main() {
     },
   });
 
-  const studentUser = await prisma.user.create({
-    data: {
+  const studentUser = await prisma.user.upsert({
+    where: { email: 'student@test.com' },
+    update: {},
+    create: {
       email: 'student@test.com',
       password: await bcrypt.hash('password', 10),
       name: 'Student',
@@ -56,8 +61,10 @@ async function main() {
     },
   });
 
-  const parent = await prisma.user.create({
-    data: {
+  const parent = await prisma.user.upsert({
+    where: { email: 'parent@test.com' },
+    update: {},
+    create: {
       email: 'parent@test.com',
       password: await bcrypt.hash('password', 10),
       name: 'Parent',
@@ -84,6 +91,22 @@ async function main() {
   });
 
   console.log('Test data created');
+}
+
+const seeders: Record<SeedSectionName, () => Promise<void>> = {
+  'core-identity': seedCoreIdentity,
+  'legacy-business-demo': seedLegacyBusinessDemo,
+};
+
+async function main() {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Development seed data is disabled in production');
+  }
+
+  const distribution = getDistribution(process.env);
+  const sections = seedSectionsForDistribution(distribution);
+  console.log(`Seeding ${distribution} distribution: ${sections.join(', ')}`);
+  for (const section of sections) await seeders[section]();
 }
 
 main()

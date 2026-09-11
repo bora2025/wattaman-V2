@@ -1,7 +1,7 @@
 # LC-0 Architecture Decisions
 
-Status: **drafted; awaiting product-owner decisions. Nothing in this record is accepted.**  
-Drafted: 2026-09-11  
+Status: **accepted by product owner Bora on 2026-09-11.**
+Drafted and accepted: 2026-09-11
 Checklist: [Gate LC-0](../../architecture/lean-core-plugin-implementation-checklist.md#gate-lc-0--approve-architecture-decisions)
 
 LC-0 is the gate before any module extraction. It closes when:
@@ -68,19 +68,19 @@ Notes: <legal, security, migration or commercial constraints>
 
 | Item | Result | Approver | Date | Rationale and notes |
 |---|---|---|---|---|
-| LC0-001 | pending | | | |
-| LC0-002 | pending | | | |
-| LC0-003 | pending | | | |
-| LC0-004 | pending | | | |
-| LC0-005 | pending | | | |
-| LC0-006 | pending | | | |
-| LC0-007 | pending | | | |
-| LC0-008 | pending | | | |
-| LC0-009 | pending | | | |
-| LC0-010 | pending | | | |
-| LC0-011 | pending | | | |
-| LC0-012 | pending | | | |
-| LC0-013 | pending | | | |
+| LC0-001 | accepted | Bora | 2026-09-11 | Lean core plus plugin-first is the target distribution. |
+| LC0-002 | replaced | Bora | 2026-09-11 | DEC-004 is replaced by ADR-0009's lean-core boundary text. |
+| LC0-003 | accepted | Bora | 2026-09-11 | Generic identity remains core; academic and employee profiles move to their domain plugins. |
+| LC0-004 | accepted | Bora | 2026-09-11 | Declarative UI v2 is the production extension model. |
+| LC0-005 | accepted | Bora | 2026-09-11 | In-process runtime remains restricted to reviewed publishers. |
+| LC0-006 | accepted | Bora | 2026-09-11 | Digest-addressed artifacts and independently verified runtime caches are required. |
+| LC0-007 | accepted | Bora | 2026-09-11 | Disable/uninstall preserves data; purge is separate and confirmed. |
+| LC0-008 | accepted | Bora | 2026-09-11 | Durable outbox events and idempotent consumers replace cross-plugin transactions. |
+| LC0-009 | accepted | Bora | 2026-09-11 | Platform billing lock and plugin entitlements are separate signed state. |
+| LC0-010 | accepted | Bora | 2026-09-11 | ADR-0017 defines the supported compatibility windows. |
+| LC0-011 | accepted | Bora | 2026-09-11 | Announcements stays standalone; Communication owns messaging/posts; marketplace bundles them. |
+| LC0-012 | accepted | Bora | 2026-09-11 | Student, staff, lesson and course attendance use the owners in ADR-0019. |
+| LC0-013 | accepted | Bora | 2026-09-11 | This dated register is the governance record. |
 
 ### Superseded or amended on acceptance
 

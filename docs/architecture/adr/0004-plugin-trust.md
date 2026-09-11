@@ -2,6 +2,10 @@
 
 Status: **Proposed** — implemented as the Version 1 default; formal acceptance is blocked on **DEC-011** at Gate **C0**.
 
+LC-0 amendment: **ADR-0012 was accepted by Bora on 2026-09-11.** While execution remains
+in-process, installation is restricted to Wattanam-official and explicitly approved publishers;
+opening broader publishing requires the isolation and governance conditions in ADR-0012.
+
 ## Context
 
 A plugin system needs a trust boundary. The two broad options are a **sandbox** (plugins run isolated, untrusted, with the platform mediating every side effect — e.g. a WASM runtime or a separate process with no filesystem/network access) or **reviewed, signed, in-process code** (plugins run with the same privileges as core code, but only after a human review and a cryptographic signature check gate their installation). These have very different engineering cost and very different security postures.

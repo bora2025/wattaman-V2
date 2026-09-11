@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { DynamicModule, Module, Type } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { DatabaseModule } from './database/database.module';
 import { SchoolBillingAccessGuard } from './marketplace/school-billing-access.guard';
@@ -42,65 +42,48 @@ import { UpdatesModule } from './updates/updates.module';
 import { MarketplaceModule } from './marketplace/marketplace.module';
 import { ObservabilityModule } from './observability/observability.module';
 import { DataExportModule } from './data-export/data-export.module';
-import { runsBackgroundJobs } from './config/environment';
+import { Distribution, runsBackgroundJobs } from './config/environment';
+import { rootModuleNamesForDistribution } from './distribution/module-registry';
 
-@Module({
-  imports: [
-    // SchoolBillingAccessGuard is registered below as a global APP_GUARD, so Nest resolves its
-    // dependencies from this module's own injector. Without SchoolAccessModule (and DatabaseModule
-    // beneath it) here, its SchoolAccessService cannot be found and the whole application fails to
-    // start -- feature modules importing them themselves does not help a provider declared at this level.
-    DatabaseModule,
-    SchoolAccessModule,
-    // Rate limiting: max 300 requests per 60 seconds per IP
-    ThrottlerModule.forRoot([{ ttl: 60000, limit: 300 }]),
-    ScheduleModule.forRoot({
-      cronJobs: runsBackgroundJobs(),
-      intervals: runsBackgroundJobs(),
-      timeouts: runsBackgroundJobs(),
-    }),
-    AuditModule,
-    AuthModule,
-    AttendanceModule,
-    NotificationModule,
-    ReportsModule,
-    ClassesModule,
-    SessionConfigModule,
-    HolidaysModule,
-    DepartmentsModule,
-    StudyYearsModule,
-    CardTemplatesModule,
-    TimetableModule,
-    ScoringModule,
-    FeesModule,
-    SalaryModule,
-    BusModule,
-    ExamModule,
-    AssignmentsModule,
-    CoursesModule,
-    ParentModule,
-    BackupModule,
-    AnnouncementsModule,
-    NotificationPreferenceModule,
-    CardAliasesModule,
-    SiteSettingsModule,
-    PostsModule,
-    ClassRegistrationsModule,
-    StaffCvModule,
-    HealthModule,
-    InstallationModule,
-    PluginsModule,
-    UpdatesModule,
-    MarketplaceModule,
-    ObservabilityModule,
-    DataExportModule,
-  ],
-  controllers: [AppController],
-  providers: [
-    AppService,
-    // Apply rate limiting globally to all endpoints
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
-    { provide: APP_GUARD, useClass: SchoolBillingAccessGuard },
-  ],
-})
-export class AppModule {}
+const LOCAL_ROOT_MODULES: Record<string, Type<unknown>> = {
+  DatabaseModule, SchoolAccessModule, AuditModule, AuthModule, BackupModule, HealthModule,
+  InstallationModule, PluginsModule, UpdatesModule, MarketplaceModule, ObservabilityModule,
+  DataExportModule, SiteSettingsModule, NotificationModule, NotificationPreferenceModule,
+  AnnouncementsModule, AttendanceModule, ReportsModule, ClassesModule, SessionConfigModule,
+  HolidaysModule, DepartmentsModule, StudyYearsModule, CardTemplatesModule, TimetableModule,
+  ScoringModule, FeesModule, SalaryModule, BusModule, ExamModule, AssignmentsModule, CoursesModule,
+  ParentModule, CardAliasesModule, PostsModule, ClassRegistrationsModule, StaffCvModule,
+};
+
+export function localModulesForDistribution(distribution: Distribution): Type<unknown>[] {
+  return rootModuleNamesForDistribution(distribution).map((name) => {
+    const module = LOCAL_ROOT_MODULES[name];
+    if (!module) throw new Error(`Root module registry references an unavailable module: ${name}`);
+    return module;
+  });
+}
+
+@Module({})
+export class AppModule {
+  static register(distribution: Distribution): DynamicModule {
+    return {
+      module: AppModule,
+      imports: [
+        // Rate limiting and scheduling are framework infrastructure, not business modules.
+        ThrottlerModule.forRoot([{ ttl: 60000, limit: 300 }]),
+        ScheduleModule.forRoot({
+          cronJobs: runsBackgroundJobs(),
+          intervals: runsBackgroundJobs(),
+          timeouts: runsBackgroundJobs(),
+        }),
+        ...localModulesForDistribution(distribution),
+      ],
+      controllers: [AppController],
+      providers: [
+        AppService,
+        { provide: APP_GUARD, useClass: ThrottlerGuard },
+        { provide: APP_GUARD, useClass: SchoolBillingAccessGuard },
+      ],
+    };
+  }
+}

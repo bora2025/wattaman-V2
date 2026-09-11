@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../lib/i18n';
 import { iconMap, IconGlobe, IconLogout } from './Icons';
 import InstallAppButton from './InstallAppButton';
+import { composeNavigation, NavigationItem, NavigationRegistration } from '../lib/navigation-registry';
 
 /** Renders an icon: if `key` maps to an SVG component, uses it; otherwise falls back to text/emoji. */
 function NavIcon({ icon, size = 20, className }: { icon: string; size?: number; className?: string }) {
@@ -14,15 +15,7 @@ function NavIcon({ icon, size = 20, className }: { icon: string; size?: number; 
   return <span className={`leading-none ${className || ''}`} style={{ fontSize: size }}>{icon}</span>;
 }
 
-interface NavItem {
-  label: string;
-  href: string;
-  icon: string;
-  /** If set, renders a section header above this item */
-  section?: string;
-  /** If set, displays an unread badge driven by /api/<key>/unread-count. */
-  badgeKey?: 'messages' | 'announcements' | 'class-registrations' | 'platform-billing';
-}
+type NavItem = NavigationItem;
 
 interface SidebarProps {
   title: string;
@@ -197,7 +190,7 @@ export default function Sidebar({ title, subtitle, navItems, accentColor = 'indi
   // Any role can have plugin nav now, not just admins -- merged into the
   // scrollable nav list and "More" drawer only, never into the curated
   // bottom-tab picks.
-  const [pluginNav, setPluginNav] = useState<NavItem[]>([]);
+  const [pluginNav, setPluginNav] = useState<NavigationRegistration[]>([]);
   useEffect(() => {
     let active = true;
     (async () => {
@@ -211,12 +204,18 @@ export default function Sidebar({ title, subtitle, navItems, accentColor = 'indi
         setPluginNav(entries.map((entry: any, index: number) => ({
           label: entry.label, href: entry.href, icon: '🧩',
           section: index === 0 ? 'Plugins' : undefined,
+          source: 'plugin' as const,
+          pluginId: entry.pluginId,
         })));
       } catch { /* plugin nav is optional; a fetch failure just means none shown */ }
     })();
     return () => { active = false; };
   }, []);
-  const effectiveNavItems = pluginNav.length ? [...navItems, ...pluginNav] : navItems;
+  const effectiveNavItems = composeNavigation(
+    navItems.map((item) => ({ ...item, source: 'core' as const })),
+    'core',
+    pluginNav,
+  );
 
   const handleLogout = async () => {
     try {

@@ -86,7 +86,10 @@ installed → active → inactive → files removed (data preserved)
 
 Every lifecycle mutation (install, activate, deactivate, remove) takes a transaction-scoped PostgreSQL advisory lock keyed by plugin id: concurrent requests for the *same* plugin serialize; different plugins never block each other. Each locked transaction has an explicit 30s timeout so a hung migration or filesystem move fails closed instead of holding the lock forever. A crash between staging a file move and committing its registry row is self-healing: the next install attempt detects the orphaned directory and cleans it up rather than getting stuck on "already present." All of this — plus a deliberately-failing migration proving real transactional rollback — is verified live against PostgreSQL, not just mocked (`docs/acceptance/gate-c-plugin-migration-lock-2026-08-28.md`).
 
-The admin UI cannot install a local upload until `POST /plugins/inspect` succeeds. `POST /plugins/install` requires the exact inspected `confirmationSha256`. Repository updates display equivalent signed metadata and verify their bytes again before invoking installation.
+Customer-school administrators cannot upload local packages. Marketplace and official-repository
+flows fetch immutable artifacts server-to-server, verify their signed metadata and bytes locally,
+and then invoke the internal installation service. Package inspection remains available through the
+developer CLI and CI/review pipeline, not through public customer-school endpoints.
 
 Files live at `PLUGIN_DIR/<plugin-id>/<version>`. Active plugins must be deactivated before update or removal. `DELETE /plugins/:id` removes the registry row and executable files but **preserves plugin tables, migration history, settings, and storage** — reinstalling the same plugin id picks up exactly where removal left off, with zero recovery steps, because migrations with a matching checksum are skipped rather than re-run. Permanent data purge is intentionally a separate, not-yet-built operation. The full install/update/disable/remove/reinstall/core-upgrade lifecycle, including this data-preservation guarantee, is certified live against every PostgreSQL version in the supported matrix (`docs/acceptance/gate-c-plugin-lifecycle-certification-2026-08-28.md`).
 
@@ -146,8 +149,6 @@ Set `PLUGIN_SAFE_MODE=true` and restart the API to load no plugin code while ret
 ```text
 GET    /plugins
 GET    /plugins/runtime-status
-POST   /plugins/inspect
-POST   /plugins/install
 POST   /plugins/:id/activate
 POST   /plugins/:id/deactivate
 DELETE /plugins/:id
@@ -158,6 +159,10 @@ GET    /plugin-api/extensions        # SUPER_ADMIN-only unfiltered overview
 GET    /plugin-api/my-extensions     # any authenticated role, filtered to what they're granted
 ALL    /plugin-api/:pluginId/*       # dispatch; permission-gated per route, not by @Roles()
 ```
+
+`POST /plugins/inspect` and `POST /plugins/install` were removed from the public customer-school API
+on 2026-09-11. They remain listed nowhere in the active endpoint surface; marketplace/repository
+controllers call the internal verified lifecycle service instead.
 
 ## Reference plugin
 

@@ -19,6 +19,9 @@ model User {
   phoneNormalized String?     @unique // digits-only form of `phone`, used as an alternate login identifier when no email is set
   photo           String?
   role            String
+  mfaEnabled      Boolean     @default(false)
+  mfaSecretEncrypted String?
+  mfaRecoveryCodes Json?
   departmentId    String?
   department      Department? @relation(fields: [departmentId], references: [id])
   createdAt       DateTime    @default(now())

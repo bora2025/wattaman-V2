@@ -144,11 +144,11 @@ export class InstallationPreflightService {
 
   /**
    * Validates each requested initial plugin package (signature, manifest, checksums, and
-   * core-version compatibility via the same PluginPackageVerifier the real install endpoint
+   * core-version compatibility via the same PluginPackageVerifier the marketplace install path
    * uses) without installing or activating anything -- no database writes, no files extracted.
-   * Actually installing a verified package still goes through the existing
-   * POST /plugins/install endpoint once setup completes; this only proves upfront that what the
-   * operator handed the installer is a legitimate, compatible package worth setting up with.
+   * Actually installing a verified package still requires a marketplace-authorized server-side
+   * download once setup completes; this only proves upfront that deployment-CLI input is a
+   * legitimate, compatible package.
    */
   private async checkInitialPlugins(base64Packages: string[] | undefined): Promise<PreflightCheckResult[]> {
     if (!base64Packages?.length) return [];

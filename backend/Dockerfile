@@ -49,4 +49,4 @@ ENV PROCESS_ROLE=combined
 EXPOSE 3001
 EXPOSE 3002
 
-CMD ["sh", "-c", "mkdir -p /data/backups /data/plugins /data/plugin-data /data/marketplace-identity && chown -R node:node /data && ./node_modules/.bin/prisma migrate deploy --schema=prisma/schema.prisma && exec gosu node node dist/main"]
+CMD ["sh", "-c", "mkdir -p /data/backups /data/plugins /data/plugin-data /data/marketplace-identity && chown -R node:node /data && node scripts/deploy-migrations.js && exec gosu node node dist/main"]

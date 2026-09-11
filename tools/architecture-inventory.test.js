@@ -430,7 +430,7 @@ test('LC1-012: generates the dependency graph for this repository', () => {
   assert.ok(fromRoots.length > 0);
   assert.ok(fromRoots.every((ref) => ref.kind === 'composition'));
   // The existing official plugin reaches core only through the SDK capabilities it declares.
-  assert.ok(dependencies.references.some((ref) => ref.from === 'wattanam.communication' && ref.kind === 'sdk-capability'));
+  assert.ok(dependencies.references.some((ref) => ref.from === 'wattanam.announcements' && ref.kind === 'sdk-capability'));
   // Every core-to-feature finding names the checklist item that removes it.
   assert.ok(dependencies.coreToFeature.every((group) => group.resolution));
 });

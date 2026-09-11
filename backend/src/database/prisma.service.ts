@@ -1,5 +1,7 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { getDistribution } from '../config/environment';
+import { assertCompatibleSchemaLineage } from './schema-lineage';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
@@ -17,6 +19,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
   async onModuleInit() {
     await this.$connect();
+    if (getDistribution() === 'core') {
+      await assertCompatibleSchemaLineage(this, 'core');
+    }
   }
 
   async onModuleDestroy() {

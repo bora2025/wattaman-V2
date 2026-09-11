@@ -7,6 +7,7 @@ const INSECURE_JWT_SECRETS = new Set([
 
 export type NodeEnvironment = 'development' | 'test' | 'production';
 export type ProcessRole = 'combined' | 'api' | 'worker';
+export type Distribution = 'core' | 'legacy-full';
 
 export interface RuntimeConfig {
   nodeEnv: NodeEnvironment;
@@ -31,6 +32,7 @@ export interface RuntimeConfig {
   pluginStorageMaxFileBytes: number;
   processRole: ProcessRole;
   workerPort: number;
+  distribution: Distribution;
 }
 
 function required(env: NodeJS.ProcessEnv, name: string): string {
@@ -93,6 +95,17 @@ export function getProcessRole(env: NodeJS.ProcessEnv = process.env): ProcessRol
 
 export function runsBackgroundJobs(env: NodeJS.ProcessEnv = process.env): boolean {
   return getProcessRole(env) !== 'api';
+}
+
+/**
+ * The feature set this installation composes (lean-core checklist LC2-001). `legacy-full` is every
+ * built-in module and stays the default, so an upgraded school, which never sets the variable, keeps
+ * what it has until it is explicitly migrated (LC2-002). `core` is the lean core alone.
+ */
+export function getDistribution(env: NodeJS.ProcessEnv = process.env): Distribution {
+  const value = env.WATTANAM_DISTRIBUTION?.trim().toLowerCase() || 'legacy-full';
+  if (!['core', 'legacy-full'].includes(value)) throw new Error(`WATTANAM_DISTRIBUTION must be core or legacy-full (got "${value}")`);
+  return value as Distribution;
 }
 
 export function parseCorsOrigins(value: string | undefined): string[] {
@@ -177,6 +190,7 @@ export function readRuntimeConfig(env: NodeJS.ProcessEnv = process.env): Runtime
     pluginStorageMaxFileBytes: integer(env, 'PLUGIN_STORAGE_MAX_FILE_BYTES', 1024 * 1024, 1, 100 * 1024 * 1024),
     processRole: getProcessRole(env),
     workerPort: parsePort(env.WORKER_PORT || '3002'),
+    distribution: getDistribution(env),
   };
 }
 

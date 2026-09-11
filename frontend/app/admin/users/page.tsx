@@ -6,6 +6,7 @@ import AuthGuard from '../../../components/AuthGuard'
 import { adminNav } from '../../../lib/admin-nav'
 import { apiFetch } from '../../../lib/api'
 import { useLanguage } from '../../../lib/i18n'
+import { frontendDistribution } from '../../../lib/navigation-registry'
 
 interface User {
   id: string
@@ -74,7 +75,8 @@ const roleBadge: Record<string, string> = {
 // Roles considered admin-level for the Manage Users screen filter.
 const ADMIN_ROLES = ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'DEPARTMENT_ADMIN', 'OFFICE_ADMIN', 'WATTAMAN', 'WATTAMAN_REPORTER']
 
-const allRoles = Object.keys(roleLabels).filter(r => r !== 'STUDENT')
+const coreDistribution = frontendDistribution() === 'core'
+const allRoles = coreDistribution ? ['SUPER_ADMIN', 'ADMIN'] : Object.keys(roleLabels).filter(r => r !== 'STUDENT')
 
 function getRoleBadgeClass(role: string) {
   return roleBadge[role] || 'badge-gray'
@@ -351,9 +353,9 @@ export default function ManageUsers() {
             <h1 className="text-2xl font-bold text-slate-800">{t('users.title')}</h1>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => { setShowBulk(!showBulk); setShowForm(false) }} className="btn-outline">
+            {!coreDistribution && <button onClick={() => { setShowBulk(!showBulk); setShowForm(false) }} className="btn-outline">
               {showBulk ? t('common.cancel') : t('users.importBulk')}
-            </button>
+            </button>}
             <button onClick={() => { setShowForm(!showForm); setShowBulk(false) }} className="btn-primary">
               {showForm ? t('common.cancel') : '+ ' + t('users.addUser')}
             </button>

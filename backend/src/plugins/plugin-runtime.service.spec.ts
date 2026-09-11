@@ -20,7 +20,9 @@ describe('PluginRuntimeService', () => {
   ] as const;
 
   beforeEach(async () => {
-    directory = await fs.mkdtemp(path.join(os.tmpdir(), 'wattanam-runtime-test-'));
+    // Keep dynamic CommonJS fixtures under Jest's rootDir; Jest refuses to resolve modules from
+    // the Windows system temp directory even though production Node accepts the absolute path.
+    directory = await fs.mkdtemp(path.join(process.cwd(), '.tmp-wattanam-runtime-test-'));
     process.env = {
       ...originalEnvironment,
       NODE_ENV: 'test',

@@ -17,6 +17,7 @@
     "postinstall": "prisma generate --schema=prisma/schema.prisma",
     "db:validate": "prisma validate --schema=prisma/schema.prisma",
     "db:migrate:deploy": "prisma migrate deploy --schema=prisma/schema.prisma",
+    "db:migrate:deploy:selected": "node scripts/deploy-migrations.js",
     "db:migrate:status": "prisma migrate status --schema=prisma/schema.prisma",
     "db:baseline:existing": "prisma migrate resolve --applied 20260827000000_baseline --schema=prisma/schema.prisma",
     "db:legacy:preflight": "node scripts/legacy-preflight.js",

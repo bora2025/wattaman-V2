@@ -21,21 +21,21 @@ An ADR's status changes from `Proposed` to `Accepted` the same moment its underl
 
 ## Lean-core records (LC-0)
 
-Eleven records were drafted on 2026-09-11 for Gate LC-0 of the [lean-core checklist](../lean-core-plugin-implementation-checklist.md). All are `Proposed`. Each turns `Accepted` only when the product owner records its decision in [lc0-architecture-decisions.md](../../acceptance/lean-core/lc0-architecture-decisions.md), which is also the governance record LC0-013 asks for.
+Eleven records were accepted by product owner Bora on 2026-09-11 for Gate LC-0 of the [lean-core checklist](../lean-core-plugin-implementation-checklist.md). The dated results are recorded in [lc0-architecture-decisions.md](../../acceptance/lean-core/lc0-architecture-decisions.md), which is also the LC0-013 governance record.
 
 | ADR | Subject | Decision(s) | Status |
 |---|---|---|---|
-| [0009](./0009-lean-core-product-boundary.md) | Lean core product boundary | LC0-001, LC0-002 (replaces DEC-004) | Proposed |
-| [0010](./0010-identity-ownership.md) | Identity ownership | LC0-003 | Proposed |
-| [0011](./0011-plugin-ui-declarative-v2.md) | Plugin UI extension model | LC0-004 | Proposed |
-| [0012](./0012-plugin-runtime-trust.md) | Plugin runtime trust under lean core | LC0-005 (extends ADR-0004) | Proposed |
-| [0013](./0013-plugin-artifact-delivery.md) | Plugin artifact delivery | LC0-006 | Proposed |
-| [0014](./0014-plugin-data-preservation.md) | Plugin data preservation | LC0-007 | Proposed |
-| [0015](./0015-cross-plugin-event-consistency.md) | Cross-plugin event consistency | LC0-008 | Proposed |
-| [0016](./0016-billing-lock-and-plugin-entitlements.md) | Billing lock and plugin entitlements | LC0-009 (amends ADR-0006) | Proposed |
-| [0017](./0017-compatibility-windows.md) | Compatibility windows | LC0-010 | Proposed |
-| [0018](./0018-communication-scope.md) | Communication plugin scope | LC0-011 | Proposed |
-| [0019](./0019-attendance-ownership.md) | Attendance ownership | LC0-012 | Proposed |
+| [0009](./0009-lean-core-product-boundary.md) | Lean core product boundary | LC0-001, LC0-002 (replaces DEC-004) | Accepted |
+| [0010](./0010-identity-ownership.md) | Identity ownership | LC0-003 | Accepted |
+| [0011](./0011-plugin-ui-declarative-v2.md) | Plugin UI extension model | LC0-004 | Accepted |
+| [0012](./0012-plugin-runtime-trust.md) | Plugin runtime trust under lean core | LC0-005 (extends ADR-0004) | Accepted |
+| [0013](./0013-plugin-artifact-delivery.md) | Plugin artifact delivery | LC0-006 | Accepted |
+| [0014](./0014-plugin-data-preservation.md) | Plugin data preservation | LC0-007 | Accepted |
+| [0015](./0015-cross-plugin-event-consistency.md) | Cross-plugin event consistency | LC0-008 | Accepted |
+| [0016](./0016-billing-lock-and-plugin-entitlements.md) | Billing lock and plugin entitlements | LC0-009 (amends ADR-0006) | Accepted |
+| [0017](./0017-compatibility-windows.md) | Compatibility windows | LC0-010 | Accepted |
+| [0018](./0018-communication-scope.md) | Communication plugin scope | LC0-011 | Accepted |
+| [0019](./0019-attendance-ownership.md) | Attendance ownership | LC0-012 | Accepted |
 
 | Decision | Subject | Implementing packages | Freeze gate | State |
 |---|---|---|---|---|

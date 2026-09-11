@@ -72,8 +72,8 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnApplicati
     const entry = path.resolve(installedPath, verified.manifest.backendEntry);
     if (!entry.startsWith(`${installedPath}${path.sep}`)) throw new Error('Plugin backend entry escapes installation directory');
     delete require.cache[require.resolve(entry)];
-    const module = require(entry) as RuntimePluginModule;
-    if (module.id !== id || typeof module.activate !== 'function') throw new Error('Plugin backend entry does not implement the lifecycle contract');
+    const pluginModule = require(entry) as RuntimePluginModule;
+    if (pluginModule.id !== id || typeof pluginModule.activate !== 'function') throw new Error('Plugin backend entry does not implement the lifecycle contract');
 
     const capabilities = new Set(verified.manifest.capabilities);
     const declaredPermissions = new Set(verified.manifest.permissions);
@@ -155,12 +155,12 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnApplicati
         catch { throw new Error('Plugin frontend entry must be valid declarative JSON'); }
         const dispose = this.extensions.registerPage(id, descriptor); disposers.push(dispose);
       }
-      const cleanup = await module.activate(context);
-      if (module.health) {
-        const health = await module.health();
+      const cleanup = await pluginModule.activate(context);
+      if (pluginModule.health) {
+        const health = await pluginModule.health();
         if (health === false || (health && typeof health === 'object' && (health as any).status === 'failed')) throw new Error('Plugin health check failed');
       }
-      this.loaded.set(id, { module, context, cleanup: typeof cleanup === 'function' ? cleanup : undefined, disposers });
+      this.loaded.set(id, { module: pluginModule, context, cleanup: typeof cleanup === 'function' ? cleanup : undefined, disposers });
       this.logger.log(`Activated ${id}@${record.version}`);
     } catch (error) {
       for (const dispose of disposers.reverse()) { try { dispose(); } catch { /* best effort */ } }

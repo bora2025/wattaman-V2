@@ -1,4 +1,4 @@
-import { getCorsOrigins, getCorsOriginsForGateway, getProcessRole, parseCorsOrigins, parseJwtSecondarySecrets, readRuntimeConfig, runsBackgroundJobs } from './environment';
+import { getCorsOrigins, getCorsOriginsForGateway, getDistribution, getProcessRole, parseCorsOrigins, parseJwtSecondarySecrets, readRuntimeConfig, runsBackgroundJobs } from './environment';
 
 describe('runtime environment', () => {
   const baseEnvironment: NodeJS.ProcessEnv = {
@@ -17,6 +17,7 @@ describe('runtime environment', () => {
     expect(config.pluginMaxPackageBytes).toBe(50 * 1024 * 1024);
     expect(config.processRole).toBe('combined');
     expect(config.workerPort).toBe(3002);
+    expect(config.distribution).toBe('legacy-full');
   });
 
   it('rejects an insecure production JWT secret', () => {
@@ -114,5 +115,17 @@ describe('runtime environment', () => {
     expect(runsBackgroundJobs({ PROCESS_ROLE: 'combined' })).toBe(true);
     expect(() => getProcessRole({ PROCESS_ROLE: 'web' })).toThrow('PROCESS_ROLE');
     expect(() => readRuntimeConfig({ ...baseEnvironment, WORKER_PORT: '70000' })).toThrow('PORT');
+  });
+
+  /* legacy-full is the default so an upgraded school, which never sets the variable, keeps every
+   * module it has (LC2-002). Anything unrecognised stops startup rather than guessing (LC2-007). */
+  it('validates the distribution and keeps legacy-full as the default', () => {
+    expect(getDistribution({})).toBe('legacy-full');
+    expect(getDistribution({ WATTANAM_DISTRIBUTION: '  ' })).toBe('legacy-full');
+    expect(getDistribution({ WATTANAM_DISTRIBUTION: 'core' })).toBe('core');
+    expect(getDistribution({ WATTANAM_DISTRIBUTION: ' Legacy-Full ' })).toBe('legacy-full');
+    expect(() => getDistribution({ WATTANAM_DISTRIBUTION: 'full' })).toThrow('WATTANAM_DISTRIBUTION must be core or legacy-full (got "full")');
+    expect(() => readRuntimeConfig({ ...baseEnvironment, WATTANAM_DISTRIBUTION: 'lean' })).toThrow('WATTANAM_DISTRIBUTION');
+    expect(readRuntimeConfig({ ...baseEnvironment, WATTANAM_DISTRIBUTION: 'core' }).distribution).toBe('core');
   });
 });

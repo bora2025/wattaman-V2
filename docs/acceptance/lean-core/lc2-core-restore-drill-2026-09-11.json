@@ -1,0 +1,32 @@
+{
+  "format": "wattanam-restore-drill-report-v1",
+  "drillStartedAt": "2026-09-11T16:23:18.202Z",
+  "backup": {
+    "startedAt": "2026-09-11T16:23:19.360Z",
+    "completedAt": "2026-09-11T16:23:19.713Z",
+    "durationSeconds": 0.353,
+    "journalFile": "wattanam-recovery-20260911T162319Z.recovery-set.json"
+  },
+  "restore": {
+    "startedAt": "2026-09-11T16:23:19.713Z",
+    "completedAt": "2026-09-11T16:23:20.075Z"
+  },
+  "rto": {
+    "measuredSeconds": 0.362,
+    "targetSeconds": 14400,
+    "withinTarget": true
+  },
+  "identity": {
+    "tableCount": 23,
+    "unexplainedRowLoss": [],
+    "tablesWithChangedContent": [],
+    "foreignKeyOrphansAfter": [],
+    "credentialIntegrity": {
+      "usersChecked": 1,
+      "allPasswordHashesValid": true
+    },
+    "exactMatch": true
+  },
+  "passed": true,
+  "reportSha256": "19af569d12591661c8a49b354e6faec4e2fe236530de5837dc1d1e121d4d028f"
+}

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Post } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { InstallDto } from './dto/install.dto';
 import { InstallationService } from './installation.service';
@@ -31,7 +31,18 @@ export class InstallationController {
 
   @Throttle({ default: { ttl: 60 * 60 * 1000, limit: 3 } })
   @Post('install')
-  install(@Body() dto: InstallDto) {
+  async install(@Body() dto: InstallDto) {
+    const report = await this.preflightService.run({
+      locale: dto.locale,
+      timezone: dto.timezone,
+      currency: dto.currency,
+      acceptedLicenseVersion: dto.acceptedLicenseVersion,
+      initialPlugins: dto.initialPlugins,
+    });
+    if (!report.ok) {
+      const blockers = report.checks.filter((check) => !check.ok).map((check) => `${check.name}: ${check.detail}`);
+      throw new BadRequestException(`Installation preflight failed: ${blockers.join('; ')}`);
+    }
     return this.installationService.install(dto);
   }
 }

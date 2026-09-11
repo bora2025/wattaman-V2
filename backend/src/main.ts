@@ -5,19 +5,18 @@ import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import express from 'express';
-import { readRuntimeConfig } from './config/environment';
+import { readApiStartupConfig } from './config/startup-config';
 import { readUpdateRepositoryConfig } from './updates/update-config';
 import { readNotificationProviderConfig } from './notification/notification-config';
 
 async function bootstrap() {
-  const config = readRuntimeConfig();
-  if (config.processRole === 'worker') throw new Error('PROCESS_ROLE=worker must start dist/worker instead of dist/main');
+  const config = readApiStartupConfig();
   // Validate optional repository trust configuration before opening a network port.
   readUpdateRepositoryConfig();
   // Optional providers do not block core operation when absent, but partial or
   // malformed credential sets fail before the server opens a network port.
   readNotificationProviderConfig();
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create(AppModule.register(config.distribution), {
     logger: config.nodeEnv === 'production'
       ? ['error', 'warn']
       : ['log', 'error', 'warn'],
@@ -72,7 +71,7 @@ async function bootstrap() {
   app.enableShutdownHooks(undefined, { useProcessExit: true });
 
   await app.listen(config.port, '0.0.0.0');
-  console.log(`API server running on port ${config.port} (${config.processRole} role)`);
+  console.log(`API server running on port ${config.port} (${config.processRole} role, ${config.distribution} distribution)`);
 }
 bootstrap().catch((error) => {
   console.error('API startup failed:', error instanceof Error ? error.message : error);

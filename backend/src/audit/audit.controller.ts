@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { PrismaService } from '../database/prisma.service';
+import { getDistribution } from '../config/environment';
 
 @Controller('audit')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -374,6 +375,7 @@ export class AuditController {
       [...idsByResource.entries()].map(async ([resource, idSet]) => {
         const ids = [...idSet];
         try {
+          if (getDistribution() === 'core' && !['USERS', 'AUTH', 'PARENT', 'PARENTS', 'NOTIFICATION-PREFERENCE'].includes(resource)) return;
           switch (resource) {
             case 'USERS':
             case 'AUTH':

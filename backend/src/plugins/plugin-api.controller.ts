@@ -1,4 +1,4 @@
-import { All, Controller, Get, Param, Req, UseGuards } from '@nestjs/common';
+import { All, Controller, Get, Param, Query, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -21,6 +21,15 @@ export class PluginApiController {
   @Get('my-extensions')
   myExtensions(@Req() request: Request & { user?: any }) {
     return this.extensions.listForPrincipal(request.user?.role);
+  }
+
+  @Get('search')
+  search(@Query('q') query: string, @Req() request: Request & { user?: any }) {
+    return this.extensions.searchForPrincipal(query || '', {
+      userId: request.user?.userId,
+      role: request.user?.role,
+      email: request.user?.email,
+    });
   }
 
   // No @Roles() here: any authenticated user may reach dispatch. Authorization

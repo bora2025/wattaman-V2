@@ -1,10 +1,25 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import type { StringValue } from 'ms';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { PrismaService } from '../database/prisma.service';
 import { isValidEmail, looksLikeEmail, normalizePhone } from '../common/identity';
+import { getDistribution } from '../config/environment';
+
+const CORE_AUTH_USER_SELECT = {
+  id: true,
+  email: true,
+  password: true,
+  name: true,
+  phone: true,
+  phoneNormalized: true,
+  role: true,
+  photo: true,
+  mfaEnabled: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
 
 @Injectable()
 export class AuthService {
@@ -18,17 +33,24 @@ export class AuthService {
    * email has uppercase characters. */
   async validateUser(identifier: string, password: string): Promise<any> {
     const trimmed = (identifier || '').trim();
+    const core = getDistribution() === 'core';
     let user: any = null;
     if (looksLikeEmail(trimmed)) {
-      user = await this.prisma.user.findFirst({ where: { email: { equals: trimmed, mode: 'insensitive' } } });
+      user = await this.prisma.user.findFirst({
+        where: { email: { equals: trimmed, mode: 'insensitive' } },
+        ...(core ? { select: CORE_AUTH_USER_SELECT } : {}),
+      });
     } else {
       const normalized = normalizePhone(trimmed);
       if (normalized) {
-        user = await this.prisma.user.findUnique({ where: { phoneNormalized: normalized } });
+        user = await this.prisma.user.findUnique({
+          where: { phoneNormalized: normalized },
+          ...(core ? { select: CORE_AUTH_USER_SELECT } : {}),
+        });
       }
     }
     if (user && (await bcrypt.compare(password, user.password))) {
-      const { password, ...result } = user;
+      const { password, mfaSecretEncrypted, mfaRecoveryCodes, ...result } = user;
       return result;
     }
     return null;
@@ -67,7 +89,7 @@ export class AuthService {
   async validateRefreshToken(token: string) {
     const record = await this.prisma.refreshToken.findFirst({
       where: { OR: [{ tokenHash: this.tokenHash(token) }, { token }] },
-      include: { user: true },
+      include: { user: getDistribution() === 'core' ? { select: CORE_AUTH_USER_SELECT } : true },
     });
     if (!record || record.revokedAt || record.expiresAt < new Date()) {
       throw new UnauthorizedException('Invalid or expired refresh token');
@@ -80,7 +102,8 @@ export class AuthService {
     const now = new Date();
     const result = await this.prisma.$transaction(async (tx) => {
       const record = await tx.refreshToken.findFirst({
-        where: { OR: [{ tokenHash: this.tokenHash(oldToken) }, { token: oldToken }] }, include: { user: true },
+        where: { OR: [{ tokenHash: this.tokenHash(oldToken) }, { token: oldToken }] },
+        include: { user: getDistribution() === 'core' ? { select: CORE_AUTH_USER_SELECT } : true },
       });
       if (!record) return { ok: false as const };
       if (record.revokedAt || record.expiresAt < now) {
@@ -117,6 +140,7 @@ export class AuthService {
     if (!normalizedRole || normalizedRole.startsWith('__')) {
       throw new Error('Invalid role');
     }
+    this.assertCoreAdministrativeRole(normalizedRole);
     const trimmedEmail = (email || '').trim().toLowerCase();
     const normalizedPhone = normalizePhone(phone);
     if (!trimmedEmail && !normalizedPhone) {
@@ -133,7 +157,7 @@ export class AuthService {
           phone: phone || undefined,
           phoneNormalized: normalizedPhone || undefined,
           password: hashedPassword, name, role: normalizedRole as any,
-          ...(departmentId ? { departmentId } : {}),
+          ...(departmentId && getDistribution() === 'legacy-full' ? { departmentId } : {}),
         },
       });
       const loginResult = await this.login(user);
@@ -156,6 +180,12 @@ export class AuthService {
   }
 
   async getUserById(userId: string) {
+    if (getDistribution() === 'core') {
+      return this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, email: true, name: true, phone: true, role: true, photo: true },
+      });
+    }
     return this.prisma.user.findUnique({
       where: { id: userId },
       select: { id: true, email: true, name: true, phone: true, role: true, photo: true, departmentId: true, department: { select: { id: true, name: true, nameKh: true } } },
@@ -168,6 +198,13 @@ export class AuthService {
       where.role = { in: roles };
     } else if (role) {
       where.role = role.toUpperCase();
+    }
+    if (getDistribution() === 'core') {
+      return this.prisma.user.findMany({
+        where,
+        orderBy: { updatedAt: 'desc' },
+        select: { id: true, email: true, name: true, phone: true, role: true, photo: true, createdAt: true, updatedAt: true },
+      });
     }
     return this.prisma.user.findMany({
       where,
@@ -189,6 +226,7 @@ export class AuthService {
   }
 
   async setStudentParent(studentUserId: string, parentId: string | null) {
+    this.assertLegacyFeature();
     const student = await this.prisma.student.findUnique({ where: { userId: studentUserId } });
     if (!student) throw new Error('Student profile not found for this user');
     if (parentId) {
@@ -208,6 +246,7 @@ export class AuthService {
   }
 
   async bulkRegister(users: { email: string; password: string; name: string; role: string; photo?: string }[]) {
+    for (const user of users) this.assertCoreAdministrativeRole(user.role?.trim());
     const hashedUsers = await Promise.all(
       users.map(async (u) => ({
         email: u.email,
@@ -296,6 +335,16 @@ export class AuthService {
   }
 
   async deleteUser(userId: string) {
+    if (getDistribution() === 'core') {
+      await this.prisma.$transaction([
+        this.prisma.notification.deleteMany({ where: { userId } }),
+        this.prisma.notificationPreference.deleteMany({ where: { userId } }),
+        this.prisma.passwordResetToken.deleteMany({ where: { userId } }),
+        this.prisma.refreshToken.deleteMany({ where: { userId } }),
+        this.prisma.user.delete({ where: { id: userId } }),
+      ]);
+      return { ok: true, id: userId };
+    }
     // Detach the student profile (if any) and its attendance.
     const student = await this.prisma.student.findUnique({ where: { userId } });
 
@@ -351,15 +400,22 @@ export class AuthService {
       updateData.phone = data.phone;
       updateData.phoneNormalized = normalizePhone(data.phone) || null;
     }
-    if (data.departmentId !== undefined) updateData.departmentId = data.departmentId || null;
+    if (data.departmentId !== undefined && getDistribution() === 'legacy-full') updateData.departmentId = data.departmentId || null;
     if (data.role) {
       const trimmed = data.role.trim();
       if (!trimmed || trimmed.startsWith('__')) {
         throw new Error('Invalid role');
       }
+      this.assertCoreAdministrativeRole(trimmed);
       updateData.role = trimmed;
     }
     try {
+      if (getDistribution() === 'core') {
+        return await this.prisma.user.update({
+          where: { id: userId }, data: updateData,
+          select: { id: true, email: true, name: true, phone: true, role: true, photo: true, createdAt: true, updatedAt: true },
+        });
+      }
       return await this.prisma.user.update({
         where: { id: userId },
         data: updateData,
@@ -387,6 +443,13 @@ export class AuthService {
       ];
     }
 
+    if (getDistribution() === 'core') {
+      return this.prisma.user.findMany({
+        where,
+        select: { id: true, email: true, name: true, phone: true, photo: true, role: true, createdAt: true },
+        orderBy: { name: 'asc' }, take: 50,
+      });
+    }
     const users = await this.prisma.user.findMany({
       where,
       select: {
@@ -438,6 +501,7 @@ export class AuthService {
   }
 
   async getTeacherSchedule(userId: string) {
+    this.assertLegacyFeature();
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { email: true },
@@ -481,6 +545,7 @@ export class AuthService {
   }
 
   async getStudentSchedule(userId: string) {
+    this.assertLegacyFeature();
     const student = await this.prisma.student.findUnique({
       where: { userId },
       include: { class: { select: { name: true } } },
@@ -529,6 +594,7 @@ export class AuthService {
   }
 
   async getFullProfile(userId: string) {
+    if (getDistribution() === 'core') return this.getUserById(userId);
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -616,5 +682,15 @@ export class AuthService {
     }
 
     return { ...user, scoreEntries, rankingMap };
+  }
+
+  private assertLegacyFeature(): void {
+    if (getDistribution() === 'core') throw new NotFoundException('This feature requires a business plugin');
+  }
+
+  private assertCoreAdministrativeRole(role: string): void {
+    if (getDistribution() === 'core' && !['SUPER_ADMIN', 'ADMIN'].includes(role)) {
+      throw new BadRequestException('Core installations can create only SUPER_ADMIN or ADMIN accounts; install the owning business plugin before creating another role');
+    }
   }
 }

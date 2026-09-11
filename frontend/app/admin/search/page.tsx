@@ -6,6 +6,8 @@ import Sidebar from '../../../components/Sidebar'
 import { adminNav } from '../../../lib/admin-nav'
 import { apiFetch } from '../../../lib/api'
 import { useLanguage } from '../../../lib/i18n'
+import { frontendDistribution } from '../../../lib/navigation-registry'
+import CorePluginSearch from '../../../components/CorePluginSearch'
 
 interface StudentProfile {
   id: string
@@ -155,7 +157,7 @@ function normalizePhotoUrl(url: string): string {
   return url
 }
 
-export default function SearchPage() {
+function LegacySearchPage() {
   const { t } = useLanguage()
   const [query, setQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState('ALL')
@@ -964,4 +966,8 @@ export default function SearchPage() {
       )}
     </div>
   )
+}
+
+export default function SearchPage() {
+  return frontendDistribution() === 'core' ? <CorePluginSearch /> : <LegacySearchPage />
 }

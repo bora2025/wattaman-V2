@@ -1,6 +1,6 @@
 # ADR-0012: Plugin Runtime Trust under Lean Core
 
-Status: **Proposed** — drafted 2026-09-11 for Gate LC-0 (**LC0-005**). Awaiting product-owner approval. Extends [ADR-0004](./0004-plugin-trust.md); does not replace it.
+Status: **Accepted** — approved by product owner **Bora** on 2026-09-11 for **LC0-005**. Extends [ADR-0004](./0004-plugin-trust.md); does not replace it.
 
 ## Context
 
@@ -8,7 +8,7 @@ Status: **Proposed** — drafted 2026-09-11 for Gate LC-0 (**LC0-005**). Awaitin
 
 The only runtime limit on a plugin today is the 10-second route timeout (`plugin-extensions.service.ts:48-53`). A plugin's own code can still read `process.env`, touch the filesystem, open network connections, or exhaust the shared process and database. A signature proves who signed the bytes, not that the code is safe.
 
-## Decision (proposed)
+## Decision
 
 1. **Only Wattanam official plugins and explicitly approved publishers may run** until a separate ADR permits more. This matches DEC-007: Wattanam-only through Milestone E, then invited verified publishers in the F pilot. Public third-party server plugins stay closed while execution is in-process.
 2. **The words are "trusted in-process code".** No document, screen or sales material calls plugins sandboxed.

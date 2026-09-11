@@ -11,6 +11,7 @@ import { AuditService } from '../audit/audit.service';
 import { getJwtSecret } from '../config/environment';
 import { PasswordResetService } from './password-reset.service';
 import { ConfirmPasswordResetDto, RequestPasswordResetDto } from './dto/password-reset.dto';
+import { MfaService } from './mfa.service';
 
 const isProduction = process.env.NODE_ENV === 'production';
 const secureCookies = process.env.COOKIE_SECURE === undefined
@@ -29,6 +30,7 @@ export class AuthController {
     private authService: AuthService,
     private audit: AuditService,
     private passwordReset: PasswordResetService,
+    private mfa: MfaService,
   ) {}
 
   @Throttle({ default: { ttl: 60000, limit: 3 } })
@@ -98,6 +100,7 @@ export class AuthController {
       });
       throw new HttpException('Invalid credentials', HttpStatus.UNAUTHORIZED);
     }
+    await this.mfa.assertLoginCode(user.id, body.mfaCode);
     const { access_token, refresh_token } = await this.authService.login(user);
     this.setTokenCookies(res, access_token, refresh_token);
     this.audit.log({
@@ -115,6 +118,18 @@ export class AuthController {
     });
     // Return tokens in body as well (mobile app needs them)
     return { access_token, refresh_token, user: { id: user.id, email: user.email, name: user.name, role: user.role } };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('mfa/setup')
+  setupMfa(@Request() req: any, @Body() body: { currentPassword?: string }) {
+    return this.mfa.begin(req.user.userId, body?.currentPassword || '');
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('mfa/enable')
+  enableMfa(@Request() req: any, @Body() body: { code?: string }) {
+    return this.mfa.enable(req.user.userId, body?.code || '');
   }
 
   @SkipThrottle()
@@ -167,7 +182,7 @@ export class AuthController {
     try {
       return await this.authService.register(body.email, body.password, body.name, body.role, body.departmentId, body.phone);
     } catch (error: any) {
-      if (error.message === 'Email already exists' || error.message === 'Phone number already registered' || error.message === 'Email or phone is required' || error.message === 'Invalid email address') {
+      if (error.message === 'Email already exists' || error.message === 'Phone number already registered' || error.message === 'Email or phone is required' || error.message === 'Invalid email address' || error.message?.startsWith('Core installations')) {
         throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
       }
       throw error;
@@ -265,8 +280,8 @@ export class AuthController {
       if (error.message === 'Email already exists' || error.message === 'Phone number already registered') {
         throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
       }
-      if (error.message === 'Invalid role') {
-        throw new HttpException('Invalid role', HttpStatus.BAD_REQUEST);
+      if (error.message === 'Invalid role' || error.message?.startsWith('Core installations')) {
+        throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
       }
       throw error;
     }

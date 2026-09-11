@@ -11,6 +11,8 @@ import { adminNav, classAdminNav } from '../../lib/admin-nav'
 import { apiFetch } from '../../lib/api'
 import { useLanguage } from '../../lib/i18n'
 import { todayCambodia } from '../../lib/dateUtils'
+import { frontendDistribution } from '../../lib/navigation-registry'
+import CoreAdminDashboard from '../../components/CoreAdminDashboard'
 
 interface PermissionBreakdown { halfDayMorning: number; halfDayAfternoon: number; fullDay: number; multiDay: number; unknown: number }
 interface GroupSummary {
@@ -1113,9 +1115,10 @@ function DashboardContent() {
 }
 
 export default function AdminPage() {
+  const core = frontendDistribution() === 'core'
   return (
     <AuthGuard allowedRoles={['ADMIN', 'SUPER_ADMIN', 'SCHOOL_ADMIN', 'CLASS_ADMIN']}>
-      <DashboardContent/>
+      {core ? <CoreAdminDashboard /> : <DashboardContent/>}
     </AuthGuard>
   )
 }

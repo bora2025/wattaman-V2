@@ -1,4 +1,4 @@
-import { IsString, MinLength } from 'class-validator';
+import { IsOptional, IsString, Matches, MinLength } from 'class-validator';
 
 export class LoginDto {
   // Email address or phone number — AuthService.validateUser routes to whichever
@@ -10,4 +10,9 @@ export class LoginDto {
   @IsString()
   @MinLength(6)
   password: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^(?:\d{6}|[A-Fa-f0-9]{10})$/)
+  mfaCode?: string;
 }

@@ -187,15 +187,14 @@ Core owns functionality that every installation needs:
 > This list predates the real per-module classification. `docs/architecture/module-boundaries.md`
 > (A-007, kept current as new modules ship) is now the authoritative, evidence-backed answer to
 > "core, shared, or plugin-eligible" for every real `backend/src/*` module — treat any
-> disagreement below in its favor. Two corrections worth calling out explicitly:
+> disagreement below in its favor. ADR-0009 replaced DEC-004 on 2026-09-11. Two corrections worth calling out explicitly:
 > **Announcements is no longer a candidate — it was extracted for real** (C-004, a live-verified
 > reference cutover: `docs/acceptance/gate-c-announcements-cutover-2026-08-28.md`), and
-> **Attendance is CORE, not plugin-eligible** (it's one of DEC-004's named base-product concepts,
-> and `session-config`/`holidays`/`card-aliases` are SHARED specifically because attendance
-> depends on them — extracting attendance would mean extracting all four together).
+> **Attendance is an official-plugin target**, including `session-config`, `holidays` and student
+> card aliases; staff, lesson and course attendance follow ADR-0019's separate owners.
 
 - ~~Announcements~~ (already extracted; see note above).
-- ~~Attendance~~ (CORE; see note above).
+- Attendance (official plugin; see note above).
 - Timetable.
 - Courses and learning content.
 - Assignments.
@@ -219,7 +218,6 @@ Core owns functionality that every installation needs:
 - Audit logging.
 - Plugin manager.
 - Database, migrations, and platform bootstrapping.
-- **Attendance** — named in DEC-004's base scope (see the correction in §5.2 above).
 
 Moving these areas into plugins would create circular dependencies and unsafe failure modes.
 

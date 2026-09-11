@@ -1,6 +1,6 @@
 # Lean Core and Module-to-Plugin Implementation Checklist
 
-Status: **implementation started; LC-1 current-state inventory complete (LC1-001 to LC1-014); LC-0 decision records drafted, awaiting product-owner approval**  
+Status: **LC-0 and LC-1 complete; LC-2 is next**
 Created: 2026-09-11  
 Architecture plan: [Wattanam Lean Core and Plugin-First Architecture](./wattanam-lean-core-plugin-first-plan.md)  
 Migration plan: [Business Modules to Official Plugins](./module-to-plugin-migration-plan.md)
@@ -19,43 +19,44 @@ evidence. Store durable evidence under `docs/acceptance/lean-core/`.
 
 No module extraction starts before this gate is complete.
 
-Proposed records for all thirteen items were drafted on 2026-09-11 and are awaiting product-owner
-approval. The recommendations, including where they refine or depart from the plans, are summarized
+All thirteen items were approved by product owner Bora on 2026-09-11. The decisions, including
+where they refine or depart from the earlier plans, are summarized
 in [lc0-architecture-decisions.md](../acceptance/lean-core/lc0-architecture-decisions.md).
 
-- [~] **LC0-001 Product boundary** — accept lean core plus plugin-first as the target distribution.
-  Draft: [ADR-0009](./adr/0009-lean-core-product-boundary.md).
-- [~] **LC0-002 DEC-004** — amend/supersede the earlier base-module decision that treats academic
-  structure and attendance as permanent core. Draft: [ADR-0009](./adr/0009-lean-core-product-boundary.md).
-- [~] **LC0-003 Identity ownership** — accept: core owns generic person/account/contact/membership;
+- [x] **LC0-001 Product boundary** — accept lean core plus plugin-first as the target distribution.
+  Record: [ADR-0009](./adr/0009-lean-core-product-boundary.md).
+- [x] **LC0-002 DEC-004** — amend/supersede the earlier base-module decision that treats academic
+  structure and attendance as permanent core. Record: [ADR-0009](./adr/0009-lean-core-product-boundary.md).
+- [x] **LC0-003 Identity ownership** — accept: core owns generic person/account/contact/membership;
   Academic Management owns student/class/enrollment; Human Resources owns employee profile.
-  Draft: [ADR-0010](./adr/0010-identity-ownership.md).
-- [~] **LC0-004 Plugin UI** — accept declarative UI v2 as the first production UI extension model;
-  arbitrary plugin JavaScript is not executed in the core origin. Draft: [ADR-0011](./adr/0011-plugin-ui-declarative-v2.md).
-- [~] **LC0-005 Runtime trust** — accept official/reviewed in-process plugins only until a separate
-  isolation/governance decision permits third parties. Draft: [ADR-0012](./adr/0012-plugin-runtime-trust.md).
-- [~] **LC0-006 Artifact delivery** — accept digest-addressed artifact storage and independent
-  verified API/worker caches for Railway. Draft: [ADR-0013](./adr/0013-plugin-artifact-delivery.md).
-- [~] **LC0-007 Data preservation** — accept disable/remove preserving data by default and a separate
-  confirmed purge operation. Draft: [ADR-0014](./adr/0014-plugin-data-preservation.md).
-- [~] **LC0-008 Event consistency** — accept versioned outbox events, idempotent consumers, retry and
-  dead-letter handling; no distributed cross-plugin transaction. Draft: [ADR-0015](./adr/0015-cross-plugin-event-consistency.md).
-- [~] **LC0-009 Entitlements** — distinguish whole-school platform billing from per-plugin licenses,
-  including offline grace, expiry, clock skew and anti-replay. Draft: [ADR-0016](./adr/0016-billing-lock-and-plugin-entitlements.md).
-- [~] **LC0-010 Compatibility** — approve supported core/SDK/runtime/plugin/PostgreSQL/Node/browser/
-  mobile version windows. Draft: [ADR-0017](./adr/0017-compatibility-windows.md).
-- [~] **LC0-011 Communication scope** — decide whether existing Announcements remains standalone or
-  becomes part of `wattanam.communication`. Draft: [ADR-0018](./adr/0018-communication-scope.md).
-- [~] **LC0-012 Attendance ownership** — confirm student school-day attendance, staff attendance,
-  timetable teacher attendance and course attendance owners. Draft: [ADR-0019](./adr/0019-attendance-ownership.md).
-- [~] **LC0-013 Governance record** — record approver, decision date, rationale and superseded docs.
-  Draft: [lc0-architecture-decisions.md](../acceptance/lean-core/lc0-architecture-decisions.md).
+  Record: [ADR-0010](./adr/0010-identity-ownership.md).
+- [x] **LC0-004 Plugin UI** — accept declarative UI v2 as the first production UI extension model;
+  arbitrary plugin JavaScript is not executed in the core origin. Record: [ADR-0011](./adr/0011-plugin-ui-declarative-v2.md).
+- [x] **LC0-005 Runtime trust** — accept official/reviewed in-process plugins only until a separate
+  isolation/governance decision permits third parties. Record: [ADR-0012](./adr/0012-plugin-runtime-trust.md).
+- [x] **LC0-006 Artifact delivery** — accept digest-addressed artifact storage and independent
+  verified API/worker caches for Railway. Record: [ADR-0013](./adr/0013-plugin-artifact-delivery.md).
+- [x] **LC0-007 Data preservation** — accept disable/remove preserving data by default and a separate
+  confirmed purge operation. Record: [ADR-0014](./adr/0014-plugin-data-preservation.md).
+- [x] **LC0-008 Event consistency** — accept versioned outbox events, idempotent consumers, retry and
+  dead-letter handling; no distributed cross-plugin transaction. Record: [ADR-0015](./adr/0015-cross-plugin-event-consistency.md).
+- [x] **LC0-009 Entitlements** — distinguish whole-school platform billing from per-plugin licenses,
+  including offline grace, expiry, clock skew and anti-replay. Record: [ADR-0016](./adr/0016-billing-lock-and-plugin-entitlements.md).
+- [x] **LC0-010 Compatibility** — approve supported core/SDK/runtime/plugin/PostgreSQL/Node/browser/
+  mobile version windows. Record: [ADR-0017](./adr/0017-compatibility-windows.md).
+- [x] **LC0-011 Communication scope** — `wattanam.announcements` remains standalone;
+  `wattanam.communication` owns messages and posts, and both are sold as one bundle.
+  Record: [ADR-0018](./adr/0018-communication-scope.md).
+- [x] **LC0-012 Attendance ownership** — confirm student school-day attendance, staff attendance,
+  timetable teacher attendance and course attendance owners. Record: [ADR-0019](./adr/0019-attendance-ownership.md).
+- [x] **LC0-013 Governance record** — record approver, decision date, rationale and superseded docs.
+  Record: [lc0-architecture-decisions.md](../acceptance/lean-core/lc0-architecture-decisions.md).
 
 Acceptance:
 
-- [ ] All thirteen decisions have accepted ADRs.
-- [ ] `module-boundaries.md` and the architecture master plan agree with those ADRs.
-- [ ] No contradictory core/module classification remains.
+- [x] All thirteen decisions have accepted ADRs/governance results.
+- [x] `module-boundaries.md` and the architecture master plan agree with those ADRs.
+- [x] No contradictory core/module classification remains.
 
 Evidence: `docs/acceptance/lean-core/lc0-architecture-decisions.md`
 
@@ -137,49 +138,112 @@ Milestone name: **LC-M1 Core-only composition and architecture enforcement**.
 
 ### LC-2A Distribution profiles
 
-- [ ] **LC2-001 Configuration** — introduce validated `WATTANAM_DISTRIBUTION` values:
-  `core` and `legacy-full`.
-- [ ] **LC2-002 Safe default** — existing upgraded installations keep `legacy-full` until explicitly
-  migrated; new installation policy is separately tested before changing production default.
-- [ ] **LC2-003 Module registry** — classify every root module as core, shared, proxy or business.
-- [ ] **LC2-004 Backend composition** — `core` does not instantiate business Nest modules.
-- [ ] **LC2-005 Worker composition** — `core` does not register business jobs or gateways.
-- [ ] **LC2-006 Seed composition** — core-only seeds contain no business demo/data records.
-- [ ] **LC2-007 Configuration validation** — invalid profile values fail startup with a clear error.
+- [x] **LC2-001 Configuration** — typed runtime configuration accepts only
+  `WATTANAM_DISTRIBUTION=core|legacy-full`; API/worker startup logs expose the selected profile and
+  Compose plus environment templates carry the setting. Evidence: [LC-2 distribution profiles](../acceptance/lean-core/lc2-distribution-profiles.md).
+- [x] **LC2-002 Safe default** — absent configuration, both Compose runtime roles, environment
+  templates and automated Railway provisioning all preserve `legacy-full`; a contract test prevents
+  switching provisioning to `core` before the clean-install gate is accepted. Evidence:
+  [LC-2 distribution profiles](../acceptance/lean-core/lc2-distribution-profiles.md).
+- [x] **LC2-003 Module registry** — the typed root registry classifies every local module imported
+  by `AppModule` exactly once as core, shared, proxy or business, records its future owner, and fails
+  tests when composition drifts. Evidence: [LC-2 module registry](../acceptance/lean-core/lc2-module-registry.md).
+- [x] **LC2-004 Backend composition** — API and worker bootstrap `AppModule.register(distribution)`;
+  the dynamic root consumes the registry and includes only core/shared modules for `core`, while
+  `legacy-full` retains all 37 local roots. Evidence: [LC-2 module registry](../acceptance/lean-core/lc2-module-registry.md).
+- [x] **LC2-005 Worker composition** — the worker uses the same registry-filtered dynamic root as
+  the API; a source-to-registry contract inventories all seven scheduled handlers and three
+  gateways and proves no business runtime owner is selected in `core`. Evidence:
+  [LC-2 module registry](../acceptance/lean-core/lc2-module-registry.md).
+- [x] **LC2-006 Seed composition** — development seeding uses the validated distribution profile;
+  `core` selects only a generic admin identity fixture, while departments, teacher/student/parent
+  identities, classes and student records remain in an explicit `legacy-business-demo` section.
+  The reviewed seed registry and contract tests prevent business models from entering core seeds.
+  Evidence: [LC-2 seed composition](../acceptance/lean-core/lc2-seed-composition.md).
+- [x] **LC2-007 Configuration validation** — API, worker and seed entrypoints share the validated
+  `core | legacy-full` contract; API and worker validators run before Nest application creation and
+  reject unknown profiles with the offending value and exact supported choices. Entrypoint role
+  mismatches remain explicit. Evidence:
+  [LC-2 configuration validation](../acceptance/lean-core/lc2-configuration-validation.md).
 
 ### LC-2B Frontend composition
 
-- [ ] **LC2-008 Navigation registry** — replace hard-coded business navigation with core and plugin
-  contributions.
-- [ ] **LC2-009 Core navigation** — expose only Dashboard, Users, Plugins, Marketplace, Settings,
-  Backup/Restore, Updates/Health, Platform Billing and authorized Audit/Security.
-- [ ] **LC2-010 Route policy** — business routes are unavailable in a core-only distribution.
-- [ ] **LC2-011 Dashboard extensions** — business cards come from active plugin contributions.
-- [ ] **LC2-012 Search extensions** — business search results come from active plugin providers.
-- [ ] **LC2-013 Empty experience** — core-only dashboard explains how to link the marketplace and add
-  features without presenting broken or empty module links.
+- [x] **LC2-008 Navigation registry** — administrator navigation now has an authoritative typed
+  registry classifying every static entry as `core` or `legacy-business`; distribution selection
+  removes legacy business entries from `core`, and authorized server-provided plugin entries are
+  normalized as identified `plugin` contributions and composed through the same registry function.
+  Evidence: [LC-2 frontend navigation registry](../acceptance/lean-core/lc2-frontend-navigation-registry.md).
+- [x] **LC2-009 Core navigation** — the core profile exposes exactly Dashboard, Users, Plugins,
+  Marketplace, Settings, Backup/Restore, Updates/Health, Platform Billing and Audit/Security. A
+  dedicated authorized system page reports runtime, database, migrations, backup and update state;
+  the exact nine-link set is regression-tested. Evidence:
+  [LC-2 core navigation](../acceptance/lean-core/lc2-core-navigation.md).
+- [x] **LC2-010 Route policy** — a Next.js request boundary returns 404 for legacy business pages
+  in `core`, including direct/bookmarked URLs; core identity, operations, marketplace, plugin-host
+  and empty portal-shell surfaces remain available, static assets are unaffected, and
+  `legacy-full` preserves every existing route. Evidence:
+  [LC-2 frontend route policy](../acceptance/lean-core/lc2-frontend-route-policy.md).
+- [x] **LC2-011 Dashboard extensions** — `core` mounts a separate operations dashboard that makes
+  no attendance/reporting/realtime business calls; feature cards are projected only from active,
+  permission-filtered, namespaced plugin contributions, while `legacy-full` retains the existing
+  dashboard. Evidence:
+  [LC-2 dashboard extensions](../acceptance/lean-core/lc2-dashboard-extensions.md).
+- [x] **LC2-012 Search extensions** — SDK 1.0 plugins opt into search by registering a permission-
+  gated `GET search` route; core discovers only active providers, reuses audited dispatch grants and
+  timeouts, validates namespaced results, and isolates provider failures. The core search UI calls
+  only this aggregator, while `legacy-full` keeps the existing cross-business search. Evidence:
+  [LC-2 search extensions](../acceptance/lean-core/lc2-search-extensions.md).
+- [x] **LC2-013 Empty experience** — when no permitted active plugin contributes a feature card, the
+  core dashboard explains why optional modules are absent and presents a progress-aware three-step
+  flow to link the marketplace, browse plugins, and install/activate them; every CTA targets a route
+  admitted by the core policy. Evidence:
+  [LC-2 empty experience](../acceptance/lean-core/lc2-empty-experience.md).
 
 ### LC-2C Core-only data and operations
 
-- [ ] **LC2-014 Clean schema design** — define how new core-only databases avoid optional business
-  tables while legacy databases remain supported.
-- [ ] **LC2-015 Clean database boot** — API and worker boot without querying an optional table.
-- [ ] **LC2-016 Installation** — interactive and unattended clean installs succeed.
-- [ ] **LC2-017 Identity** — owner login, password recovery, MFA and user administration succeed.
-- [ ] **LC2-018 Marketplace** — link, unlink, catalog and marketplace-only installation entry work.
-- [ ] **LC2-019 Billing control** — notice, final notice, suspension, owner recovery and reactivation
-  work with zero business plugins.
-- [ ] **LC2-020 Backup/restore** — core-only recovery into a clean project succeeds.
-- [ ] **LC2-021 Updates** — core-only update preflight, maintenance mode and rollback succeed.
-- [ ] **LC2-022 Observability** — health, metrics, logs and audit remain available.
-- [ ] **LC2-023 Legacy regression** — `legacy-full` preserves current school behavior and data.
+- [x] **LC2-014 Clean schema design** — accepted dual-lineage design gives fresh core and existing
+  legacy databases separate immutable schema/migration paths, derives the exact 21-model core set
+  from accepted ownership, records every current cross-owner identity relation that must be split,
+  prohibits in-place destructive conversion, and defines lineage, client, plugin migration,
+  backup/restore and LC2-015 boot gates. Evidence:
+  [clean core database schema design](./core-database-schema-design.md) and
+  [machine-readable contract](./core-schema-contract.json).
+- [x] **LC2-015 Clean database boot** — the isolated 21-model core schema, baseline migration,
+  immutable lineage markers, distribution-aware Docker/Railway migration selection and fail-closed
+  core startup guard are implemented and live-verified on disposable PostgreSQL 16: API and worker
+  readiness pass, no optional table exists, legacy routes are absent, and invalid lineage fails
+  closed. Evidence:
+  [LC2 clean database boot](../acceptance/lean-core/lc2-clean-database-boot.md).
+- [x] **LC2-016 Installation** — interactive and unattended paths now share DTO, preflight and
+  serializable persistence; the CLI selects the core migration lineage, and contract tests prove
+  setup touches only core-owned data without bootstrapping optional plugins. Backend and core
+  frontend production builds pass. Clean PostgreSQL CLI and interactive web-path installations,
+  owner login, and repeat rejection pass. Evidence:
+  [LC2 clean installation](../acceptance/lean-core/lc2-clean-installation.md).
+- [x] **LC2-017 Identity** — core-safe owner/admin management, password recovery, session revocation,
+  encrypted TOTP MFA, single-use recovery codes and administrator enrollment UI are implemented and
+  tested without business-table access.
+- [x] **LC2-018 Marketplace** — link, unlink, delegated-session rotation, catalog, orders,
+  entitlements and marketplace-only verified plugin installation are implemented; the local package
+  upload entry is absent.
+- [x] **LC2-019 Billing control** — invoice notice, final notice, suspension, signed payment recovery,
+  outage fail-open notification and automatic reactivation work with zero business plugins.
+- [x] **LC2-020 Backup/restore** — backup/recovery sets are schema-neutral and manifests bind and
+  verify core/legacy lineage before and after restore. A real PostgreSQL 18 source-to-target drill
+  restored exact identity across 23 tables in 0.362 seconds with zero drift or FK orphans.
+- [x] **LC2-021 Updates** — signed update preflight, compatibility blockers, backup-before-maintenance,
+  maintenance mode, healthy completion and explicit rollback recovery path pass automated tests.
+- [x] **LC2-022 Observability** — health, metrics, structured request logs and audit remain composed
+  and core-safe, including business-label enrichment isolation.
+- [x] **LC2-023 Legacy regression** — `legacy-full` remains the default, composes every registered
+  module, keeps its migration lineage and passes the complete backend regression suite.
 
 Acceptance:
 
-- [ ] Core-only backend, worker and frontend production builds pass.
-- [ ] Core-only install and boot pass on a clean supported PostgreSQL database.
-- [ ] No business module provider, route, job, gateway or static navigation is active.
-- [ ] Legacy-full regression suite passes without destructive migration.
+- [x] Core-only backend, worker and frontend production builds pass.
+- [x] Core-only install and boot pass on a clean supported PostgreSQL database.
+- [x] No business module provider, route, job, gateway or static navigation is active.
+- [x] Legacy-full regression suite passes without destructive migration.
 
 Evidence: `docs/acceptance/lean-core/lc2-core-only-composition.md`
 
@@ -373,12 +437,12 @@ Evidence: `docs/acceptance/lean-core/lcf-production-default.md`
 Only start these tasks after LC-0 approval:
 
 1. [x] Implement the reproducible inventory generator (`LC1-001` through `LC1-014`).
-2. [ ] Add and validate `WATTANAM_DISTRIBUTION` (`LC2-001`, `LC2-007`).
-3. [ ] Introduce the backend module registry (`LC2-003`, `LC2-004`).
-4. [ ] Introduce frontend core/plugin navigation registries (`LC2-008`, `LC2-009`).
-5. [ ] Add clean-database core-only boot/install tests (`LC2-014` through `LC2-016`).
-6. [ ] Add the legacy-full regression lane (`LC2-023`).
-7. [ ] Complete the remaining LC-2 operational proofs before beginning UI v2.
+2. [x] Add and validate `WATTANAM_DISTRIBUTION` (`LC2-001`, `LC2-002`, `LC2-007`).
+3. [x] Introduce the backend module registry (`LC2-003`, `LC2-004`).
+4. [x] Introduce frontend core/plugin navigation registries (`LC2-008`, `LC2-009`).
+5. [x] Add clean-database core-only boot/install tests (`LC2-014` through `LC2-016`).
+6. [x] Add the legacy-full regression lane (`LC2-023`).
+7. [x] Complete the remaining LC-2 operational proofs before beginning UI v2.
 
 Do not delete or move current module code in this first queue. The first milestone creates a safe,
 testable composition boundary while preserving existing customer schools.

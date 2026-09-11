@@ -8,6 +8,7 @@ import { InstallationModule } from './installation.module';
 import { InstallationService } from './installation.service';
 import { InstallationPreflightService } from './installation-preflight.service';
 import { InstallDto } from './dto/install.dto';
+import { getDistribution } from '../config/environment';
 
 type FileReader = (file: string) => string;
 type BinaryFileReader = (file: string) => Buffer;
@@ -75,9 +76,15 @@ export function selectInstallDatabaseUrl(env: NodeJS.ProcessEnv, useIsolatedTarg
   return isolated;
 }
 
+export function selectInstallMigrationSchema(env: NodeJS.ProcessEnv = process.env): string {
+  return getDistribution(env) === 'core' ? 'prisma/core/schema.prisma' : 'prisma/schema.prisma';
+}
+
 function migrateDatabase() {
-  const executable = path.join(process.cwd(), 'node_modules', '.bin', process.platform === 'win32' ? 'prisma.cmd' : 'prisma');
-  const result = spawnSync(executable, ['migrate', 'deploy', '--schema=prisma/schema.prisma'], {
+  const prismaCli = path.join(process.cwd(), 'node_modules', 'prisma', 'build', 'index.js');
+  const schema = selectInstallMigrationSchema();
+  const result = spawnSync(process.execPath, [prismaCli, 'migrate', 'deploy', `--schema=${schema}`], {
+    cwd: process.cwd(),
     env: process.env,
     stdio: 'inherit',
   });
@@ -96,14 +103,18 @@ async function main() {
   }
   const app = await NestFactory.createApplicationContext(InstallationModule, { logger: ['error', 'warn'] });
   try {
+    const report = await app.get(InstallationPreflightService).run({
+      locale: dto.locale, timezone: dto.timezone, currency: dto.currency,
+      acceptedLicenseVersion: dto.acceptedLicenseVersion, initialPlugins: dto.initialPlugins,
+    });
     if (process.argv.includes('--dry-run')) {
-      const report = await app.get(InstallationPreflightService).run({
-        locale: dto.locale, timezone: dto.timezone, currency: dto.currency,
-        acceptedLicenseVersion: dto.acceptedLicenseVersion, initialPlugins: dto.initialPlugins,
-      });
       process.stdout.write(`${JSON.stringify(report)}\n`);
       if (!report.ok) process.exitCode = 1;
       return;
+    }
+    if (!report.ok) {
+      const blockers = report.checks.filter((check) => !check.ok).map((check) => `${check.name}: ${check.detail}`);
+      throw new Error(`installation preflight failed: ${blockers.join('; ')}`);
     }
     const result = await app.get(InstallationService).install(dto);
     process.stdout.write(`${JSON.stringify({

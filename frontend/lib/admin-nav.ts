@@ -1,4 +1,22 @@
-export const adminNav = [
+import {
+  composeNavigation,
+  frontendDistribution,
+  NavigationRegistration,
+} from './navigation-registry';
+
+const coreAdminHrefs = new Set([
+  '/admin',
+  '/admin/users',
+  '/admin/plugins',
+  '/marketplace',
+  '/admin/settings',
+  '/admin/backup',
+  '/admin/system',
+  '/admin/platform-billing',
+  '/admin/audit',
+]);
+
+const legacyAdminItems = [
   // ── Overview ──
   { label: 'nav.dashboard', href: '/admin', icon: 'dashboard', section: 'nav.section.overview' },
   { label: 'nav.search', href: '/admin/search', icon: 'search' },
@@ -58,14 +76,29 @@ export const adminNav = [
   { label: 'nav.holidays', href: '/admin/holidays', icon: 'holiday' },
   { label: 'Backup & Restore', href: '/admin/backup', icon: 'briefcase' },
   { label: 'Plugin Manager', href: '/admin/plugins', icon: 'settings' },
+  { label: 'Marketplace', href: '/marketplace', icon: 'briefcase' },
+  { label: 'Updates & Health', href: '/admin/system', icon: 'chart' },
   { label: 'Licensing', href: '/admin/licensing', icon: 'certificate' },
-  { label: 'Audit Logs', href: '/admin/audit', icon: 'clipboard' },
+  { label: 'Audit & Security', href: '/admin/audit', icon: 'clipboard' },
   { label: 'nav.settings', href: '/admin/settings', icon: 'settings' },
   { label: 'My Profile', href: '/admin/profile', icon: 'users' },
   { label: 'Appearance', href: '/admin/appearance', icon: 'paint', section: 'Appearance' },
   { label: 'Posts', href: '/admin/appearance/posts', icon: 'edit' },
   { label: 'About', href: '/admin/appearance/about', icon: 'users' },
-]
+] as const;
+
+/** Authoritative ownership registry for static administrator navigation. */
+export const adminNavigationRegistry: readonly NavigationRegistration[] = legacyAdminItems.map((item) => ({
+  ...item,
+  source: coreAdminHrefs.has(item.href) ? 'core' : 'legacy-business',
+}));
+
+export function adminNavigationForDistribution(value?: string) {
+  return composeNavigation(adminNavigationRegistry, frontendDistribution(value));
+}
+
+// Safe compatibility default: existing deployments stay legacy-full until explicitly migrated.
+export const adminNav = adminNavigationForDistribution();
 
 /** Navigation for CLASS_ADMIN — limited to classes, scoring, and student attendance only. */
 export const classAdminNav = [

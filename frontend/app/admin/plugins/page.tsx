@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import AuthGuard from '../../../components/AuthGuard';
 import Sidebar from '../../../components/Sidebar';
 import { adminNav } from '../../../lib/admin-nav';
@@ -38,7 +38,6 @@ interface UpdateStatus {
 }
 
 interface PluginExtensions { navigation: Array<{ pluginId: string; id: string; label: string; href: string; permission?: string }>; pages?: Array<{ pluginId: string; id: string; title: string; routePath: string; kind: string }> }
-interface PluginPreview { packageSha256: string; plugin: { id: string; name: string; description: string; version: string; publisher: string; requiresCore: string; capabilities: string[]; permissions: string[]; dependencies: Record<string, string>; migrations: Array<{ id: string; destructive: boolean }> } }
 interface MarketplaceLinkStatus { linked: boolean; accountEmailMasked?: string; scope?: string; expiresAt?: string; pending?: { requestId: string; startedAt: string; expiresAt: string } | null }
 interface CatalogProduct {
   id: string; name: string; description: string; license: string; paid: boolean;
@@ -57,7 +56,6 @@ export default function PluginsPage() {
   const [plugins, setPlugins] = useState<PluginRecord[]>([]);
   const [updates, setUpdates] = useState<UpdateStatus | null>(null);
   const [extensions, setExtensions] = useState<PluginExtensions>({ navigation: [] });
-  const [preview, setPreview] = useState<PluginPreview | null>(null);
   const [runtime, setRuntime] = useState<{ safeMode: boolean; loaded: string[] } | null>(null);
   const [linkStatus, setLinkStatus] = useState<MarketplaceLinkStatus | null>(null);
   const [linking, setLinking] = useState(false);
@@ -66,7 +64,6 @@ export default function PluginsPage() {
   const [orders, setOrders] = useState<MarketplaceOrder[]>([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
-  const fileRef = useRef<HTMLInputElement>(null);
 
   async function load() {
     const [pluginsResponse, updatesResponse, extensionsResponse, runtimeResponse] = await Promise.all([apiFetch('/api/plugins'), apiFetch('/api/updates'), apiFetch('/api/plugin-api/extensions'), apiFetch('/api/plugins/runtime-status')]);
@@ -188,20 +185,6 @@ export default function PluginsPage() {
     finally { setLinking(false); }
   }
 
-  async function inspect() {
-    const file = fileRef.current?.files?.[0];
-    if (!file) return setError('Select a signed .wtp package first.');
-    setBusy('inspect'); setError(''); setPreview(null);
-    try {
-      const body = new FormData(); body.append('package', file);
-      const response = await apiFetch('/api/plugins/inspect', { method: 'POST', body });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.message || `Inspection failed (${response.status})`);
-      setPreview(result);
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Inspection failed'); }
-    finally { setBusy(''); }
-  }
-
   async function installRepositoryUpdate(pluginId: string, version: string) {
     setBusy(`${pluginId}:update`); setError('');
     try {
@@ -214,24 +197,6 @@ export default function PluginsPage() {
   }
 
   useEffect(() => { load().catch((cause) => setError(cause.message)); }, []);
-
-  async function install() {
-    const file = fileRef.current?.files?.[0];
-    if (!file || !preview) return setError('Inspect the signed package before installation.');
-    setBusy('install'); setError('');
-    try {
-      const body = new FormData();
-      body.append('package', file);
-      body.append('confirmationSha256', preview.packageSha256);
-      const response = await apiFetch('/api/plugins/install', { method: 'POST', body });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(Array.isArray(result.message) ? result.message.join('. ') : result.message || `Installation failed (${response.status})`);
-      if (fileRef.current) fileRef.current.value = '';
-      setPreview(null);
-      await load();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Installation failed'); }
-    finally { setBusy(''); }
-  }
 
   async function removePlugin(plugin: PluginRecord) {
     if (!window.confirm(`Remove ${plugin.name} files? Plugin settings, storage, migrations, and business data will be preserved.`)) return;
@@ -262,21 +227,10 @@ export default function PluginsPage() {
         <Sidebar title="Admin Panel" subtitle="Wattanam" navItems={adminNav} accentColor="indigo" />
         <div className="page-content">
           <div className="h-14 lg:hidden" />
-          <div className="page-header"><h1 className="text-2xl font-bold text-slate-800">Plugin Manager</h1><p className="mt-1 text-sm text-slate-500">Install only signed packages from trusted publishers.</p></div>
+          <div className="page-header"><h1 className="text-2xl font-bold text-slate-800">Plugin Manager</h1><p className="mt-1 text-sm text-slate-500">Browse, buy, and install verified plugins through the Wattanam Marketplace.</p></div>
           <div className="page-body space-y-6">
             {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
             {runtime?.safeMode && <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"><strong>Plugin safe mode is active.</strong> No plugin code is loaded and activation is disabled. Core administration remains available.</div>}
-            <section className="card p-6">
-              <h2 className="font-semibold text-slate-800">Install signed package</h2>
-              <p className="mt-1 text-sm text-slate-500">The server verifies archive paths, checksums, Ed25519 signature, publisher trust, core compatibility, and dependencies.</p>
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                <input ref={fileRef} onChange={() => setPreview(null)} type="file" accept=".wtp,application/zip" className="max-w-lg text-sm" />
-                <button className="btn btn-secondary" disabled={!!busy} onClick={inspect}>{busy === 'inspect' ? 'Inspecting…' : 'Inspect package'}</button>
-                <button className="btn btn-primary" disabled={!!busy || !preview} onClick={install}>{busy === 'install' ? 'Installing…' : 'Confirm & install'}</button>
-              </div>
-              {preview && <div className="mt-5 rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-sm text-slate-700"><div className="font-semibold text-slate-900">{preview.plugin.name} {preview.plugin.version}</div><div className="mt-1 font-mono text-xs">{preview.plugin.id} · {preview.plugin.publisher}</div><p className="mt-2">{preview.plugin.description}</p><dl className="mt-3 grid gap-3 sm:grid-cols-2"><Info label="Requested capabilities" value={preview.plugin.capabilities.join(', ') || 'None'} /><Info label="Requested permissions" value={preview.plugin.permissions.join(', ') || 'None'} /><Info label="Dependencies" value={Object.entries(preview.plugin.dependencies).map(([id, range]) => `${id} ${range}`).join(', ') || 'None'} /><Info label="Migrations" value={preview.plugin.migrations.map((migration) => `${migration.id}${migration.destructive ? ' (destructive)' : ''}`).join(', ') || 'None'} /></dl><details className="mt-3 text-xs"><summary>Confirmed package checksum</summary><code className="mt-1 block break-all">{preview.packageSha256}</code></details></div>}
-            </section>
-
             <section className="card p-6">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div><h2 className="font-semibold text-slate-800">Official repository</h2><p className="mt-1 text-sm text-slate-500">Repository metadata and downloaded packages are verified locally before installation.</p></div>

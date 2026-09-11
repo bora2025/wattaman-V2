@@ -62,6 +62,11 @@ export default function AdminProfilePage() {
   const [notice, setNotice] = useState('');
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoError, setPhotoError] = useState('');
+  const [mfaPassword, setMfaPassword] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaSetup, setMfaSetup] = useState<{ secret: string; otpauthUrl: string; recoveryCodes: string[] } | null>(null);
+  const [mfaMessage, setMfaMessage] = useState('');
+  const [mfaBusy, setMfaBusy] = useState(false);
 
   useEffect(() => {
     apiFetch('/api/auth/me')
@@ -120,6 +125,28 @@ export default function AdminProfilePage() {
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not change the password');
     } finally { setBusy(false); }
+  }
+
+  async function beginMfa(event: FormEvent) {
+    event.preventDefault(); setMfaBusy(true); setMfaMessage('');
+    try {
+      const response = await apiFetch('/api/auth/mfa/setup', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ currentPassword: mfaPassword }) });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.message || 'Could not start MFA setup');
+      setMfaSetup(result); setMfaPassword('');
+    } catch (cause) { setMfaMessage(cause instanceof Error ? cause.message : 'Could not start MFA setup'); }
+    finally { setMfaBusy(false); }
+  }
+
+  async function enableMfa(event: FormEvent) {
+    event.preventDefault(); setMfaBusy(true); setMfaMessage('');
+    try {
+      const response = await apiFetch('/api/auth/mfa/enable', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: mfaCode }) });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.message || 'Could not enable MFA');
+      setMfaCode(''); setMfaMessage('MFA enabled. Store the recovery codes safely before leaving this page.');
+    } catch (cause) { setMfaMessage(cause instanceof Error ? cause.message : 'Could not enable MFA'); }
+    finally { setMfaBusy(false); }
   }
 
   return (
@@ -213,6 +240,28 @@ export default function AdminProfilePage() {
                   {busy ? 'Changing…' : 'Change password'}
                 </button>
               </form>
+            </section>
+
+            <section className="card p-6">
+              <h2 className="font-semibold text-slate-800">Authenticator MFA</h2>
+              <p className="mt-1 text-sm text-slate-500">Protect this school account with Google Authenticator or another TOTP application.</p>
+              {!mfaSetup ? (
+                <form className="mt-4 grid gap-3 sm:max-w-md" onSubmit={beginMfa}>
+                  <input type="password" autoComplete="current-password" required value={mfaPassword} onChange={event => setMfaPassword(event.target.value)} placeholder="Current password" />
+                  <button className="btn btn-primary justify-self-start" disabled={mfaBusy}>{mfaBusy ? 'Preparing…' : 'Set up MFA'}</button>
+                </form>
+              ) : (
+                <form className="mt-4 grid gap-4 sm:max-w-xl" onSubmit={enableMfa}>
+                  <div className="rounded-lg bg-slate-50 p-4 text-sm">
+                    <p className="font-semibold">Authenticator secret</p><code className="mt-1 block break-all select-all">{mfaSetup.secret}</code>
+                    <p className="mt-3 font-semibold">One-time recovery codes</p>
+                    <div className="mt-1 grid grid-cols-2 gap-1 font-mono">{mfaSetup.recoveryCodes.map(code => <code key={code}>{code}</code>)}</div>
+                  </div>
+                  <input required value={mfaCode} onChange={event => setMfaCode(event.target.value)} inputMode="numeric" autoComplete="one-time-code" placeholder="6-digit authenticator code" maxLength={6} />
+                  <button className="btn btn-primary justify-self-start" disabled={mfaBusy}>{mfaBusy ? 'Checking…' : 'Verify and enable'}</button>
+                </form>
+              )}
+              {mfaMessage && <p role="status" className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-700">{mfaMessage}</p>}
             </section>
           </div>
         </div>

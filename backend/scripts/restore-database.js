@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
-const { fail, installationSlug, postgresEnvironment, run, sha256 } = require('./db-toolkit');
+const { expectedSchemaLineage, fail, installationSlug, schemaLineage, postgresEnvironment, run, sha256 } = require('./db-toolkit');
 
 function argument(name) {
   const index = process.argv.indexOf(name);
@@ -31,6 +31,13 @@ try { manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')); } catch { fa
 if (manifest.format !== 'pg_dump-custom-v1') fail('unsupported backup format');
 if (manifest.file !== path.basename(archive)) fail('manifest does not match archive filename');
 if (manifest.sha256 !== sha256(archive)) fail('backup checksum verification failed');
+const expectedLineage = expectedSchemaLineage();
+if (expectedLineage === 'wattanam-core-v1' && manifest.schemaLineage !== expectedLineage) {
+  fail(`core restore requires a ${expectedLineage} backup manifest`);
+}
+if (manifest.schemaLineage && manifest.schemaLineage !== expectedLineage) {
+  fail(`backup lineage ${manifest.schemaLineage} is incompatible with ${process.env.WATTANAM_DISTRIBUTION || 'legacy-full'}`);
+}
 
 const baseEnvironment = postgresEnvironment(useValidationTarget ? process.env.RESTORE_DATABASE_URL : process.env.DATABASE_URL);
 const environment = {
@@ -56,4 +63,6 @@ run('pg_restore', ['--clean', '--if-exists', '--no-owner', '--no-acl', '--single
 process.stderr.write('Verifying restored installation identity...\n');
 const restoredSlug = installationSlug(environment);
 if (manifest.installationSlug && restoredSlug !== manifest.installationSlug) fail('restore completed but installation identity verification failed');
+const restoredLineage = schemaLineage(environment);
+if (manifest.schemaLineage && restoredLineage !== manifest.schemaLineage) fail('restore completed but schema lineage verification failed');
 process.stdout.write(`Restore verified for ${restoredSlug || 'legacy installation'} from ${path.basename(archive)}\n`);

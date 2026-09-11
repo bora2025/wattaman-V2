@@ -6,6 +6,7 @@ import { PluginPermissionsService } from './plugin-permissions.service';
 export interface PermissionExtension { pluginId: string; id: string; label: string; description?: string }
 export interface NavigationExtension { pluginId: string; id: string; label: string; href: string; permission?: string }
 export interface PageExtension { pluginId: string; schemaVersion: 1; id: string; title: string; routePath: string; kind: 'json-settings' }
+export interface PluginSearchResult { pluginId: string; id: string; title: string; description?: string; href: string }
 
 @Injectable()
 export class PluginExtensionsService {
@@ -119,6 +120,40 @@ export class PluginExtensionsService {
     // Pages carry no permission field of their own -- the route(s) behind a page are what dispatch()
     // actually gates, so page metadata (id/title/routePath) is not sensitive to list unfiltered.
     return { navigation, pages: [...this.pages.values()] };
+  }
+
+  /**
+   * SDK 1.0 search convention: an active plugin may register a permission-gated GET `search`
+   * route. Reusing dispatch preserves its grant, timeout and audit guarantees without adding a
+   * new frozen capability. Bad provider output is discarded at the namespace boundary.
+   */
+  async searchForPrincipal(query: string, principal: PluginRouteRequest['principal']): Promise<PluginSearchResult[]> {
+    const q = query.trim();
+    if (q.length < 2 || q.length > 100) throw new BadRequestException('Search query must be between 2 and 100 characters');
+    const providers = [...this.routes.keys()]
+      .filter((key) => key.endsWith(':GET:search'))
+      .map((key) => key.slice(0, -':GET:search'.length));
+    const batches = await Promise.all(providers.map(async (pluginId) => {
+      try {
+        const value = await this.dispatch(pluginId, {
+          method: 'GET', path: 'search', params: {}, query: { q }, body: undefined, principal,
+        });
+        if (!Array.isArray(value)) return [];
+        return value.slice(0, 25).flatMap((candidate): PluginSearchResult[] => {
+          if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return [];
+          const item = candidate as Record<string, unknown>;
+          if (typeof item.id !== 'string' || !/^[a-zA-Z0-9._:-]{1,160}$/.test(item.id)) return [];
+          if (typeof item.title !== 'string' || !item.title.trim() || item.title.length > 200) return [];
+          if (typeof item.href !== 'string' || !item.href.startsWith(`/plugins/${pluginId}/`) || item.href.includes('..')) return [];
+          if (item.description !== undefined && (typeof item.description !== 'string' || item.description.length > 500)) return [];
+          return [{ pluginId, id: item.id, title: item.title.trim(), href: item.href, ...(item.description ? { description: item.description as string } : {}) }];
+        });
+      } catch {
+        // One unavailable or unauthorized provider must not break results from other plugins.
+        return [];
+      }
+    }));
+    return batches.flat();
   }
 
   private async filterAsync<T>(items: T[], predicate: (item: T) => Promise<boolean>): Promise<T[]> {

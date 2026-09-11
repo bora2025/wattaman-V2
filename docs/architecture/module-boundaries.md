@@ -1,12 +1,17 @@
 # Core/Plugin/Shared/Deprecated Module Classification (A-007)
 
-Status: **proposed analysis, not a ruling.** This classification is built directly on DEC-004's proposed base product scope ("Identity, roles, students, staff, academic structure, attendance, audit, installation, backup, plugin host") — DEC-004 is still `proposed`, not `accepted`. Until the Product Owner accepts (or amends) DEC-004, the PLUGIN-ELIGIBLE list below is a technical recommendation for what *could* follow the announcements precedent, not a committed roadmap. Re-run this classification the day DEC-004 is accepted, since an amended scope could move items between columns.
+Status: **accepted target classification.** Product owner Bora accepted ADR-0009–0019 on
+2026-09-11. ADR-0009 replaces DEC-004: core is the permanent platform foundation, while academic
+structure, attendance and other school business capabilities become official plugins. The checked
+[ownership manifest](./ownership-manifest.json) is authoritative for individual files, routes,
+models and split plans.
 
 ## What the columns mean
 
-- **CORE** — stays in `backend/src` permanently, regardless of DEC-004's exact wording. Either explicitly named in DEC-004's base scope, or infrastructure the plugin host itself depends on (a plugin can't unload the thing that loads plugins).
+- **CORE** — stays in `backend/src` permanently as platform infrastructure required by every school.
 - **SHARED** — lives in `backend/src`, but is deliberately exposed to plugins as SDK surface (a capability, like `notifications.send` wrapping `NotificationService`) rather than being plugin-exclusive. Removing it would break both core features and any plugin using that capability.
-- **PLUGIN-ELIGIBLE** — a real, working feature today, implemented as a core NestJS module, that is *not* named in DEC-004's base scope. A candidate for the same extraction playbook C-004 already proved on `announcements` (see below) — not yet extracted, and extraction is not implied to be scheduled.
+- **OFFICIAL PLUGIN TARGET** — business functionality currently compiled into the application that
+  must move to its accepted official-plugin owner through the staged extraction plan.
 - **DEPRECATED** — superseded or slated for removal. None found in this pass — noted honestly rather than manufacturing an entry to fill the category.
 
 ## The proven extraction playbook (from C-004)
@@ -17,21 +22,18 @@ Moving a PLUGIN-ELIGIBLE module to `plugins/<id>/` now has a working precedent, 
 
 | Module (`backend/src/*`) | Class | Why |
 |---|---|---|
-| `auth` | CORE | Identity — named in DEC-004 |
-| `installation` | CORE | Named in DEC-004 |
-| `backup` | CORE | Named in DEC-004 |
-| `audit` | CORE | Named in DEC-004 |
-| `attendance` | CORE | Named in DEC-004 |
-| `classes`, `study-years`, `departments` | CORE | "Academic structure" per DEC-004 |
-| `plugins` | CORE | "Plugin host" per DEC-004 — the thing that can never become a plugin |
+| `auth` | CORE | Generic identity, authentication, sessions, roles and recovery per ADR-0010 |
+| `installation`, `backup`, `audit` | CORE | Platform installation, safety and compliance infrastructure |
+| `attendance`, `session-config`, `holidays`, `card-aliases` | OFFICIAL PLUGIN TARGET | `wattanam.attendance`; staff and lesson/course attendance split per ADR-0019 |
+| `classes`, `study-years`, `departments`, `class-registrations` | OFFICIAL PLUGIN TARGET | `wattanam.academic-management` per ADR-0010 |
+| `plugins` | CORE | Plugin host and lifecycle infrastructure |
 | `database`, `config`, `common`, `health` | CORE | Infrastructure every module (core or plugin-supporting) depends on |
 | `site-settings` | CORE | Installation-wide configuration, same tier as `installation` |
 | `marketplace` | CORE | The school-side marketplace client (entitlement cache, installation registration) — part of the "plugin host" ecosystem DEC-004 names, not itself a feature |
-| `directory` | SHARED | Built this session specifically as SDK-exposed infrastructure (`directory.read`) — no core feature calls it directly today; it exists *because* plugins need scoped reads into `User`/`Class`/`Student` |
+| `directory` | SHARED | Generic identity directory; academic roster resolution moves behind Academic Management contracts |
 | `notification` | SHARED | Own core callers (e.g. absence alerts) plus the `notifications.send` capability plugins use |
 | `notification-preference` | SHARED | Per-user channel preferences read by both core notification paths and plugin-driven sends |
 | `parent` (`MessagesGateway` specifically) | SHARED | The realtime Socket.IO room infrastructure (`user-<id>` rooms) is reused by the `realtime.notify` capability; the parent-teacher messaging *feature* built on top of it is itself PLUGIN-ELIGIBLE (see below) |
-| `session-config`, `holidays`, `card-aliases` | SHARED | Not named in DEC-004, but each is a direct, load-bearing dependency of `attendance` (session windows, expected school days, physical-card-to-student resolution) — extracting them would mean extracting attendance itself |
 | `assignments` | PLUGIN-ELIGIBLE | Homework/assignment tracking — a distinct LMS feature, not "academic structure" in the identity/roster sense |
 | `bus` | PLUGIN-ELIGIBLE | Transport routes/stops/live location — optional feature, not core |
 | `card-templates` | PLUGIN-ELIGIBLE | Physical ID card visual design — cosmetic, optional |
@@ -56,8 +58,11 @@ Moving a PLUGIN-ELIGIBLE module to `plugins/<id>/` now has a working precedent, 
 This repo gained its first real standalone-package convention this session (`packages/plugin-sdk`, `packages/plugin-cli` — C-008), which clarifies where things belong:
 
 - **`packages/`** is for publishable, framework-independent *developer tooling* (typed SDK, CLI, harness) — never business-domain code. Nothing in the classification above moves here.
-- **CORE and SHARED** modules stay in `backend/src` permanently — they are the "plugin host," not plugin content.
-- **PLUGIN-ELIGIBLE** modules' eventual destination, if and when DEC-004 is accepted and prioritized, is `plugins/<publisher>.<name>/` (following the `plugins/announcements/` precedent), built with `@wattanam/plugin-sdk` and the CLI's `init`/`check`/`pack` tooling like any third-party plugin would be — the platform does not get a special extraction shortcut its own tooling doesn't support.
+- **CORE and SHARED** infrastructure stays in `backend/src` permanently; business-specific callers
+  and data are split out according to the ownership manifest.
+- **OFFICIAL PLUGIN TARGET** and the older table label **PLUGIN-ELIGIBLE** both mean accepted
+  extraction work. Their destination is `plugins/<publisher>.<name>/`, following the announcements
+  precedent and using the public SDK, CLI and certification workflow without an internal shortcut.
 
 ## Change rule
 

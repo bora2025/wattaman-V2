@@ -1,6 +1,6 @@
 # ADR-0010: Identity Ownership
 
-Status: **Proposed** — drafted 2026-09-11 for Gate LC-0 (**LC0-003**). Awaiting product-owner approval. 51 inventory items stay provisional until it is decided.
+Status: **Accepted** — approved by product owner **Bora** on 2026-09-11 for **LC0-003**.
 
 ## Context
 
@@ -14,7 +14,7 @@ Status: **Proposed** — drafted 2026-09-11 for Gate LC-0 (**LC0-003**). Awaitin
 
 The plans agree on the split between accounts and profiles, but neither says where the **guardian relationship** lives: which account is the parent of which student. Today it is `Student.parentId`. Attendance (absence alerts), Finance (fee reminders), Transportation (parent tracking), Communication and Parent Portal all need it, so where it lives decides which plugins become mandatory.
 
-## Decision (proposed)
+## Decision
 
 1. **Core owns the person as an account**: identity, name, login identifiers, contact endpoints (email, phone), credentials, MFA and sessions, organization membership and generic role assignments. Role names such as STUDENT or TEACHER remain core access roles; a role is not a profile.
 2. **Core also owns the guardian relationship**, as a generic link between two accounts with no academic data on it. Parent Portal owns the request and approval workflow (`ParentLinkRequest`) and writes the link through a core contract. Any plugin can then notify a student's guardians with only core present.
