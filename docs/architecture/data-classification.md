@@ -193,3 +193,19 @@ Real engineering closed the two genuine gaps here since this document was first 
 ## Change rule
 
 A new sensitive field is classified in the same change that adds it — same discipline as `technical-inventory.md`'s model-level rule. When A-006 sets actual retention/export/deletion periods, it should reference tiers here rather than re-deriving field lists from scratch.
+
+## Machine-checked companion (LC1-013)
+
+The school-database classification above is encoded in [data-classification.json](./data-classification.json), which the architecture inventory (`tools/architecture-inventory.js`) checks on every pull request. It keeps these tiers and field judgements, and adds the lean-core categories (personal, child, financial, credential, location) plus a rollup per future plugin owner.
+
+It also enforces the change rule. A new model must be listed, and a new field whose name suggests sensitive data must be classified or recorded as reviewed. Any model holding student-linked records must come out as child data.
+
+The JSON classifies five things this document does not yet list; each is marked "Not in A-002" there, and should be added here:
+
+- `PasswordResetToken.tokenHash` — tier 4.
+- `CourseSession.checkInCode` — tier 4.
+- `MarketplaceProxyLink.accountEmailMasked` — tier 2.
+- `MarketplaceSchoolControl.billingJson` and `warningsJson` — financial school business data.
+- `PluginEntitlementCache.signedTokenJson` — treated as a credential.
+
+The marketplace database remains classified only in this document: the inventory covers the school installation.

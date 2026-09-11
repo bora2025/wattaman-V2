@@ -5,6 +5,19 @@ on:
   workflow_dispatch:
 
 jobs:
+  architecture-inventory:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      # First, so a pull request that adds anything unowned or unclassified stops with the gate's
+      # list of what to fix rather than a generic drift message.
+      - name: Reject unowned or unclassified architecture items
+        run: npm run architecture:inventory:gate
+      - name: Reject unreviewed architecture inventory drift
+        run: npm run architecture:inventory:check && node --test tools/architecture-inventory.test.js
+
   control-plane-config:
     runs-on: ubuntu-latest
     steps:
