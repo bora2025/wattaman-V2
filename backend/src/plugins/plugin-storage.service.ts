@@ -16,6 +16,18 @@ export class PluginStorageService {
     await this.storage.put(this.key(pluginId, name), Buffer.from(value));
   }
 
+  async readBinary(pluginId: string, name: string) {
+    const value = await this.storage.get(this.key(pluginId, name));
+    return value ? value.toString('base64') : null;
+  }
+
+  async writeBinary(pluginId: string, name: string, base64: string) {
+    if (typeof base64 !== 'string' || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(base64)) throw new BadRequestException('Plugin binary storage value must be canonical base64');
+    const value = Buffer.from(base64, 'base64');
+    if (value.byteLength > this.maximum()) throw new BadRequestException('Plugin storage value exceeds its per-file limit');
+    await this.storage.put(this.key(pluginId, name), value);
+  }
+
   async delete(pluginId: string, name: string) { await this.storage.delete(this.key(pluginId, name)); }
 
   async list(pluginId: string, prefix = '') {

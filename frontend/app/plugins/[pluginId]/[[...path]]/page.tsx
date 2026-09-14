@@ -39,7 +39,7 @@ export default function PluginPageHost() {
     if (page.schemaVersion === 2) {
       const data: Record<string, unknown> = {};
       const errors: Record<string, string> = {};
-      await Promise.all(page.dataSources.filter((entry: any) => entry.method === 'GET').map(async (source: any) => {
+      await Promise.all(page.dataSources.filter((entry: any) => entry.method === 'GET' && entry.autoload !== false).map(async (source: any) => {
         const endpoint = `/api/plugin-api/${encodeURIComponent(pluginId)}/${resolvePluginSourcePath(source.path, matched?.params || {})}`;
         try {
           const response = await apiFetch(endpoint);

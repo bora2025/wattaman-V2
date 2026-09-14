@@ -133,4 +133,13 @@ describe('PluginExtensionsService', () => {
     dispose();
     expect(service.list().pages).toHaveLength(0);
   });
+
+  it('uses the same grant to hide v2 navigation/pages and deny API dispatch', async () => {
+    const denied = deps(false); const deniedService = new PluginExtensionsService(denied.grants, denied.audit);
+    deniedService.registerNavigation('wattanam.test', permissions, [{ pluginId: 'wattanam.test', id: 'records', label: 'Records', href: '/plugins/wattanam.test/records', permission: 'wattanam.test.read' }]);
+    deniedService.registerPage('wattanam.test', { schemaVersion: 2, kind: 'declarative-ui', pages: [{ id: 'records', title: 'Records', routePath: 'records', permission: 'wattanam.test.read', parameters: [], dataSources: [{ id: 'records', method: 'GET', path: 'records', permission: 'wattanam.test.read' }], components: [{ id: 'title', type: 'heading', title: 'Records' }] }] }, permissions);
+    deniedService.registerRoute('wattanam.test', permissions, { method: 'GET', path: 'records', permission: 'wattanam.test.read', handler: () => [] });
+    await expect(deniedService.listForPrincipal('STUDENT')).resolves.toEqual({ navigation: [], pages: [] });
+    await expect(deniedService.dispatch('wattanam.test', { method: 'GET', path: 'records', params: {}, query: {}, body: null, principal: { userId: 'u1', role: 'STUDENT' } })).rejects.toThrow('Missing plugin permission');
+  });
 });

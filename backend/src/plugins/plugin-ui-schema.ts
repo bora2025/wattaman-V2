@@ -11,6 +11,8 @@ export interface PluginUiDataSource {
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   path: string;
   permission: string;
+  parameters?: string[];
+  autoload?: boolean;
 }
 
 export interface PluginUiComponent {
@@ -30,6 +32,7 @@ export interface PluginUiPage {
   parameters: Array<{ name: string; type: 'uuid' | 'integer' | 'slug' | 'string'; maximumLength?: number }>;
   dataSources: PluginUiDataSource[];
   components: PluginUiComponent[];
+  realtime?: Array<{ event: string; refreshSources: string[] }>;
 }
 
 export interface PluginUiBundle {
@@ -46,6 +49,7 @@ const COMPONENTS = new Set<PluginUiComponentType>([
   'chart', 'file', 'print', 'scanner', 'actions',
 ]);
 const FORBIDDEN_KEYS = /^(?:html|dangerouslySetInnerHTML|script|srcDoc|javascript|on[A-Z].*)$/;
+const DATA_PATH = /^[a-zA-Z][a-zA-Z0-9_]*(?:\.[a-zA-Z][a-zA-Z0-9_]*)*$/;
 
 function routeParameters(route: string): string[] {
   return route.split('/').filter((segment) => segment.startsWith(':')).map((segment) => segment.slice(1));
@@ -120,6 +124,7 @@ export function parsePluginUiBundle(value: unknown, pluginId: string, declaredPe
     if (!Array.isArray(page.dataSources) || page.dataSources.length > 30) throw new BadRequestException(`pages[${pageIndex}].dataSources must be an array`);
     const sourceIds = new Set<string>();
     const sourceMethods = new Map<string, PluginUiDataSource['method']>();
+    const sourceParameters = new Map<string, Set<string>>();
     const dataSources = page.dataSources.map((candidateSource, sourceIndex): PluginUiDataSource => {
       const source = object(candidateSource, `pages[${pageIndex}].dataSources[${sourceIndex}]`);
       const sourceId = string(source.id, 'data source id', 100);
@@ -130,9 +135,16 @@ export function parsePluginUiBundle(value: unknown, pluginId: string, declaredPe
       const sourcePermission = string(source.permission, 'data source permission');
       if (!sourcePermission.startsWith(`${pluginId}.`) || !declaredPermissions.has(sourcePermission)) throw new BadRequestException('Plugin UI data source permission is not declared by the plugin');
       const sourcePath = safeRoute(source.path, 'data source path', true);
-      if (routeParameters(sourcePath).some((name) => !parameterNames.has(name))) throw new BadRequestException('Plugin UI data source uses an undeclared route parameter');
+      if (source.parameters !== undefined && (!Array.isArray(source.parameters) || source.parameters.some((name) => typeof name !== 'string' || !/^[a-z][a-zA-Z0-9]*$/.test(name)))) throw new BadRequestException('Plugin UI data source parameters are invalid');
+      const ownParameters = new Set((source.parameters || []) as string[]);
+      if (ownParameters.size !== ((source.parameters || []) as string[]).length) throw new BadRequestException('Plugin UI data source parameters are duplicated');
+      if (routeParameters(sourcePath).some((name) => !parameterNames.has(name) && !ownParameters.has(name))) throw new BadRequestException('Plugin UI data source uses an undeclared route parameter');
+      if ([...ownParameters].some((name) => !routeParameters(sourcePath).includes(name))) throw new BadRequestException('Plugin UI data source declares an unused parameter');
+      if (source.autoload !== undefined && typeof source.autoload !== 'boolean') throw new BadRequestException('Plugin UI data source autoload must be boolean');
+      if (ownParameters.size && source.autoload !== false) throw new BadRequestException('Plugin UI data source with runtime parameters must disable autoload');
       sourceMethods.set(sourceId, method as PluginUiDataSource['method']);
-      return { id: sourceId, method: method as PluginUiDataSource['method'], path: sourcePath, permission: sourcePermission };
+      sourceParameters.set(sourceId, ownParameters);
+      return { id: sourceId, method: method as PluginUiDataSource['method'], path: sourcePath, permission: sourcePermission, ...(ownParameters.size ? { parameters: [...ownParameters] } : {}), ...(source.autoload === false ? { autoload: false } : {}) };
     });
 
     if (!Array.isArray(page.components) || page.components.length < 1 || page.components.length > 100) throw new BadRequestException(`pages[${pageIndex}].components must contain 1 to 100 components`);
@@ -216,6 +228,64 @@ export function parsePluginUiBundle(value: unknown, pluginId: string, declaredPe
           }
         });
       }
+      if (['metric', 'card', 'chart', 'status'].includes(type)) {
+        if (!source || sourceMethods.get(source) !== 'GET') throw new BadRequestException(`Plugin UI ${type} requires a GET data source`);
+        const options = object(component.options, `Plugin UI ${type} options`);
+        const dataPath = (key: string, required = false) => {
+          if (options[key] === undefined && !required) return;
+          if (typeof options[key] !== 'string' || !DATA_PATH.test(options[key] as string)) throw new BadRequestException(`Plugin UI ${type} ${key} is invalid`);
+        };
+        if (type === 'metric') {
+          dataPath('valuePath', true); dataPath('trendPath');
+          if (options.format !== undefined && !['number', 'percent', 'currency', 'text'].includes(String(options.format))) throw new BadRequestException('Plugin UI metric format is invalid');
+        }
+        if (type === 'card') {
+          if (!Array.isArray(component.fields) || component.fields.length < 1 || component.fields.length > 20) throw new BadRequestException('Plugin UI card requires 1 to 20 fields');
+          component.fields.forEach((candidateField, fieldIndex) => { const field = object(candidateField, `card fields[${fieldIndex}]`); string(field.label, 'card field label', 120); if (typeof field.path !== 'string' || !DATA_PATH.test(field.path)) throw new BadRequestException('Plugin UI card field path is invalid'); });
+        }
+        if (type === 'chart') {
+          if (!['bar', 'line', 'pie'].includes(String(options.chartType))) throw new BadRequestException('Plugin UI chart type is invalid');
+          dataPath('itemsPath'); dataPath('categoryPath', true); dataPath('valuePath', true);
+          if (options.maximumItems !== undefined && (!Number.isInteger(options.maximumItems) || Number(options.maximumItems) < 1 || Number(options.maximumItems) > 1000)) throw new BadRequestException('Plugin UI chart maximumItems is invalid');
+        }
+        if (type === 'status') {
+          dataPath('valuePath', true);
+          if (!Array.isArray(options.states) || options.states.length < 1 || options.states.length > 20) throw new BadRequestException('Plugin UI status requires 1 to 20 states');
+          options.states.forEach((candidateState, stateIndex) => { const state = object(candidateState, `status states[${stateIndex}]`); if (!['string', 'number', 'boolean'].includes(typeof state.value)) throw new BadRequestException('Plugin UI status value is invalid'); string(state.label, 'status label', 80); if (!['neutral', 'success', 'warning', 'danger', 'info'].includes(String(state.tone))) throw new BadRequestException('Plugin UI status tone is invalid'); });
+        }
+      }
+      if (type === 'file') {
+        if (!source || sourceMethods.get(source) !== 'GET' || sourceParameters.get(source)?.size) throw new BadRequestException('Plugin UI file requires an autoload GET listing source');
+        const options = object(component.options, 'Plugin UI file options');
+        const uploadSource = string(options.uploadSource, 'file uploadSource', 100);
+        const downloadSource = string(options.downloadSource, 'file downloadSource', 100);
+        if (!sourceIds.has(uploadSource) || sourceMethods.get(uploadSource) === 'GET' || sourceMethods.get(uploadSource) === 'DELETE') throw new BadRequestException('Plugin UI file uploadSource must be a write data source');
+        if (!sourceIds.has(downloadSource) || sourceMethods.get(downloadSource) !== 'GET' || !sourceParameters.get(downloadSource)?.size) throw new BadRequestException('Plugin UI file downloadSource must be a parameterized GET data source');
+        const idParameter = string(options.idParameter, 'file idParameter', 60);
+        if (!sourceParameters.get(downloadSource)?.has(idParameter)) throw new BadRequestException('Plugin UI file idParameter is not declared by downloadSource');
+        if (options.deleteSource !== undefined) { const deleteSource = string(options.deleteSource, 'file deleteSource', 100); if (!sourceIds.has(deleteSource) || sourceMethods.get(deleteSource) !== 'DELETE' || !sourceParameters.get(deleteSource)?.has(idParameter)) throw new BadRequestException('Plugin UI file deleteSource is invalid'); }
+        if (!Number.isInteger(options.maxBytes) || Number(options.maxBytes) < 1 || Number(options.maxBytes) > 10 * 1024 * 1024) throw new BadRequestException('Plugin UI file maxBytes is invalid');
+        const safeTypes = new Set(['image/png', 'image/jpeg', 'image/webp', 'application/pdf', 'text/plain', 'text/csv']);
+        if (!Array.isArray(options.acceptedTypes) || options.acceptedTypes.length < 1 || options.acceptedTypes.length > safeTypes.size || options.acceptedTypes.some((mime) => typeof mime !== 'string' || !safeTypes.has(mime))) throw new BadRequestException('Plugin UI file acceptedTypes contains an unsafe type');
+      }
+      if (type === 'print') {
+        if (!source || sourceMethods.get(source) !== 'GET' || sourceParameters.get(source)?.size) throw new BadRequestException('Plugin UI print requires an autoload GET data source');
+        if (!Array.isArray(component.fields) || component.fields.length < 1 || component.fields.length > 30) throw new BadRequestException('Plugin UI print requires 1 to 30 fields');
+        component.fields.forEach((candidateField, fieldIndex) => { const field = object(candidateField, `print fields[${fieldIndex}]`); string(field.label, 'print field label', 120); if (typeof field.path !== 'string' || !DATA_PATH.test(field.path)) throw new BadRequestException('Plugin UI print field path is invalid'); });
+        const options = object(component.options, 'Plugin UI print options');
+        if (!Array.isArray(options.formats) || options.formats.length < 1 || options.formats.some((format) => !['print', 'csv', 'pdf'].includes(String(format)))) throw new BadRequestException('Plugin UI print formats are invalid');
+        if (new Set(options.formats as unknown[]).size !== options.formats.length) throw new BadRequestException('Plugin UI print formats are duplicated');
+        if (options.filename !== undefined && !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}$/.test(String(options.filename))) throw new BadRequestException('Plugin UI print filename is invalid');
+        if (options.maximumRows !== undefined && (!Number.isInteger(options.maximumRows) || Number(options.maximumRows) < 1 || Number(options.maximumRows) > 10000)) throw new BadRequestException('Plugin UI print maximumRows is invalid');
+      }
+      if (type === 'scanner') {
+        if (!source || sourceMethods.get(source) === 'GET' || sourceMethods.get(source) === 'DELETE') throw new BadRequestException('Plugin UI scanner requires a write data source');
+        const options = object(component.options, 'Plugin UI scanner options');
+        if (!Array.isArray(options.modes) || options.modes.length < 1 || options.modes.some((mode) => !['camera', 'keyboard'].includes(String(mode)))) throw new BadRequestException('Plugin UI scanner modes are invalid');
+        if (!ID.test(string(options.field, 'scanner field', 100))) throw new BadRequestException('Plugin UI scanner field is invalid');
+        for (const [key, minimum, maximum] of [['minLength', 1, 1000], ['maxLength', 1, 1000], ['debounceMs', 0, 10000]] as const) if (options[key] !== undefined && (!Number.isInteger(options[key]) || Number(options[key]) < minimum || Number(options[key]) > maximum)) throw new BadRequestException(`Plugin UI scanner ${key} is invalid`);
+        if (options.minLength !== undefined && options.maxLength !== undefined && Number(options.minLength) > Number(options.maxLength)) throw new BadRequestException('Plugin UI scanner length range is invalid');
+      }
       return {
         id: componentId, type,
         ...(component.title === undefined ? {} : { title: string(component.title, 'component title', 200) }),
@@ -224,7 +294,20 @@ export function parsePluginUiBundle(value: unknown, pluginId: string, declaredPe
         ...(component.options ? { options: component.options as Record<string, unknown> } : {}),
       };
     });
-    return { id, title: string(page.title, `pages[${pageIndex}].title`, 200), routePath, permission, parameters, dataSources, components };
+    let realtime: Array<{ event: string; refreshSources: string[] }> | undefined;
+    if (page.realtime !== undefined) {
+      if (!Array.isArray(page.realtime) || page.realtime.length < 1 || page.realtime.length > 20) throw new BadRequestException('Plugin UI realtime must contain 1 to 20 subscriptions');
+      const events = new Set<string>();
+      realtime = page.realtime.map((candidateSubscription, subscriptionIndex) => {
+        const subscription = object(candidateSubscription, `realtime[${subscriptionIndex}]`);
+        const event = string(subscription.event, 'realtime event', 120);
+        if (!/^[a-z0-9][a-z0-9:._-]*$/.test(event) || event.startsWith('plugin:') || events.has(event)) throw new BadRequestException('Plugin UI realtime event is invalid or duplicated');
+        events.add(event);
+        if (!Array.isArray(subscription.refreshSources) || subscription.refreshSources.length < 1 || subscription.refreshSources.some((sourceId) => typeof sourceId !== 'string' || sourceMethods.get(sourceId) !== 'GET' || sourceParameters.get(sourceId)?.size)) throw new BadRequestException('Plugin UI realtime refreshSources must reference autoload GET sources');
+        return { event, refreshSources: [...new Set(subscription.refreshSources as string[])] };
+      });
+    }
+    return { id, title: string(page.title, `pages[${pageIndex}].title`, 200), routePath, permission, parameters, dataSources, components, ...(realtime ? { realtime } : {}) };
   });
   return { schemaVersion: 2, kind: 'declarative-ui', pages };
 }

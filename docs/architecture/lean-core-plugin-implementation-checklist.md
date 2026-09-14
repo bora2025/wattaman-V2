@@ -270,15 +270,23 @@ Evidence: `docs/acceptance/lean-core/lc2-core-only-composition.md`
 - [x] **LC3-007 Actions** — declarative mutation actions support POST/PUT/PATCH/DELETE,
   confirmations and destructive presentation; table selections feed sequential bulk execution with
   live completed/failed progress, partial-failure summaries and post-action refresh.
-- [ ] **LC3-008 Dashboard** — cards, charts and status indicators.
-- [ ] **LC3-009 Files** — scoped upload, download and previews.
-- [ ] **LC3-010 Print/export** — print layout, CSV and PDF actions.
-- [ ] **LC3-011 Realtime** — authorized refresh/subscription declarations.
-- [ ] **LC3-012 Scanner input** — camera QR and keyboard-wedge input components before Attendance.
+- [x] **LC3-008 Dashboard** — host-owned metric/trend cards, key/value cards, mapped status
+  indicators and bounded responsive bar/line/pie charts consume validated GET sources and expose
+  loading, empty, error and screen-reader representations.
+- [x] **LC3-009 Files** — capability-gated binary storage preserves per-plugin namespaces and
+  limits; declarative file components provide safe-type bounded uploads, parameterized downloads,
+  confirmed deletion and sandboxed image/PDF/text previews with object-URL cleanup.
+- [x] **LC3-010 Print/export** — declared fields render in a print-safe table and export through
+  bounded host-owned UTF-8 CSV and PDF actions with safe filenames.
+- [x] **LC3-011 Realtime** — authenticated user-room subscriptions accept only plugin-namespaced
+  events and debounce refreshes of declared autoload GET sources.
+- [x] **LC3-012 Scanner input** — host-owned camera QR/barcode and keyboard-wedge input share one
+  permission-gated mutation source with length checks and duplicate debounce.
 - [ ] **LC3-013 Localization** — Khmer/launch languages, timezone and currency formatting.
 - [ ] **LC3-014 Accessibility** — keyboard, screen-reader, focus and contrast tests.
 - [ ] **LC3-015 Responsive UI** — phone, tablet and desktop certification.
-- [ ] **LC3-016 Permission parity** — navigation, page and API enforcement use the same grants.
+- [x] **LC3-016 Permission parity** — the same persisted role grant filters v2 navigation and page
+  discovery and remains the authoritative audited check at API dispatch; denied deep links fail.
 
 Acceptance:
 

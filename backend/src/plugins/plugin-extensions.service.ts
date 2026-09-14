@@ -156,9 +156,8 @@ export class PluginExtensionsService {
   async listForPrincipal(role: string | undefined) {
     const allowed = async (permission: string | undefined, pluginId: string) => !permission || this.grants.isGranted(pluginId, permission, role);
     const navigation = await this.filterAsync([...this.navigation.values()], (entry) => allowed(entry.permission, entry.pluginId));
-    // Pages carry no permission field of their own -- the route(s) behind a page are what dispatch()
-    // actually gates, so page metadata (id/title/routePath) is not sensitive to list unfiltered.
-    return { navigation, pages: [...this.pages.values()] };
+    const pages = await this.filterAsync([...this.pages.values()], async (page) => page.schemaVersion === 1 || allowed(page.permission, page.pluginId));
+    return { navigation, pages };
   }
 
   /**

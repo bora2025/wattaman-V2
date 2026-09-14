@@ -101,4 +101,55 @@ describe('Plugin UI v2 schema', () => {
     value.pages[0].components[2].options.actions[1].selectionSource = 'save';
     expect(() => parsePluginUiBundle(value, 'wattanam.test', permissions)).toThrow('GET data source');
   });
+
+  it('validates dashboard metrics, charts, cards, and statuses', () => {
+    const value: any = valid();
+    value.pages[0].components = [
+      { id: 'total', type: 'metric', title: 'Total', source: 'record', options: { valuePath: 'summary.total', trendPath: 'summary.change', format: 'number' } },
+      { id: 'breakdown', type: 'chart', title: 'Breakdown', source: 'record', options: { chartType: 'bar', itemsPath: 'items', categoryPath: 'label', valuePath: 'count', maximumItems: 50 } },
+      { id: 'details', type: 'card', title: 'Details', source: 'record', fields: [{ label: 'Owner', path: 'owner.name' }], options: {} },
+      { id: 'health', type: 'status', title: 'Health', source: 'record', options: { valuePath: 'health', states: [{ value: 'ok', label: 'Healthy', tone: 'success' }] } },
+    ];
+    expect(parsePluginUiBundle(value, 'wattanam.test', permissions).pages[0].components).toHaveLength(4);
+    value.pages[0].components[1].options.chartType = 'script';
+    expect(() => parsePluginUiBundle(value, 'wattanam.test', permissions)).toThrow('chart type');
+  });
+
+  it('validates scoped file sources, safe MIME types, and bounded uploads', () => {
+    const value: any = valid();
+    value.pages[0].dataSources.push(
+      { id: 'files', method: 'GET', path: 'files', permission: 'wattanam.test.read' },
+      { id: 'upload', method: 'POST', path: 'files', permission: 'wattanam.test.manage' },
+      { id: 'download', method: 'GET', path: 'files/:fileId', parameters: ['fileId'], autoload: false, permission: 'wattanam.test.read' },
+      { id: 'delete', method: 'DELETE', path: 'files/:fileId', parameters: ['fileId'], autoload: false, permission: 'wattanam.test.manage' },
+    );
+    value.pages[0].components = [{ id: 'files', type: 'file', source: 'files', options: { uploadSource: 'upload', downloadSource: 'download', deleteSource: 'delete', idParameter: 'fileId', maxBytes: 1048576, acceptedTypes: ['image/png', 'application/pdf', 'text/plain'] } }];
+    expect(parsePluginUiBundle(value, 'wattanam.test', permissions).pages[0].components[0]).toMatchObject({ type: 'file' });
+    value.pages[0].components[0].options.acceptedTypes.push('image/svg+xml');
+    expect(() => parsePluginUiBundle(value, 'wattanam.test', permissions)).toThrow('unsafe type');
+  });
+
+  it('validates print, CSV, and PDF export declarations', () => {
+    const value: any = valid();
+    value.pages[0].components = [{ id: 'export', type: 'print', title: 'Records', source: 'record', fields: [{ label: 'Name', path: 'name' }], options: { formats: ['print', 'csv', 'pdf'], filename: 'records', maximumRows: 5000 } }];
+    expect(parsePluginUiBundle(value, 'wattanam.test', permissions).pages[0].components[0]).toMatchObject({ type: 'print' });
+    value.pages[0].components[0].options.filename = '../escape';
+    expect(() => parsePluginUiBundle(value, 'wattanam.test', permissions)).toThrow('filename');
+  });
+
+  it('allows only namespaced refresh subscriptions over declared GET sources', () => {
+    const value: any = valid();
+    value.pages[0].realtime = [{ event: 'records:changed', refreshSources: ['record'] }];
+    expect(parsePluginUiBundle(value, 'wattanam.test', permissions).pages[0].realtime).toEqual([{ event: 'records:changed', refreshSources: ['record'] }]);
+    value.pages[0].realtime[0].event = 'plugin:other:escape';
+    expect(() => parsePluginUiBundle(value, 'wattanam.test', permissions)).toThrow('event');
+  });
+
+  it('validates camera and keyboard scanner declarations', () => {
+    const value: any = valid();
+    value.pages[0].components = [{ id: 'scan', type: 'scanner', source: 'save', options: { modes: ['camera', 'keyboard'], field: 'code', minLength: 4, maxLength: 100, debounceMs: 1000 } }];
+    expect(parsePluginUiBundle(value, 'wattanam.test', permissions).pages[0].components[0]).toMatchObject({ type: 'scanner' });
+    value.pages[0].components[0].options.modes = ['script'];
+    expect(() => parsePluginUiBundle(value, 'wattanam.test', permissions)).toThrow('modes');
+  });
 });

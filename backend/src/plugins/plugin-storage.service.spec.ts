@@ -26,4 +26,13 @@ describe('PluginStorageService', () => {
     process.env.PLUGIN_STORAGE_MAX_FILE_BYTES = '3';
     await expect(service.writeText('wattanam.test', 'large.txt', 'four')).rejects.toThrow('limit');
   });
+
+  it('round-trips bounded binary data without crossing plugin namespaces', async () => {
+    const service = new PluginStorageService(new LocalVolumeStorageProvider(directory));
+    const encoded = Buffer.from([0, 1, 2, 250, 255]).toString('base64');
+    await service.writeBinary('wattanam.test', 'uploads/sample.bin', encoded);
+    await expect(service.readBinary('wattanam.test', 'uploads/sample.bin')).resolves.toBe(encoded);
+    await expect(service.readBinary('wattanam.other', 'uploads/sample.bin')).resolves.toBeNull();
+    await expect(service.writeBinary('wattanam.test', 'uploads/bad.bin', 'not base64!')).rejects.toThrow('base64');
+  });
 });

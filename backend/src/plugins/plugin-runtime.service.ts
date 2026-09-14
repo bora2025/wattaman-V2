@@ -106,6 +106,8 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnApplicati
       storage: {
         readText: (name) => { requireCapability('storage.read'); return this.storage.readText(id, name); },
         writeText: (name, value) => { requireCapability('storage.write'); return this.storage.writeText(id, name, value); },
+        readBinary: (name) => { requireCapability('storage.read'); return this.storage.readBinary(id, name); },
+        writeBinary: (name, value) => { requireCapability('storage.write'); return this.storage.writeBinary(id, name, value); },
         delete: (name) => { requireCapability('storage.write'); return this.storage.delete(id, name); },
         list: (prefix) => { requireCapability('storage.read'); return this.storage.list(id, prefix); },
       },

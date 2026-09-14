@@ -35,7 +35,14 @@ export interface PluginRuntimeContext {
   routes: { register(definition: PluginRouteDefinition): () => void };
   jobs: { register(definition: { id: string; intervalSeconds: number; handler(): void | Promise<void> }): Promise<() => void> };
   settings: { get<T>(key: string, fallback?: T): Promise<T | undefined>; set(key: string, value: unknown): Promise<void>; delete(key: string): Promise<void> };
-  storage: { readText(name: string): Promise<string | null>; writeText(name: string, value: string): Promise<void>; delete(name: string): Promise<void>; list(prefix?: string): Promise<string[]> };
+  storage: {
+    readText(name: string): Promise<string | null>;
+    writeText(name: string, value: string): Promise<void>;
+    readBinary(name: string): Promise<string | null>;
+    writeBinary(name: string, base64: string): Promise<void>;
+    delete(name: string): Promise<void>;
+    list(prefix?: string): Promise<string[]>;
+  };
   permissions: { register(definitions: Array<{ id: string; label: string; description?: string }>): () => void };
   navigation: { register(entries: Array<{ id: string; label: string; href: string; permission?: string }>): () => void };
   notifications: {
