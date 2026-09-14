@@ -249,11 +249,21 @@ Evidence: `docs/acceptance/lean-core/lc2-core-only-composition.md`
 
 ## Gate LC-3 — Plugin UI v2
 
-- [ ] **LC3-001 Schema/version** — define versioned declarative page and component schemas.
-- [ ] **LC3-002 Security** — reject scripts, unsafe HTML, untrusted URLs and namespace escape.
-- [ ] **LC3-003 Data source** — bind components only to permission-gated plugin routes.
-- [ ] **LC3-004 Routing** — support list/detail/create/edit and validated route parameters.
-- [ ] **LC3-005 Tables** — sorting, filtering, pagination, selection and empty/loading/error states.
+- [x] **LC3-001 Schema/version** — UI schema v2 defines a declarative bundle of typed pages,
+  permission-bound data sources and allow-listed components; v1 settings descriptors remain
+  supported during migration.
+- [x] **LC3-002 Security** — the activation-time parser fails closed on scripts, HTML/event-handler
+  injection, JavaScript/external URLs, unknown component types, excessive nesting and namespace
+  escape.
+- [x] **LC3-003 Data source** — every component source resolves to a descriptor-local data source;
+  every source declares a plugin-namespaced manifest permission and dispatch retains the actual
+  route permission check.
+- [x] **LC3-004 Routing** — declarative pages support static list/create paths and typed dynamic
+  detail/edit paths; static routes win over parameter routes, declared UUID/integer/slug/string
+  values are validated before loading, and API dispatch safely captures namespaced parameters.
+- [x] **LC3-005 Tables** — the allow-listed table renderer provides sortable/filterable declared
+  columns, bounded client pagination, optional row selection and distinct initial-empty,
+  filter-empty, loading and per-source error states with responsive overflow.
 - [ ] **LC3-006 Forms** — validation, conditional fields, server errors and confirmations.
 - [ ] **LC3-007 Actions** — create/update/delete, bulk actions and progress reporting.
 - [ ] **LC3-008 Dashboard** — cards, charts and status indicators.

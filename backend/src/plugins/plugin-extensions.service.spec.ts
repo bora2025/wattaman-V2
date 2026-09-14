@@ -43,6 +43,27 @@ describe('PluginExtensionsService', () => {
     expect(() => service.registerRoute('wattanam.test', permissions, { method: 'GET', path: 'settings', permission: 'wattanam.test.read', handler })).toThrow('already');
   });
 
+  it('dispatches parameterized routes with validated, decoded path parameters', async () => {
+    service.registerRoute('wattanam.test', permissions, {
+      method: 'GET', path: 'records/:recordId', permission: 'wattanam.test.read',
+      handler: ({ params }) => ({ id: params.recordId }),
+    });
+    await expect(service.dispatch('wattanam.test', {
+      method: 'GET', path: 'records/record-123', params: {}, query: {}, body: null,
+      principal: { userId: 'owner', role: 'SUPER_ADMIN' },
+    })).resolves.toEqual({ id: 'record-123' });
+  });
+
+  it('rejects invalid parameter values and ambiguous route shapes', async () => {
+    const handler = () => ({});
+    service.registerRoute('wattanam.test', permissions, { method: 'GET', path: 'records/:id', permission: 'wattanam.test.read', handler });
+    expect(() => service.registerRoute('wattanam.test', permissions, { method: 'GET', path: 'records/:recordId', permission: 'wattanam.test.read', handler })).toThrow('conflicts');
+    await expect(service.dispatch('wattanam.test', {
+      method: 'GET', path: 'records/%2Fadmin', params: {}, query: {}, body: null,
+      principal: { userId: 'owner', role: 'SUPER_ADMIN' },
+    })).rejects.toThrow('not found');
+  });
+
   it('listForPrincipal filters navigation to what the role is granted, always keeps unpermissioned entries, and leaves pages unfiltered', async () => {
     service.registerNavigation('wattanam.test', permissions, [
       { pluginId: 'wattanam.test', id: 'settings', label: 'Settings', href: '/plugins/wattanam.test/settings', permission: 'wattanam.test.manage' },
@@ -99,5 +120,17 @@ describe('PluginExtensionsService', () => {
     const service = new PluginExtensionsService({} as any, {} as any);
     await expect(service.searchForPrincipal(' ', { userId: 'u1', role: 'ADMIN' })).rejects.toThrow('between 2 and 100');
     await expect(service.searchForPrincipal('x'.repeat(101), { userId: 'u1', role: 'ADMIN' })).rejects.toThrow('between 2 and 100');
+  });
+
+  it('registers every page in a declarative UI v2 bundle and removes them together', () => {
+    const dispose = service.registerPage('wattanam.test', {
+      schemaVersion: 2, kind: 'declarative-ui', pages: [
+        { id: 'list', title: 'List', routePath: 'records', permission: 'wattanam.test.read', parameters: [], dataSources: [{ id: 'records', method: 'GET', path: 'records', permission: 'wattanam.test.read' }], components: [{ id: 'table', type: 'table', source: 'records', fields: [{ id: 'name', label: 'Name' }] }] },
+        { id: 'create', title: 'Create', routePath: 'records/create', permission: 'wattanam.test.manage', parameters: [], dataSources: [{ id: 'create', method: 'POST', path: 'records', permission: 'wattanam.test.manage' }], components: [{ id: 'form', type: 'form', source: 'create' }] },
+      ],
+    }, permissions);
+    expect(service.list().pages).toHaveLength(2);
+    dispose();
+    expect(service.list().pages).toHaveLength(0);
   });
 });

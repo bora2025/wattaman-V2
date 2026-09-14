@@ -2,10 +2,13 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { AuditService } from '../audit/audit.service';
 import { PluginRouteDefinition, PluginRouteRequest } from './plugin-sdk';
 import { PluginPermissionsService } from './plugin-permissions.service';
+import { parsePluginUiBundle, PluginUiPage } from './plugin-ui-schema';
 
 export interface PermissionExtension { pluginId: string; id: string; label: string; description?: string }
 export interface NavigationExtension { pluginId: string; id: string; label: string; href: string; permission?: string }
-export interface PageExtension { pluginId: string; schemaVersion: 1; id: string; title: string; routePath: string; kind: 'json-settings' }
+export type PageExtension =
+  | { pluginId: string; schemaVersion: 1; id: string; title: string; routePath: string; kind: 'json-settings' }
+  | (PluginUiPage & { pluginId: string; schemaVersion: 2; kind: 'declarative-ui' });
 export interface PluginSearchResult { pluginId: string; id: string; title: string; description?: string; href: string }
 
 @Injectable()
@@ -23,18 +26,43 @@ export class PluginExtensionsService {
   registerRoute(pluginId: string, declaredPermissions: Set<string>, definition: PluginRouteDefinition) {
     const method = definition.method?.toUpperCase();
     if (!['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) throw new BadRequestException('Plugin route method is unsupported');
-    if (!/^[a-z0-9][a-z0-9/_-]*$/.test(definition.path) || definition.path.includes('//') || definition.path.split('/').includes('..')) throw new BadRequestException('Plugin route path is invalid');
+    const segments = definition.path.split('/');
+    if (!definition.path || definition.path.length > 240 || segments.length > 12 || definition.path.includes('//') || segments.some((segment) => !/^(?:[a-z0-9][a-z0-9_-]*|:[a-z][a-zA-Z0-9]*)$/.test(segment))) throw new BadRequestException('Plugin route path is invalid');
+    const parameterNames = segments.filter((segment) => segment.startsWith(':')).map((segment) => segment.slice(1));
+    if (new Set(parameterNames).size !== parameterNames.length) throw new BadRequestException('Plugin route parameter names must be unique');
     if (!declaredPermissions.has(definition.permission)) throw new BadRequestException('Plugin route permission is not declared in the manifest');
     if (typeof definition.handler !== 'function') throw new BadRequestException('Plugin route handler is required');
     const key = `${pluginId}:${method}:${definition.path}`;
     if (this.routes.has(key)) throw new BadRequestException(`Plugin route is already registered: ${method} ${definition.path}`);
+    const shape = segments.map((segment) => segment.startsWith(':') ? ':' : segment).join('/');
+    if ([...this.routes.keys()].some((existing) => {
+      const [existingPlugin, existingMethod, ...path] = existing.split(':');
+      return existingPlugin === pluginId && existingMethod === method && path.join(':').split('/').map((segment) => segment.startsWith(':') ? ':' : segment).join('/') === shape;
+    })) throw new BadRequestException(`Plugin route conflicts with an existing parameterized route: ${method} ${definition.path}`);
     this.routes.set(key, { ...definition, method: method as any });
     return () => this.routes.delete(key);
   }
 
   async dispatch(pluginId: string, request: PluginRouteRequest) {
-    const definition = this.routes.get(`${pluginId}:${request.method}:${request.path}`);
+    if (!request.path || request.path.length > 240 || request.path.includes('//') || request.path.split('/').some((segment) => !/^[a-zA-Z0-9._~-]{1,160}$/.test(segment) || segment === '..')) throw new NotFoundException('Plugin route not found');
+    let definition = this.routes.get(`${pluginId}:${request.method}:${request.path}`);
+    let params: Record<string, string> = {};
+    if (!definition) {
+      const actual = request.path.split('/');
+      for (const [key, candidate] of this.routes) {
+        if (!key.startsWith(`${pluginId}:${request.method}:`) || !candidate.path.includes(':')) continue;
+        const template = candidate.path.split('/');
+        if (template.length !== actual.length) continue;
+        const captured: Record<string, string> = {};
+        if (!template.every((segment, index) => {
+          if (!segment.startsWith(':')) return segment === actual[index];
+          captured[segment.slice(1)] = actual[index]; return true;
+        })) continue;
+        definition = candidate; params = captured; break;
+      }
+    }
     if (!definition) throw new NotFoundException('Plugin route not found');
+    request = { ...request, params };
     const auditBase = {
       actorId: request.principal.userId, actorRole: request.principal.role, actorEmail: request.principal.email,
       action: 'PLUGIN_ROUTE', resource: 'PLUGIN', resourceId: pluginId,
@@ -85,9 +113,20 @@ export class PluginExtensionsService {
     return () => keys.forEach((key) => this.navigation.delete(key));
   }
 
-  registerPage(pluginId: string, value: unknown) {
+  registerPage(pluginId: string, value: unknown, declaredPermissions = new Set<string>()) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) throw new BadRequestException('Plugin frontend entry must be an object');
     const page = value as Record<string, unknown>;
+    if (page.schemaVersion === 2) {
+      const bundle = parsePluginUiBundle(value, pluginId, declaredPermissions);
+      const keys: string[] = [];
+      for (const descriptor of bundle.pages) {
+        const key = `${pluginId}:${descriptor.id}`;
+        if (this.pages.has(key)) { keys.forEach((registered) => this.pages.delete(registered)); throw new BadRequestException(`Plugin page is already registered: ${descriptor.id}`); }
+        this.pages.set(key, { ...descriptor, pluginId, schemaVersion: 2, kind: 'declarative-ui' });
+        keys.push(key);
+      }
+      return () => keys.forEach((key) => this.pages.delete(key));
+    }
     if (page.schemaVersion !== 1 || page.kind !== 'json-settings' || typeof page.id !== 'string' || !/^[a-z0-9][a-z0-9._-]*$/.test(page.id) || typeof page.title !== 'string' || !page.title.trim() || typeof page.routePath !== 'string' || !/^[a-z0-9][a-z0-9/_-]*$/.test(page.routePath)) {
       throw new BadRequestException('Plugin frontend page descriptor is invalid');
     }

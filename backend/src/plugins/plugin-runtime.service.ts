@@ -153,7 +153,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnApplicati
         let descriptor: unknown;
         try { descriptor = JSON.parse(verified.files.get(verified.manifest.frontendEntry)!.toString('utf8')); }
         catch { throw new Error('Plugin frontend entry must be valid declarative JSON'); }
-        const dispose = this.extensions.registerPage(id, descriptor); disposers.push(dispose);
+        const dispose = this.extensions.registerPage(id, descriptor, declaredPermissions); disposers.push(dispose);
       }
       const cleanup = await pluginModule.activate(context);
       if (pluginModule.health) {
