@@ -21,6 +21,7 @@ export default function PluginPageHost() {
   const [error, setError] = useState('');
   const [descriptor, setDescriptor] = useState<PluginUiPageDescriptor | null>(null);
   const [sourceErrors, setSourceErrors] = useState<Record<string, string>>({});
+  const [routeParams, setRouteParams] = useState<Record<string, string>>({});
 
   async function load() {
     setError(''); setSourceErrors({}); setValue(null);
@@ -34,6 +35,7 @@ export default function PluginPageHost() {
     if (!page) throw new Error('This plugin page is not registered by an active plugin or its route parameters are invalid.');
     setLabel(page.title || pluginId);
     setDescriptor(page.schemaVersion === 2 ? page : null);
+    setRouteParams(matched?.params || {});
     if (page.schemaVersion === 2) {
       const data: Record<string, unknown> = {};
       const errors: Record<string, string> = {};
@@ -77,7 +79,7 @@ export default function PluginPageHost() {
           <div className="h-14 lg:hidden" />
           <div className="page-header"><h1 className="text-2xl font-bold text-slate-800">{label}</h1><p className="mt-1 font-mono text-xs text-slate-500">{pluginId} · {routePath}</p></div>
           <div className="page-body">
-            {descriptor ? <PluginUiRenderer page={descriptor} data={(value || {}) as Record<string, unknown>} loading={value === null} errors={sourceErrors} /> : <section className="card max-w-3xl p-6">
+            {descriptor ? <PluginUiRenderer pluginId={pluginId} page={descriptor} params={routeParams} data={(value || {}) as Record<string, unknown>} loading={value === null} errors={sourceErrors} onRefresh={load} /> : <section className="card max-w-3xl p-6">
               <h2 className="font-semibold text-slate-800">{descriptor ? 'Plugin page data' : 'Plugin settings'}</h2>
               <p className="mt-1 text-sm text-slate-500">This generic host sends JSON only to the plugin&apos;s namespaced, authenticated core route. Plugin browser scripts are not injected into Wattanam.</p>
               {error && <div role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}

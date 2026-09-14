@@ -264,7 +264,9 @@ Evidence: `docs/acceptance/lean-core/lc2-core-only-composition.md`
 - [x] **LC3-005 Tables** — the allow-listed table renderer provides sortable/filterable declared
   columns, bounded client pagination, optional row selection and distinct initial-empty,
   filter-empty, loading and per-source error states with responsive overflow.
-- [ ] **LC3-006 Forms** — validation, conditional fields, server errors and confirmations.
+- [x] **LC3-006 Forms** — allow-listed create/edit forms provide typed field validation,
+  conditional visibility, bounded select choices, initial GET data, field/global server errors,
+  confirmation prompts, busy/success feedback and refresh after successful mutation.
 - [ ] **LC3-007 Actions** — create/update/delete, bulk actions and progress reporting.
 - [ ] **LC3-008 Dashboard** — cards, charts and status indicators.
 - [ ] **LC3-009 Files** — scoped upload, download and previews.

@@ -126,7 +126,7 @@ describe('PluginExtensionsService', () => {
     const dispose = service.registerPage('wattanam.test', {
       schemaVersion: 2, kind: 'declarative-ui', pages: [
         { id: 'list', title: 'List', routePath: 'records', permission: 'wattanam.test.read', parameters: [], dataSources: [{ id: 'records', method: 'GET', path: 'records', permission: 'wattanam.test.read' }], components: [{ id: 'table', type: 'table', source: 'records', fields: [{ id: 'name', label: 'Name' }] }] },
-        { id: 'create', title: 'Create', routePath: 'records/create', permission: 'wattanam.test.manage', parameters: [], dataSources: [{ id: 'create', method: 'POST', path: 'records', permission: 'wattanam.test.manage' }], components: [{ id: 'form', type: 'form', source: 'create' }] },
+        { id: 'create', title: 'Create', routePath: 'records/create', permission: 'wattanam.test.manage', parameters: [], dataSources: [{ id: 'create', method: 'POST', path: 'records', permission: 'wattanam.test.manage' }], components: [{ id: 'form', type: 'form', source: 'create', fields: [{ id: 'name', type: 'text', label: 'Name', required: true }] }] },
       ],
     }, permissions);
     expect(service.list().pages).toHaveLength(2);

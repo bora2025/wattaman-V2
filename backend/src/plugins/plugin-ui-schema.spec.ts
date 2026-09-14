@@ -15,7 +15,7 @@ function valid() {
       ],
       components: [
         { id: 'title', type: 'heading', title: 'Record' },
-        { id: 'editor', type: 'form', source: 'save', fields: [{ id: 'name', type: 'text', required: true }] },
+        { id: 'editor', type: 'form', source: 'save', fields: [{ id: 'name', type: 'text', label: 'Name', required: true }] },
       ],
     }],
   };
@@ -74,5 +74,20 @@ describe('Plugin UI v2 schema', () => {
     expect(parsePluginUiBundle(value, 'wattanam.test', permissions).pages[0].components[1]).toMatchObject({ type: 'table', source: 'record' });
     value.pages[0].components[1].options.pageSize = 101;
     expect(() => parsePluginUiBundle(value, 'wattanam.test', permissions)).toThrow('pageSize');
+  });
+
+  it('validates form fields, mutations, conditions, and confirmations', () => {
+    const value: any = valid();
+    value.pages[0].components[1] = {
+      id: 'editor', type: 'form', source: 'save',
+      fields: [
+        { id: 'kind', type: 'select', label: 'Kind', required: true, options: [{ label: 'Person', value: 'person' }] },
+        { id: 'name', type: 'text', label: 'Name', minLength: 2, visibleWhen: { field: 'kind', equals: 'person' } },
+      ],
+      options: { initialSource: 'record', confirmation: 'Save this record?', submitLabel: 'Save' },
+    };
+    expect(parsePluginUiBundle(value, 'wattanam.test', permissions).pages[0].components[1]).toMatchObject({ type: 'form', source: 'save' });
+    value.pages[0].dataSources[1].method = 'GET';
+    expect(() => parsePluginUiBundle(value, 'wattanam.test', permissions)).toThrow('POST, PUT, or PATCH');
   });
 });

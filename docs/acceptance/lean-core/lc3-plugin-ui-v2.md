@@ -55,6 +55,18 @@ The hostile fixture suite proves each rejection path.
 - All GET sources for a page load independently, so one failed source does not erase successful
   components.
 
+### LC3-006 — forms
+
+- Forms bind only to declared POST, PUT or PATCH sources; optional initial values bind only to a
+  declared GET source.
+- The activation parser allows text, email, number, date, datetime, select, textarea and checkbox
+  fields, with bounded field/choice counts and validated required/disabled/min/max/length options.
+- Conditional fields may depend only on another declared field and compare primitive values.
+- The generic renderer performs client validation, strips hidden fields from submission, converts
+  numeric inputs, prompts for declared confirmation and disables controls while saving.
+- API-wide and field-specific server errors are displayed accessibly; success feedback is announced
+  and the page's GET sources refresh after mutation.
+
 ## Verification
 
 Run from `backend/`:
@@ -67,12 +79,12 @@ npm run build
 Result on 2026-09-14:
 
 - 3 suites passed;
-- 32 tests passed;
+- 33 tests passed;
 - 257 backend files compiled successfully.
 - the frontend production build compiled and generated all 120 routes successfully.
 
 ## Remaining gate work
 
-LC3-006 through LC3-016 and all four end-to-end acceptance statements remain open. The gate must
+LC3-007 through LC3-016 and all four end-to-end acceptance statements remain open. The gate must
 not be called complete until a signed sample v2 plugin proves the complete workflow without a core
 frontend rebuild.

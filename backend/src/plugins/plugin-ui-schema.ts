@@ -69,7 +69,7 @@ function safeRoute(value: unknown, label: string, parameters = false): string {
 }
 
 function inspectSafeJson(value: unknown, label: string, depth = 0): void {
-  if (depth > 8) throw new BadRequestException(`${label} is too deeply nested`);
+  if (depth > 12) throw new BadRequestException(`${label} is too deeply nested`);
   if (typeof value === 'string') {
     if (/\bjavascript\s*:/i.test(value) || /<\s*script\b/i.test(value) || /<[^>]+>/i.test(value)) throw new BadRequestException(`${label} contains unsafe executable or HTML content`);
     if (/^(?:https?:)?\/\//i.test(value)) throw new BadRequestException(`${label} contains an untrusted external URL`);
@@ -119,6 +119,7 @@ export function parsePluginUiBundle(value: unknown, pluginId: string, declaredPe
 
     if (!Array.isArray(page.dataSources) || page.dataSources.length > 30) throw new BadRequestException(`pages[${pageIndex}].dataSources must be an array`);
     const sourceIds = new Set<string>();
+    const sourceMethods = new Map<string, PluginUiDataSource['method']>();
     const dataSources = page.dataSources.map((candidateSource, sourceIndex): PluginUiDataSource => {
       const source = object(candidateSource, `pages[${pageIndex}].dataSources[${sourceIndex}]`);
       const sourceId = string(source.id, 'data source id', 100);
@@ -130,6 +131,7 @@ export function parsePluginUiBundle(value: unknown, pluginId: string, declaredPe
       if (!sourcePermission.startsWith(`${pluginId}.`) || !declaredPermissions.has(sourcePermission)) throw new BadRequestException('Plugin UI data source permission is not declared by the plugin');
       const sourcePath = safeRoute(source.path, 'data source path', true);
       if (routeParameters(sourcePath).some((name) => !parameterNames.has(name))) throw new BadRequestException('Plugin UI data source uses an undeclared route parameter');
+      sourceMethods.set(sourceId, method as PluginUiDataSource['method']);
       return { id: sourceId, method: method as PluginUiDataSource['method'], path: sourcePath, permission: sourcePermission };
     });
 
@@ -161,6 +163,34 @@ export function parsePluginUiBundle(value: unknown, pluginId: string, declaredPe
         const options = (component.options || {}) as Record<string, unknown>;
         if (options.pageSize !== undefined && (!Number.isInteger(options.pageSize) || Number(options.pageSize) < 1 || Number(options.pageSize) > 100)) throw new BadRequestException('Plugin UI table pageSize must be between 1 and 100');
         if (options.selectable !== undefined && typeof options.selectable !== 'boolean') throw new BadRequestException('Plugin UI table selectable must be boolean');
+      }
+      if (type === 'form') {
+        if (!source || sourceMethods.get(source) === 'GET' || sourceMethods.get(source) === 'DELETE') throw new BadRequestException('Plugin UI form requires a POST, PUT, or PATCH data source');
+        if (!Array.isArray(component.fields) || component.fields.length < 1 || component.fields.length > 50) throw new BadRequestException('Plugin UI form requires 1 to 50 fields');
+        const fieldIds = new Set<string>();
+        component.fields.forEach((candidateField, fieldIndex) => {
+          const field = object(candidateField, `form fields[${fieldIndex}]`);
+          const fieldId = string(field.id, 'form field id', 100);
+          const fieldType = string(field.type, 'form field type', 30);
+          if (!ID.test(fieldId) || fieldIds.has(fieldId) || !['text', 'email', 'number', 'date', 'datetime', 'select', 'textarea', 'checkbox'].includes(fieldType)) throw new BadRequestException('Plugin UI form field id or type is invalid');
+          fieldIds.add(fieldId);
+          string(field.label, 'form field label', 120);
+          for (const booleanKey of ['required', 'disabled'] as const) if (field[booleanKey] !== undefined && typeof field[booleanKey] !== 'boolean') throw new BadRequestException(`Plugin UI form ${booleanKey} must be boolean`);
+          for (const numericKey of ['min', 'max', 'minLength', 'maxLength'] as const) if (field[numericKey] !== undefined && typeof field[numericKey] !== 'number') throw new BadRequestException(`Plugin UI form ${numericKey} must be numeric`);
+          if (fieldType === 'select') {
+            if (!Array.isArray(field.options) || field.options.length < 1 || field.options.length > 100) throw new BadRequestException('Plugin UI select requires 1 to 100 options');
+            field.options.forEach((choice, choiceIndex) => { const option = object(choice, `select options[${choiceIndex}]`); string(option.label, 'select option label', 120); string(option.value, 'select option value', 160); });
+          }
+          if (field.visibleWhen !== undefined) {
+            const condition = object(field.visibleWhen, 'form field visibleWhen');
+            const dependency = string(condition.field, 'visibleWhen field', 100);
+            if (!ID.test(dependency) || !Object.prototype.hasOwnProperty.call(condition, 'equals') || !['string', 'number', 'boolean'].includes(typeof condition.equals)) throw new BadRequestException('Plugin UI form visibleWhen is invalid');
+          }
+        });
+        component.fields.forEach((candidateField) => { const condition = (candidateField as Record<string, any>).visibleWhen; if (condition && !fieldIds.has(condition.field)) throw new BadRequestException('Plugin UI form visibleWhen references an unknown field'); });
+        const options = (component.options || {}) as Record<string, unknown>;
+        for (const key of ['submitLabel', 'confirmation', 'successMessage'] as const) if (options[key] !== undefined) string(options[key], `form ${key}`, 240);
+        if (options.initialSource !== undefined && (typeof options.initialSource !== 'string' || !sourceIds.has(options.initialSource) || sourceMethods.get(options.initialSource) !== 'GET')) throw new BadRequestException('Plugin UI form initialSource must reference a GET data source');
       }
       return {
         id: componentId, type,
