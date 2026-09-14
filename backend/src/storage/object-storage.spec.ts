@@ -27,12 +27,14 @@ describe('object storage providers', () => {
   });
 
   it('requires complete S3 configuration and HTTPS in production', () => {
-    expect(() => createPluginStorageProvider({ NODE_ENV: 'test', PLUGIN_DATA_DIR: directory, PLUGIN_STORAGE_PROVIDER: 's3' })).toThrow('PLUGIN_STORAGE_S3_ENDPOINT');
+    expect(() => createPluginStorageProvider({ NODE_ENV: 'test', PLUGIN_DATA_DIR: directory, PLUGIN_STORAGE_PROVIDER: 's3' })).toThrow('PLUGIN_STORAGE_S3_BUCKET');
     expect(() => createPluginStorageProvider({
       NODE_ENV: 'production', PLUGIN_DATA_DIR: directory, PLUGIN_STORAGE_PROVIDER: 's3',
       PLUGIN_STORAGE_S3_ENDPOINT: 'http://objects.example', PLUGIN_STORAGE_S3_BUCKET: 'school', PLUGIN_STORAGE_S3_REGION: 'auto',
       PLUGIN_STORAGE_S3_ACCESS_KEY_ID: 'access', PLUGIN_STORAGE_S3_SECRET_ACCESS_KEY: 'secret',
     })).toThrow('HTTPS');
+    expect(() => createPluginStorageProvider({ NODE_ENV: 'production', PROCESS_ROLE: 'worker', PLUGIN_DATA_DIR: directory })).toThrow('shared S3');
+    expect(() => createPluginStorageProvider({ NODE_ENV: 'test', PLUGIN_STORAGE_PROVIDER: 's3', PLUGIN_STORAGE_S3_BUCKET: 'school', PLUGIN_STORAGE_S3_REGION: 'auto', PLUGIN_STORAGE_S3_ACCESS_KEY_ID: 'only-one' })).toThrow('configured together');
   });
 
   it('dual-writes identical bytes and falls back to the secondary for reads', async () => {

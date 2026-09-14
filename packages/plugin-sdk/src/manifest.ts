@@ -25,7 +25,9 @@ export const PLUGIN_CAPABILITIES = [
   'storage.write',
   'ui.pages',
 ] as const;
-export const PLUGIN_SDK_VERSION = '1.0.0';
+export const PLUGIN_CAPABILITIES_V1_1 = ['events.durable', 'readmodels.publish', 'readmodels.read'] as const;
+export const PLUGIN_SUPPORTED_CAPABILITIES = [...PLUGIN_CAPABILITIES, ...PLUGIN_CAPABILITIES_V1_1] as const;
+export const PLUGIN_SDK_VERSION = '1.1.0';
 export const PLUGIN_RUNTIME_VERSION = '1.0.0';
 
 export interface PluginManifest {
@@ -42,6 +44,7 @@ export interface PluginManifest {
   capabilities: string[];
   permissions: string[];
   dependencies: Record<string, string>;
+  optionalDependencies: Record<string, string>;
   sdkVersion?: string;
   runtimeVersion?: string;
   migrations: Array<{ id: string; path: string; checksum: string; destructive: boolean }>;
@@ -92,7 +95,7 @@ export function parsePluginManifest(value: unknown): PluginManifest {
   if (!semver.validRange(requiresCore)) throw new Error('requiresCore must be a valid semantic-version range');
 
   const capabilities = input.capabilities ?? [];
-  if (!Array.isArray(capabilities) || capabilities.some((item) => typeof item !== 'string' || !(PLUGIN_CAPABILITIES as readonly string[]).includes(item))) {
+  if (!Array.isArray(capabilities) || capabilities.some((item) => typeof item !== 'string' || !(PLUGIN_SUPPORTED_CAPABILITIES as readonly string[]).includes(item))) {
     throw new Error('Plugin contains an unsupported capability');
   }
   const permissions = input.permissions ?? [];
@@ -105,6 +108,11 @@ export function parsePluginManifest(value: unknown): PluginManifest {
     if (!/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/.test(dependency) || typeof range !== 'string' || !semver.validRange(range)) {
       throw new Error(`Invalid plugin dependency: ${dependency}`);
     }
+  }
+  const optionalDependencies = input.optionalDependencies ?? {};
+  if (!optionalDependencies || typeof optionalDependencies !== 'object' || Array.isArray(optionalDependencies)) throw new Error('optionalDependencies must be an object');
+  for (const [dependency, range] of Object.entries(optionalDependencies as Record<string, unknown>)) {
+    if (!/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/.test(dependency) || typeof range !== 'string' || !semver.validRange(range) || dependency in (dependencies as Record<string, unknown>)) throw new Error(`Invalid optional plugin dependency: ${dependency}`);
   }
 
   const migrations = input.migrations ?? [];
@@ -150,7 +158,10 @@ export function parsePluginManifest(value: unknown): PluginManifest {
   };
   const sdkVersion = input.sdkVersion === undefined ? undefined : text(input.sdkVersion, 'sdkVersion', 40);
   const runtimeVersion = input.runtimeVersion === undefined ? undefined : text(input.runtimeVersion, 'runtimeVersion', 40);
-  if (sdkVersion && (!semver.validRange(sdkVersion) || !semver.satisfies(PLUGIN_SDK_VERSION, sdkVersion))) throw new Error(`Plugin requires unsupported SDK version: ${sdkVersion}`);
+  const sdkSupported = !sdkVersion || (semver.valid(sdkVersion)
+    ? semver.major(sdkVersion) === semver.major(PLUGIN_SDK_VERSION) && semver.lte(sdkVersion, PLUGIN_SDK_VERSION)
+    : !!semver.validRange(sdkVersion) && semver.satisfies(PLUGIN_SDK_VERSION, sdkVersion));
+  if (!sdkSupported) throw new Error(`Plugin requires unsupported SDK version: ${sdkVersion}`);
   if (runtimeVersion && (!semver.validRange(runtimeVersion) || !semver.satisfies(PLUGIN_RUNTIME_VERSION, runtimeVersion))) throw new Error(`Plugin requires unsupported runtime version: ${runtimeVersion}`);
   if (parsedNavigation.length && !capabilities.includes('navigation.register')) throw new Error('navigation entries require navigation.register capability');
   if (input.frontendEntry !== undefined && !capabilities.includes('ui.pages')) throw new Error('frontendEntry requires ui.pages capability');
@@ -169,6 +180,7 @@ export function parsePluginManifest(value: unknown): PluginManifest {
     capabilities: [...new Set(capabilities as string[])],
     permissions: [...new Set(permissions as string[])],
     dependencies: dependencies as Record<string, string>,
+    optionalDependencies: optionalDependencies as Record<string, string>,
     sdkVersion,
     runtimeVersion,
     migrations: parsedMigrations,

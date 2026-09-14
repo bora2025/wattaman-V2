@@ -13,6 +13,7 @@ export class PluginStorageService {
 
   async writeText(pluginId: string, name: string, value: string) {
     if (typeof value !== 'string' || Buffer.byteLength(value) > this.maximum()) throw new BadRequestException('Plugin storage value exceeds its per-file limit');
+    await this.assertTotal(pluginId, name, Buffer.byteLength(value));
     await this.storage.put(this.key(pluginId, name), Buffer.from(value));
   }
 
@@ -25,6 +26,7 @@ export class PluginStorageService {
     if (typeof base64 !== 'string' || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(base64)) throw new BadRequestException('Plugin binary storage value must be canonical base64');
     const value = Buffer.from(base64, 'base64');
     if (value.byteLength > this.maximum()) throw new BadRequestException('Plugin storage value exceeds its per-file limit');
+    await this.assertTotal(pluginId, name, value.byteLength);
     await this.storage.put(this.key(pluginId, name), value);
   }
 
@@ -44,4 +46,10 @@ export class PluginStorageService {
 
   private safe(name: string) { return !!name && !name.startsWith('/') && !name.includes('\\') && !name.includes('\0') && !name.split('/').includes('..'); }
   private maximum() { return Number(process.env.PLUGIN_STORAGE_MAX_FILE_BYTES || 1024 * 1024); }
+  private async assertTotal(pluginId: string, name: string, incoming: number) {
+    const limit = Number(process.env.PLUGIN_STORAGE_MAX_TOTAL_BYTES || 100 * 1024 * 1024);
+    const key = this.key(pluginId, name); const existing = await this.storage.get(key);
+    const used = (await this.storage.list(`${pluginId}/`)).reduce((sum, item) => sum + item.size, 0) - (existing?.length || 0);
+    if (used + incoming > limit) throw new BadRequestException('Plugin storage exceeds its total quota');
+  }
 }

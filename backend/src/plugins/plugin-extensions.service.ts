@@ -1,8 +1,9 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, HttpException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { AuditService } from '../audit/audit.service';
-import { PluginRouteDefinition, PluginRouteRequest } from './plugin-sdk';
+import { PluginContractError, PluginRouteDefinition, PluginRouteRequest } from './plugin-sdk';
 import { PluginPermissionsService } from './plugin-permissions.service';
 import { parsePluginUiBundle, PluginUiPage } from './plugin-ui-schema';
+import { PluginResourceQuotaService } from './plugin-resource-quota.service';
 
 export interface PermissionExtension { pluginId: string; id: string; label: string; description?: string }
 export interface NavigationExtension { pluginId: string; id: string; label: string; href: string; permission?: string }
@@ -21,6 +22,7 @@ export class PluginExtensionsService {
   constructor(
     private readonly grants: PluginPermissionsService,
     private readonly audit: AuditService,
+    @Optional() private readonly quota?: PluginResourceQuotaService,
   ) {}
 
   registerRoute(pluginId: string, declaredPermissions: Set<string>, definition: PluginRouteDefinition) {
@@ -32,6 +34,9 @@ export class PluginExtensionsService {
     if (new Set(parameterNames).size !== parameterNames.length) throw new BadRequestException('Plugin route parameter names must be unique');
     if (!declaredPermissions.has(definition.permission)) throw new BadRequestException('Plugin route permission is not declared in the manifest');
     if (typeof definition.handler !== 'function') throw new BadRequestException('Plugin route handler is required');
+    if (definition.contract) {
+      if (!/^\d+\.\d+$/.test(definition.contract.version) || !definition.contract.response?.parse || !definition.contract.errors || Object.entries(definition.contract.errors).some(([code, value]) => !/^[A-Z][A-Z0-9_]{2,63}$/.test(code) || !Number.isInteger(value.status) || value.status < 400 || value.status > 599 || !value.message?.trim())) throw new BadRequestException('Plugin route contract is invalid');
+    }
     const key = `${pluginId}:${method}:${definition.path}`;
     if (this.routes.has(key)) throw new BadRequestException(`Plugin route is already registered: ${method} ${definition.path}`);
     const shape = segments.map((segment) => segment.startsWith(':') ? ':' : segment).join('/');
@@ -44,6 +49,7 @@ export class PluginExtensionsService {
   }
 
   async dispatch(pluginId: string, request: PluginRouteRequest) {
+    this.quota?.consume(pluginId, 'request');
     if (!request.path || request.path.length > 240 || request.path.includes('//') || request.path.split('/').some((segment) => !/^[a-zA-Z0-9._~-]{1,160}$/.test(segment) || segment === '..')) throw new NotFoundException('Plugin route not found');
     let definition = this.routes.get(`${pluginId}:${request.method}:${request.path}`);
     let params: Record<string, string> = {};
@@ -63,6 +69,16 @@ export class PluginExtensionsService {
     }
     if (!definition) throw new NotFoundException('Plugin route not found');
     request = { ...request, params };
+    if (definition.contract?.request) {
+      try {
+        request = {
+          ...request,
+          params: definition.contract.request.params?.parse(request.params) ?? request.params,
+          query: definition.contract.request.query?.parse(request.query) ?? request.query,
+          body: definition.contract.request.body?.parse(request.body) ?? request.body,
+        };
+      } catch { throw new BadRequestException('Plugin request does not match its declared contract'); }
+    }
     const auditBase = {
       actorId: request.principal.userId, actorRole: request.principal.role, actorEmail: request.principal.email,
       action: 'PLUGIN_ROUTE', resource: 'PLUGIN', resourceId: pluginId,
@@ -76,14 +92,23 @@ export class PluginExtensionsService {
     }
     let timer: NodeJS.Timeout | undefined;
     try {
-      const result = await Promise.race([
+      let result = await Promise.race([
         Promise.resolve(definition.handler(request)),
         new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('Plugin route timed out')), 10_000); timer.unref(); }),
       ]);
+      if (definition.contract) {
+        try { result = definition.contract.response.parse(result); }
+        catch { throw new Error('Plugin response does not match its declared contract'); }
+      }
       void this.audit.log({ ...auditBase, success: true });
       return result;
     } catch (error) {
       void this.audit.log({ ...auditBase, success: false, errorMessage: error instanceof Error ? error.message : String(error) });
+      if (error instanceof PluginContractError && definition.contract) {
+        const declared = definition.contract.errors[error.code];
+        if (!declared) throw new Error('Plugin returned an undeclared error code');
+        throw new HttpException({ code: error.code, message: declared.message }, declared.status);
+      }
       throw error;
     } finally { if (timer) clearTimeout(timer); }
   }
@@ -138,7 +163,7 @@ export class PluginExtensionsService {
 
   list() {
     return {
-      sdkVersion: '1.0.0',
+      sdkVersion: '1.1.0',
       permissions: [...this.permissions.values()],
       navigation: [...this.navigation.values()],
       pages: [...this.pages.values()],

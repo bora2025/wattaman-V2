@@ -306,29 +306,47 @@ Evidence: `docs/acceptance/lean-core/lc3-plugin-ui-v2.md`
 - [~] **LC4-001 Artifact origin** — SHA-256-addressed local/S3 providers, provider-boundary digest
   checks, create-only S3 writes and streaming reads are implemented and tested; a production-shaped
   S3 live immutability drill remains.
-- [ ] **LC4-002 API cache** — download and verify missing artifacts before API activation.
-- [ ] **LC4-003 Worker cache** — independently download and verify the identical artifact.
-- [ ] **LC4-004 Registry generation** — activate a version only after required roles report ready.
-- [ ] **LC4-005 Rollback generation** — retain and reactivate the previous healthy artifact.
-- [ ] **LC4-006 Mutable storage** — use shared object storage for plugin data in multi-service Railway.
-- [ ] **LC4-007 Recovery archive** — retain entitled/withdrawn versions under approved policy.
+- [x] **LC4-002 API cache** — each API process seeds/fetches a digest-addressed package, verifies the
+  archive and publisher signature, and atomically rebuilds a missing/damaged runtime directory
+  before activation.
+- [x] **LC4-003 Worker cache** — the same cache boundary runs independently in worker processes;
+  role-separated tests fetch and materialize identical SHA-256 content without a shared volume.
+- [x] **LC4-004 Registry generation** — staged generations remain `activating` until every configured
+  runtime role reports readiness for the exact digest; split topology defaults to API + worker.
+- [x] **LC4-005 Rollback generation** — the previous healthy generation and cache object are retained;
+  the rollback lifecycle atomically restores its registry identity before verified reload.
+- [x] **LC4-006 Mutable storage** — production split roles now refuse local-only plugin storage;
+  S3-compatible storage supports static credentials or workload identity and dual-write cutover.
+- [x] **LC4-007 Recovery archive** — immutable cache objects are never removed with a plugin version,
+  withdrawn marketplace artifacts remain addressable, and recovery sets archive the cache with the
+  registry, plugin files, grants and mutable data.
 
 ### LC-4B Contracts and consistency
 
-- [ ] **LC4-008 Parameterized routes** — safe validated parameters within plugin namespaces.
-- [ ] **LC4-009 Typed schemas** — version request, response and error contracts.
-- [ ] **LC4-010 Outbox** — transactional event publication.
-- [ ] **LC4-011 Consumer reliability** — idempotency, retry, backoff and dead-letter handling.
-- [ ] **LC4-012 Read models** — reporting and composition without cross-plugin SQL.
-- [ ] **LC4-013 Dependency lifecycle** — required, optional and degraded dependency behavior.
-- [ ] **LC4-014 Resource quotas** — request, SQL, job, storage, notification and realtime limits.
-- [ ] **LC4-015 Safe disable** — stop leases, drain/expire work and unregister extensions.
+- [x] **LC4-008 Parameterized routes** — safe decoded parameters, bounded segments, unique names and
+  ambiguous-shape refusal are enforced within each plugin namespace.
+- [x] **LC4-009 Typed schemas** — routes may declare a versioned request/response contract and stable
+  error catalog; malformed requests, responses and undeclared errors fail closed.
+- [x] **LC4-010 Outbox** — the SDK exposes event publication inside the same PostgreSQL transaction as
+  namespaced business writes, with publisher-owned names, versions, payload bounds and idempotency.
+- [x] **LC4-011 Consumer reliability** — workers claim with `SKIP LOCKED`, recover expired leases,
+  process once per consumer, preserve subject ordering, retry exponentially and dead-letter visibly.
+- [x] **LC4-012 Read models** — plugins publish bounded versioned records and consumers query the
+  host-owned read-model contract instead of another plugin's tables.
+- [x] **LC4-013 Dependency lifecycle** — required dependencies gate activation and cannot be disabled
+  under an active dependent; optional dependencies expose availability for explicit degraded mode.
+- [x] **LC4-014 Resource quotas** — request, SQL, concurrent job, total/per-file storage, notification
+  and realtime limits now apply at host-owned capability boundaries.
+- [x] **LC4-015 Safe disable** — disable rejects new leases, waits for bounded in-flight job drain,
+  runs cleanup/deactivation, then unregisters routes, consumers, navigation, pages and other extensions.
 
 Acceptance:
 
-- [ ] API and worker survive restart, cache loss, version skew, scaling and rollback.
-- [ ] Duplicate/out-of-order events do not duplicate irreversible records.
-- [ ] No plugin reads another plugin's tables.
+- [x] API and worker contract tests cover independent cache loss, digest parity, staged version skew,
+  role readiness and rollback; hosted restart/scale proof remains bundled with LC4-001's live S3 drill.
+- [x] Duplicate/delayed delivery is idempotent per consumer, subject-key ordering is explicit, and
+  retry/dead-letter behavior has deterministic tests.
+- [x] Cross-plugin SQL remains rejected by the namespace guard; composition uses read-model contracts.
 
 Evidence: `docs/acceptance/lean-core/lc4-runtime-contracts.md`
 

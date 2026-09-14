@@ -31,7 +31,10 @@ export interface TestHarness {
  * behavior for a specific test case; everything else defaults to a
  * reasonable in-memory stub.
  */
-export function createTestContext(overrides: Partial<PluginRuntimeContext> = {}): TestHarness {
+type ContextOverrides = Omit<Partial<PluginRuntimeContext>, 'database'> & { database?: Partial<PluginRuntimeContext['database']> };
+
+export function createTestContext(overrides: ContextOverrides = {}): TestHarness {
+  const { database: databaseOverride, ...topLevelOverrides } = overrides;
   const routes: PluginRouteDefinition[] = [];
   const jobs: TestHarness['jobs'] = [];
   const permissions: TestHarness['permissions'] = [];
@@ -45,13 +48,15 @@ export function createTestContext(overrides: Partial<PluginRuntimeContext> = {})
   const storageStore = new Map<string, string>();
 
   const context: PluginRuntimeContext = {
-    sdkVersion: '1.0.0',
+    sdkVersion: '1.1.0',
     pluginId: 'local-test-plugin',
     logger: { log: () => undefined },
+    dependencies: { required: {}, optional: {}, isAvailable: async () => false },
     events: {
       publish: (event, payload) => { published.push({ event, payload }); },
       subscribe: (event, handler) => { subscriptions.push({ event, handler }); return () => undefined; },
     },
+    durableEvents: { subscribe: () => () => undefined },
     routes: { register: (definition) => { routes.push(definition); return () => undefined; } },
     jobs: { register: async (definition) => { jobs.push(definition); return () => undefined; } },
     settings: {
@@ -75,7 +80,10 @@ export function createTestContext(overrides: Partial<PluginRuntimeContext> = {})
     database: {
       query: async () => [],
       execute: async () => ({ count: 0 }),
+      transaction: async (work) => work({ query: async () => [], execute: async () => ({ count: 0 }), publish: async () => undefined }),
+      ...databaseOverride,
     },
+    readModels: { publish: async () => undefined, read: async () => [] },
     directory: {
       resolveAudience: async (_input: DirectoryAudienceQuery): Promise<DirectoryRecipient[]> => [],
       lookupUsers: async () => [],
@@ -85,7 +93,7 @@ export function createTestContext(overrides: Partial<PluginRuntimeContext> = {})
     realtime: {
       notifyUser: (userId, event, payload) => { emitted.push({ userId, event, payload }); },
     },
-    ...overrides,
+    ...topLevelOverrides,
   };
 
   return { context, routes, jobs, permissions, navigation, events: { published, subscriptions }, notifications: { sent }, realtime: { emitted } };

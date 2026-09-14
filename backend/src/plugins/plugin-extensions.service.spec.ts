@@ -1,4 +1,5 @@
 import { PluginExtensionsService } from './plugin-extensions.service';
+import { PluginContractError } from './plugin-sdk';
 
 function deps(granted = true) {
   const grants = { isGranted: jest.fn().mockResolvedValue(granted) } as any;
@@ -52,6 +53,26 @@ describe('PluginExtensionsService', () => {
       method: 'GET', path: 'records/record-123', params: {}, query: {}, body: null,
       principal: { userId: 'owner', role: 'SUPER_ADMIN' },
     })).resolves.toEqual({ id: 'record-123' });
+  });
+
+  it('enforces versioned request, response, and declared error contracts', async () => {
+    const parseParams = jest.fn((value: any) => {
+      if (!/^record-/.test(value.recordId || '')) throw new Error('invalid');
+      return value;
+    });
+    service.registerRoute('wattanam.test', permissions, {
+      method: 'GET', path: 'contract/:recordId', permission: 'wattanam.test.read',
+      contract: {
+        version: '1.0', request: { params: { parse: parseParams } },
+        response: { parse: (value: any) => { if (typeof value?.id !== 'string') throw new Error('invalid'); return value; } },
+        errors: { RECORD_MISSING: { status: 404, message: 'Record was not found' } },
+      },
+      handler: ({ params }) => params.recordId === 'record-missing' ? Promise.reject(new PluginContractError('RECORD_MISSING')) : ({ id: params.recordId }),
+    });
+    const request = (path: string) => ({ method: 'GET' as const, path, params: {}, query: {}, body: null, principal: { userId: 'owner', role: 'SUPER_ADMIN' } });
+    await expect(service.dispatch('wattanam.test', request('contract/record-1'))).resolves.toEqual({ id: 'record-1' });
+    await expect(service.dispatch('wattanam.test', request('contract/bad'))).rejects.toThrow('declared contract');
+    await expect(service.dispatch('wattanam.test', request('contract/record-missing'))).rejects.toMatchObject({ response: { code: 'RECORD_MISSING', message: 'Record was not found' }, status: 404 });
   });
 
   it('rejects invalid parameter values and ambiguous route shapes', async () => {

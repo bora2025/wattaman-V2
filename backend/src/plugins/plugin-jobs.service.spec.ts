@@ -86,4 +86,25 @@ describe('PluginJobsService', () => {
     await expect(service.run('wattanam.test', 'digest', jest.fn())).resolves.toBeUndefined();
     expect(prisma.$transaction).toHaveBeenCalled();
   });
+
+  it('rejects new leases while disable drains an in-flight job', async () => {
+    const tx = {
+      pluginJobDefinition: { update: jest.fn() },
+      pluginJobRun: { create: jest.fn().mockResolvedValue({ id: 'run-drain' }), update: jest.fn() },
+      $queryRawUnsafe: jest.fn().mockResolvedValue([{ acquired: true }]),
+    };
+    const prisma = {
+      pluginJobDefinition: { updateMany: jest.fn() },
+      $transaction: jest.fn(async (work) => work(tx)),
+    } as any;
+    const service = new PluginJobsService(prisma, open);
+    let finish!: () => void;
+    const first = service.run('wattanam.test', 'slow', () => new Promise<void>((resolve) => { finish = resolve; }));
+    await new Promise((resolve) => setImmediate(resolve));
+    const draining = service.clear('wattanam.test');
+    await service.run('wattanam.test', 'new', jest.fn());
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    finish();
+    await expect(Promise.all([first, draining])).resolves.toBeDefined();
+  });
 });

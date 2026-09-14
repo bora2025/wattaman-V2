@@ -1,5 +1,6 @@
-import { Injectable, Logger, OnApplicationBootstrap, OnApplicationShutdown } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationBootstrap, OnApplicationShutdown, Optional } from '@nestjs/common';
 import path from 'path';
+import semver from 'semver';
 import { PrismaService } from '../database/prisma.service';
 import { readRuntimeConfig } from '../config/environment';
 import { trustedPluginKeys } from './plugin-config';
@@ -16,11 +17,16 @@ import { PluginNotificationQuotaService } from './plugin-notification-quota.serv
 import { AuditService } from '../audit/audit.service';
 import { assertNoForbiddenSql, assertPluginNamespace } from './plugin-sql-guard';
 import { PluginRuntimeContext, RuntimePluginModule } from './plugin-sdk';
+import { PluginArtifactCacheService } from './plugin-artifact-cache.service';
+import { PluginResourceQuotaService } from './plugin-resource-quota.service';
+import { PluginContractRuntimeService } from './plugin-contract-runtime.service';
+import { PluginRolloutService } from './plugin-rollout.service';
 
 @Injectable()
 export class PluginRuntimeService implements OnApplicationBootstrap, OnApplicationShutdown {
   private readonly logger = new Logger(PluginRuntimeService.name);
   private readonly loaded = new Map<string, { module: RuntimePluginModule; context: PluginRuntimeContext; cleanup?: () => void; disposers: Array<() => void> }>();
+  private rolloutTimer?: NodeJS.Timeout;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -35,6 +41,10 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnApplicati
     private readonly realtime: PluginRealtimeService,
     private readonly notificationQuota: PluginNotificationQuotaService,
     private readonly audit: AuditService,
+    @Optional() private readonly artifactCache?: PluginArtifactCacheService,
+    @Optional() private readonly resourceQuota?: PluginResourceQuotaService,
+    @Optional() private readonly contracts?: PluginContractRuntimeService,
+    @Optional() private readonly rollout?: PluginRolloutService,
   ) {}
 
   async onApplicationBootstrap() {
@@ -42,6 +52,8 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnApplicati
       this.logger.warn('PLUGIN_SAFE_MODE is enabled; no plugin code will be loaded');
       return;
     }
+    await this.reconcileRollouts();
+    if (this.rollout) { this.rolloutTimer = setInterval(() => void this.reconcileRollouts(), 2_000); this.rolloutTimer.unref(); }
     const active = await this.prisma.pluginInstallation.findMany({ where: { status: 'active' } });
     for (const plugin of active) {
       try { await this.load(plugin.id); }
@@ -55,7 +67,17 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnApplicati
   }
 
   async onApplicationShutdown() {
+    if (this.rolloutTimer) clearInterval(this.rolloutTimer);
     for (const id of [...this.loaded.keys()].reverse()) await this.unload(id);
+  }
+
+  private async reconcileRollouts() {
+    if (!this.rollout) return;
+    const pending = await this.rollout.pendingForCurrentRole().catch(() => []);
+    for (const generation of pending) {
+      try { await this.load(generation.pluginId); await this.rollout.report(generation, generation.sha256); }
+      catch (error) { await this.rollout.report(generation, generation.sha256, error instanceof Error ? error.message : String(error)).catch(() => undefined); }
+    }
   }
 
   async load(id: string) {
@@ -64,9 +86,10 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnApplicati
     const record = await this.prisma.pluginInstallation.findUnique({ where: { id } });
     if (!record) throw new Error(`Plugin registry entry not found: ${id}`);
     const root = this.pluginRoot();
-    const installedPath = path.resolve(record.installedPath);
+    const cached = this.artifactCache ? await this.artifactCache.ensure(record) : null;
+    const installedPath = path.resolve(cached?.directory || record.installedPath);
     if (!installedPath.startsWith(`${root}${path.sep}`)) throw new Error(`Plugin path is outside PLUGIN_DIR: ${id}`);
-    const verified = await this.verifier.verifyInstalledDirectory(installedPath, await trustedPluginKeys(), readRuntimeConfig().appVersion);
+    const verified = cached?.verified || await this.verifier.verifyInstalledDirectory(installedPath, await trustedPluginKeys(), readRuntimeConfig().appVersion);
     if (verified.manifest.id !== id || verified.manifest.version !== record.version) throw new Error('Installed plugin identity does not match registry');
     if (!verified.manifest.backendEntry) return;
     const entry = path.resolve(installedPath, verified.manifest.backendEntry);
@@ -83,9 +106,19 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnApplicati
       if (!capabilities.has(capability)) throw new Error(`${id} did not declare ${capability}`);
     };
     const context: PluginRuntimeContext = {
-      sdkVersion: '1.0.0',
+      sdkVersion: '1.1.0',
       pluginId: id,
       logger,
+      dependencies: {
+        required: verified.manifest.dependencies,
+        optional: verified.manifest.optionalDependencies || {},
+        isAvailable: async (pluginId) => {
+          const range = verified.manifest.dependencies[pluginId] || verified.manifest.optionalDependencies?.[pluginId];
+          if (!range) return false;
+          const dependency = await this.prisma.pluginInstallation.findUnique({ where: { id: pluginId }, select: { status: true, version: true } });
+          return !!dependency && dependency.status === 'active' && semver.satisfies(dependency.version, range);
+        },
+      },
       events: {
         publish: (event, payload) => {
           requireCapability('events.publish');
@@ -94,6 +127,13 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnApplicati
         subscribe: (event, handler) => {
           requireCapability('events.subscribe');
           const dispose = this.eventBus.subscribe(event, handler); disposers.push(dispose); return dispose;
+        },
+      },
+      durableEvents: {
+        subscribe: (definition) => {
+          requireCapability('events.durable');
+          if (!this.contracts) throw new Error('Durable event runtime is unavailable');
+          const dispose = this.contracts.subscribe(id, definition); disposers.push(dispose); return dispose;
         },
       },
       routes: { register: (definition) => { requireCapability('api.routes'); const dispose = this.extensions.registerRoute(id, declaredPermissions, definition); disposers.push(dispose); return dispose; } },
@@ -121,6 +161,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnApplicati
       database: {
         query: (sql, params = []) => {
           requireCapability('database.read');
+          this.resourceQuota?.consume(id, 'sql');
           const label = `Plugin ${id} query`;
           if (!/^\s*SELECT\b/i.test(sql)) throw new Error(`${label} must be a SELECT statement`);
           if ((sql.match(/;/g) || []).length > 1) throw new Error(`${label} must contain exactly one SQL statement`);
@@ -130,6 +171,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnApplicati
         },
         execute: async (sql, params = []) => {
           requireCapability('database.write');
+          this.resourceQuota?.consume(id, 'sql');
           const label = `Plugin ${id} execute`;
           if (!/^\s*(INSERT|UPDATE|DELETE)\b/i.test(sql)) throw new Error(`${label} must be an INSERT, UPDATE, or DELETE statement`);
           if ((sql.match(/;/g) || []).length > 1) throw new Error(`${label} must contain exactly one SQL statement`);
@@ -138,6 +180,27 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnApplicati
           const count = await this.prisma.$executeRawUnsafe(sql, ...params);
           return { count };
         },
+        transaction: async (work) => {
+          requireCapability('database.write'); requireCapability('events.durable');
+          if (!this.contracts) throw new Error('Durable event runtime is unavailable');
+          return this.prisma.$transaction(async (tx) => work({
+            query: (sql, params = []) => {
+              this.resourceQuota?.consume(id, 'sql'); const label = `Plugin ${id} transactional query`;
+              if (!/^\s*SELECT\b/i.test(sql)) throw new Error(`${label} must be a SELECT statement`);
+              assertNoForbiddenSql(sql, label); assertPluginNamespace(id, sql, label); return tx.$queryRawUnsafe(sql, ...params);
+            },
+            execute: async (sql, params = []) => {
+              this.resourceQuota?.consume(id, 'sql'); const label = `Plugin ${id} transactional execute`;
+              if (!/^\s*(INSERT|UPDATE|DELETE)\b/i.test(sql)) throw new Error(`${label} must be an INSERT, UPDATE, or DELETE statement`);
+              assertNoForbiddenSql(sql, label); assertPluginNamespace(id, sql, label); return { count: await tx.$executeRawUnsafe(sql, ...params) };
+            },
+            publish: (input) => this.contracts!.publish(tx, id, input),
+          }));
+        },
+      },
+      readModels: {
+        publish: (model, version, key, data) => { requireCapability('readmodels.publish'); if (!this.contracts) throw new Error('Read-model runtime is unavailable'); return this.contracts.putReadModel(id, model, version, key, data); },
+        read: (owner, model, versions) => { requireCapability('readmodels.read'); if (!this.contracts) throw new Error('Read-model runtime is unavailable'); return this.contracts.readModel(owner, model, versions); },
       },
       directory: {
         resolveAudience: (query) => { requireCapability('directory.read'); return this.directory.resolveAudience(query); },
@@ -146,7 +209,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnApplicati
         classesForUser: (userId, role) => { requireCapability('directory.read'); return this.directory.classesForUser(userId, role); },
       },
       realtime: {
-        notifyUser: (userId, event, payload) => { requireCapability('realtime.notify'); this.realtime.notifyUser(id, userId, event, payload); },
+        notifyUser: (userId, event, payload) => { requireCapability('realtime.notify'); this.resourceQuota?.consume(id, 'realtime'); this.realtime.notifyUser(id, userId, event, payload); },
       },
     };
     try {
@@ -198,11 +261,14 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnApplicati
   async unload(id: string) {
     const loaded = this.loaded.get(id);
     if (!loaded) return;
+    // Disable scheduling and reject fresh leases before plugin cleanup begins. Existing work must
+    // finish within the bounded drain window; otherwise deactivation fails closed.
+    await this.jobs.clear(id);
     await loaded.cleanup?.();
     await loaded.module.deactivate?.(loaded.context);
     for (const dispose of loaded.disposers.reverse()) { try { dispose(); } catch { /* best effort */ } }
     this.extensions.clear(id);
-    await this.jobs.clear(id);
+    this.contracts?.clear(id);
     this.loaded.delete(id);
     this.logger.log(`Deactivated ${id}`);
   }

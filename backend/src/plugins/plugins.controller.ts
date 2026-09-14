@@ -22,10 +22,19 @@ export class PluginsController {
   @Get('runtime-status')
   runtimeStatus() { return this.plugins.runtimeStatus(); }
 
+  @Get(':id/contract-health')
+  contractHealth(@Param('id') id: string) { return this.plugins.contractHealth(id); }
+
+  @Post(':id/dead-letters/:deadLetterId/replay')
+  replayDeadLetter(@Param('id') id: string, @Param('deadLetterId') deadLetterId: string) { return this.plugins.replayDeadLetter(id, deadLetterId); }
+
   @Post(':id/activate')
   activate(@Param('id') id: string) {
     return this.plugins.activate(id);
   }
+
+  @Post(':id/rollback')
+  rollback(@Param('id') id: string) { return this.plugins.rollback(id); }
 
   @Post(':id/deactivate')
   deactivate(@Param('id') id: string) {

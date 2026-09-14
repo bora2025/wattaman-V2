@@ -1,8 +1,9 @@
-import { BadRequestException, Injectable, Logger, OnApplicationShutdown } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, OnApplicationShutdown, Optional } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { Prisma } from '@prisma/client';
 import { runsBackgroundJobs } from '../config/environment';
 import { SchoolAccessService } from '../marketplace/school-access.service';
+import { PluginResourceQuotaService } from './plugin-resource-quota.service';
 
 @Injectable()
 export class PluginJobsService implements OnApplicationShutdown {
@@ -10,8 +11,9 @@ export class PluginJobsService implements OnApplicationShutdown {
   private readonly timers = new Map<string, NodeJS.Timeout>();
   private readonly definitions = new Set<string>();
   private readonly running = new Set<string>();
+  private readonly draining = new Set<string>();
 
-  constructor(private readonly prisma: PrismaService, private readonly schoolAccess: SchoolAccessService) {}
+  constructor(private readonly prisma: PrismaService, private readonly schoolAccess: SchoolAccessService, @Optional() private readonly quota?: PluginResourceQuotaService) {}
 
   async register(pluginId: string, definition: { id: string; intervalSeconds: number; handler(): void | Promise<void> }) {
     if (!/^[a-z0-9][a-z0-9._-]{0,99}$/.test(definition.id)) throw new BadRequestException('Plugin job id is invalid');
@@ -20,6 +22,7 @@ export class PluginJobsService implements OnApplicationShutdown {
       throw new BadRequestException(`Plugin job interval must be ${minimum}..31536000 seconds`);
     }
     const key = `${pluginId}:${definition.id}`;
+    this.draining.delete(pluginId);
     if (this.definitions.has(key)) throw new BadRequestException(`Plugin job is already registered: ${definition.id}`);
     await this.prisma.pluginJobDefinition.upsert({
       where: { pluginId_jobId: { pluginId, jobId: definition.id } },
@@ -44,15 +47,24 @@ export class PluginJobsService implements OnApplicationShutdown {
   }
 
   async clear(pluginId: string) {
+    this.draining.add(pluginId);
     for (const key of [...this.definitions]) if (key.startsWith(`${pluginId}:`)) this.unregister(pluginId, key.slice(pluginId.length + 1));
     await this.prisma.pluginJobDefinition.updateMany({ where: { pluginId }, data: { enabled: false } });
+    const timeout = Number(process.env.PLUGIN_JOB_DRAIN_TIMEOUT_MS || 30_000);
+    const deadline = Date.now() + timeout;
+    while ([...this.running].some((key) => key.startsWith(`${pluginId}:`))) {
+      if (Date.now() >= deadline) throw new Error(`Timed out draining plugin jobs for ${pluginId}`);
+      await new Promise((resolve) => setTimeout(resolve, Math.min(25, Math.max(1, deadline - Date.now()))));
+    }
   }
 
   async run(pluginId: string, jobId: string, handler: () => void | Promise<void>) {
     const key = `${pluginId}:${jobId}`;
-    if (this.running.has(key)) return;
+    if (this.draining.has(pluginId) || this.running.has(key)) return;
     this.running.add(key);
+    let leaveQuota: (() => void) | undefined;
     try {
+      leaveQuota = this.quota?.enterJob(pluginId);
       // A plugin is part of the service a school locked for an unpaid platform bill has stopped
       // paying for, so its jobs pause and resume with the school. Checked after claiming `running`,
       // so two timer ticks cannot both slip past while the lock is read. If the lock cannot be read
@@ -67,7 +79,7 @@ export class PluginJobsService implements OnApplicationShutdown {
       }, { maxWait: 5_000, timeout: 24 * 60 * 60 * 1000 });
     } catch (error) {
       this.logger.error(`Plugin job ${key} transaction failed: ${error instanceof Error ? error.message : String(error)}`);
-    } finally { this.running.delete(key); }
+    } finally { leaveQuota?.(); this.running.delete(key); }
   }
 
   private async executeClaimed(tx: Prisma.TransactionClient, pluginId: string, jobId: string, handler: () => void | Promise<void>) {
@@ -88,5 +100,5 @@ export class PluginJobsService implements OnApplicationShutdown {
     }
   }
 
-  onApplicationShutdown() { for (const timer of this.timers.values()) clearInterval(timer); this.timers.clear(); this.definitions.clear(); }
+  onApplicationShutdown() { for (const timer of this.timers.values()) clearInterval(timer); this.timers.clear(); this.definitions.clear(); this.draining.clear(); }
 }

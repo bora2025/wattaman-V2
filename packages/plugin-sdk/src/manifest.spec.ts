@@ -1,4 +1,4 @@
-import { PLUGIN_CAPABILITIES, PLUGIN_SDK_VERSION, PLUGIN_RUNTIME_VERSION, parsePluginManifest } from './manifest';
+import { PLUGIN_CAPABILITIES, PLUGIN_CAPABILITIES_V1_1, PLUGIN_SDK_VERSION, PLUGIN_RUNTIME_VERSION, parsePluginManifest } from './manifest';
 
 // Twin of backend/src/plugins/plugin-sdk-contract.spec.ts -- keep both lists
 // identical by hand; a mismatch here or there is exactly the drift this
@@ -14,8 +14,9 @@ describe('SDK 1.0 frozen contract surface (twin of the backend pinning test)', (
   });
 
   it('pins the SDK and runtime version at 1.0.0', () => {
-    expect(PLUGIN_SDK_VERSION).toBe('1.0.0');
+    expect(PLUGIN_SDK_VERSION).toBe('1.1.0');
     expect(PLUGIN_RUNTIME_VERSION).toBe('1.0.0');
+    expect([...PLUGIN_CAPABILITIES_V1_1].sort()).toEqual(['events.durable', 'readmodels.publish', 'readmodels.read']);
   });
 });
 

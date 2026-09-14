@@ -19,11 +19,15 @@ import { PluginRealtimeGateway } from './plugin-realtime.gateway';
 import { PluginNotificationQuotaService } from './plugin-notification-quota.service';
 import { StorageModule } from '../storage/storage.module';
 import { AuthModule } from '../auth/auth.module';
+import { PluginArtifactCacheService } from './plugin-artifact-cache.service';
+import { PluginResourceQuotaService } from './plugin-resource-quota.service';
+import { PluginContractRuntimeService } from './plugin-contract-runtime.service';
+import { PluginRolloutService } from './plugin-rollout.service';
 
 @Module({
   imports: [DatabaseModule, NotificationModule, AuthModule, DirectoryModule, StorageModule],
   controllers: [PluginsController, PluginApiController],
-  providers: [PluginPackageVerifier, PluginEventBus, PluginPermissionsService, PluginExtensionsService, PluginJobsService, PluginSettingsService, PluginStorageService, PluginMigrationsService, PluginRealtimeGateway, PluginRealtimeService, PluginNotificationQuotaService, PluginRuntimeService, PluginsService],
+  providers: [PluginPackageVerifier, PluginArtifactCacheService, PluginResourceQuotaService, PluginContractRuntimeService, PluginRolloutService, PluginEventBus, PluginPermissionsService, PluginExtensionsService, PluginJobsService, PluginSettingsService, PluginStorageService, PluginMigrationsService, PluginRealtimeGateway, PluginRealtimeService, PluginNotificationQuotaService, PluginRuntimeService, PluginsService],
   exports: [PluginsService, PluginEventBus, PluginExtensionsService, PluginPermissionsService],
 })
 export class PluginsModule {}

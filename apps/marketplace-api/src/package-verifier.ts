@@ -20,6 +20,7 @@ const manifestSchema = z.object({
   capabilities: z.array(z.string()).default([]),
   permissions: z.array(z.string()).default([]),
   dependencies: z.record(z.string()).default({}),
+  optionalDependencies: z.record(z.string()).default({}),
   migrations: z.array(z.object({ id: z.string(), path: z.string(), checksum: z.string().regex(/^[a-f0-9]{64}$/), destructive: z.boolean().default(false) })).default([]),
   navigation: z.array(z.unknown()).default([]),
   supportedLanguages: z.array(z.string()).default([]),
@@ -56,6 +57,11 @@ export async function verifyPluginPackage(buffer: Buffer, publisherKeys: Map<str
   for (const [dependency, range] of Object.entries(manifest.dependencies)) {
     if (!/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/.test(dependency) || !semver.validRange(range)) {
       throw new HttpError(400, `Invalid plugin dependency: ${dependency}`);
+    }
+  }
+  for (const [dependency, range] of Object.entries(manifest.optionalDependencies)) {
+    if (!/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/.test(dependency) || !semver.validRange(range) || dependency in manifest.dependencies) {
+      throw new HttpError(400, `Invalid optional plugin dependency: ${dependency}`);
     }
   }
 

@@ -21,16 +21,33 @@ export interface PluginRouteDefinition {
   method: PluginRouteMethod;
   path: string;
   permission: string;
+  contract?: PluginRouteContract;
   handler(request: PluginRouteRequest): unknown | Promise<unknown>;
 }
 
+export interface PluginValueSchema<T = unknown> { parse(value: unknown): T }
+export interface PluginRouteContract {
+  version: `${number}.${number}`;
+  request?: { params?: PluginValueSchema<Record<string, string>>; query?: PluginValueSchema<Record<string, string | string[]>>; body?: PluginValueSchema };
+  response: PluginValueSchema;
+  errors: Record<string, { status: number; message: string }>;
+}
+
+export class PluginContractError extends Error {
+  constructor(readonly code: string, message?: string) { super(message || code); }
+}
+
 export interface PluginRuntimeContext {
-  sdkVersion: '1.0.0';
+  sdkVersion: '1.1.0';
   pluginId: string;
   logger: Logger;
+  dependencies: { required: Readonly<Record<string, string>>; optional: Readonly<Record<string, string>>; isAvailable(pluginId: string): Promise<boolean> };
   events: {
     publish(event: string, payload: unknown): void;
     subscribe(event: string, handler: (payload: unknown) => void | Promise<void>): () => void;
+  };
+  durableEvents: {
+    subscribe(definition: { id: string; event: string; versions: number[]; handler(event: { id: string; pluginId: string; eventName: string; schemaVersion: number; subjectKey: string; payload: unknown; createdAt: Date }): void | Promise<void> }): () => void;
   };
   routes: { register(definition: PluginRouteDefinition): () => void };
   jobs: { register(definition: { id: string; intervalSeconds: number; handler(): void | Promise<void> }): Promise<() => void> };
@@ -53,6 +70,15 @@ export interface PluginRuntimeContext {
   database: {
     query<T = unknown>(sql: string, params?: unknown[]): Promise<T[]>;
     execute(sql: string, params?: unknown[]): Promise<{ count: number }>;
+    transaction<T>(work: (transaction: {
+      query<R = unknown>(sql: string, params?: unknown[]): Promise<R[]>;
+      execute(sql: string, params?: unknown[]): Promise<{ count: number }>;
+      publish(input: { event: string; version: number; subjectKey: string; payload: unknown; idempotencyKey: string }): Promise<void>;
+    }) => Promise<T>): Promise<T>;
+  };
+  readModels: {
+    publish(model: string, version: number, key: string, data: unknown): Promise<void>;
+    read(ownerPluginId: string, model: string, acceptedVersions: number[]): Promise<Array<{ key: string; version: number; data: unknown; updatedAt: Date }>>;
   };
   directory: {
     resolveAudience(input: DirectoryAudienceQuery): Promise<DirectoryRecipient[]>;

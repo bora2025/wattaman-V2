@@ -35,4 +35,13 @@ describe('PluginStorageService', () => {
     await expect(service.readBinary('wattanam.other', 'uploads/sample.bin')).resolves.toBeNull();
     await expect(service.writeBinary('wattanam.test', 'uploads/bad.bin', 'not base64!')).rejects.toThrow('base64');
   });
+
+  it('enforces a total quota across a plugin storage namespace', async () => {
+    process.env.PLUGIN_STORAGE_MAX_FILE_BYTES = '10';
+    process.env.PLUGIN_STORAGE_MAX_TOTAL_BYTES = '5';
+    const service = new PluginStorageService(new LocalVolumeStorageProvider(directory));
+    await service.writeText('wattanam.test', 'one', '123');
+    await expect(service.writeText('wattanam.test', 'two', '456')).rejects.toThrow('total quota');
+    await service.writeText('wattanam.test', 'one', '12345');
+  });
 });

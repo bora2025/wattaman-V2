@@ -180,3 +180,6 @@ controllers call the internal verified lifecycle service instead.
 ### Changelog
 
 - **1.0.0** (2026-08-28) — Frozen. Final capability set: `api.routes`, `database.read`, `database.write`, `directory.read`, `events.publish`, `events.subscribe`, `jobs.schedule`, `navigation.register`, `notifications.send`, `permissions.register`, `realtime.notify`, `settings.read`, `settings.write`, `storage.read`, `storage.write`, `ui.pages`. Dispatch permission model (grants + audit) and `my-extensions` discovery included from the start of the freeze. `plugins/announcements` is the reference implementation and the sole production consumer.
+- **1.1.0** (2026-09-14) — Additive LC4 contract: `events.durable`, `readmodels.publish`, and
+  `readmodels.read`; optional dependency availability; transactional outbox publication; and
+  versioned route request, response, and stable error schemas. SDK 1.0 capabilities remain frozen.

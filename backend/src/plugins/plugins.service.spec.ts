@@ -29,7 +29,7 @@ function harness() {
     pluginInstallation: { findUnique: jest.fn(), upsert: jest.fn(), update: jest.fn(), delete: jest.fn() },
   };
   const prisma = {
-    pluginInstallation: { findUnique: jest.fn(), update: jest.fn().mockResolvedValue({}), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+    pluginInstallation: { findUnique: jest.fn(), findMany: jest.fn().mockResolvedValue([]), update: jest.fn().mockResolvedValue({}), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
     $transaction: jest.fn((work: (tx: any) => unknown, _options?: unknown) => work(tx)),
   } as any;
   const verifier = { verify: jest.fn() } as any;
@@ -218,6 +218,14 @@ describe('PluginsService lifecycle locking, timeout, progress, and crash recover
 
       await service.deactivate('wattanam.test');
       expect(order).toEqual(['unload', 'update']);
+    });
+
+    it('refuses to deactivate a dependency required by an active plugin', async () => {
+      const { service, prisma, runtime } = harness();
+      prisma.pluginInstallation.findUnique.mockResolvedValue({ id: 'wattanam.base' });
+      prisma.pluginInstallation.findMany.mockResolvedValue([{ id: 'wattanam.feature', manifestJson: JSON.stringify({ dependencies: { 'wattanam.base': '^1.0.0' } }) }]);
+      await expect(service.deactivate('wattanam.base')).rejects.toThrow('wattanam.feature requires it');
+      expect(runtime.unload).not.toHaveBeenCalled();
     });
 
     it('refuses to remove an active plugin', async () => {

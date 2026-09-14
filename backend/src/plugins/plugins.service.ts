@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { promises as fs } from 'fs';
 import path from 'path';
 import semver from 'semver';
@@ -10,6 +10,9 @@ import { trustedPluginKeys } from './plugin-config';
 import { PluginPackageVerifier, TrustedPluginKeys, VerifiedPluginPackage } from './plugin-package';
 import { PluginRuntimeService } from './plugin-runtime.service';
 import { PluginMigrationsService } from './plugin-migrations.service';
+import { PluginArtifactCacheService } from './plugin-artifact-cache.service';
+import { PluginRolloutService } from './plugin-rollout.service';
+import { PluginContractRuntimeService } from './plugin-contract-runtime.service';
 
 /**
  * Wall-clock ceiling for a single locked lifecycle transaction (install,
@@ -27,6 +30,9 @@ export class PluginsService {
     private readonly verifier: PluginPackageVerifier,
     private readonly runtime: PluginRuntimeService,
     private readonly migrations: PluginMigrationsService,
+    @Optional() private readonly artifactCache?: PluginArtifactCacheService,
+    @Optional() private readonly rollout?: PluginRolloutService,
+    @Optional() private readonly contracts?: PluginContractRuntimeService,
   ) {}
 
   /**
@@ -72,6 +78,8 @@ export class PluginsService {
   }
 
   runtimeStatus() { return this.runtime.status(); }
+  contractHealth(id: string) { if (!this.contracts) throw new ConflictException('Plugin contract runtime is unavailable'); return this.contracts.health(id); }
+  replayDeadLetter(id: string, deadLetterId: string) { if (!this.contracts) throw new ConflictException('Plugin contract runtime is unavailable'); return this.contracts.replay(id, deadLetterId); }
 
   async inspect(packageBuffer: Buffer) {
     const verified = await this.verifier.verify(packageBuffer, await trustedPluginKeys(), readRuntimeConfig().appVersion);
@@ -100,6 +108,7 @@ export class PluginsService {
   async install(packageBuffer: Buffer, confirmedPackageSha256?: string, trustedKeys?: TrustedPluginKeys) {
     const coreVersion = readRuntimeConfig().appVersion;
     const verified = await this.verifier.verify(packageBuffer, trustedKeys ?? await trustedPluginKeys(), coreVersion);
+    await this.artifactCache?.seed(packageBuffer, verified.packageSha256);
     if (confirmedPackageSha256 !== undefined && confirmedPackageSha256 !== verified.packageSha256) throw new BadRequestException('The package differs from the inspected package');
     await this.assertDependencies(verified);
     const current = await this.prisma.pluginInstallation.findUnique({ where: { id: verified.manifest.id } });
@@ -159,7 +168,7 @@ export class PluginsService {
 
   async activate(id: string) {
     try {
-      const updated = await this.withPluginLock(id, async (tx) => {
+      const activation = await this.withPluginLock(id, async (tx) => {
         const plugin = await this.getTx(tx, id);
         const manifest = JSON.parse(plugin.manifestJson);
         await this.assertDependencies({ manifest } as VerifiedPluginPackage, tx);
@@ -167,13 +176,16 @@ export class PluginsService {
         for (const entry of [manifest.backendEntry, manifest.frontendEntry].filter(Boolean)) {
           await fs.access(path.join(plugin.installedPath, entry));
         }
-        return tx.pluginInstallation.update({
+        const updated = await tx.pluginInstallation.update({
           where: { id },
-          data: { status: 'active', activatedAt: new Date(), deactivatedAt: null, lastError: null },
+          data: { status: this.rollout ? 'activating' : 'active', activatedAt: this.rollout ? null : new Date(), deactivatedAt: null, lastError: null },
         });
+        const generation = this.rollout ? await this.rollout.stage(tx, plugin) : null;
+        return { updated, generation };
       });
       await this.runtime.load(id);
-      return this.publicPlugin(updated);
+      if (activation.generation) await this.rollout!.report(activation.generation, activation.generation.sha256);
+      return this.publicPlugin(activation.generation ? await this.get(id) : activation.updated);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       await this.prisma.pluginInstallation.updateMany({ where: { id }, data: { status: 'failed', lastError: message } }).catch(() => undefined);
@@ -181,8 +193,21 @@ export class PluginsService {
     }
   }
 
+  async rollback(id: string) {
+    if (!this.rollout) throw new ConflictException('Artifact rollout generations are unavailable');
+    await this.runtime.unload(id);
+    const restored = await this.rollout.reactivatePrevious(id);
+    await this.runtime.load(id);
+    return this.publicPlugin(restored);
+  }
+
   async deactivate(id: string) {
     await this.get(id);
+    const active = await this.prisma.pluginInstallation.findMany({ where: { status: 'active' }, select: { id: true, manifestJson: true } });
+    const dependent = active.find((candidate) => {
+      try { return Object.prototype.hasOwnProperty.call(JSON.parse(candidate.manifestJson).dependencies || {}, id); } catch { return false; }
+    });
+    if (dependent) throw new ConflictException(`Cannot deactivate ${id}; active plugin ${dependent.id} requires it`);
     await this.runtime.unload(id);
     const updated = await this.withPluginLock(id, (tx) => tx.pluginInstallation.update({
       where: { id },
@@ -249,6 +274,7 @@ export class PluginsService {
   private publicPlugin(plugin: any) {
     let manifest: any = {};
     try { manifest = JSON.parse(plugin.manifestJson); } catch { /* registry corruption is surfaced by status and activation */ }
+    const optionalDependencies = manifest.optionalDependencies || {};
     return {
       id: plugin.id,
       name: plugin.name,
@@ -264,6 +290,7 @@ export class PluginsService {
       activatedAt: plugin.activatedAt,
       deactivatedAt: plugin.deactivatedAt,
       lastError: plugin.lastError,
+      dependencyState: { required: manifest.dependencies || {}, optional: optionalDependencies },
     };
   }
 }
