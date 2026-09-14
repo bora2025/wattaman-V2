@@ -11,6 +11,8 @@ export type PluginUiPageDescriptor = {
   dataSources: Array<{ id: string; method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'; path: string; permission: string; parameters?: string[]; autoload?: boolean }>;
   components: Array<Record<string, unknown>>;
   realtime?: Array<{ event: string; refreshSources: string[] }>;
+  defaultLanguage?: string;
+  translations?: Record<string, Record<string, string>>;
 };
 
 const validators: Record<PluginRouteParameter['type'], (value: string) => boolean> = {

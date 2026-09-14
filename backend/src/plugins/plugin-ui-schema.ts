@@ -33,6 +33,8 @@ export interface PluginUiPage {
   dataSources: PluginUiDataSource[];
   components: PluginUiComponent[];
   realtime?: Array<{ event: string; refreshSources: string[] }>;
+  defaultLanguage?: string;
+  translations?: Record<string, Record<string, string>>;
 }
 
 export interface PluginUiBundle {
@@ -171,6 +173,7 @@ export function parsePluginUiBundle(value: unknown, pluginId: string, declaredPe
           if (field.label !== undefined) string(field.label, 'table column label', 120);
           if (field.sortable !== undefined && typeof field.sortable !== 'boolean') throw new BadRequestException('Plugin UI table sortable must be boolean');
           if (field.filterable !== undefined && typeof field.filterable !== 'boolean') throw new BadRequestException('Plugin UI table filterable must be boolean');
+          if (field.format !== undefined && !['text', 'number', 'currency', 'date', 'datetime'].includes(String(field.format))) throw new BadRequestException('Plugin UI table format is invalid');
         });
         const options = (component.options || {}) as Record<string, unknown>;
         if (options.pageSize !== undefined && (!Number.isInteger(options.pageSize) || Number(options.pageSize) < 1 || Number(options.pageSize) > 100)) throw new BadRequestException('Plugin UI table pageSize must be between 1 and 100');
@@ -307,7 +310,23 @@ export function parsePluginUiBundle(value: unknown, pluginId: string, declaredPe
         return { event, refreshSources: [...new Set(subscription.refreshSources as string[])] };
       });
     }
-    return { id, title: string(page.title, `pages[${pageIndex}].title`, 200), routePath, permission, parameters, dataSources, components, ...(realtime ? { realtime } : {}) };
+    let translations: Record<string, Record<string, string>> | undefined;
+    let defaultLanguage: string | undefined;
+    if (page.translations !== undefined) {
+      const source = object(page.translations, 'Plugin UI translations'); const languages = Object.entries(source);
+      if (languages.length < 1 || languages.length > 20) throw new BadRequestException('Plugin UI translations language count is invalid');
+      translations = {};
+      for (const [language, candidateMessages] of languages) {
+        if (!/^[a-z]{2,3}(?:-[A-Z]{2})?$/.test(language)) throw new BadRequestException('Plugin UI translation language is invalid');
+        const messages = object(candidateMessages, `translations.${language}`); const entries = Object.entries(messages);
+        if (entries.length > 500) throw new BadRequestException('Plugin UI translation message count is invalid');
+        translations[language] = {};
+        for (const [key, message] of entries) { if (!/^[a-z0-9][a-z0-9._-]*$/.test(key) || typeof message !== 'string' || !message.trim() || message.length > 500) throw new BadRequestException('Plugin UI translation entry is invalid'); translations[language][key] = message.trim(); }
+      }
+      defaultLanguage = string(page.defaultLanguage, 'Plugin UI defaultLanguage', 10);
+      if (!translations[defaultLanguage]) throw new BadRequestException('Plugin UI defaultLanguage has no translations');
+    } else if (page.defaultLanguage !== undefined) throw new BadRequestException('Plugin UI defaultLanguage requires translations');
+    return { id, title: string(page.title, `pages[${pageIndex}].title`, 200), routePath, permission, parameters, dataSources, components, ...(realtime ? { realtime } : {}), ...(translations ? { translations, defaultLanguage } : {}) };
   });
   return { schemaVersion: 2, kind: 'declarative-ui', pages };
 }

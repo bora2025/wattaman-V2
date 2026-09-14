@@ -152,4 +152,13 @@ describe('Plugin UI v2 schema', () => {
     value.pages[0].components[0].options.modes = ['script'];
     expect(() => parsePluginUiBundle(value, 'wattanam.test', permissions)).toThrow('modes');
   });
+
+  it('validates bounded launch-language translations', () => {
+    const value: any = valid();
+    value.pages[0].defaultLanguage = 'en';
+    value.pages[0].translations = { en: { 'page.title': 'Records' }, km: { 'page.title': 'កំណត់ត្រា' } };
+    expect(parsePluginUiBundle(value, 'wattanam.test', permissions).pages[0].translations?.km['page.title']).toBe('កំណត់ត្រា');
+    value.pages[0].defaultLanguage = 'fr';
+    expect(() => parsePluginUiBundle(value, 'wattanam.test', permissions)).toThrow('no translations');
+  });
 });

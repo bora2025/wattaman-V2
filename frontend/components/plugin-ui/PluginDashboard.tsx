@@ -13,10 +13,10 @@ function atPath(value: unknown, path?: string): unknown {
 function LoadingCard() { return <section className="card p-5" aria-busy="true"><div className="h-4 w-24 animate-pulse rounded bg-slate-200" /><div className="mt-3 h-8 w-36 animate-pulse rounded bg-slate-100" /><span className="sr-only">Loading dashboard item</span></section>; }
 function ErrorCard({ title, error }: { title?: string; error: string }) { return <section className="card border-red-200 p-5" role="alert"><h2 className="font-semibold text-red-800">{title || 'Dashboard item'}</h2><p className="mt-2 text-sm text-red-700">{error}</p></section>; }
 
-export function PluginMetric({ title, value, options, loading, error }: any) {
+export function PluginMetric({ title, value, options, loading, error, formatValue }: any) {
   if (loading) return <LoadingCard />; if (error) return <ErrorCard title={title} error={error} />;
   const raw = atPath(value, options.valuePath); const trend = atPath(value, options.trendPath);
-  const formatted = options.format === 'percent' && typeof raw === 'number' ? `${new Intl.NumberFormat().format(raw)}%` : typeof raw === 'number' ? new Intl.NumberFormat().format(raw) : String(raw ?? '—');
+  const formatted = options.format === 'percent' && typeof raw === 'number' ? `${formatValue(raw, 'number')}%` : formatValue(raw, options.format || 'text');
   return <section className="card p-5"><p className="text-sm font-medium text-slate-500">{title}</p><p className="mt-2 text-3xl font-bold text-slate-900">{formatted}</p>{trend !== undefined && <p className={`mt-2 text-sm ${Number(trend) >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{Number(trend) >= 0 ? '↑' : '↓'} {String(trend)}</p>}</section>;
 }
 
@@ -26,9 +26,9 @@ export function PluginStatus({ title, value, options, loading, error }: any) {
   return <section className="card p-5"><p className="text-sm font-medium text-slate-500">{title}</p><span className={`mt-3 inline-flex rounded-full px-3 py-1 text-sm font-semibold ${TONES[state?.tone] || TONES.neutral}`}><span className="mr-2" aria-hidden="true">●</span>{state?.label || String(raw ?? 'Unknown')}</span></section>;
 }
 
-export function PluginCard({ title, value, fields, loading, error }: any) {
+export function PluginCard({ title, value, fields, loading, error, formatValue }: any) {
   if (loading) return <LoadingCard />; if (error) return <ErrorCard title={title} error={error} />;
-  return <section className="card p-5"><h2 className="font-semibold text-slate-800">{title}</h2><dl className="mt-4 divide-y divide-slate-100">{fields.map((field: any) => <div key={field.path} className="flex justify-between gap-4 py-2 text-sm"><dt className="text-slate-500">{field.label}</dt><dd className="text-right font-medium text-slate-800">{String(atPath(value, field.path) ?? '—')}</dd></div>)}</dl></section>;
+  return <section className="card p-5"><h2 className="font-semibold text-slate-800">{title}</h2><dl className="mt-4 divide-y divide-slate-100">{fields.map((field: any) => <div key={field.path} className="flex justify-between gap-4 py-2 text-sm"><dt className="text-slate-500">{field.label}</dt><dd className="text-right font-medium text-slate-800">{formatValue(atPath(value, field.path), field.format || 'text')}</dd></div>)}</dl></section>;
 }
 
 export function PluginChart({ title, value, options, loading, error }: any) {

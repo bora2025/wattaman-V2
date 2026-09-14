@@ -118,6 +118,18 @@ The hostile fixture suite proves each rejection path.
 navigation and dispatch. A parity test proves a denied role receives neither navigation nor page
 metadata and receives a permission error if it calls the route directly.
 
+### LC3-013 — localization and regional formatting
+
+- A page may carry bounded BCP-47 translation dictionaries and must name a default language that
+  exists in the descriptor.
+- The host maps Wattanam's Khmer selection to `km`, uses Khmer/English fallback keys for component,
+  field, action and status labels, and never accepts markup in translated values.
+- Number, currency, date and datetime fields use `Intl` with the installation's configured locale,
+  IANA timezone and ISO currency. Safe English/Khmer defaults apply while installation metadata is
+  loading.
+- Schema tests cover English/Khmer acceptance and missing-default rejection; backend and the full
+  120-route frontend production build pass.
+
 ## Verification
 
 Run from `backend/`:
@@ -136,6 +148,6 @@ Result on 2026-09-14:
 
 ## Remaining gate work
 
-LC3-013 through LC3-015 and all four end-to-end acceptance statements remain open. The gate must
+LC3-014, LC3-015 and all four end-to-end acceptance statements remain open. The gate must
 not be called complete until a signed sample v2 plugin proves the complete workflow without a core
 frontend rebuild.

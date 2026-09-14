@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
-type Column = { id: string; label?: string; sortable?: boolean; filterable?: boolean };
+type Column = { id: string; label?: string; sortable?: boolean; filterable?: boolean; format?: string };
 
 function rowsFrom(value: unknown): Record<string, unknown>[] {
   const candidate = Array.isArray(value) ? value : value && typeof value === 'object' && Array.isArray((value as any).items) ? (value as any).items : [];
@@ -17,7 +17,7 @@ function display(value: unknown) {
 }
 
 export default function PluginDataTable({
-  title, value, fields, options, loading, error, onSelectionChange,
+  title, value, fields, options, loading, error, onSelectionChange, formatValue,
 }: {
   title?: string;
   value: unknown;
@@ -26,10 +26,11 @@ export default function PluginDataTable({
   loading?: boolean;
   error?: string;
   onSelectionChange?(ids: string[]): void;
+  formatValue?(value: unknown, kind?: string): string;
 }) {
   const sourceRows = useMemo(() => rowsFrom(value), [value]);
   const columns = useMemo<Column[]>(() => {
-    if (fields?.length) return fields.map((field) => ({ id: String(field.id), label: typeof field.label === 'string' ? field.label : String(field.id), sortable: field.sortable !== false, filterable: field.filterable !== false }));
+    if (fields?.length) return fields.map((field) => ({ id: String(field.id), label: typeof field.label === 'string' ? field.label : String(field.id), sortable: field.sortable !== false, filterable: field.filterable !== false, format: typeof field.format === 'string' ? field.format : 'text' }));
     return Object.keys(sourceRows[0] || {}).slice(0, 12).map((id) => ({ id, label: id, sortable: true, filterable: true }));
   }, [fields, sourceRows]);
   const pageSize = typeof options?.pageSize === 'number' ? Math.min(Math.max(Math.trunc(options.pageSize), 1), 100) : 10;
@@ -78,7 +79,7 @@ export default function PluginDataTable({
         </tr></thead>
         <tbody className="divide-y divide-slate-100 bg-white">{visible.map((row, index) => { const key = rowKey(row, index); return <tr key={key} className={selected.has(key) ? 'bg-indigo-50' : ''}>
           {selectable && <td className="px-4 py-3"><input aria-label={`Select row ${index + 1}`} type="checkbox" checked={selected.has(key)} onChange={() => setSelected((current) => { const next = new Set(current); if (next.has(key)) next.delete(key); else next.add(key); return next; })} /></td>}
-          {columns.map((column) => <td key={column.id} className="max-w-sm px-4 py-3 text-slate-700">{display(row[column.id])}</td>)}
+          {columns.map((column) => <td key={column.id} className="max-w-sm px-4 py-3 text-slate-700">{formatValue ? formatValue(row[column.id], column.format) : display(row[column.id])}</td>)}
         </tr>; })}</tbody>
       </table>
     </div>}

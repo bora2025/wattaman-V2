@@ -9,22 +9,25 @@ import PluginFiles from './PluginFiles';
 import PluginPrintExport from './PluginPrintExport';
 import { usePluginUiRealtime } from '../../lib/plugin-ui-realtime';
 import PluginScanner from './PluginScanner';
+import { usePluginUiPresentation } from '../../lib/plugin-ui-presentation';
 import type { PluginUiPageDescriptor } from '../../lib/plugin-ui-routing';
 
 export default function PluginUiRenderer({ pluginId, page, params, data, loading, errors, onRefresh }: { pluginId: string; page: PluginUiPageDescriptor; params: Record<string, string>; data: Record<string, unknown>; loading: boolean; errors: Record<string, string>; onRefresh(): void | Promise<void> }) {
   const [selections, setSelections] = useState<Record<string, string[]>>({});
+  const presentation = usePluginUiPresentation(page);
   usePluginUiRealtime(pluginId, page.realtime, onRefresh);
   const updateSelection = useCallback((source: string, ids: string[]) => setSelections((current) => {
     if ((current[source] || []).join('\0') === ids.join('\0')) return current;
     return { ...current, [source]: ids };
   }), []);
   return <div className="space-y-5">{page.components.map((component: any) => {
-    if (component.type === 'table') return <PluginDataTable key={component.id} title={component.title} value={component.source ? data[component.source] : []} fields={component.fields} options={component.options} loading={loading} error={component.source ? errors[component.source] : undefined} onSelectionChange={component.source ? (ids) => updateSelection(component.source, ids) : undefined} />;
+    const localized = { ...component, title: presentation.translate(component.titleKey, component.title), fields: component.fields?.map((field: any) => ({ ...field, label: presentation.translate(field.labelKey, field.label) })), options: { ...component.options, submitLabel: presentation.translate(component.options?.submitLabelKey, component.options?.submitLabel), confirmation: presentation.translate(component.options?.confirmationKey, component.options?.confirmation), successMessage: presentation.translate(component.options?.successMessageKey, component.options?.successMessage), actions: component.options?.actions?.map((action: any) => ({ ...action, label: presentation.translate(action.labelKey, action.label), confirmation: presentation.translate(action.confirmationKey, action.confirmation) })), states: component.options?.states?.map((state: any) => ({ ...state, label: presentation.translate(state.labelKey, state.label) })) } }; component = localized;
+    if (component.type === 'table') return <PluginDataTable key={component.id} title={component.title} value={component.source ? data[component.source] : []} fields={component.fields} options={component.options} loading={loading} error={component.source ? errors[component.source] : undefined} onSelectionChange={component.source ? (ids) => updateSelection(component.source, ids) : undefined} formatValue={presentation.format} />;
     if (component.type === 'form') { const source = page.dataSources.find((entry) => entry.id === component.source); const initialSource = component.options?.initialSource; return source && source.method !== 'GET' && source.method !== 'DELETE' ? <PluginForm key={component.id} pluginId={pluginId} source={source as any} params={params} fields={component.fields || []} options={component.options as any} initialData={typeof initialSource === 'string' ? data[initialSource] : undefined} onSuccess={onRefresh} /> : null; }
     if (component.type === 'actions') return <PluginActions key={component.id} pluginId={pluginId} sources={page.dataSources.filter((entry) => entry.method !== 'GET') as any} params={params} actions={(component.options?.actions || []) as any} selections={selections} onSuccess={onRefresh} />;
-    if (component.type === 'metric') return <PluginMetric key={component.id} title={component.title} value={data[component.source]} options={component.options} loading={loading} error={errors[component.source]} />;
+    if (component.type === 'metric') return <PluginMetric key={component.id} title={component.title} value={data[component.source]} options={component.options} loading={loading} error={errors[component.source]} formatValue={presentation.format} />;
     if (component.type === 'status') return <PluginStatus key={component.id} title={component.title} value={data[component.source]} options={component.options} loading={loading} error={errors[component.source]} />;
-    if (component.type === 'card') return <PluginCard key={component.id} title={component.title} value={data[component.source]} fields={component.fields || []} loading={loading} error={errors[component.source]} />;
+    if (component.type === 'card') return <PluginCard key={component.id} title={component.title} value={data[component.source]} fields={component.fields || []} loading={loading} error={errors[component.source]} formatValue={presentation.format} />;
     if (component.type === 'chart') return <PluginChart key={component.id} title={component.title} value={data[component.source]} options={component.options} loading={loading} error={errors[component.source]} />;
     if (component.type === 'file') return <PluginFiles key={component.id} pluginId={pluginId} value={data[component.source]} sources={page.dataSources} params={params} options={component.options} loading={loading} error={errors[component.source]} onRefresh={onRefresh} />;
     if (component.type === 'print') return <PluginPrintExport key={component.id} title={component.title} value={data[component.source]} fields={component.fields || []} options={component.options} loading={loading} error={errors[component.source]} />;

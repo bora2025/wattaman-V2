@@ -282,7 +282,9 @@ Evidence: `docs/acceptance/lean-core/lc2-core-only-composition.md`
   events and debounce refreshes of declared autoload GET sources.
 - [x] **LC3-012 Scanner input** — host-owned camera QR/barcode and keyboard-wedge input share one
   permission-gated mutation source with length checks and duplicate debounce.
-- [ ] **LC3-013 Localization** — Khmer/launch languages, timezone and currency formatting.
+- [x] **LC3-013 Localization** — bounded descriptor dictionaries provide English/Khmer fallback;
+  host formatting uses the installation locale, IANA timezone and ISO currency for declared
+  number/currency/date/datetime values.
 - [ ] **LC3-014 Accessibility** — keyboard, screen-reader, focus and contrast tests.
 - [ ] **LC3-015 Responsive UI** — phone, tablet and desktop certification.
 - [x] **LC3-016 Permission parity** — the same persisted role grant filters v2 navigation and page
