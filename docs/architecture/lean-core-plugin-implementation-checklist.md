@@ -303,7 +303,9 @@ Evidence: `docs/acceptance/lean-core/lc3-plugin-ui-v2.md`
 
 ### LC-4A Artifact distribution
 
-- [ ] **LC4-001 Artifact origin** — use immutable object storage addressed by SHA-256.
+- [~] **LC4-001 Artifact origin** — SHA-256-addressed local/S3 providers, provider-boundary digest
+  checks, create-only S3 writes and streaming reads are implemented and tested; a production-shaped
+  S3 live immutability drill remains.
 - [ ] **LC4-002 API cache** — download and verify missing artifacts before API activation.
 - [ ] **LC4-003 Worker cache** — independently download and verify the identical artifact.
 - [ ] **LC4-004 Registry generation** — activate a version only after required roles report ready.

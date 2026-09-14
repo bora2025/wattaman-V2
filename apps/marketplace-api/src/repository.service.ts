@@ -1,13 +1,12 @@
 import { Prisma, PrismaClient, ReleaseChannel } from '@prisma/client';
 import { createHash } from 'node:crypto';
-import { link, mkdir, unlink, writeFile } from 'node:fs/promises';
-import path from 'node:path';
 import semver from 'semver';
 import { z } from 'zod';
 import { MarketplaceConfig } from './config';
 import { HttpError } from './http-error';
 import { verifyPluginPackage } from './package-verifier';
 import { repositoryPublicKey, signEnvelopeWithKeys } from './signing';
+import { ArtifactStorage, createArtifactStorage } from './artifact-storage';
 
 const publisherInput = z.object({
   slug: z.string().regex(/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/).max(100),
@@ -60,7 +59,8 @@ const pluginPromotionInput = z.object({
 const corePromotionInput = z.object({ version: z.string().refine((value) => semver.valid(value) !== null) }).strict();
 
 export class RepositoryService {
-  constructor(private readonly prisma: PrismaClient, private readonly config: MarketplaceConfig) {}
+  private readonly artifacts: ArtifactStorage;
+  constructor(private readonly prisma: PrismaClient, private readonly config: MarketplaceConfig, artifacts?: ArtifactStorage) { this.artifacts = artifacts || createArtifactStorage(config); }
 
   keyDocument() {
     return {
@@ -98,18 +98,7 @@ export class RepositoryService {
     const publisher = publishers.find((candidate) => candidate.slug === verified.manifest.publisher && candidate.keys.some((key) => key.keyId === verified.publisherKeyId));
     if (!publisher) throw new HttpError(403, 'The package publisher is not verified');
 
-    const storageKey = path.posix.join(verified.sha256.slice(0, 2), `${verified.sha256}.wtp`);
-    const destination = path.join(this.config.artifactPath, ...storageKey.split('/'));
-    const temporary = `${destination}.${process.pid}.${Date.now()}.partial`;
-    await mkdir(path.dirname(destination), { recursive: true });
-    try {
-      await writeFile(temporary, packageBuffer, { flag: 'wx', mode: 0o640 });
-      await link(temporary, destination);
-      await unlink(temporary);
-    } catch (error) {
-      await unlink(temporary).catch(() => undefined);
-      throw error;
-    }
+    const storageKey = await this.artifacts.putImmutable(verified.sha256, packageBuffer);
 
     try {
       return await this.prisma.$transaction(async (tx) => {
@@ -137,10 +126,7 @@ export class RepositoryService {
         });
         return { pluginId: plugin.id, pluginVersionId: version.id, version: version.version, channel: version.channel, sha256: version.artifact!.sha256, analysisSignals: verified.analysisSignals };
       });
-    } catch (error) {
-      await unlink(destination).catch(() => undefined);
-      throw error;
-    }
+    } catch (error) { throw error; }
   }
 
   async publishCoreRelease(value: unknown) {
@@ -253,7 +239,7 @@ export class RepositoryService {
     if (!artifact || artifact.pluginVersion.reviewStatus !== 'APPROVED' || artifact.pluginVersion.withdrawnAt || artifact.pluginVersion.plugin.status !== 'APPROVED') {
       throw new HttpError(404, 'Artifact not found');
     }
-    return { path: path.join(this.config.artifactPath, ...artifact.storageKey.split('/')), artifact };
+    return { stream: await this.artifacts.open(artifact.storageKey), artifact };
   }
 
   async recordDownload(pluginVersionId: string, artifactSha256: string, installationId?: string) {

@@ -22,6 +22,9 @@ const schema = z.object({
   PAYMENT_WEBHOOK_SECRET: z.string().min(32),
   PAYMENT_WEBHOOK_SECONDARY_SECRETS_JSON: z.string().optional(),
   ARTIFACT_STORAGE_PATH: z.string().min(1),
+  ARTIFACT_STORAGE_PROVIDER: z.enum(['local', 's3']).default('local'),
+  ARTIFACT_S3_BUCKET: z.string().min(1).optional(), ARTIFACT_S3_REGION: z.string().min(1).optional(), ARTIFACT_S3_ENDPOINT: z.string().url().optional(),
+  ARTIFACT_S3_ACCESS_KEY_ID: z.string().min(1).optional(), ARTIFACT_S3_SECRET_ACCESS_KEY: z.string().min(1).optional(), ARTIFACT_S3_FORCE_PATH_STYLE: z.enum(['true', 'false']).default('false'),
   MAX_ARTIFACT_BYTES: z.coerce.number().int().positive().max(250 * 1024 * 1024).default(50 * 1024 * 1024),
   IDENTITY_ENCRYPTION_KEYS_JSON: z.string().optional(),
   IDENTITY_ENCRYPTION_ACTIVE_KEY_ID: z.string().regex(/^[a-zA-Z0-9._-]{1,100}$/).optional(),
@@ -52,6 +55,8 @@ export type MarketplaceConfig = {
    * trusted secrets app-side costs nothing and is ready whenever that provider is chosen. */
   paymentWebhookSecrets: string[];
   artifactPath: string;
+  artifactProvider?: 'local' | 's3';
+  artifactS3?: { bucket: string; region: string; endpoint?: string; accessKeyId?: string; secretAccessKey?: string; forcePathStyle: boolean };
   maxArtifactBytes: number;
   identityEncryptionKeys: SecretEncryptionKey[];
   transactionalEmail: { provider: 'disabled' | 'sendgrid'; apiKey?: string; from?: string };
@@ -71,6 +76,8 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): MarketplaceCon
   }
   const artifactPath = path.resolve(value.ARTIFACT_STORAGE_PATH);
   mkdirSync(artifactPath, { recursive: true });
+  if (value.ARTIFACT_STORAGE_PROVIDER === 's3' && (!value.ARTIFACT_S3_BUCKET || !value.ARTIFACT_S3_REGION)) throw new Error('ARTIFACT_S3_BUCKET and ARTIFACT_S3_REGION are required for S3 artifact storage');
+  if (!!value.ARTIFACT_S3_ACCESS_KEY_ID !== !!value.ARTIFACT_S3_SECRET_ACCESS_KEY) throw new Error('Both S3 access key variables must be configured together');
   const signingPrivateKey = readPrivateKey(value.METADATA_SIGNING_PRIVATE_KEY_FILE, value.METADATA_SIGNING_PRIVATE_KEY);
   if (!signingPrivateKey) throw new Error('METADATA_SIGNING_PRIVATE_KEY_FILE or METADATA_SIGNING_PRIVATE_KEY is required');
   const entitlementPrivateKey = readPrivateKey(value.ENTITLEMENT_SIGNING_PRIVATE_KEY_FILE, value.ENTITLEMENT_SIGNING_PRIVATE_KEY);
@@ -103,6 +110,8 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): MarketplaceCon
     entitlementKeyId: value.ENTITLEMENT_SIGNING_KEY_ID,
     paymentWebhookSecrets: [value.PAYMENT_WEBHOOK_SECRET, ...parseSecondaryTokens(value.PAYMENT_WEBHOOK_SECONDARY_SECRETS_JSON, 'PAYMENT_WEBHOOK_SECONDARY_SECRETS_JSON')],
     artifactPath,
+    artifactProvider: value.ARTIFACT_STORAGE_PROVIDER,
+    artifactS3: value.ARTIFACT_STORAGE_PROVIDER === 's3' ? { bucket: value.ARTIFACT_S3_BUCKET!, region: value.ARTIFACT_S3_REGION!, endpoint: value.ARTIFACT_S3_ENDPOINT, accessKeyId: value.ARTIFACT_S3_ACCESS_KEY_ID, secretAccessKey: value.ARTIFACT_S3_SECRET_ACCESS_KEY, forcePathStyle: value.ARTIFACT_S3_FORCE_PATH_STYLE === 'true' } : undefined,
     maxArtifactBytes: value.MAX_ARTIFACT_BYTES,
     identityEncryptionKeys,
     transactionalEmail: { provider: value.TRANSACTIONAL_EMAIL_PROVIDER, apiKey: value.SENDGRID_API_KEY, from: value.TRANSACTIONAL_EMAIL_FROM },

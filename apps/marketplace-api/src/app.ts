@@ -1,7 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import express, { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
-import { createReadStream } from 'node:fs';
 import multer from 'multer';
 import { ZodError } from 'zod';
 import { MarketplaceConfig } from './config';
@@ -160,7 +159,7 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
         'Cache-Control': 'public, max-age=31536000, immutable',
         ETag: `"sha256-${result.artifact.sha256}"`,
       });
-      createReadStream(result.path).on('error', next).pipe(response);
+      result.stream.on('error', next).pipe(response);
     } catch (error) { next(error); }
   });
   app.post('/v1/payments/webhooks/online-hmac-v1', async (request, response, next) => {
