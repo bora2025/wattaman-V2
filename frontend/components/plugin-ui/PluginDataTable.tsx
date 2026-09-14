@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 type Column = { id: string; label?: string; sortable?: boolean; filterable?: boolean };
 
@@ -17,7 +17,7 @@ function display(value: unknown) {
 }
 
 export default function PluginDataTable({
-  title, value, fields, options, loading, error,
+  title, value, fields, options, loading, error, onSelectionChange,
 }: {
   title?: string;
   value: unknown;
@@ -25,6 +25,7 @@ export default function PluginDataTable({
   options?: Record<string, unknown>;
   loading?: boolean;
   error?: string;
+  onSelectionChange?(ids: string[]): void;
 }) {
   const sourceRows = useMemo(() => rowsFrom(value), [value]);
   const columns = useMemo<Column[]>(() => {
@@ -37,6 +38,8 @@ export default function PluginDataTable({
   const [sort, setSort] = useState<{ id: string; direction: 'asc' | 'desc' } | null>(null);
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  useEffect(() => { const available = new Set(sourceRows.map((row, index) => String(row.id ?? `1-${index}`))); setSelected((current) => new Set([...current].filter((id) => available.has(id)))); }, [sourceRows]);
+  useEffect(() => { onSelectionChange?.([...selected]); }, [onSelectionChange, selected]);
 
   const filtered = useMemo(() => {
     const needle = filter.trim().toLocaleLowerCase();

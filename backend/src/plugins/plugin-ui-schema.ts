@@ -192,6 +192,30 @@ export function parsePluginUiBundle(value: unknown, pluginId: string, declaredPe
         for (const key of ['submitLabel', 'confirmation', 'successMessage'] as const) if (options[key] !== undefined) string(options[key], `form ${key}`, 240);
         if (options.initialSource !== undefined && (typeof options.initialSource !== 'string' || !sourceIds.has(options.initialSource) || sourceMethods.get(options.initialSource) !== 'GET')) throw new BadRequestException('Plugin UI form initialSource must reference a GET data source');
       }
+      if (type === 'actions') {
+        const options = object(component.options, 'Plugin UI actions options');
+        if (!Array.isArray(options.actions) || options.actions.length < 1 || options.actions.length > 20) throw new BadRequestException('Plugin UI actions requires 1 to 20 actions');
+        const actionIds = new Set<string>();
+        options.actions.forEach((candidateAction, actionIndex) => {
+          const action = object(candidateAction, `actions[${actionIndex}]`);
+          const actionId = string(action.id, 'action id', 100);
+          const actionSource = string(action.source, 'action source', 100);
+          const mode = string(action.mode, 'action mode', 20);
+          if (!ID.test(actionId) || actionIds.has(actionId) || !['single', 'bulk'].includes(mode)) throw new BadRequestException('Plugin UI action id or mode is invalid');
+          actionIds.add(actionId);
+          string(action.label, 'action label', 120);
+          if (!sourceIds.has(actionSource) || sourceMethods.get(actionSource) === 'GET') throw new BadRequestException('Plugin UI action must reference a mutation data source');
+          if (action.confirmation !== undefined) string(action.confirmation, 'action confirmation', 240);
+          if (action.destructive !== undefined && typeof action.destructive !== 'boolean') throw new BadRequestException('Plugin UI action destructive must be boolean');
+          if (action.body !== undefined) object(action.body, 'action body');
+          if (mode === 'bulk') {
+            const selectionSource = string(action.selectionSource, 'action selectionSource', 100);
+            if (!sourceIds.has(selectionSource) || sourceMethods.get(selectionSource) !== 'GET') throw new BadRequestException('Plugin UI bulk action selectionSource must reference a GET data source');
+            if (action.idField !== undefined && !ID.test(string(action.idField, 'action idField', 100))) throw new BadRequestException('Plugin UI action idField is invalid');
+            if (action.idParameter !== undefined && !/^[a-z][a-zA-Z0-9]*$/.test(string(action.idParameter, 'action idParameter', 60))) throw new BadRequestException('Plugin UI action idParameter is invalid');
+          }
+        });
+      }
       return {
         id: componentId, type,
         ...(component.title === undefined ? {} : { title: string(component.title, 'component title', 200) }),

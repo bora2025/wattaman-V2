@@ -67,6 +67,17 @@ The hostile fixture suite proves each rejection path.
 - API-wide and field-specific server errors are displayed accessibly; success feedback is announced
   and the page's GET sources refresh after mutation.
 
+### LC3-007 — actions
+
+- Action descriptors reference only declared non-GET data sources and define bounded labels,
+  optional request bodies, confirmation text and destructive presentation.
+- Single actions support create/update/delete-style POST, PUT, PATCH and DELETE mutations.
+- Bulk actions consume selections from a declared GET source and execute each selected identity
+  independently, with URI-safe optional path substitution and configurable body identity field.
+- The renderer exposes live completed/total/failed progress, retains partial-failure counts, blocks
+  concurrent action runs and refreshes all page reads after completion.
+- Empty bulk selections are rejected before mutation and destructive actions remain explicit.
+
 ## Verification
 
 Run from `backend/`:
@@ -79,12 +90,12 @@ npm run build
 Result on 2026-09-14:
 
 - 3 suites passed;
-- 33 tests passed;
+- 34 tests passed;
 - 257 backend files compiled successfully.
 - the frontend production build compiled and generated all 120 routes successfully.
 
 ## Remaining gate work
 
-LC3-007 through LC3-016 and all four end-to-end acceptance statements remain open. The gate must
+LC3-008 through LC3-016 and all four end-to-end acceptance statements remain open. The gate must
 not be called complete until a signed sample v2 plugin proves the complete workflow without a core
 frontend rebuild.

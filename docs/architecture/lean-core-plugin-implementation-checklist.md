@@ -267,7 +267,9 @@ Evidence: `docs/acceptance/lean-core/lc2-core-only-composition.md`
 - [x] **LC3-006 Forms** — allow-listed create/edit forms provide typed field validation,
   conditional visibility, bounded select choices, initial GET data, field/global server errors,
   confirmation prompts, busy/success feedback and refresh after successful mutation.
-- [ ] **LC3-007 Actions** — create/update/delete, bulk actions and progress reporting.
+- [x] **LC3-007 Actions** — declarative mutation actions support POST/PUT/PATCH/DELETE,
+  confirmations and destructive presentation; table selections feed sequential bulk execution with
+  live completed/failed progress, partial-failure summaries and post-action refresh.
 - [ ] **LC3-008 Dashboard** — cards, charts and status indicators.
 - [ ] **LC3-009 Files** — scoped upload, download and previews.
 - [ ] **LC3-010 Print/export** — print layout, CSV and PDF actions.

@@ -90,4 +90,15 @@ describe('Plugin UI v2 schema', () => {
     value.pages[0].dataSources[1].method = 'GET';
     expect(() => parsePluginUiBundle(value, 'wattanam.test', permissions)).toThrow('POST, PUT, or PATCH');
   });
+
+  it('validates single and bulk mutation actions', () => {
+    const value: any = valid();
+    value.pages[0].components.push({ id: 'record-actions', type: 'actions', options: { actions: [
+      { id: 'save', label: 'Save', mode: 'single', source: 'save', body: { approved: true } },
+      { id: 'bulk-save', label: 'Save selected', mode: 'bulk', source: 'save', selectionSource: 'record', idField: 'id', idParameter: 'id', confirmation: 'Continue?' },
+    ] } });
+    expect(parsePluginUiBundle(value, 'wattanam.test', permissions).pages[0].components[2]).toMatchObject({ type: 'actions' });
+    value.pages[0].components[2].options.actions[1].selectionSource = 'save';
+    expect(() => parsePluginUiBundle(value, 'wattanam.test', permissions)).toThrow('GET data source');
+  });
 });
