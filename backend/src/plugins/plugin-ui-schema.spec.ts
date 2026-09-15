@@ -76,6 +76,14 @@ describe('Plugin UI v2 schema', () => {
     expect(() => parsePluginUiBundle(value, 'wattanam.test', permissions)).toThrow('pageSize');
   });
 
+  it('allows safe camelCase and nested API data paths as table columns', () => {
+    const value: any = valid();
+    value.pages[0].components[1] = { id: 'records', type: 'table', source: 'record', fields: [
+      { id: 'createdAt', label: 'Created' }, { id: 'owner.name', label: 'Owner' },
+    ], options: {} };
+    expect(parsePluginUiBundle(value, 'wattanam.test', permissions).pages[0].components[1].fields).toHaveLength(2);
+  });
+
   it('validates form fields, mutations, conditions, and confirmations', () => {
     const value: any = valid();
     value.pages[0].components[1] = {

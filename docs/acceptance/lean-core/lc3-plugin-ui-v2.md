@@ -1,6 +1,6 @@
 # LC-3 Plugin UI v2 evidence
 
-Status: in progress
+Status: complete
 
 ## Completed foundation
 
@@ -118,6 +118,26 @@ The hostile fixture suite proves each rejection path.
 navigation and dispatch. A parity test proves a denied role receives neither navigation nor page
 metadata and receives a permission error if it calls the route directly.
 
+### LC3-014–015 — browser accessibility and responsive certification
+
+- Playwright loads the signed official-template descriptor through the real generic page host and
+  mocks only the authenticated API boundary.
+- The list/create/print workflow proves keyboard focus, submission feedback and an axe scan of the
+  plugin-owned page surface with no serious or critical findings.
+- Both list/create/print and detail/edit workflows pass on a Pixel 7 profile, an 820 x 1180 tablet
+  viewport and Desktop Chrome.
+- Every viewport proves that the document stays within its client width. The test also exposed and
+  closed a real renderer omission by mapping the validated `detail` component to the host-owned
+  key/value card renderer.
+
+### Signed package enable/disable lifecycle
+
+`plugin-template-v2.spec.ts` uses the public scaffolder and packer, verifies the signed artifact,
+materializes exactly those verified files into the configured plugin directory, and loads it through
+`PluginRuntimeService`. The already-built generic host discovers its navigation and both pages and
+dispatches the records route without generated frontend code or a rebuild. Runtime unload then
+removes navigation and page discovery and makes direct route dispatch fail closed as not found.
+
 ### LC3-013 — localization and regional formatting
 
 - A page may carry bounded BCP-47 translation dictionaries and must name a default language that
@@ -146,8 +166,29 @@ Result on 2026-09-14:
 - 257 backend files compiled successfully.
 - the frontend production build compiled and generated all 120 routes successfully.
 
-## Remaining gate work
+Run from `frontend/`:
 
-LC3-014, LC3-015 and all four end-to-end acceptance statements remain open. The gate must
-not be called complete until a signed sample v2 plugin proves the complete workflow without a core
-frontend rebuild.
+```text
+npm run test:plugin-ui:e2e
+```
+
+Result on 2026-09-15: all 6 browser scenarios passed (2 workflows across phone, tablet and desktop).
+The Next.js development server emits a non-fatal webpack cache warning in this Windows workspace;
+it does not affect compilation or browser results.
+
+The focused backend lifecycle/schema/permission run also passed 3 suites and 36 tests.
+
+## Gate result
+
+All LC-3 implementation and acceptance items are complete. The signed template, activation-time
+security boundary, generic browser host, enable/disable lifecycle, accessibility and responsive
+certification are covered by executable tests.
+
+## Signed sample prerequisite (2026-09-14)
+
+The official SDK 1.1 template now emits UI schema v2 with list, create, detail, edit and print/CSV/PDF
+pages backed by namespaced database routes. `plugin-template-v2.spec.ts` scaffolds it, signs it with
+the public CLI, verifies the resulting `.wtp` through the production package verifier, then parses
+the descriptor through the activation-time UI validator. This closes the signed-sample workflow
+statement. Browser accessibility, responsive behavior and install/disable lifecycle certification
+are complete.

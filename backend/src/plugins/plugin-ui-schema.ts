@@ -168,7 +168,7 @@ export function parsePluginUiBundle(value: unknown, pluginId: string, declaredPe
         component.fields.forEach((candidateField, fieldIndex) => {
           const field = object(candidateField, `table fields[${fieldIndex}]`);
           const fieldId = string(field.id, 'table column id', 100);
-          if (!ID.test(fieldId) || columnIds.has(fieldId)) throw new BadRequestException('Plugin UI table column id is invalid or duplicated');
+          if (!DATA_PATH.test(fieldId) || columnIds.has(fieldId)) throw new BadRequestException('Plugin UI table column id is invalid or duplicated');
           columnIds.add(fieldId);
           if (field.label !== undefined) string(field.label, 'table column label', 120);
           if (field.sortable !== undefined && typeof field.sortable !== 'boolean') throw new BadRequestException('Plugin UI table sortable must be boolean');

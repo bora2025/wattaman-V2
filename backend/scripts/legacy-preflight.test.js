@@ -2,7 +2,7 @@
 
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { BASELINE, buildReport, classify, fingerprint } = require('./legacy-preflight');
+const { BASELINE, adoptionReadiness, buildReport, classify, fingerprint } = require('./legacy-preflight');
 
 test('empty databases can run normal migrations', () => {
   assert.deepEqual(classify({ tables: [], migrations: [] }), {
@@ -39,4 +39,21 @@ test('reports contain stable metadata fingerprints but no customer rows', () => 
   assert.equal(report.schemaFingerprint, fingerprint(snapshot));
   assert.equal(report.tableCount, 3);
   assert.equal(JSON.stringify(report).includes('password'), false);
+});
+
+test('adoption readiness accepts a reviewed supported source with sufficient capacity', () => {
+  const snapshot = { databaseVersion: '16.4', databaseBytes: 1000, tables: ['User', 'Class', 'Student'], migrations: [], columns: [], constraints: [] };
+  const report = adoptionReadiness(snapshot, { approvedFingerprint: fingerprint(snapshot), availableCapacityBytes: 300_000_000 });
+  assert.equal(report.ready, true);
+  assert.deepEqual(report.blockers, []);
+  assert.equal(report.approvedFingerprintMatches, true);
+});
+
+test('adoption readiness blocks version, fingerprint and capacity failures', () => {
+  const snapshot = { databaseVersion: '13.9', databaseBytes: 100_000_000, tables: ['User', 'Class', 'Student'], migrations: [], columns: [], constraints: [] };
+  const report = adoptionReadiness(snapshot, { approvedFingerprint: 'a'.repeat(64), availableCapacityBytes: 200_000_000 });
+  assert.equal(report.ready, false);
+  assert.match(report.blockers.join('; '), /PostgreSQL major version/);
+  assert.match(report.blockers.join('; '), /fingerprint/);
+  assert.match(report.blockers.join('; '), /capacity is insufficient/);
 });

@@ -75,18 +75,70 @@ function prismaCommand(args, env) {
   command(executable, args, env);
 }
 
+function buildDryRunPlan(report, input, ownerExists) {
+  const blockers = [...(report.adoptionReadiness?.blockers || [])];
+  if (!ownerExists) blockers.push('ADOPT_OWNER_EMAIL must identify an existing SUPER_ADMIN');
+  return {
+    format: 'wattanam-legacy-adoption-dry-run-v1',
+    generatedAt: new Date().toISOString(),
+    dryRun: true,
+    zeroWriteGuarantee: true,
+    ready: blockers.length === 0,
+    blockers,
+    source: {
+      state: report.state,
+      schemaFingerprint: report.schemaFingerprint,
+      databaseVersion: report.databaseVersion,
+      databaseBytes: report.databaseBytes,
+      tableCount: report.tableCount,
+      columnCount: report.columnCount,
+    },
+    target: { schoolSlug: input.schoolSlug, coreVersion: input.coreVersion },
+    plannedSteps: [
+      'create_verified_recovery_backup',
+      `record_baseline_${BASELINE}`,
+      'deploy_post_baseline_migrations',
+      'create_installation_identity_and_audit',
+      'capture_after_snapshot_and_reconcile',
+    ],
+    reconciliationPreview: {
+      preserveAllSourceTables: true,
+      preserveAllSourceRows: true,
+      expectedSourceTableCount: report.tableCount,
+      checks: ['row_counts', 'foreign_key_orphans', 'content_hashes', 'credential_hash_format'],
+    },
+  };
+}
+
+async function confirmedOwnerExists(input) {
+  const prisma = new PrismaClient();
+  try {
+    return Boolean(await prisma.user.findFirst({ where: { email: { equals: input.ownerEmail, mode: 'insensitive' }, role: 'SUPER_ADMIN' }, select: { id: true } }));
+  } finally { await prisma.$disconnect(); }
+}
+
 async function adopt() {
   const isolated = process.argv.includes('--use-adopt-database-url');
   if (isolated && !process.env.ADOPT_DATABASE_URL?.trim()) throw new Error('ADOPT_DATABASE_URL is required with --use-adopt-database-url');
   if (isolated) process.env.DATABASE_URL = process.env.ADOPT_DATABASE_URL.trim();
   const input = parseInput();
   const databaseEnvironment = postgresEnvironment();
-  const report = buildReport(querySnapshot(databaseEnvironment));
+  const report = buildReport(querySnapshot(databaseEnvironment), {
+    approvedFingerprint: input.fingerprint,
+    availableCapacityBytes: process.env.ADOPT_TARGET_CAPACITY_BYTES?.trim(),
+  });
+  if (process.argv.includes('--dry-run')) {
+    const plan = buildDryRunPlan(report, input, await confirmedOwnerExists(input));
+    process.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);
+    if (!plan.ready) process.exitCode = 2;
+    return plan;
+  }
   const directory = backupDirectory();
   const journalFile = path.join(directory, `legacy-adoption-${input.schoolSlug}.json`);
   let journal = readJournal(journalFile, input);
 
   if (!journal) {
+    if (!report.adoptionReadiness.ready) throw new Error(`adoption preflight failed: ${report.adoptionReadiness.blockers.join('; ')}`);
     if (report.state !== 'legacy_unadopted') throw new Error(`initial adoption requires legacy_unadopted state; found ${report.state}`);
     if (report.schemaFingerprint !== input.fingerprint) throw new Error('current schema fingerprint does not match the reviewed approval');
     const prisma = new PrismaClient();
@@ -154,4 +206,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { parseInput, readJournal };
+module.exports = { buildDryRunPlan, parseInput, readJournal };

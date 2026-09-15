@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const Module = require('module');
 const { sha256 } = require('../util');
 
 /**
@@ -11,7 +12,7 @@ const { sha256 } = require('../util');
  * itself) on any failure, so it stays a plain, testable function; bin/cli.js
  * is the only place that turns a thrown error into a process exit code.
  */
-async function run(argv) {
+async function run(argv, options = {}) {
   const dir = argv[0];
   if (!dir || argv.includes('--help')) {
     process.stdout.write('Usage: wattanam-plugin check <plugin-directory>\n');
@@ -23,9 +24,10 @@ async function run(argv) {
   const { parsePluginManifest, createTestContext } = require('@wattanam/plugin-sdk');
 
   let failures = 0;
+  const failedLabels = [];
   const check = (label, ok, detail) => {
     process.stdout.write(`${ok ? 'PASS' : 'FAIL'} ${label}${detail ? ` -- ${detail}` : ''}\n`);
-    if (!ok) failures += 1;
+    if (!ok) { failures += 1; failedLabels.push(`${label}${detail ? ` (${detail})` : ''}`); }
   };
 
   const manifestPath = path.join(root, 'plugin.json');
@@ -54,13 +56,17 @@ async function run(argv) {
       check(`entry file exists: ${entry}`, fs.existsSync(path.join(root, entry)));
     }
 
-    if (manifest.backendEntry) {
+    if (manifest.backendEntry && options.activate !== false) {
       const entryPath = path.resolve(root, manifest.backendEntry);
       let plugin;
       try {
-        delete require.cache[require.resolve(entryPath)];
-        // eslint-disable-next-line global-require, import/no-dynamic-require
-        plugin = require(entryPath);
+        // Compile the entry from its real filename. This preserves normal relative require()
+        // resolution while avoiding test-runner resolvers that reject valid temp directories.
+        const entryModule = new Module(entryPath, module);
+        entryModule.filename = entryPath;
+        entryModule.paths = Module._nodeModulePaths(path.dirname(entryPath));
+        entryModule._compile(fs.readFileSync(entryPath, 'utf8'), entryPath);
+        plugin = entryModule.exports;
         check('backend entry exports { id, activate }', Boolean(plugin) && plugin.id === manifest.id && typeof plugin.activate === 'function', plugin ? `id=${plugin.id}` : 'module has no exports');
       } catch (error) {
         check('backend entry loads without throwing', false, error.message);
@@ -78,7 +84,7 @@ async function run(argv) {
   }
 
   process.stdout.write(`\n${failures === 0 ? 'ALL CHECKS PASSED' : `${failures} CHECK(S) FAILED`}\n`);
-  if (failures > 0) throw new Error(`${failures} check(s) failed`);
+  if (failures > 0) throw new Error(`${failures} check(s) failed: ${failedLabels.join(', ')}`);
 }
 
 module.exports = { run };

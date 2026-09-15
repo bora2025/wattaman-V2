@@ -14,11 +14,22 @@ describe('wattanam-plugin init', () => {
     const manifest = JSON.parse(fs.readFileSync(path.join(dest, 'plugin.json'), 'utf8'));
     expect(manifest.id).toBe('acme.widget');
     expect(manifest.publisher).toBe('acme');
-    expect(manifest.navigation[0].href).toBe('/plugins/acme.widget/settings');
+    expect(manifest.navigation[0].href).toBe('/plugins/acme.widget/records');
+    expect(manifest.sdkVersion).toBe('1.1.0');
+    expect(manifest.supportedLanguages).toEqual(['en', 'km']);
+    expect(manifest.migrations[0].checksum).toMatch(/^[a-f0-9]{64}$/);
 
     const backend = fs.readFileSync(path.join(dest, 'backend', 'index.js'), 'utf8');
     expect(backend).toContain("id: 'acme.widget'");
     expect(fs.existsSync(path.join(dest, 'frontend', 'page.json'))).toBe(true);
+    expect(fs.existsSync(path.join(dest, 'translations', 'en.json'))).toBe(true);
+    expect(fs.existsSync(path.join(dest, 'translations', 'km.json'))).toBe(true);
+    expect(fs.existsSync(path.join(dest, 'docs', 'permissions.md'))).toBe(true);
+    const frontend = JSON.parse(fs.readFileSync(path.join(dest, 'frontend', 'page.json'), 'utf8'));
+    expect(frontend.schemaVersion).toBe(2);
+    expect(frontend.kind).toBe('declarative-ui');
+    expect(frontend.pages.map((page) => page.routePath)).toEqual(['records', 'records/:id']);
+    expect(frontend.pages[0].components.map((component) => component.type)).toEqual(['heading', 'table', 'form', 'print']);
 
     fs.rmSync(parent, { recursive: true, force: true });
   });

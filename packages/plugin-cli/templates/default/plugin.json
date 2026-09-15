@@ -9,14 +9,22 @@
   "license": "MIT",
   "backendEntry": "backend/index.js",
   "frontendEntry": "frontend/page.json",
-  "sdkVersion": "1.0.0",
+  "sdkVersion": "1.1.0",
   "runtimeVersion": "1.0.0",
-  "capabilities": ["api.routes", "navigation.register", "permissions.register", "settings.read", "settings.write", "ui.pages"],
-  "permissions": ["{{publisher}}.{{name}}.manage"],
+  "capabilities": ["api.routes", "database.read", "database.write", "navigation.register", "permissions.register", "settings.read", "settings.write", "ui.pages"],
+  "permissions": ["{{publisher}}.{{name}}.view", "{{publisher}}.{{name}}.manage"],
   "dependencies": {},
-  "migrations": [],
-  "navigation": [
-    { "id": "settings", "label": "{{displayName}} settings", "href": "/plugins/{{publisher}}.{{name}}/settings", "permission": "{{publisher}}.{{name}}.manage" }
+  "optionalDependencies": {},
+  "migrations": [
+    {
+      "id": "001_create_widget",
+      "path": "migrations/001_create_widget.sql",
+      "checksum": "{{migrationChecksum}}",
+      "destructive": false
+    }
   ],
-  "supportedLanguages": ["en"]
+  "navigation": [
+    { "id": "records", "label": "{{displayName}}", "href": "/plugins/{{publisher}}.{{name}}/records", "permission": "{{publisher}}.{{name}}.view" }
+  ],
+  "supportedLanguages": ["en", "km"]
 }

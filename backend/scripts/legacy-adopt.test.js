@@ -5,7 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const test = require('node:test');
-const { parseInput, readJournal } = require('./legacy-adopt');
+const { buildDryRunPlan, parseInput, readJournal } = require('./legacy-adopt');
 
 const valid = {
   ADOPT_NON_INTERACTIVE: 'true', ADOPT_SCHOOL_NAME: 'Legacy School', ADOPT_SCHOOL_SLUG: 'legacy-school',
@@ -50,4 +50,27 @@ test('journal rejects backup path traversal', () => {
     fs.writeFileSync(journalFile, JSON.stringify({ format: 'wattanam-legacy-adoption-v1', schoolSlug: 'legacy-school', sourceFingerprint: 'a'.repeat(64), backup: { file: '../escape.dump', sha256: 'a'.repeat(64) } }));
     assert.throws(() => readJournal(journalFile, parseInput(valid)), /invalid backup filename/);
   } finally { fs.rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('dry-run plan previews every mutation and reconciliation without performing one', () => {
+  const input = parseInput(valid);
+  const report = {
+    state: 'legacy_unadopted', schemaFingerprint: input.fingerprint, databaseVersion: '16.4',
+    databaseBytes: 1000, tableCount: 68, columnCount: 400,
+    adoptionReadiness: { ready: true, blockers: [] },
+  };
+  const plan = buildDryRunPlan(report, input, true);
+  assert.equal(plan.ready, true);
+  assert.equal(plan.dryRun, true);
+  assert.equal(plan.zeroWriteGuarantee, true);
+  assert.equal(plan.reconciliationPreview.expectedSourceTableCount, 68);
+  assert.deepEqual(plan.reconciliationPreview.checks, ['row_counts', 'foreign_key_orphans', 'content_hashes', 'credential_hash_format']);
+  assert.equal(plan.plannedSteps.length, 5);
+});
+
+test('dry-run plan reports readiness and owner blockers', () => {
+  const report = { state: 'unsupported_partial', adoptionReadiness: { ready: false, blockers: ['source mismatch'] } };
+  const plan = buildDryRunPlan(report, parseInput(valid), false);
+  assert.equal(plan.ready, false);
+  assert.deepEqual(plan.blockers, ['source mismatch', 'ADOPT_OWNER_EMAIL must identify an existing SUPER_ADMIN']);
 });

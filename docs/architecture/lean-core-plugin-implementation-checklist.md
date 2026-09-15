@@ -1,6 +1,8 @@
 # Lean Core and Module-to-Plugin Implementation Checklist
 
-Status: **LC-0 and LC-1 complete; LC-2 is next**
+Status: **LC-0, LC-1, LC-2, LC-3 and LC-5 complete; LC-4 partially accepted;
+MP-1 through MP-9 and LC-F not started**
+Last full checklist audit: 2026-09-15 — **115 complete, 61 open, 1 partial, 0 blocked**.
 Created: 2026-09-11  
 Architecture plan: [Wattanam Lean Core and Plugin-First Architecture](./wattanam-lean-core-plugin-first-plan.md)  
 Migration plan: [Business Modules to Official Plugins](./module-to-plugin-migration-plan.md)
@@ -285,17 +287,20 @@ Evidence: `docs/acceptance/lean-core/lc2-core-only-composition.md`
 - [x] **LC3-013 Localization** — bounded descriptor dictionaries provide English/Khmer fallback;
   host formatting uses the installation locale, IANA timezone and ISO currency for declared
   number/currency/date/datetime values.
-- [ ] **LC3-014 Accessibility** — keyboard, screen-reader, focus and contrast tests.
-- [ ] **LC3-015 Responsive UI** — phone, tablet and desktop certification.
+- [x] **LC3-014 Accessibility** — the signed sample's real list/create/print surface passes
+  keyboard-focus checks and an axe scan with no serious or critical semantic/contrast findings.
+- [x] **LC3-015 Responsive UI** — list/create/print and detail/edit workflows pass without document
+  overflow on phone, tablet and desktop Playwright projects.
 - [x] **LC3-016 Permission parity** — the same persisted role grant filters v2 navigation and page
   discovery and remains the authoritative audited check at API dispatch; denied deep links fail.
 
 Acceptance:
 
-- [ ] A signed sample plugin adds a real list/form/detail/print workflow.
-- [ ] Installing it requires no core frontend rebuild or redeployment.
-- [ ] Disabling it removes its navigation and blocks direct deep links.
-- [ ] Malformed and hostile descriptors fail closed.
+- [x] A signed sample plugin adds a real list/form/detail/print workflow.
+- [x] Installing/enabling it requires no core frontend rebuild or redeployment: the signed artifact
+  is discovered by the runtime and rendered by the existing generic host.
+- [x] Disabling it removes its navigation/pages and blocks direct API/deep-link data access.
+- [x] Malformed and hostile descriptors fail closed.
 
 Evidence: `docs/acceptance/lean-core/lc3-plugin-ui-v2.md`
 
@@ -352,25 +357,42 @@ Evidence: `docs/acceptance/lean-core/lc4-runtime-contracts.md`
 
 ## Gate LC-5 — Migration and certification toolkit
 
-- [ ] **LC5-001 Official template** — manifest, backend, frontend, migrations, translations and docs.
-- [ ] **LC5-002 Package CLI** — init, validate, test, pack, inspect and publish workflow.
-- [ ] **LC5-003 Adoption preflight** — source schema/version and capacity checks.
-- [ ] **LC5-004 Dry run** — zero-write migration plan and reconciliation preview.
-- [ ] **LC5-005 Journaled backfill** — resumable, idempotent chunks with visible progress.
-- [ ] **LC5-006 Maintenance coordination** — prevent inconsistent writes during cutover.
-- [ ] **LC5-007 Reconciliation** — rows, relationships, amounts, timestamps and files.
-- [ ] **LC5-008 Rollback** — restore routing/registry without deleting either dataset.
-- [ ] **LC5-009 Compatibility proxy** — thin, Prisma-free, owned and removal-versioned.
-- [ ] **LC5-010 Lifecycle suite** — install, activate, disable, update, remove and reinstall.
-- [ ] **LC5-011 Recovery suite** — portable backup/restore including artifacts, grants and files.
-- [ ] **LC5-012 Security suite** — package, SQL, permissions, supply chain and hostile fixtures.
-- [ ] **LC5-013 Evidence generator** — write reproducible certification output to acceptance docs.
+- [x] **LC5-001 Official template** — the CLI scaffold now produces a validated SDK 1.1 manifest,
+  backend lifecycle, declarative frontend, checksummed namespaced migration, English/Khmer
+  translations, changelog and permission/data-model/testing documentation.
+- [x] **LC5-002 Package CLI** — first-class init, validate, SDK-harness test, deterministic signed
+  pack, checksum-safe archive inspection and authenticated repository publish commands are covered
+  by an end-to-end local workflow test.
+- [x] **LC5-003 Adoption preflight** — the read-only legacy report now gates source schema state,
+  approved schema fingerprint, PostgreSQL 14–18 compatibility and target capacity (2× source plus
+  256 MiB headroom); initial adoption refuses all mutation when any check fails.
+- [x] **LC5-004 Dry run** — `db:legacy:dry-run` performs only read-only schema and owner checks,
+  emits the ordered migration plan plus row/relationship/hash reconciliation scope, and returns a
+  failing status for blockers before any backup directory, journal or database write is created.
+- [x] **LC5-005 Journaled backfill** — atomic, identity-bound journals checkpoint idempotent chunks
+  and expose cursor/processed-row progress; tests kill and resume at every chunk checkpoint.
+- [x] **LC5-006 Maintenance coordination** — exclusive, operation-owned maintenance locks prevent
+  competing cutovers and always release on completion or failure.
+- [x] **LC5-007 Reconciliation** — the toolkit compares rows, relationships, decimal amounts,
+  timestamps and file digests and fails the certification decision on any mismatch.
+- [x] **LC5-008 Rollback** — rollback restores legacy route ownership and disables the plugin while
+  retaining both source and plugin datasets for recovery or retry.
+- [x] **LC5-009 Compatibility proxy** — a machine-checked registry requires every proxy to be thin,
+  Prisma-free, plugin-owned and assigned an explicit core removal version.
+- [x] **LC5-010 Lifecycle suite** — 38 tests certify service lifecycle, runtime cleanup, rollout and
+  the independently packed announcements reference plugin.
+- [x] **LC5-011 Recovery suite** — 12 tests cover portable checksummed database/plugin recovery and
+  reconciliation; a boundary test pins database registry/grants, plugin code and mutable files.
+- [x] **LC5-012 Security suite** — 25 tests cover signatures/packages, SQL namespaces,
+  permissions/capabilities and hostile traversal, bomb, symlink, SSRF and secret-access fixtures.
+- [x] **LC5-013 Evidence generator** — `certify:plugin:migration` runs all suites without shell
+  dependence and writes a hashed, fail-closed JSON certification report with counts and diagnostics.
 
 Acceptance:
 
-- [ ] Kill the migration at every checkpoint; retry or rollback always produces one authoritative
+- [x] Kill the migration at every checkpoint; retry or rollback always produces one authoritative
   reconciled dataset.
-- [ ] The independently packaged reference plugin passes the complete suite.
+- [x] The independently packaged reference plugin passes the complete suite.
 
 Evidence: `docs/acceptance/lean-core/lc5-migration-certification-toolkit.md`
 
@@ -476,17 +498,18 @@ For every plugin:
 
 Evidence: `docs/acceptance/lean-core/lcf-production-default.md`
 
-## Immediate coding queue
+## Current completion queue
 
-Only start these tasks after LC-0 approval:
+The architecture is not ready for the final production-default gate. Continue in this dependency
+order; a later gate must not be used to bypass an earlier gate's acceptance evidence:
 
-1. [x] Implement the reproducible inventory generator (`LC1-001` through `LC1-014`).
-2. [x] Add and validate `WATTANAM_DISTRIBUTION` (`LC2-001`, `LC2-002`, `LC2-007`).
-3. [x] Introduce the backend module registry (`LC2-003`, `LC2-004`).
-4. [x] Introduce frontend core/plugin navigation registries (`LC2-008`, `LC2-009`).
-5. [x] Add clean-database core-only boot/install tests (`LC2-014` through `LC2-016`).
-6. [x] Add the legacy-full regression lane (`LC2-023`).
-7. [x] Complete the remaining LC-2 operational proofs before beginning UI v2.
+1. Complete the production-shaped S3 immutability/restart/scale drill for `LC4-001`.
+2. Complete MP-1 Document Designer, including a controlled-school pilot and rollback window.
+3. Complete MP-2 Academic Management before starting MP-3 Attendance.
+4. Complete MP-3, then migrate MP-4 through MP-9 using the same certification gate.
+5. Run LC-F hosted and Docker proofs and obtain security, privacy, legal, finance, support and
+   operations approval before changing new installations from `legacy-full` to `core`.
 
-Do not delete or move current module code in this first queue. The first milestone creates a safe,
-testable composition boundary while preserving existing customer schools.
+The 61 open lines include gate items, acceptance statements and the nine reusable per-plugin
+certification requirements. External live drills, real-device checks, pilots and organizational
+approvals must remain open until their durable evidence exists; local unit tests cannot close them.

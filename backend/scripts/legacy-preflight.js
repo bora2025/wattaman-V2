@@ -5,6 +5,37 @@ const { postgresEnvironment, run } = require('./db-toolkit');
 
 const BASELINE = '20260827000000_baseline';
 const LEGACY_ANCHORS = ['User', 'Class', 'Student'];
+const MIN_POSTGRES_MAJOR = 14;
+const MAX_POSTGRES_MAJOR = 18;
+const CAPACITY_MULTIPLIER = 2;
+const CAPACITY_HEADROOM_BYTES = 256 * 1024 * 1024;
+
+function adoptionReadiness(snapshot, requirements = {}) {
+  const classification = classify(snapshot);
+  const databaseBytes = Number(snapshot.databaseBytes || 0);
+  const postgresMajor = Number.parseInt(String(snapshot.databaseVersion || '').split('.')[0], 10);
+  const requiredCapacityBytes = Math.ceil(databaseBytes * CAPACITY_MULTIPLIER + CAPACITY_HEADROOM_BYTES);
+  const availableCapacityBytes = Number(requirements.availableCapacityBytes || 0);
+  const blockers = [];
+  if (classification.state !== 'legacy_unadopted') blockers.push(`source schema state must be legacy_unadopted (found ${classification.state})`);
+  if (!Number.isInteger(postgresMajor) || postgresMajor < MIN_POSTGRES_MAJOR || postgresMajor > MAX_POSTGRES_MAJOR) {
+    blockers.push(`PostgreSQL major version must be ${MIN_POSTGRES_MAJOR}-${MAX_POSTGRES_MAJOR}`);
+  }
+  const actualFingerprint = fingerprint(snapshot);
+  if (!requirements.approvedFingerprint) blockers.push('approved source schema fingerprint is required');
+  else if (requirements.approvedFingerprint !== actualFingerprint) blockers.push('source schema fingerprint does not match approval');
+  if (!Number.isFinite(availableCapacityBytes) || availableCapacityBytes <= 0) blockers.push('target capacity bytes are required');
+  else if (availableCapacityBytes < requiredCapacityBytes) blockers.push(`target capacity is insufficient (requires ${requiredCapacityBytes} bytes)`);
+  return {
+    ready: blockers.length === 0,
+    blockers,
+    postgresMajor: Number.isInteger(postgresMajor) ? postgresMajor : null,
+    supportedPostgresRange: `${MIN_POSTGRES_MAJOR}-${MAX_POSTGRES_MAJOR}`,
+    requiredCapacityBytes,
+    availableCapacityBytes: availableCapacityBytes > 0 ? availableCapacityBytes : null,
+    approvedFingerprintMatches: Boolean(requirements.approvedFingerprint) && requirements.approvedFingerprint === actualFingerprint,
+  };
+}
 
 function classify(snapshot) {
   const tables = new Set(snapshot.tables || []);
@@ -70,7 +101,7 @@ SELECT json_build_object(
   return snapshot;
 }
 
-function buildReport(snapshot) {
+function buildReport(snapshot, requirements) {
   const result = classify(snapshot);
   return {
     format: 'wattanam-legacy-preflight-v1',
@@ -87,6 +118,7 @@ function buildReport(snapshot) {
     appliedMigrations: snapshot.migrations || [],
     schemaFingerprint: fingerprint(snapshot),
     containsCustomerRows: false,
+    ...(requirements ? { adoptionReadiness: adoptionReadiness(snapshot, requirements) } : {}),
   };
 }
 
@@ -99,9 +131,12 @@ function main() {
   if (selectors.length > 1) throw new Error('select only one alternate database URL');
   const selected = selectors[0];
   if (selected && !process.env[selected[1]]) throw new Error(`${selected[1]} is required with ${selected[0]}`);
-  const report = buildReport(querySnapshot(postgresEnvironment(selected ? process.env[selected[1]] : process.env.DATABASE_URL)));
+  const report = buildReport(querySnapshot(postgresEnvironment(selected ? process.env[selected[1]] : process.env.DATABASE_URL)), {
+    approvedFingerprint: process.env.ADOPT_APPROVED_SCHEMA_FINGERPRINT?.trim(),
+    availableCapacityBytes: process.env.ADOPT_TARGET_CAPACITY_BYTES?.trim(),
+  });
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
-  if (report.state === 'unsupported_partial') process.exitCode = 2;
+  if (report.state === 'unsupported_partial' || !report.adoptionReadiness.ready) process.exitCode = 2;
 }
 
 if (require.main === module) {
@@ -112,4 +147,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { BASELINE, LEGACY_ANCHORS, buildReport, classify, fingerprint, querySnapshot };
+module.exports = { BASELINE, LEGACY_ANCHORS, adoptionReadiness, buildReport, classify, fingerprint, querySnapshot };

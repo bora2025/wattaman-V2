@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { fail, renderTemplate } = require('../util');
+const { fail, renderTemplate, sha256 } = require('../util');
 
 function run(argv) {
   const id = argv[0];
@@ -23,6 +23,9 @@ function run(argv) {
 
   const displayName = name.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   renderTemplate(path.join(__dirname, '..', '..', 'templates', 'default'), destination, { publisher, name, displayName });
+  const migration = path.join(destination, 'migrations', '001_create_widget.sql');
+  const manifestPath = path.join(destination, 'plugin.json');
+  fs.writeFileSync(manifestPath, fs.readFileSync(manifestPath, 'utf8').replace('{{migrationChecksum}}', sha256(fs.readFileSync(migration))));
   process.stdout.write(`Scaffolded ${id} at ${destination}\nNext: wattanam-plugin check ${destination}\n`);
 }
 

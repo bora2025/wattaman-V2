@@ -1,6 +1,8 @@
 # {{displayName}}
 
-Scaffolded by `wattanam-plugin init`. See [docs/plugins/package-and-runtime.md](https://github.com/wattanam/wattanam-v2/blob/main/docs/plugins/package-and-runtime.md) for the full SDK 1.0 contract this plugin is built against.
+Scaffolded by `wattanam-plugin init`. The project includes a signed manifest contract, backend,
+declarative frontend, namespaced migration, English/Khmer translations, and operational docs.
+See `docs/plugins/package-and-runtime.md` in Wattanam V2 for the SDK 1.1 contract.
 
 ## Develop
 
