@@ -1,9 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { DirectoryService } from '../directory/directory.service';
 
 @Injectable()
 export class ScoringService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private readonly directory: DirectoryService) {}
 
   // ─── Score Sheets ─────────────────────────────────────────────────────────
 
@@ -53,11 +54,8 @@ export class ScoringService {
 
   /** Returns sheets scoped to a CLASS_ADMIN user — only sheets for their assigned classes. */
   async getSheetsForClassAdmin(userId: string) {
-    const myClasses = await this.prisma.class.findMany({
-      where: { classAdminId: userId },
-      select: { id: true },
-    });
-    return this.getSheetsByClassIds(myClasses.map(c => c.id));
+    const classIds = await this.directory.classesForUser(userId, 'CLASS_ADMIN');
+    return this.getSheetsByClassIds(classIds);
   }
 
   async getSheet(id: string) {

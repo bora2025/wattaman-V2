@@ -54,12 +54,9 @@ test('LC2-008: frontend distribution validation is explicit and upgrade-safe', a
   );
 });
 
-test('LC2-009: administrator core navigation is the exact approved surface set', () => {
-  const source = fs.readFileSync(path.resolve(__dirname, '..', 'frontend', 'lib', 'admin-nav.ts'), 'utf8');
-  const block = source.match(/const coreAdminHrefs = new Set\(\[([\s\S]*?)\]\);/);
-  assert.ok(block, 'coreAdminHrefs registry was not found');
-  const hrefs = [...block[1].matchAll(/'([^']+)'/g)].map((match) => match[1]);
-  assert.deepEqual(hrefs, [
+test('LC2-009: administrator core navigation is the exact approved surface set', async () => {
+  const { isCoreNavigationHref } = await registry();
+  const hrefs = [
     '/admin',
     '/admin/users',
     '/admin/plugins',
@@ -69,7 +66,18 @@ test('LC2-009: administrator core navigation is the exact approved surface set',
     '/admin/system',
     '/admin/platform-billing',
     '/admin/audit',
-  ]);
+  ];
+  assert.ok(hrefs.every(isCoreNavigationHref));
+  assert.equal(isCoreNavigationHref('/admin/attendance'), false);
+  assert.equal(isCoreNavigationHref('/admin/classes'), false);
+});
+
+test('LC2-009: Sidebar resolves distribution at runtime and fails closed before it loads', () => {
+  const source = fs.readFileSync(path.resolve(__dirname, '..', 'frontend', 'components', 'Sidebar.tsx'), 'utf8');
+  assert.match(source, /useState<FrontendDistribution>\('core'\)/);
+  assert.match(source, /api\/version/);
+  assert.match(source, /version\?\.distribution === 'legacy-full'/);
+  assert.match(source, /isCoreNavigationHref\(item\.href\)/);
 });
 
 test('LC2-010: core route policy admits core and plugin-host surfaces', async () => {

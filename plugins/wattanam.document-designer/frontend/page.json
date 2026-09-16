@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 2, "kind": "declarative-ui",
+  "pages": [
+    {
+      "id": "templates", "title": "Document Designer", "routePath": "templates", "permission": "wattanam.document-designer.view", "parameters": [],
+      "dataSources": [
+        { "id": "templates", "method": "GET", "path": "templates", "permission": "wattanam.document-designer.view" },
+        { "id": "create", "method": "POST", "path": "templates", "permission": "wattanam.document-designer.edit" }
+      ],
+      "components": [
+        { "id": "heading", "type": "heading", "title": "Document templates" },
+        { "id": "templates-table", "type": "table", "title": "Templates", "source": "templates", "fields": [
+          { "id": "name", "label": "Name", "sortable": true, "filterable": true },
+          { "id": "documentType", "label": "Document type", "sortable": true, "filterable": true },
+          { "id": "isActive", "label": "Active", "format": "boolean", "sortable": true },
+          { "id": "updatedAt", "label": "Updated", "format": "datetime", "sortable": true }
+        ], "options": { "pageSize": 20, "selectable": false } },
+        { "id": "create-form", "type": "form", "title": "Create template", "source": "create", "fields": [
+          { "id": "name", "type": "text", "label": "Name", "required": true, "minLength": 1, "maxLength": 120 },
+          { "id": "documentType", "type": "text", "label": "Document type", "required": true, "minLength": 1, "maxLength": 40 }
+        ], "options": { "submitLabel": "Create", "successMessage": "Template created" } }
+      ]
+    },
+    {
+      "id": "template-detail", "title": "Document template", "routePath": "templates/:id", "permission": "wattanam.document-designer.view",
+      "parameters": [{ "name": "id", "type": "string", "maximumLength": 120 }],
+      "dataSources": [{ "id": "template", "method": "GET", "path": "templates/:id", "permission": "wattanam.document-designer.view" }],
+      "components": [{ "id": "template-detail", "type": "detail", "title": "Template", "source": "template", "fields": [
+        { "label": "Name", "path": "name" }, { "label": "Document type", "path": "documentType" },
+        { "label": "Active", "path": "isActive" }, { "label": "Updated", "path": "updatedAt" }
+      ] }]
+    },
+    {
+      "id": "template-editor", "title": "Edit document template", "routePath": "templates/edit/:id", "permission": "wattanam.document-designer.edit",
+      "parameters": [{ "name": "id", "type": "string", "maximumLength": 120 }],
+      "dataSources": [
+        { "id": "template", "method": "GET", "path": "templates/:id", "permission": "wattanam.document-designer.view" },
+        { "id": "save-template", "method": "PATCH", "path": "templates/:id", "permission": "wattanam.document-designer.edit" }
+      ],
+      "components": [{ "id": "design-editor", "type": "form", "title": "Edit template design", "source": "save-template", "fields": [
+        { "id": "name", "type": "text", "label": "Template name", "required": true, "minLength": 1, "maxLength": 120 },
+        { "id": "design", "type": "json", "label": "Design JSON", "required": true, "maxLength": 200000 }
+      ], "options": { "initialSource": "template", "submitLabel": "Save design", "successMessage": "Template design saved" } }]
+    }
+  ]
+}

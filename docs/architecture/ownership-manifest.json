@@ -722,6 +722,16 @@
       "owner": "platform-control-plane"
     },
     {
+      "match": "^frontend/e2e/plugin-ui/",
+      "owner": "lean-core",
+      "note": "Plugin UI v2 host-contract validation belongs to the core shell test suite."
+    },
+    {
+      "match": "^frontend/playwright\\.plugin-ui\\.config\\.ts$",
+      "owner": "lean-core",
+      "note": "Playwright config for plugin-host UI v2 regression tests."
+    },
+    {
       "match": "^apps/mobile/((App\\.tsx|index\\.ts|src/(api|config|AuthContext|theme)\\.ts)$|assets/)",
       "owner": "lean-core",
       "note": "Mobile app shell: entry point, sign-in context, theme, API client and bundled assets."
@@ -761,6 +771,11 @@
       "match": "^plugins/announcements/",
       "owner": "wattanam.announcements",
       "note": "The existing official plugin: evolves into Communication or stays standalone, and is never duplicated."
+    },
+    {
+      "match": "^plugins/wattanam\\.document-designer/",
+      "owner": "wattanam.document-designer",
+      "note": "Official Document Designer plugin package and runtime artifacts."
     }
   ],
   "routes": [

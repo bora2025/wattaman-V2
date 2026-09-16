@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
+import { DirectoryService } from '../directory/directory.service';
 import { H5P_TYPES, isH5PType, sanitizeH5PInput, sanitizeH5PForStudent, gradeH5PQuestion, shuffle } from '../h5p/h5p-questions';
 
 const ALLOWED_EXAM_QUESTION_TYPES = ['MCQ', 'TF', ...H5P_TYPES];
@@ -121,7 +122,7 @@ function gradeExamQuestion(q: { type: string; marks: number; data: any }, respon
 
 @Injectable()
 export class ExamService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private readonly directory: DirectoryService) {}
 
   // ── Admin / Teacher: manage exams ──
 
@@ -213,13 +214,16 @@ export class ExamService {
   async getStudentExams(studentId: string) {
     const student = await this.prisma.student.findUnique({
       where: { userId: studentId },
-      select: { id: true, classId: true },
+      select: { id: true },
     });
     if (!student) return [];
 
+    const classIds = await this.directory.classesForUser(studentId, 'STUDENT');
+    const classScope = classIds.length ? { classId: { in: classIds } } : null;
+
     const exams = await this.prisma.exam.findMany({
       where: {
-        OR: [{ classId: student.classId }, { classId: null }],
+        OR: classScope ? [classScope, { classId: null }] : [{ classId: null }],
         status: { in: ['PUBLISHED', 'ACTIVE', 'COMPLETED'] },
       },
       include: {

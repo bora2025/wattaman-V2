@@ -75,6 +75,17 @@ describe('DirectoryService', () => {
     await expect(service.lookupClasses([])).resolves.toEqual([]);
   });
 
+  it('delegates department membership and fails closed when the contract is unavailable', async () => {
+    const departmentForUser = jest.fn().mockResolvedValue('department-1');
+    const service = new DirectoryService(prismaWith({}), { resolveClassAudience: jest.fn(), departmentForUser } as any);
+
+    await expect(service.departmentForUser('user-1')).resolves.toBe('department-1');
+    expect(departmentForUser).toHaveBeenCalledWith('user-1');
+
+    await expect(new DirectoryService(prismaWith({})).departmentForUser('user-1'))
+      .rejects.toThrow('does not support department membership');
+  });
+
   it('classesForUser unions taught classes with the student/parent class, deduplicated', async () => {
     const classFindMany = jest.fn().mockResolvedValue([{ id: 'taught-1' }]);
     const studentFindUnique = jest.fn().mockResolvedValue({ classId: 'taught-1' });
@@ -87,5 +98,107 @@ describe('DirectoryService', () => {
     const studentFindMany = jest.fn().mockResolvedValue([{ classId: 'c1' }, { classId: 'c2' }, { classId: null }]);
     const service = new DirectoryService(prismaWith({ class: { findMany: classFindMany }, student: { findMany: studentFindMany } }));
     await expect(service.classesForUser('parent-1', 'PARENT')).resolves.toEqual(['c1', 'c2']);
+  });
+
+  it('uses the academic provider for CLASS audience resolution when configured', async () => {
+    const classFindUnique = jest.fn();
+    const prisma = prismaWith({ class: { findUnique: classFindUnique, findMany: jest.fn().mockResolvedValue([]) } });
+    const provider = {
+      resolveClassAudience: jest.fn().mockResolvedValue([
+        { id: 't1', email: 't@example.com', phone: null, role: 'TEACHER' },
+        { id: 's1', email: 's1@example.com', phone: null, role: 'STUDENT' },
+      ]),
+    } as any;
+
+    const service = new DirectoryService(prisma, provider);
+    const recipients = await service.resolveAudience({ audience: 'CLASS', classId: 'class-1' });
+
+    expect(provider.resolveClassAudience).toHaveBeenCalledWith('class-1');
+    expect(classFindUnique).not.toHaveBeenCalled();
+    expect(recipients.map((recipient) => recipient.id)).toEqual(['t1', 's1']);
+  });
+
+  it('falls back to local class/student joins when no academic provider is configured', async () => {
+    const classFindUnique = jest.fn().mockResolvedValue({
+      teacher: { id: 't1', email: 't@example.com', phone: null, role: 'TEACHER' },
+      students: [{ user: { id: 's1', email: 's1@example.com', phone: null, role: 'STUDENT' }, parent: null }],
+    });
+    const prisma = prismaWith({ class: { findUnique: classFindUnique, findMany: jest.fn().mockResolvedValue([]) } });
+    const service = new DirectoryService(prisma);
+
+    const recipients = await service.resolveAudience({ audience: 'CLASS', classId: 'class-1' });
+
+    expect(classFindUnique).toHaveBeenCalled();
+    expect(recipients.map((recipient) => recipient.id).sort()).toEqual(['s1', 't1']);
+  });
+
+  it('uses the academic provider for classesForUser when configured', async () => {
+    const classFindMany = jest.fn();
+    const studentFindUnique = jest.fn();
+    const prisma = prismaWith({ class: { findUnique: jest.fn().mockResolvedValue(null), findMany: classFindMany }, student: { findUnique: studentFindUnique, findMany: jest.fn().mockResolvedValue([]) } });
+    const provider = {
+      resolveClassAudience: jest.fn().mockResolvedValue([]),
+      resolveClassesForUser: jest.fn().mockResolvedValue(['class-1', 'class-2']),
+    } as any;
+    const service = new DirectoryService(prisma, provider);
+
+    const result = await service.classesForUser('user-1', 'TEACHER');
+
+    expect(result).toEqual(['class-1', 'class-2']);
+    expect(provider.resolveClassesForUser).toHaveBeenCalledWith('user-1', 'TEACHER');
+    expect(classFindMany).not.toHaveBeenCalled();
+    expect(studentFindUnique).not.toHaveBeenCalled();
+  });
+
+  it('falls back to local joins for classesForUser when provider has no classes method', async () => {
+    const classFindMany = jest.fn().mockResolvedValue([{ id: 'taught-1' }]);
+    const studentFindUnique = jest.fn().mockResolvedValue({ classId: 'taught-1' });
+    const prisma = prismaWith({ class: { findUnique: jest.fn().mockResolvedValue(null), findMany: classFindMany }, student: { findUnique: studentFindUnique, findMany: jest.fn().mockResolvedValue([]) } });
+    const provider = { resolveClassAudience: jest.fn().mockResolvedValue([]) } as any;
+    const service = new DirectoryService(prisma, provider);
+
+    await expect(service.classesForUser('u1', 'STUDENT')).resolves.toEqual(['taught-1']);
+    expect(classFindMany).toHaveBeenCalled();
+    expect(studentFindUnique).toHaveBeenCalled();
+  });
+
+  it('uses the academic provider for lookupClasses when configured', async () => {
+    const classFindMany = jest.fn();
+    const prisma = prismaWith({ class: { findUnique: jest.fn().mockResolvedValue(null), findMany: classFindMany } });
+    const provider = {
+      resolveClassAudience: jest.fn().mockResolvedValue([]),
+      lookupClasses: jest.fn().mockResolvedValue([{ id: 'class-1', name: 'Grade 1A' }]),
+    } as any;
+    const service = new DirectoryService(prisma, provider);
+
+    await expect(service.lookupClasses(['class-1', 'class-1'])).resolves.toEqual([{ id: 'class-1', name: 'Grade 1A' }]);
+    expect(provider.lookupClasses).toHaveBeenCalledWith(['class-1', 'class-1']);
+    expect(classFindMany).not.toHaveBeenCalled();
+  });
+
+  it('falls back to local class lookup when provider has no lookupClasses method', async () => {
+    const classFindMany = jest.fn().mockResolvedValue([{ id: 'class-1', name: 'Grade 1A' }]);
+    const prisma = prismaWith({ class: { findUnique: jest.fn().mockResolvedValue(null), findMany: classFindMany } });
+    const provider = { resolveClassAudience: jest.fn().mockResolvedValue([]) } as any;
+    const service = new DirectoryService(prisma, provider);
+
+    await expect(service.lookupClasses(['class-1'])).resolves.toEqual([{ id: 'class-1', name: 'Grade 1A' }]);
+    expect(classFindMany).toHaveBeenCalledWith({ where: { id: { in: ['class-1'] } }, select: { id: true, name: true } });
+  });
+
+  it('delegates versioned roster and enrollment reads and fails closed without the contract', async () => {
+    const getClassRoster = jest.fn().mockResolvedValue({ classId: 'c1', students: [] });
+    const getEnrollmentAtDate = jest.fn().mockResolvedValue({ studentId: 's1', enrolled: true });
+    const service = new DirectoryService(prismaWith({}), {
+      resolveClassAudience: jest.fn(), getClassRoster, getEnrollmentAtDate,
+    } as any);
+    await expect(service.getClassRoster('c1', '2026-09-16')).resolves.toMatchObject({ classId: 'c1' });
+    await expect(service.getEnrollmentAtDate('s1', '2026-09-16')).resolves.toMatchObject({ studentId: 's1' });
+    expect(getClassRoster).toHaveBeenCalledWith('c1', '2026-09-16');
+    expect(getEnrollmentAtDate).toHaveBeenCalledWith('s1', '2026-09-16');
+
+    const unavailable = new DirectoryService(prismaWith({}));
+    await expect(unavailable.getClassRoster('c1', '2026-09-16')).rejects.toThrow('roster contract v1');
+    await expect(unavailable.getEnrollmentAtDate('s1', '2026-09-16')).rejects.toThrow('enrollment contract v1');
   });
 });

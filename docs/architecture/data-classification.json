@@ -501,6 +501,7 @@
   },
   "outbound": [
     { "match": "^backend/src/marketplace/", "destination": "wattanam-marketplace" },
+    { "match": "^backend/src/plugins/plugin-artifact-cache\\.service\\.ts$", "destination": "wattanam-marketplace" },
     { "match": "^frontend/app/api/marketplace/", "destination": "wattanam-marketplace" },
     { "match": "^frontend/app/api/\\[\\.\\.\\.path\\]/route\\.ts$", "destination": "school-api" },
     { "match": "^backend/src/updates/", "destination": "wattanam-update-repository" },

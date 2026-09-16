@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "wattanam.academic-management",
+  "name": "Academic Management",
+  "description": "Official Wattanam academic structures, profiles, admissions, enrollment, and roster contracts.",
+  "version": "0.1.0",
+  "requiresCore": ">=0.1.0-0 <1.0.0",
+  "publisher": "wattanam",
+  "license": "commercial",
+  "backendEntry": "backend/index.js",
+  "frontendEntry": "frontend/page.json",
+  "sdkVersion": "1.1.0",
+  "runtimeVersion": "1.0.0",
+  "capabilities": ["api.routes", "database.read", "database.write", "events.durable", "navigation.register", "permissions.register", "ui.pages"],
+  "permissions": ["wattanam.academic-management.view", "wattanam.academic-management.manage"],
+  "dependencies": {},
+  "optionalDependencies": {},
+  "migrations": [
+    {
+      "id": "001_create_department",
+      "path": "migrations/001_create_department.sql",
+      "checksum": "f31e8f0b76a6c02756d421b4518054e079850cc6cd364f892df3c89ba193cfe0",
+      "destructive": false
+    },
+    {
+      "id": "002_create_user_department",
+      "path": "migrations/002_create_user_department.sql",
+      "checksum": "cf6f91a74b316b00a06384ac7c9704995c12412cc8e620777f349efb474217ef",
+      "destructive": false
+    },
+    {
+      "id": "003_create_enrollment_interval",
+      "path": "migrations/003_create_enrollment_interval.sql",
+      "checksum": "6a7304a8ea29c064a394144ba0fa4aa9288e62fabe03a9f0a81224401d969861",
+      "destructive": false
+    }
+  ],
+  "navigation": [
+    { "id": "departments", "label": "Academic Management", "href": "/plugins/wattanam.academic-management/departments", "permission": "wattanam.academic-management.view" }
+  ],
+  "supportedLanguages": ["en", "km"]
+}

@@ -43,7 +43,7 @@ export interface PluginUiBundle {
   pages: PluginUiPage[];
 }
 
-const ID = /^[a-z0-9][a-z0-9._-]*$/;
+const ID = /^[a-z0-9][a-zA-Z0-9._-]*$/;
 const ROUTE = /^[a-z0-9][a-z0-9/_-]*(?::[a-z][a-zA-Z0-9]*)?$/;
 const METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
 const COMPONENTS = new Set<PluginUiComponentType>([
@@ -173,7 +173,7 @@ export function parsePluginUiBundle(value: unknown, pluginId: string, declaredPe
           if (field.label !== undefined) string(field.label, 'table column label', 120);
           if (field.sortable !== undefined && typeof field.sortable !== 'boolean') throw new BadRequestException('Plugin UI table sortable must be boolean');
           if (field.filterable !== undefined && typeof field.filterable !== 'boolean') throw new BadRequestException('Plugin UI table filterable must be boolean');
-          if (field.format !== undefined && !['text', 'number', 'currency', 'date', 'datetime'].includes(String(field.format))) throw new BadRequestException('Plugin UI table format is invalid');
+          if (field.format !== undefined && !['text', 'boolean', 'number', 'currency', 'date', 'datetime'].includes(String(field.format))) throw new BadRequestException('Plugin UI table format is invalid');
         });
         const options = (component.options || {}) as Record<string, unknown>;
         if (options.pageSize !== undefined && (!Number.isInteger(options.pageSize) || Number(options.pageSize) < 1 || Number(options.pageSize) > 100)) throw new BadRequestException('Plugin UI table pageSize must be between 1 and 100');
@@ -187,7 +187,7 @@ export function parsePluginUiBundle(value: unknown, pluginId: string, declaredPe
           const field = object(candidateField, `form fields[${fieldIndex}]`);
           const fieldId = string(field.id, 'form field id', 100);
           const fieldType = string(field.type, 'form field type', 30);
-          if (!ID.test(fieldId) || fieldIds.has(fieldId) || !['text', 'email', 'number', 'date', 'datetime', 'select', 'textarea', 'checkbox'].includes(fieldType)) throw new BadRequestException('Plugin UI form field id or type is invalid');
+          if (!ID.test(fieldId) || fieldIds.has(fieldId) || !['text', 'email', 'number', 'date', 'datetime', 'select', 'textarea', 'json', 'checkbox'].includes(fieldType)) throw new BadRequestException('Plugin UI form field id or type is invalid');
           fieldIds.add(fieldId);
           string(field.label, 'form field label', 120);
           for (const booleanKey of ['required', 'disabled'] as const) if (field[booleanKey] !== undefined && typeof field[booleanKey] !== 'boolean') throw new BadRequestException(`Plugin UI form ${booleanKey} must be boolean`);

@@ -1,31 +1,31 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../database/prisma.service';
+import { Inject, Injectable } from '@nestjs/common';
+import {
+  ACADEMIC_DEPARTMENTS_PROVIDER,
+  AcademicDepartmentsProvider,
+  DepartmentCreateInput,
+  DepartmentUpdateInput,
+} from './academic-departments.contract';
 
 @Injectable()
 export class DepartmentsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    @Inject(ACADEMIC_DEPARTMENTS_PROVIDER)
+    private readonly academic: AcademicDepartmentsProvider,
+  ) {}
 
   async findAll() {
-    return this.prisma.department.findMany({
-      orderBy: { name: 'asc' },
-      include: { _count: { select: { users: true } } },
-    });
+    return this.academic.findAll();
   }
 
-  async create(data: { name: string; nameKh?: string; description?: string }) {
-    return this.prisma.department.create({ data });
+  async create(data: DepartmentCreateInput) {
+    return this.academic.create(data);
   }
 
-  async update(id: string, data: { name?: string; nameKh?: string; description?: string }) {
-    return this.prisma.department.update({ where: { id }, data });
+  async update(id: string, data: DepartmentUpdateInput) {
+    return this.academic.update(id, data);
   }
 
   async delete(id: string) {
-    // Unassign users from this department first
-    await this.prisma.user.updateMany({
-      where: { departmentId: id },
-      data: { departmentId: null },
-    });
-    return this.prisma.department.delete({ where: { id } });
+    return this.academic.delete({ id, idempotencyKey: `delete-department:${id}` });
   }
 }

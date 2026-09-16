@@ -9,6 +9,8 @@ import { getJwtKeyId, getJwtSecret } from '../config/environment';
 import { NotificationModule } from '../notification/notification.module';
 import { PasswordResetService } from './password-reset.service';
 import { MfaService } from './mfa.service';
+import { ACADEMIC_IDENTITY_PROVIDER } from './academic-identity.contract';
+import { PrismaAcademicIdentityProvider } from './academic-identity.provider';
 
 @Module({
   imports: [
@@ -25,7 +27,14 @@ import { MfaService } from './mfa.service';
       }),
     }),
   ],
-  providers: [AuthService, PasswordResetService, MfaService, JwtStrategy],
+  providers: [
+    AuthService,
+    PasswordResetService,
+    MfaService,
+    JwtStrategy,
+    PrismaAcademicIdentityProvider,
+    { provide: ACADEMIC_IDENTITY_PROVIDER, useExisting: PrismaAcademicIdentityProvider },
+  ],
   controllers: [AuthController],
   exports: [JwtModule],
 })

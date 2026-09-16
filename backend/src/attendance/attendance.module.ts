@@ -6,9 +6,10 @@ import { DatabaseModule } from '../database/database.module';
 import { NotificationModule } from '../notification/notification.module';
 import { SessionConfigModule } from '../session-config/session-config.module';
 import { AuthModule } from '../auth/auth.module';
+import { DirectoryModule } from '../directory/directory.module';
 
 @Module({
-  imports: [DatabaseModule, NotificationModule, SessionConfigModule, AuthModule],
+  imports: [DatabaseModule, NotificationModule, SessionConfigModule, AuthModule, DirectoryModule],
   providers: [AttendanceGateway, AttendanceService],
   controllers: [AttendanceController],
   exports: [AttendanceService],

@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { AcademicClassRoster, AcademicEnrollment } from './academic-roster.contract';
 
 export interface DirectoryAudienceQuery {
   audience: 'SCHOOL' | 'ROLE' | 'CLASS';
@@ -18,6 +19,21 @@ export interface DirectoryRecipient {
 type CoreUser = { id: string; email: string | null; phone: string | null; role: string };
 
 /**
+ * MP-2 boundary hook: once Academic Management is extracted, class audience
+ * expansion must come from a versioned academic contract rather than direct
+ * lean-core joins over class/student tables.
+ */
+export const ACADEMIC_DIRECTORY_PROVIDER = 'ACADEMIC_DIRECTORY_PROVIDER';
+export interface AcademicDirectoryProvider {
+  resolveClassAudience(classId: string): Promise<CoreUser[]>;
+  resolveClassesForUser?(userId: string, role: string): Promise<string[]>;
+  lookupClasses?(ids: string[]): Promise<Array<{ id: string; name: string }>>;
+  departmentForUser?(userId: string): Promise<string | null>;
+  getClassRoster?(classId: string, asOfIsoDate: string): Promise<AcademicClassRoster>;
+  getEnrollmentAtDate?(studentId: string, asOfIsoDate: string): Promise<AcademicEnrollment>;
+}
+
+/**
  * Resolves "which core users should receive this" for a given audience
  * scope, without giving callers (including plugins, via the directory.read
  * capability) direct access to User/Class/Student/NotificationPreference
@@ -27,7 +43,11 @@ type CoreUser = { id: string; email: string | null; phone: string | null; role: 
  */
 @Injectable()
 export class DirectoryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() @Inject(ACADEMIC_DIRECTORY_PROVIDER)
+    private readonly academic?: AcademicDirectoryProvider,
+  ) {}
 
   async resolveAudience(input: DirectoryAudienceQuery): Promise<DirectoryRecipient[]> {
     const users = await this.resolveUsers(input);
@@ -56,12 +76,17 @@ export class DirectoryService {
 
   async lookupClasses(ids: string[]): Promise<Array<{ id: string; name: string }>> {
     if (!ids.length) return [];
+    if (this.academic?.lookupClasses) return this.academic.lookupClasses(ids);
     return this.prisma.class.findMany({ where: { id: { in: [...new Set(ids)] } }, select: { id: true, name: true } });
   }
 
   /** The reverse of resolveAudience: which classes is this user a teacher, student, or parent-of-student in. */
   async classesForUser(userId: string, role: string): Promise<string[]> {
+    if (this.academic?.resolveClassesForUser) return this.academic.resolveClassesForUser(userId, role);
     const teacherClassIds = (await this.prisma.class.findMany({ where: { teacherId: userId }, select: { id: true } })).map((c) => c.id);
+    const classAdminIds = role === 'CLASS_ADMIN'
+      ? (await this.prisma.class.findMany({ where: { classAdminId: userId }, select: { id: true } })).map((c) => c.id)
+      : [];
     let studentClassIds: string[] = [];
     if (role === 'STUDENT') {
       const record = await this.prisma.student.findUnique({ where: { userId }, select: { classId: true } });
@@ -70,7 +95,24 @@ export class DirectoryService {
       const kids = await this.prisma.student.findMany({ where: { parentId: userId }, select: { classId: true } });
       studentClassIds = kids.map((kid) => kid.classId).filter((id): id is string => !!id);
     }
-    return [...new Set([...teacherClassIds, ...studentClassIds])];
+    return [...new Set([...teacherClassIds, ...classAdminIds, ...studentClassIds])];
+  }
+
+  async departmentForUser(userId: string): Promise<string | null> {
+    if (!this.academic?.departmentForUser) {
+      throw new Error('Academic directory provider does not support department membership');
+    }
+    return this.academic.departmentForUser(userId);
+  }
+
+  async getClassRoster(classId: string, asOfIsoDate: string): Promise<AcademicClassRoster> {
+    if (!this.academic?.getClassRoster) throw new Error('Academic directory provider does not support roster contract v1');
+    return this.academic.getClassRoster(classId, asOfIsoDate);
+  }
+
+  async getEnrollmentAtDate(studentId: string, asOfIsoDate: string): Promise<AcademicEnrollment> {
+    if (!this.academic?.getEnrollmentAtDate) throw new Error('Academic directory provider does not support enrollment contract v1');
+    return this.academic.getEnrollmentAtDate(studentId, asOfIsoDate);
   }
 
   private async resolveUsers(input: DirectoryAudienceQuery): Promise<CoreUser[]> {
@@ -85,6 +127,7 @@ export class DirectoryService {
       return this.prisma.user.findMany({ where: { role: input.targetRole }, select: { id: true, email: true, phone: true, role: true } });
     }
     if (input.audience === 'CLASS' && input.classId) {
+      if (this.academic) return this.academic.resolveClassAudience(input.classId);
       const cls = await this.prisma.class.findUnique({
         where: { id: input.classId },
         include: {

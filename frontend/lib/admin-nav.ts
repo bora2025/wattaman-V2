@@ -1,20 +1,9 @@
 import {
   composeNavigation,
   frontendDistribution,
+  isCoreNavigationHref,
   NavigationRegistration,
 } from './navigation-registry';
-
-const coreAdminHrefs = new Set([
-  '/admin',
-  '/admin/users',
-  '/admin/plugins',
-  '/marketplace',
-  '/admin/settings',
-  '/admin/backup',
-  '/admin/system',
-  '/admin/platform-billing',
-  '/admin/audit',
-]);
 
 const legacyAdminItems = [
   // ── Overview ──
@@ -90,7 +79,7 @@ const legacyAdminItems = [
 /** Authoritative ownership registry for static administrator navigation. */
 export const adminNavigationRegistry: readonly NavigationRegistration[] = legacyAdminItems.map((item) => ({
   ...item,
-  source: coreAdminHrefs.has(item.href) ? 'core' : 'legacy-business',
+  source: isCoreNavigationHref(item.href) ? 'core' : 'legacy-business',
 }));
 
 export function adminNavigationForDistribution(value?: string) {

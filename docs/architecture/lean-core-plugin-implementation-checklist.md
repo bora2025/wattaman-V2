@@ -1,8 +1,8 @@
 # Lean Core and Module-to-Plugin Implementation Checklist
 
 Status: **LC-0, LC-1, LC-2, LC-3 and LC-5 complete; LC-4 partially accepted;
-MP-1 through MP-9 and LC-F not started**
-Last full checklist audit: 2026-09-15 — **115 complete, 61 open, 1 partial, 0 blocked**.
+MP-1 underway; MP-2 through MP-9 and LC-F not complete**
+Last focused MP-1 audit: 2026-09-15 — **118 complete, 55 open, 4 partial, 0 blocked**.
 Created: 2026-09-11  
 Architecture plan: [Wattanam Lean Core and Plugin-First Architecture](./wattanam-lean-core-plugin-first-plan.md)  
 Migration plan: [Business Modules to Official Plugins](./module-to-plugin-migration-plan.md)
@@ -400,17 +400,34 @@ Evidence: `docs/acceptance/lean-core/lc5-migration-certification-toolkit.md`
 
 Recommended first plugin: **`wattanam.document-designer`**.
 
-- [ ] **MP1-001 Inventory** — trace Card Templates, card pages, certificates, QR codes, LaTeX tool,
-  supporting APIs/models/files, reports and print views.
-- [ ] **MP1-002 Scope decision** — decide whether LaTeX is included or a separate Tool plugin.
-- [ ] **MP1-003 Package** — create the official plugin using the standard template.
-- [ ] **MP1-004 Data** — create namespaced migrations and adoption scripts.
-- [ ] **MP1-005 UI** — move listing, editing, preview, bulk generation and print workflows.
-- [ ] **MP1-006 Permissions** — separate view, edit, generate and print permissions.
+- [x] **MP1-001 Inventory** — Card Templates, card pages, certificates, QR codes, LaTeX tool,
+  supporting APIs/models/files and print views inventoried in
+  `docs/acceptance/mp1-document-designer-ownership-2026-09-15.md`.
+- [x] **MP1-002 Scope decision** — LaTeX is excluded as a separate optional Tool plugin;
+  rationale recorded in the ownership inventory.
+- [x] **MP1-003 Package** — `plugins/wattanam.document-designer` created from the standard
+  template with a namespaced migration, four permission IDs, backend route contract and UI v2
+  descriptor; CLI check and five focused route tests pass. This is not a complete feature cutover.
+- [~] **MP1-004 Data** — namespaced create-table migration, read-only preflight and
+  backup-bound zero-write dry-run plus journaled copy/reconciliation are implemented with local
+  crash/retry tests; explicit compatibility routing defaults to legacy and supports a
+  non-destructive configuration rollback. Real backup restore, hosted adoption, rendered-output
+  comparison and live rollback certification remain open
+  ([evidence](../acceptance/mp1-document-designer-adoption-preflight-2026-09-15.md)).
+- [~] **MP1-005 UI** — list/detail remain declarative; a separate permission-gated edit page now
+  submits validated JSON-object designs through the plugin route. Actual descriptor/schema tests
+  pass; three desktop browser assertions passed but Playwright teardown hung, so clean browser
+  certification is open. Discoverable editor navigation, rich canvas preview, bulk generation
+  and print remain open ([evidence](../acceptance/mp1-document-designer-json-editor-2026-09-16.md)).
+- [~] **MP1-006 Permissions** — the manifest/runtime separates view, edit, generate and print;
+  adoption idempotently preserves authenticated legacy active-design reads and administrator
+  mutation access. Generate/print UI actions and their row-scope tests remain open.
 - [ ] **MP1-007 Storage** — migrate templates/assets through scoped shared storage.
 - [ ] **MP1-008 Fresh certification** — install from marketplace on clean core.
 - [ ] **MP1-009 Legacy certification** — adopt existing data and compare rendered output.
-- [ ] **MP1-010 Lifecycle/recovery** — disable/update/remove/reinstall/backup/restore.
+- [~] **MP1-010 Lifecycle/recovery** — local reactivation preserves template data and compatibility
+  routing has an explicit legacy rollback; hosted disable/update/remove/reinstall and clean
+  backup/restore remain open.
 - [ ] **MP1-011 Pilot** — controlled school rollout with rollback evidence.
 - [ ] **MP1-012 Cleanup** — remove legacy ownership only after rollback window approval.
 
@@ -418,14 +435,29 @@ Gate: the first complete business plugin operates without rebuilding core.
 
 ## Gate MP-2 — Academic Management foundation
 
-- [ ] **MP2-001 Split identity** — separate account/person from student, teacher and employee domain
-  profiles.
-- [ ] **MP2-002 Academic schema** — own Student, Class, Enrollment, StudyYear, Department and Subject.
+- [~] **MP2-001 Split identity** — account reads, parent-link writes and user-delete academic detach
+  now cross an explicit provider boundary; delete uses a deterministic idempotency key and the
+  legacy adapter owns its transaction. Identity list/detail/search contain no academic relation
+  fallback, department assignment/clearing uses a provider command, and login/refresh always use
+  core-only projections. Parent assignment/clearing also has no direct fallback. Installed-plugin
+  binding and remaining mixed User concerns still prevent completion; Session Configuration now
+  consumes department membership through the academic directory contract.
+- [~] **MP2-002 Academic schema** — ownership manifests identify the target models and Departments
+  CRUD is provider-backed with atomic legacy deletion. The initial plugin owns additive namespaced
+  Department/membership migrations; Student/Class/Enrollment/StudyYear/Subject remain open.
 - [ ] **MP2-003 Admissions** — move class registration/intake and configurable fields.
-- [ ] **MP2-004 Roster contracts** — lookup, enrollment-at-date and authorized audience APIs.
+- [~] **MP2-004 Roster contracts** — class audience, class membership, class lookup and department
+  membership have provider-backed consumers; enrollment-at-date and full runtime plugin binding
+  remain open.
 - [ ] **MP2-005 Event contracts** — student/class/enrollment lifecycle with outbox delivery.
-- [ ] **MP2-006 UI** — administrators, teachers, students, classes, years and admissions pages.
-- [ ] **MP2-007 Migration** — reconcile identities, profiles, classes and relationships.
+- [~] **MP2-006 UI** — initial read-only department list declarative UI exists;
+  administrators, teachers, students, classes, years, admissions and full CRUD remain open.
+- [~] **MP2-007 Migration** — read-only department/membership preflight has deterministic
+  fingerprinting, orphan detection and target readiness checks, and its additive target migrations
+  exist. Backup-bound dry-run and two-phase resumable copy/reconciliation pass locally. Department
+  reads have legacy-default/plugin-explicit routing; plugin-mode writes fail closed until certified
+  consistency. Restored-backup and
+  hosted cutover/rollback proofs plus the remaining academic entities are open.
 - [ ] **MP2-008 Dependent fixtures** — prove Attendance/Timetable/Exam/Learning/Finance can consume
   contracts without database joins.
 - [ ] **MP2-009 Certification and pilot** — full lifecycle, recovery and production-shaped adoption.

@@ -31,6 +31,12 @@ describe('wattanam-plugin init', () => {
     expect(frontend.pages.map((page) => page.routePath)).toEqual(['records', 'records/:id']);
     expect(frontend.pages[0].components.map((component) => component.type)).toEqual(['heading', 'table', 'form', 'print']);
 
+    const dashedDest = path.join(parent, 'acme.sample-plugin');
+    await run(['acme.sample-plugin', '--dir', dashedDest]);
+    expect(fs.readFileSync(path.join(dashedDest, 'migrations', '001_create_widget.sql'), 'utf8')).toContain('plugin_acme_sample_plugin_widget');
+    expect(fs.readFileSync(path.join(dashedDest, 'migrations', '001_create_widget.sql'), 'utf8')).toContain('"status" TEXT NOT NULL');
+    expect(fs.readFileSync(path.join(dashedDest, 'backend', 'index.js'), 'utf8')).not.toContain('sample-plugin_widget');
+
     fs.rmSync(parent, { recursive: true, force: true });
   });
 

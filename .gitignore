@@ -68,3 +68,6 @@ Thumbs.db
 
 # Local scratch files
 temp_settings.txt
+backend/.tmp-mp1/
+backend/.tmp-mp1-seed.sql
+frontend/test-results/

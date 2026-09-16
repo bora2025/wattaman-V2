@@ -13,6 +13,7 @@ import {
   QuestionPagePayload,
   SubmittedAnswer,
 } from './lesson-content';
+import { DirectoryService } from '../directory/directory.service';
 
 // ─── Lifecycle constants ──────────────────────────────────────────────────
 // Mirrors the documented state-flow:
@@ -182,7 +183,7 @@ function sanitizePageInput(input: PageInput) {
 
 @Injectable()
 export class CoursesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private readonly directory: DirectoryService) {}
 
   // ──────────────────────────────────────────────────────────────────────
   //  Authorisation helpers
@@ -605,19 +606,24 @@ export class CoursesService {
   async getStudentCourses(userId: string) {
     const student = await this.prisma.student.findUnique({
       where: { userId },
-      select: { id: true, classId: true },
+      select: { id: true },
     });
     if (!student) return [];
+
+    const classIds = await this.directory.classesForUser(userId, 'STUDENT');
+    const publishedClassScope = classIds.length
+      ? {
+          classId: { in: classIds },
+          status: { in: ['PUBLISHED', 'ENROLLMENT', 'ACTIVE', 'COMPLETED'] },
+        }
+      : null;
 
     // Visible to a student: any course in their class that's at least PUBLISHED,
     // plus any course they're already enrolled in.
     return this.prisma.course.findMany({
       where: {
         OR: [
-          {
-            classId: student.classId ?? '__no_class__',
-            status: { in: ['PUBLISHED', 'ENROLLMENT', 'ACTIVE', 'COMPLETED'] },
-          },
+          ...(publishedClassScope ? [publishedClassScope] : []),
           { enrollments: { some: { studentId: student.id } } },
         ],
       },

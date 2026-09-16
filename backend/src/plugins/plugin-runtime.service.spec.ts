@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs';
 import os from 'os';
 import path from 'path';
+import { DirectoryService } from '../directory/directory.service';
 import { PluginEventBus } from './plugin-events';
 import { PluginRuntimeService } from './plugin-runtime.service';
 
@@ -264,5 +265,50 @@ describe('PluginRuntimeService', () => {
       action: 'PLUGIN_NOTIFICATION_SEND', resourceId: 'wattanam.test', success: true,
       metadata: expect.objectContaining({ channel: 'sms', to: '+85512345678' }),
     }));
+  });
+
+  it('dependent plugin path resolves class lookups through provider-backed DirectoryService', async () => {
+    const installedPath = path.join(directory, 'wattanam.test', '1.0.0');
+    await fs.mkdir(path.join(installedPath, 'backend'), { recursive: true });
+    await fs.writeFile(path.join(installedPath, 'backend', 'index.js'), `
+      module.exports = {
+        id: 'wattanam.test',
+        async activate(context) {
+          global.__wattanamDependentClasses = await context.directory.lookupClasses(['class-1']);
+          global.__wattanamDependentMembership = await context.directory.classesForUser('user-1', 'TEACHER');
+        }
+      };
+    `);
+    const manifest = {
+      id: 'wattanam.test', version: '1.0.0', backendEntry: 'backend/index.js',
+      capabilities: ['directory.read'], permissions: [], dependencies: {},
+    };
+    const prisma = {
+      pluginInstallation: { findUnique: jest.fn().mockResolvedValue({ id: 'wattanam.test', version: '1.0.0', installedPath }) },
+      class: { findMany: jest.fn() },
+      student: { findUnique: jest.fn(), findMany: jest.fn() },
+      notificationPreference: { findMany: jest.fn().mockResolvedValue([]) },
+      user: { findMany: jest.fn().mockResolvedValue([]) },
+    } as any;
+    const provider = {
+      resolveClassAudience: jest.fn().mockResolvedValue([]),
+      lookupClasses: jest.fn().mockResolvedValue([{ id: 'class-1', name: 'Grade 1A' }]),
+      resolveClassesForUser: jest.fn().mockResolvedValue(['class-1']),
+    } as any;
+    const verifier = { verifyInstalledDirectory: jest.fn().mockResolvedValue({ manifest }) } as any;
+    const [extensions, jobs, settings, storage, notifications, , realtime, notificationQuota, audit] = dependencies();
+    const directoryService = new DirectoryService(prisma, provider);
+    const runtime = new PluginRuntimeService(prisma, verifier, new PluginEventBus(), extensions as any, jobs as any, settings as any, storage as any, notifications as any, directoryService as any, realtime as any, notificationQuota as any, audit as any);
+
+    await runtime.load('wattanam.test');
+
+    expect(provider.lookupClasses).toHaveBeenCalledWith(['class-1']);
+    expect(provider.resolveClassesForUser).toHaveBeenCalledWith('user-1', 'TEACHER');
+    expect(prisma.class.findMany).not.toHaveBeenCalled();
+    expect(prisma.student.findUnique).not.toHaveBeenCalled();
+    expect((global as any).__wattanamDependentClasses).toEqual([{ id: 'class-1', name: 'Grade 1A' }]);
+    expect((global as any).__wattanamDependentMembership).toEqual(['class-1']);
+    delete (global as any).__wattanamDependentClasses;
+    delete (global as any).__wattanamDependentMembership;
   });
 });

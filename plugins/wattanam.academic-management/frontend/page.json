@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 2,
+  "kind": "declarative-ui",
+  "pages": [
+    {
+      "id": "departments",
+      "title": "Academic Management",
+      "routePath": "departments",
+      "permission": "wattanam.academic-management.view",
+      "parameters": [],
+      "dataSources": [
+        { "id": "departments", "method": "GET", "path": "departments", "permission": "wattanam.academic-management.view" }
+      ],
+      "components": [
+        { "id": "heading", "type": "heading", "title": "Departments" },
+        { "id": "departments-table", "type": "table", "title": "Departments", "source": "departments", "fields": [
+          { "id": "name", "label": "Name", "sortable": true, "filterable": true },
+          { "id": "nameKh", "label": "Khmer name", "sortable": true },
+          { "id": "description", "label": "Description" }
+        ], "options": { "pageSize": 20, "selectable": false } }
+      ]
+    }
+  ]
+}

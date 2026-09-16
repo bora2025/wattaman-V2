@@ -1,4 +1,6 @@
 import { parsePluginUiBundle } from './plugin-ui-schema';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 
 const permissions = new Set(['wattanam.test.read', 'wattanam.test.manage']);
 
@@ -97,6 +99,26 @@ describe('Plugin UI v2 schema', () => {
     expect(parsePluginUiBundle(value, 'wattanam.test', permissions).pages[0].components[1]).toMatchObject({ type: 'form', source: 'save' });
     value.pages[0].dataSources[1].method = 'GET';
     expect(() => parsePluginUiBundle(value, 'wattanam.test', permissions)).toThrow('POST, PUT, or PATCH');
+  });
+
+  it('allows a declared JSON object editor field without allowing arbitrary component types', () => {
+    const value: any = valid();
+    value.pages[0].components[1].fields = [{ id: 'design', type: 'json', label: 'Design JSON', required: true, maxLength: 200000 }];
+    expect(parsePluginUiBundle(value, 'wattanam.test', permissions).pages[0].components[1].fields[0])
+      .toMatchObject({ id: 'design', type: 'json' });
+    value.pages[0].components[1].fields[0].type = 'script';
+    expect(() => parsePluginUiBundle(value, 'wattanam.test', permissions)).toThrow('form field id or type');
+  });
+
+  it('validates the Document Designer edit page against its declared permissions', () => {
+    const pluginRoot = path.resolve(process.cwd(), '../plugins/wattanam.document-designer');
+    const descriptor = JSON.parse(readFileSync(path.join(pluginRoot, 'frontend/page.json'), 'utf8'));
+    const manifest = JSON.parse(readFileSync(path.join(pluginRoot, 'plugin.json'), 'utf8'));
+    const bundle = parsePluginUiBundle(descriptor, 'wattanam.document-designer', new Set(manifest.permissions));
+    expect(bundle.pages.find((page) => page.id === 'template-editor')).toMatchObject({
+      permission: 'wattanam.document-designer.edit',
+      components: [{ type: 'form', source: 'save-template' }],
+    });
   });
 
   it('validates single and bulk mutation actions', () => {

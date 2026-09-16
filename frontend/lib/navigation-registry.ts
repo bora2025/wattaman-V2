@@ -14,6 +14,22 @@ export interface NavigationRegistration extends NavigationItem {
   pluginId?: string;
 }
 
+const CORE_ADMIN_NAVIGATION_HREFS = new Set([
+  '/admin',
+  '/admin/users',
+  '/admin/plugins',
+  '/marketplace',
+  '/admin/settings',
+  '/admin/backup',
+  '/admin/system',
+  '/admin/platform-billing',
+  '/admin/audit',
+]);
+
+export function isCoreNavigationHref(href: string): boolean {
+  return CORE_ADMIN_NAVIGATION_HREFS.has(href);
+}
+
 export function frontendDistribution(value = process.env.NEXT_PUBLIC_WATTANAM_DISTRIBUTION): FrontendDistribution {
   const normalized = value?.trim().toLowerCase() || 'legacy-full';
   if (normalized !== 'core' && normalized !== 'legacy-full') {
@@ -33,4 +49,3 @@ export function composeNavigation(
   const plugins = pluginContributions.filter((entry) => entry.source === 'plugin' && Boolean(entry.pluginId));
   return [...staticEntries, ...plugins].map(({ source: _source, pluginId: _pluginId, ...item }) => item);
 }
-

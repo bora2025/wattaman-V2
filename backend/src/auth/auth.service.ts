@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException, Optional, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import type { StringValue } from 'ms';
 import * as bcrypt from 'bcryptjs';
@@ -6,6 +6,7 @@ import * as crypto from 'crypto';
 import { PrismaService } from '../database/prisma.service';
 import { isValidEmail, looksLikeEmail, normalizePhone } from '../common/identity';
 import { getDistribution } from '../config/environment';
+import { ACADEMIC_IDENTITY_PROVIDER, AcademicIdentityProvider } from './academic-identity.contract';
 
 const CORE_AUTH_USER_SELECT = {
   id: true,
@@ -21,9 +22,25 @@ const CORE_AUTH_USER_SELECT = {
   updatedAt: true,
 } as const;
 
+const AUTH_USER_LIST_BASE_SELECT = {
+  id: true,
+  email: true,
+  name: true,
+  phone: true,
+  role: true,
+  photo: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
+
 @Injectable()
 export class AuthService {
-  constructor(private jwtService: JwtService, private prisma: PrismaService) {}
+  constructor(
+    private jwtService: JwtService,
+    private prisma: PrismaService,
+    @Optional() @Inject(ACADEMIC_IDENTITY_PROVIDER)
+    private readonly academicIdentity?: AcademicIdentityProvider,
+  ) {}
 
   /** `identifier` is whatever the user typed into the login field — an email
    * address or a phone number. Routed to the matching unique column.
@@ -33,19 +50,18 @@ export class AuthService {
    * email has uppercase characters. */
   async validateUser(identifier: string, password: string): Promise<any> {
     const trimmed = (identifier || '').trim();
-    const core = getDistribution() === 'core';
     let user: any = null;
     if (looksLikeEmail(trimmed)) {
       user = await this.prisma.user.findFirst({
         where: { email: { equals: trimmed, mode: 'insensitive' } },
-        ...(core ? { select: CORE_AUTH_USER_SELECT } : {}),
+        select: CORE_AUTH_USER_SELECT,
       });
     } else {
       const normalized = normalizePhone(trimmed);
       if (normalized) {
         user = await this.prisma.user.findUnique({
           where: { phoneNormalized: normalized },
-          ...(core ? { select: CORE_AUTH_USER_SELECT } : {}),
+          select: CORE_AUTH_USER_SELECT,
         });
       }
     }
@@ -89,7 +105,7 @@ export class AuthService {
   async validateRefreshToken(token: string) {
     const record = await this.prisma.refreshToken.findFirst({
       where: { OR: [{ tokenHash: this.tokenHash(token) }, { token }] },
-      include: { user: getDistribution() === 'core' ? { select: CORE_AUTH_USER_SELECT } : true },
+      include: { user: { select: CORE_AUTH_USER_SELECT } },
     });
     if (!record || record.revokedAt || record.expiresAt < new Date()) {
       throw new UnauthorizedException('Invalid or expired refresh token');
@@ -103,7 +119,7 @@ export class AuthService {
     const result = await this.prisma.$transaction(async (tx) => {
       const record = await tx.refreshToken.findFirst({
         where: { OR: [{ tokenHash: this.tokenHash(oldToken) }, { token: oldToken }] },
-        include: { user: getDistribution() === 'core' ? { select: CORE_AUTH_USER_SELECT } : true },
+        include: { user: { select: CORE_AUTH_USER_SELECT } },
       });
       if (!record) return { ok: false as const };
       if (record.revokedAt || record.expiresAt < now) {
@@ -157,9 +173,11 @@ export class AuthService {
           phone: phone || undefined,
           phoneNormalized: normalizedPhone || undefined,
           password: hashedPassword, name, role: normalizedRole as any,
-          ...(departmentId && getDistribution() === 'legacy-full' ? { departmentId } : {}),
         },
       });
+      if (departmentId && getDistribution() === 'legacy-full') {
+        await this.assignDepartment(user.id, departmentId);
+      }
       const loginResult = await this.login(user);
       return {
         ...loginResult,
@@ -186,10 +204,14 @@ export class AuthService {
         select: { id: true, email: true, name: true, phone: true, role: true, photo: true },
       });
     }
-    return this.prisma.user.findUnique({
+    const academicIdentity = this.requireAcademicIdentity();
+    const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true, name: true, phone: true, role: true, photo: true, departmentId: true, department: { select: { id: true, name: true, nameKh: true } } },
+      select: { id: true, email: true, name: true, phone: true, role: true, photo: true },
     });
+    if (!user) return null;
+    const [enriched] = await academicIdentity.attachAcademicProfiles([user]);
+    return enriched;
   }
 
   async getUsers(role?: string, roles?: string[]) {
@@ -203,44 +225,23 @@ export class AuthService {
       return this.prisma.user.findMany({
         where,
         orderBy: { updatedAt: 'desc' },
-        select: { id: true, email: true, name: true, phone: true, role: true, photo: true, createdAt: true, updatedAt: true },
+        select: AUTH_USER_LIST_BASE_SELECT,
       });
     }
-    return this.prisma.user.findMany({
+    const users = await this.prisma.user.findMany({
       where,
       orderBy: { updatedAt: 'desc' },
-      select: {
-        id: true, email: true, name: true, phone: true, role: true, photo: true,
-        departmentId: true, createdAt: true, updatedAt: true,
-        department: { select: { id: true, name: true, nameKh: true } },
-        studentProfile: {
-          select: {
-            id: true, studentNumber: true, parentId: true,
-            class: { select: { id: true, name: true } },
-            parent: { select: { id: true, name: true, email: true, phone: true } },
-          },
-        },
-        parentStudents: { select: { id: true, user: { select: { name: true } } } },
-      },
+      select: AUTH_USER_LIST_BASE_SELECT,
     });
+    return this.requireAcademicIdentity().attachAcademicProfiles(users as any);
   }
 
   async setStudentParent(studentUserId: string, parentId: string | null) {
     this.assertLegacyFeature();
-    const student = await this.prisma.student.findUnique({ where: { userId: studentUserId } });
-    if (!student) throw new Error('Student profile not found for this user');
-    if (parentId) {
-      const parent = await this.prisma.user.findUnique({
-        where: { id: parentId },
-        select: { id: true, role: true },
-      });
-      if (!parent || parent.role !== 'PARENT') {
-        throw new Error('parentId must reference a user with role PARENT');
-      }
-    }
-    await this.prisma.student.update({
-      where: { id: student.id },
-      data: { parentId: parentId || null },
+    await this.requireAcademicIdentity().assignStudentParent({
+      studentUserId,
+      parentId,
+      idempotencyKey: `assign-parent:${studentUserId}:${parentId ?? 'none'}`,
     });
     return { ok: true };
   }
@@ -345,49 +346,43 @@ export class AuthService {
       ]);
       return { ok: true, id: userId };
     }
-    // Detach the student profile (if any) and its attendance.
-    const student = await this.prisma.student.findUnique({ where: { userId } });
+
+    if (!this.academicIdentity) {
+      throw new Error('Academic identity provider is required to delete a legacy-distribution user');
+    }
+
+    // Academic Management owns its detach transaction. The deterministic command key makes a
+    // retry safe if core cleanup fails after the academic side has already committed.
+    await this.academicIdentity.detachUserAcademicIdentity({
+      userId,
+      idempotencyKey: `delete-user:${userId}`,
+    });
 
     // Wipe every record that references this user, in dependency order.
-    await this.prisma.$transaction([
-      // Detach any classes this user was teaching (do not delete the classes;
-      // students/attendance stay intact, an admin can reassign a teacher later).
-      this.prisma.class.updateMany({ where: { teacherId: userId }, data: { teacherId: null } }),
-      // Student-side
-      ...(student
-        ? [
-            this.prisma.attendance.deleteMany({ where: { studentId: student.id } }),
-            this.prisma.feeRecord.deleteMany({ where: { studentId: student.id } }),
-            this.prisma.student.delete({ where: { id: student.id } }),
-          ]
-        : []),
-
-      // As parent: detach children (do not delete the students)
-      this.prisma.student.updateMany({ where: { parentId: userId }, data: { parentId: null } }),
-
+    await this.prisma.$transaction(async (tx) => {
       // Attendance marker (student + staff)
-      this.prisma.attendance.deleteMany({ where: { markedById: userId } }),
-      this.prisma.staffAttendance.deleteMany({ where: { markedById: userId } }),
-      this.prisma.staffAttendance.deleteMany({ where: { userId } }),
+      await tx.attendance.deleteMany({ where: { markedById: userId } });
+      await tx.staffAttendance.deleteMany({ where: { markedById: userId } });
+      await tx.staffAttendance.deleteMany({ where: { userId } });
 
       // Communication
-      this.prisma.message.deleteMany({ where: { OR: [{ senderId: userId }, { receiverId: userId }] } }),
-      this.prisma.announcementRead.deleteMany({ where: { userId } }),
-      this.prisma.announcement.deleteMany({ where: { authorId: userId } }),
+      await tx.message.deleteMany({ where: { OR: [{ senderId: userId }, { receiverId: userId }] } });
+      await tx.announcementRead.deleteMany({ where: { userId } });
+      await tx.announcement.deleteMany({ where: { authorId: userId } });
 
       // Modules
-      this.prisma.salary.deleteMany({ where: { userId } }),
-      this.prisma.exam.deleteMany({ where: { createdById: userId } }),
-      this.prisma.assignment.deleteMany({ where: { createdById: userId } }),
+      await tx.salary.deleteMany({ where: { userId } });
+      await tx.exam.deleteMany({ where: { createdById: userId } });
+      await tx.assignment.deleteMany({ where: { createdById: userId } });
 
       // Preferences / notifications / sessions
-      this.prisma.notification.deleteMany({ where: { userId } }),
-      this.prisma.notificationPreference.deleteMany({ where: { userId } }),
-      this.prisma.refreshToken.deleteMany({ where: { userId } }),
+      await tx.notification.deleteMany({ where: { userId } });
+      await tx.notificationPreference.deleteMany({ where: { userId } });
+      await tx.refreshToken.deleteMany({ where: { userId } });
 
       // Finally the user
-      this.prisma.user.delete({ where: { id: userId } }),
-    ].filter(Boolean) as any);
+      await tx.user.delete({ where: { id: userId } });
+    });
 
     return { ok: true, id: userId };
   }
@@ -400,7 +395,6 @@ export class AuthService {
       updateData.phone = data.phone;
       updateData.phoneNormalized = normalizePhone(data.phone) || null;
     }
-    if (data.departmentId !== undefined && getDistribution() === 'legacy-full') updateData.departmentId = data.departmentId || null;
     if (data.role) {
       const trimmed = data.role.trim();
       if (!trimmed || trimmed.startsWith('__')) {
@@ -416,11 +410,16 @@ export class AuthService {
           select: { id: true, email: true, name: true, phone: true, role: true, photo: true, createdAt: true, updatedAt: true },
         });
       }
-      return await this.prisma.user.update({
+      const user = await this.prisma.user.update({
         where: { id: userId },
         data: updateData,
-        select: { id: true, email: true, name: true, phone: true, role: true, photo: true, departmentId: true, createdAt: true, department: { select: { id: true, name: true, nameKh: true } } },
+        select: { id: true, email: true, name: true, phone: true, role: true, photo: true, createdAt: true, updatedAt: true },
       });
+      if (data.departmentId !== undefined) {
+        await this.assignDepartment(userId, data.departmentId || null);
+      }
+      const [enriched] = await this.requireAcademicIdentity().attachAcademicProfiles([user]);
+      return enriched;
     } catch (error: any) {
       if (error.code === 'P2002') {
         const target = Array.isArray(error.meta?.target) ? error.meta.target.join(',') : String(error.meta?.target || '');
@@ -452,32 +451,11 @@ export class AuthService {
     }
     const users = await this.prisma.user.findMany({
       where,
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        phone: true,
-        photo: true,
-        role: true,
-        createdAt: true,
-        department: { select: { id: true, name: true } },
-        studentProfile: {
-          select: {
-            id: true,
-            studentNumber: true,
-            sex: true,
-            photo: true,
-            dateOfBirth: true,
-            address: true,
-            class: { select: { id: true, name: true } },
-          },
-        },
-      },
+      select: { id: true, email: true, name: true, phone: true, photo: true, role: true, createdAt: true, updatedAt: true },
       orderBy: { name: 'asc' },
       take: 50,
     });
-
-    return users;
+    return this.requireAcademicIdentity().attachAcademicProfiles(users as any);
   }
 
   private _ttClassInclude() {
@@ -686,6 +664,21 @@ export class AuthService {
 
   private assertLegacyFeature(): void {
     if (getDistribution() === 'core') throw new NotFoundException('This feature requires a business plugin');
+  }
+
+  private requireAcademicIdentity(): AcademicIdentityProvider {
+    if (!this.academicIdentity) {
+      throw new Error('Academic identity provider is required in legacy-full distribution');
+    }
+    return this.academicIdentity;
+  }
+
+  private async assignDepartment(userId: string, departmentId: string | null): Promise<void> {
+    await this.requireAcademicIdentity().assignUserDepartment({
+      userId,
+      departmentId,
+      idempotencyKey: `assign-department:${userId}:${departmentId ?? 'none'}`,
+    });
   }
 
   private assertCoreAdministrativeRole(role: string): void {

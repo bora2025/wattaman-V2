@@ -1,0 +1,40 @@
+{
+  "format": "wattanam-plugin-migration-certification-v1",
+  "generatedAt": "2026-09-15T06:37:22.091Z",
+  "passed": true,
+  "suites": [
+    {
+      "id": "adoption",
+      "passed": true,
+      "exitCode": 0,
+      "durationMs": 229,
+      "testCount": 7,
+      "outputSha256": "194237e5c92bd9bf902920aac249b0172bb96ea771f2f117c60e911a068de2a7"
+    },
+    {
+      "id": "lifecycle",
+      "passed": true,
+      "exitCode": 0,
+      "durationMs": 12273,
+      "testCount": 38,
+      "outputSha256": "d6764220890641759c990862d59fbdd6b6b85e36bd9219fd59d8bc0bf7531eee"
+    },
+    {
+      "id": "recovery",
+      "passed": true,
+      "exitCode": 0,
+      "durationMs": 389,
+      "testCount": 12,
+      "outputSha256": "acc013089c3b1f7f0093935b6000e521a238ded49a691f0aad6679b604ea3de7"
+    },
+    {
+      "id": "security",
+      "passed": true,
+      "exitCode": 0,
+      "durationMs": 11496,
+      "testCount": 25,
+      "outputSha256": "373154348ff6ad6278edf854a1c9e24540e51130ec6ae887ae88055e20e3ef48"
+    }
+  ],
+  "reportSha256": "80ffd2351115bbc83f98cf727c80f43f9868f180575a0c49b820acb0d864698f"
+}

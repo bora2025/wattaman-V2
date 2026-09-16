@@ -1,8 +1,9 @@
 # Wattanam Business Modules to Official Plugins Migration Plan
 
-Status: **proposed; architecture preparation only; no module extraction authorized yet**  
+Status: **approved and executing; MP-0 complete, MP-1 proof complete, Document Designer extraction and MP-2 foundation in progress**
 Written: 2026-09-11  
 Parent decision: [Wattanam Lean Core and Plugin-First Architecture Plan](./wattanam-lean-core-plugin-first-plan.md)
+Execution tracker: [Module-to-Plugin Migration Progress Checklist](./module-to-plugin-progress-checklist.md)
 
 ## 1. Purpose
 
@@ -472,30 +473,31 @@ prevents disabling an active required dependency.
 
 ### Wave MP-0 — Platform prerequisites
 
-- [ ] Accept lean-core boundaries and plugin ownership ADRs.
-- [ ] Build UI v2 and parameterized route contracts.
-- [ ] Build event/outbox and cross-plugin query contracts.
-- [ ] Build digest-addressed API/worker artifact delivery.
-- [ ] Build the standard adoption/certification toolkit.
-- [ ] Add a clean core-only CI and Railway deployment drill.
+- [x] Accept lean-core boundaries and plugin ownership ADRs.
+- [x] Build UI v2 and parameterized route contracts.
+- [x] Build event/outbox and cross-plugin query contracts.
+- [x] Build digest-addressed API/worker artifact delivery.
+- [x] Build the standard adoption/certification toolkit.
+- [x] Add a clean core-only CI and Railway deployment drill.
 
 Gate: a non-trivial reference plugin installs without rebuilding core and survives full lifecycle,
 backup and restore.
 
 ### Wave MP-1 — Low-coupling proof
 
-- [ ] Re-certify `plugins/announcements` under marketplace-only installation.
-- [ ] Extract Document Designer.
+- [x] Re-certify `plugins/announcements` under marketplace-only installation.
+- [~] Extract Document Designer (package/data groundwork implemented; UI, hosted adoption,
+  recovery, pilot and legacy cleanup remain open).
 - [ ] Extract Transportation if its identity/location contracts are ready.
 
 Gate: independently installed UI, files, realtime behavior and print output work on a clean school.
 
 ### Wave MP-2 — Academic foundation
 
-- [ ] Separate core identity from academic student profiles.
+- [~] Separate core identity from academic student profiles.
 - [ ] Extract Academic Management.
 - [ ] Migrate classes, study years, departments, admissions and enrollments.
-- [ ] Publish roster/enrollment contracts.
+- [~] Publish roster/enrollment contracts.
 
 Gate: core-only accounts work without the plugin, while dependent-plugin contract tests pass when it
 is installed.
@@ -596,9 +598,9 @@ The overall program is complete when:
 7. Legacy modules, routes, pages and tables are removed only after their approved support windows.
 8. Production, security, privacy, legal and operational evidence is accepted for each release wave.
 
-## 17. First action
+## 17. Current action
 
-Begin with MP-0, not Attendance code movement. Create the full ownership inventory and prove
-declarative UI v2 plus API/worker artifact delivery using a low-risk plugin. Attendance becomes the
-first major vertical-slice validation only after Academic Management and the scanner/report/print
-contracts are ready.
+Finish Document Designer MP1-004 through MP1-012: controlled backup/restore, hosted adoption,
+rendered-output comparison, compatibility routing/rollback, complete UI and scoped storage, then
+marketplace certification and pilot. Continue Academic Management boundary work in MP-2, but do
+not begin Attendance extraction until MP-2 and the remaining LC4 production evidence are complete.

@@ -3,6 +3,7 @@ import { PrismaService } from '../database/prisma.service';
 import { AttendanceGateway } from './attendance.gateway';
 import { NotificationService } from '../notification/notification.service';
 import { SessionConfigService } from '../session-config/session-config.service';
+import { DirectoryService } from '../directory/directory.service';
 
 function toUTCMidnight(d: Date): Date {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
@@ -37,7 +38,16 @@ export class AttendanceService {
     private attendanceGateway: AttendanceGateway,
     private notificationService: NotificationService,
     private sessionConfigService: SessionConfigService,
+    private readonly directory: DirectoryService,
   ) {}
+
+  private async assertClassAdminClassAccess(operatorRole: string | undefined, operatorId: string, classId: string) {
+    if (operatorRole !== 'CLASS_ADMIN') return;
+    const classIds = await this.directory.classesForUser(operatorId, 'CLASS_ADMIN');
+    if (!classIds.includes(classId)) {
+      throw new BadRequestException('CLASS_ADMIN is not assigned to this class');
+    }
+  }
 
   private async upsertStudentPermissionRange(
     studentId: string,
@@ -179,6 +189,7 @@ export class AttendanceService {
     classId: string,
     status: string,
     teacherId: string,
+    operatorRole?: string,
     date?: Date,
     session: number = 1,
     providedCheckInTime?: Date,
@@ -189,6 +200,7 @@ export class AttendanceService {
     permissionStartDate?: Date,
     permissionEndDate?: Date,
   ) {
+    await this.assertClassAdminClassAccess(operatorRole, teacherId, classId);
     const raw = date || new Date();
     const attendanceDate = toUTCMidnight(raw);
     // Use the actual scan time from the frontend if provided, otherwise fall back to now
@@ -314,12 +326,14 @@ export class AttendanceService {
     records: Array<{ studentId: string; status: string; checkInTime?: Date; permissionType?: string; permissionStartDate?: Date; permissionEndDate?: Date }>,
     classId: string,
     teacherId: string,
+    operatorRole?: string,
     date?: Date,
     session: number = 1,
     latitude?: number,
     longitude?: number,
     location?: string,
   ) {
+    await this.assertClassAdminClassAccess(operatorRole, teacherId, classId);
     const raw = date || new Date();
     const attendanceDate = toUTCMidnight(raw);
 

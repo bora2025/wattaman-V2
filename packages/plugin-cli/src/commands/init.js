@@ -17,12 +17,13 @@ function run(argv) {
   const dotIndex = id.indexOf('.');
   const publisher = id.slice(0, dotIndex);
   const name = id.slice(dotIndex + 1);
+  const sqlName = name.replace(/[^a-z0-9]/g, '_');
   const dirFlag = argv.indexOf('--dir');
   const destination = path.resolve(dirFlag >= 0 ? argv[dirFlag + 1] : id);
   if (fs.existsSync(destination) && fs.readdirSync(destination).length > 0) fail(`${destination} already exists and is not empty`);
 
   const displayName = name.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-  renderTemplate(path.join(__dirname, '..', '..', 'templates', 'default'), destination, { publisher, name, displayName });
+  renderTemplate(path.join(__dirname, '..', '..', 'templates', 'default'), destination, { publisher, name, sqlName, displayName });
   const migration = path.join(destination, 'migrations', '001_create_widget.sql');
   const manifestPath = path.join(destination, 'plugin.json');
   fs.writeFileSync(manifestPath, fs.readFileSync(manifestPath, 'utf8').replace('{{migrationChecksum}}', sha256(fs.readFileSync(migration))));

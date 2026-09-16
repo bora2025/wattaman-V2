@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { DirectoryService } from '../directory/directory.service';
 
 const DEFAULT_CONFIGS = [
   { session: 1, type: 'CHECK_IN', startTime: '07:00', endTime: '07:15' },
@@ -17,7 +18,7 @@ const STAFF_DEFAULT_CONFIGS = [
 
 @Injectable()
 export class SessionConfigService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private readonly directory: DirectoryService) {}
 
   /** Deduplicate configs by session number — keeps the last (most recent) entry per session */
   private dedup(configs: any[]): any[] {
@@ -159,11 +160,7 @@ export class SessionConfigService {
   // ========== ATTENDANCE FORMAT RULES ==========
 
   async getUserOrganizationId(userId: string): Promise<string | null> {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { departmentId: true },
-    });
-    return user?.departmentId || null;
+    return this.directory.departmentForUser(userId);
   }
 
   /** Get attendance format rules for a scope (CLASS or STAFF) */

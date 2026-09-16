@@ -31,6 +31,7 @@ export class AttendanceController {
     try {
       const { studentId, classId, status, date, session, checkInTime, latitude, longitude, location, permissionType, permissionStartDate, permissionEndDate } = body;
       const teacherId = req.user.userId;
+      const operatorRole = req.user.role;
       const attendanceDate = date ? new Date(date) : undefined;
       const parsedCheckIn = checkInTime ? new Date(checkInTime) : undefined;
       return await this.attendanceService.recordAttendance(
@@ -38,6 +39,7 @@ export class AttendanceController {
         classId,
         status,
         teacherId,
+        operatorRole,
         attendanceDate,
         session ?? 1,
         parsedCheckIn,
@@ -72,6 +74,7 @@ export class AttendanceController {
     try {
       const { classId, date, session, records, latitude, longitude, location } = body;
       const teacherId = req.user.userId;
+      const operatorRole = req.user.role;
       const attendanceDate = date ? new Date(date) : undefined;
       const parsedRecords = records.map(r => ({
         studentId: r.studentId,
@@ -81,7 +84,7 @@ export class AttendanceController {
         permissionStartDate: r.permissionStartDate ? new Date(r.permissionStartDate) : undefined,
         permissionEndDate: r.permissionEndDate ? new Date(r.permissionEndDate) : undefined,
       }));
-      return await this.attendanceService.recordBulkAttendance(parsedRecords, classId, teacherId, attendanceDate, session ?? 1, latitude, longitude, location);
+      return await this.attendanceService.recordBulkAttendance(parsedRecords, classId, teacherId, operatorRole, attendanceDate, session ?? 1, latitude, longitude, location);
     } catch (err) {
       console.error('[attendance/bulk] ERROR:', err?.message || err, err?.stack);
       throw err;

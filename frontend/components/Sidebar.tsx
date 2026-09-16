@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../lib/i18n';
 import { iconMap, IconGlobe, IconLogout } from './Icons';
 import InstallAppButton from './InstallAppButton';
-import { composeNavigation, NavigationItem, NavigationRegistration } from '../lib/navigation-registry';
+import { composeNavigation, FrontendDistribution, isCoreNavigationHref, NavigationItem, NavigationRegistration } from '../lib/navigation-registry';
 
 /** Renders an icon: if `key` maps to an SVG component, uses it; otherwise falls back to text/emoji. */
 function NavIcon({ icon, size = 20, className }: { icon: string; size?: number; className?: string }) {
@@ -191,11 +191,20 @@ export default function Sidebar({ title, subtitle, navItems, accentColor = 'indi
   // scrollable nav list and "More" drawer only, never into the curated
   // bottom-tab picks.
   const [pluginNav, setPluginNav] = useState<NavigationRegistration[]>([]);
+  // Fail closed while runtime distribution is loading. NEXT_PUBLIC_* values are compiled into the
+  // browser bundle and therefore cannot safely distinguish core and legacy schools that reuse the
+  // same immutable web image; /api/version is the runtime authority.
+  const [runtimeDistribution, setRuntimeDistribution] = useState<FrontendDistribution>('core');
   useEffect(() => {
     let active = true;
     (async () => {
       try {
         const apiBase = process.env.NEXT_PUBLIC_API_URL ?? '';
+        const versionResponse = await fetch(`${apiBase}/api/version`, { credentials: 'include' });
+        if (versionResponse.ok) {
+          const version = await versionResponse.json();
+          if (active && version?.distribution === 'legacy-full') setRuntimeDistribution('legacy-full');
+        }
         const res = await fetch(`${apiBase}/api/plugin-api/my-extensions`, { credentials: 'include' });
         if (!res.ok) return;
         const data = await res.json();
@@ -212,8 +221,11 @@ export default function Sidebar({ title, subtitle, navItems, accentColor = 'indi
     return () => { active = false; };
   }, []);
   const effectiveNavItems = composeNavigation(
-    navItems.map((item) => ({ ...item, source: 'core' as const })),
-    'core',
+    navItems.map((item) => ({
+      ...item,
+      source: isCoreNavigationHref(item.href) ? 'core' as const : 'legacy-business' as const,
+    })),
+    runtimeDistribution,
     pluginNav,
   );
 

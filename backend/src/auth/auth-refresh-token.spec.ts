@@ -28,6 +28,10 @@ describe('AuthService refresh-token custody', () => {
     const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
     const result = await new AuthService(jwt, prisma).rotateRefreshToken(oldToken);
     expect(result.accessToken).toBe('access-token');
+    const userSelect = tx.refreshToken.findFirst.mock.calls[0][0].include.user.select;
+    expect(userSelect).not.toHaveProperty('department');
+    expect(userSelect).not.toHaveProperty('studentProfile');
+    expect(userSelect).not.toHaveProperty('parentStudents');
     expect(tx.refreshToken.updateMany).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: 'old', revokedAt: null }, data: expect.objectContaining({ token: null, tokenHash: hash(oldToken) }),
     }));
