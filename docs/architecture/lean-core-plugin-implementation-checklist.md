@@ -445,7 +445,11 @@ Gate: the first complete business plugin operates without rebuilding core.
 - [~] **MP2-002 Academic schema** — ownership manifests identify the target models and Departments
   CRUD is provider-backed with atomic legacy deletion. The initial plugin owns additive namespaced
   Department/membership migrations; Student/Class/Enrollment/StudyYear/Subject remain open.
-- [ ] **MP2-003 Admissions** — move class registration/intake and configurable fields.
+- [~] **MP2-003 Admissions** — compatibility seam, fail-closed legacy writes, namespaced
+  migrations, deterministic preflight, journaled adopt/dry-run toolkit, rollback drill,
+  cutover-readiness parity, and certified plugin-owned submit/resolve/settings/fields write
+  handlers are implemented and locally tested. Full production-shaped cutover evidence remains
+  open.
 - [~] **MP2-004 Roster contracts** — class audience, class membership, class lookup and department
   membership have provider-backed consumers; enrollment-at-date and full runtime plugin binding
   remain open.

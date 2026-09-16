@@ -11,7 +11,7 @@
   "frontendEntry": "frontend/page.json",
   "sdkVersion": "1.1.0",
   "runtimeVersion": "1.0.0",
-  "capabilities": ["api.routes", "database.read", "database.write", "events.durable", "navigation.register", "permissions.register", "ui.pages"],
+  "capabilities": ["api.routes", "crypto.hash", "database.read", "database.write", "events.durable", "events.publish", "navigation.register", "notifications.send", "permissions.register", "ui.pages"],
   "permissions": ["wattanam.academic-management.view", "wattanam.academic-management.manage"],
   "dependencies": {},
   "optionalDependencies": {},
@@ -32,6 +32,36 @@
       "id": "003_create_enrollment_interval",
       "path": "migrations/003_create_enrollment_interval.sql",
       "checksum": "6a7304a8ea29c064a394144ba0fa4aa9288e62fabe03a9f0a81224401d969861",
+      "destructive": false
+    },
+    {
+      "id": "004_create_study_year",
+      "path": "migrations/004_create_study_year.sql",
+      "checksum": "54a0a91809e5ad924484776f47c8b7638b6d1894bff379f1485c229f25fb0ac1",
+      "destructive": false
+    },
+    {
+      "id": "005_create_class",
+      "path": "migrations/005_create_class.sql",
+      "checksum": "9d10a96010801a827f947e0f04a1fedb8a4eb59e3be3b742e51a7e1d53ea9b9c",
+      "destructive": false
+    },
+    {
+      "id": "006_create_class_registration",
+      "path": "migrations/006_create_class_registration.sql",
+      "checksum": "a6eaa58785201a91f2236dbbe777eb7900600e71eb193c9052b99a860f53ce67",
+      "destructive": false
+    },
+    {
+      "id": "007_create_class_registration_settings",
+      "path": "migrations/007_create_class_registration_settings.sql",
+      "checksum": "f7fac966cf3f0d9156898a3a297e7a17747d50a77090af8c85634449a2ba734f",
+      "destructive": false
+    },
+    {
+      "id": "008_create_class_registration_field",
+      "path": "migrations/008_create_class_registration_field.sql",
+      "checksum": "b550055dd6951c330f7f8fb0719fb2bfef722c0066486c8a3a2f64946caffa18",
       "destructive": false
     }
   ],

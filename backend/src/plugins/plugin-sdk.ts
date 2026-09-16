@@ -89,6 +89,9 @@ export interface PluginRuntimeContext {
   realtime: {
     notifyUser(userId: string, event: string, payload: unknown): void;
   };
+  crypto: {
+    hashBcrypt(plaintext: string, rounds?: number): Promise<string>;
+  };
 }
 
 export interface DirectoryAudienceQuery {

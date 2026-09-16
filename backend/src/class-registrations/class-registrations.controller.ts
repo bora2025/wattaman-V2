@@ -1,23 +1,51 @@
-import { Controller, Get, Post, Patch, Delete, Body, Query, Param, UseGuards, Request, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Query, Param, UseGuards, Request, BadRequestException, ConflictException } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { ClassRegistrationsService } from './class-registrations.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { PluginExtensionsService } from '../plugins/plugin-extensions.service';
+
+const PLUGIN_ID = 'wattanam.academic-management';
+
+export function academicClassRegistrationsRouteOwner(value = process.env.ACADEMIC_CLASS_REGISTRATIONS_ROUTE_OWNER): 'legacy' | 'plugin' {
+  const owner = String(value || 'legacy').trim().toLowerCase();
+  if (owner !== 'legacy' && owner !== 'plugin') throw new Error('ACADEMIC_CLASS_REGISTRATIONS_ROUTE_OWNER must be legacy or plugin');
+  return owner;
+}
 
 @Controller('class-registrations')
 export class ClassRegistrationsController {
-  constructor(private svc: ClassRegistrationsService) {}
+  constructor(
+    private svc: ClassRegistrationsService,
+    private readonly extensions: PluginExtensionsService,
+  ) {}
 
   // ─── Public — no auth required ─────────────────────────────────────────
   @Get('public/classes')
-  listPublicClasses() {
-    return this.svc.listPublicClasses();
+  async listPublicClasses() {
+    if (!this.pluginOwned()) return this.svc.listPublicClasses();
+    return this.extensions.dispatch(PLUGIN_ID, {
+      method: 'GET',
+      path: 'admissions/public/classes',
+      params: {},
+      query: {},
+      body: {},
+      principal: { userId: 'system-public-route', role: 'SUPER_ADMIN', email: undefined },
+    });
   }
 
   @Get('public/form-config')
-  getFormConfig() {
-    return this.svc.getFormConfig();
+  async getFormConfig() {
+    if (!this.pluginOwned()) return this.svc.getFormConfig();
+    return this.extensions.dispatch(PLUGIN_ID, {
+      method: 'GET',
+      path: 'admissions/public/form-config',
+      params: {},
+      query: {},
+      body: {},
+      principal: { userId: 'system-public-route', role: 'SUPER_ADMIN', email: undefined },
+    });
   }
 
   @Throttle({ default: { ttl: 60000, limit: 5 } })
@@ -39,6 +67,9 @@ export class ClassRegistrationsController {
       customFieldValues?: Record<string, string | string[]>;
     },
   ) {
+    if (this.pluginOwned()) {
+      return this.dispatch('POST', 'admissions/public/submit', { user: { userId: 'system-public-route', role: 'SUPER_ADMIN' } }, body);
+    }
     return this.svc.createRegistration(body);
   }
 
@@ -46,7 +77,8 @@ export class ClassRegistrationsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Get('settings')
-  getSettings() {
+  getSettings(@Request() req: any) {
+    if (this.pluginOwned()) return this.dispatch('GET', 'admissions/settings', req, {});
     return this.svc.getSettings();
   }
 
@@ -54,6 +86,7 @@ export class ClassRegistrationsController {
   @Roles('ADMIN')
   @Patch('settings')
   updateSettings(
+    @Request() req: any,
     @Body()
     body: {
       khmerNameMode?: string;
@@ -67,41 +100,47 @@ export class ClassRegistrationsController {
       generationMode?: string;
     },
   ) {
+    if (this.pluginOwned()) return this.dispatch('PATCH', 'admissions/settings', req, body);
     return this.svc.updateSettings(body);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Get('fields')
-  listFields() {
+  listFields(@Request() req: any) {
+    if (this.pluginOwned()) return this.dispatch('GET', 'admissions/fields', req, {});
     return this.svc.listFields();
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Post('fields')
-  createField(@Body() body: { label: string; required?: boolean; fieldType?: string; options?: string[] }) {
+  createField(@Request() req: any, @Body() body: { label: string; required?: boolean; fieldType?: string; options?: string[] }) {
+    if (this.pluginOwned()) return this.dispatch('POST', 'admissions/fields', req, body);
     return this.svc.createField(body);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Patch('fields/reorder')
-  reorderFields(@Body() body: { ids: string[] }) {
+  reorderFields(@Request() req: any, @Body() body: { ids: string[] }) {
+    if (this.pluginOwned()) return this.dispatch('POST', 'admissions/fields/reorder', req, body);
     return this.svc.reorderFields(body?.ids);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Patch('fields/:id')
-  updateField(@Param('id') id: string, @Body() body: { label?: string; required?: boolean; enabled?: boolean; fieldType?: string; options?: string[] }) {
+  updateField(@Request() req: any, @Param('id') id: string, @Body() body: { label?: string; required?: boolean; enabled?: boolean; fieldType?: string; options?: string[] }) {
+    if (this.pluginOwned()) return this.dispatch('PATCH', `admissions/fields/${id}`, req, body);
     return this.svc.updateField(id, body);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Delete('fields/:id')
-  deleteField(@Param('id') id: string) {
+  deleteField(@Request() req: any, @Param('id') id: string) {
+    if (this.pluginOwned()) return this.dispatch('DELETE', `admissions/fields/${id}`, req, {});
     return this.svc.deleteField(id);
   }
 
@@ -128,9 +167,37 @@ export class ClassRegistrationsController {
     @Param('id') id: string,
     @Body() body: { action: 'APPROVE' | 'REJECT'; rejectReason?: string },
   ) {
+    if (this.pluginOwned()) {
+      return this.dispatch('PATCH', `admissions/registrations/${id}/resolve`, req, body);
+    }
     if (body?.action !== 'APPROVE' && body?.action !== 'REJECT') {
       throw new BadRequestException('action must be APPROVE or REJECT');
     }
     return this.svc.resolveRegistration(req.user.userId, id, body);
+  }
+
+  private pluginOwned() {
+    return academicClassRegistrationsRouteOwner() === 'plugin';
+  }
+
+  private assertLegacyMutationOwner() {
+    if (this.pluginOwned()) {
+      throw new ConflictException('Academic admissions writes require a certified consistency policy; keep the route owner at legacy');
+    }
+  }
+
+  private dispatch(method: 'GET' | 'POST' | 'PATCH' | 'DELETE', route: string, req: any, body: unknown) {
+    return this.extensions.dispatch(PLUGIN_ID, {
+      method,
+      path: route,
+      params: {},
+      query: {},
+      body,
+      principal: {
+        userId: req?.user?.userId ?? 'system-public-route',
+        role: req?.user?.role ?? 'SUPER_ADMIN',
+        email: req?.user?.email,
+      },
+    });
   }
 }

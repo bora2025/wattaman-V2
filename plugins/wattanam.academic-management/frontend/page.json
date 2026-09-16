@@ -19,6 +19,60 @@
           { "id": "description", "label": "Description" }
         ], "options": { "pageSize": 20, "selectable": false } }
       ]
+    },
+    {
+      "id": "study-years",
+      "title": "Study Years",
+      "routePath": "study-years",
+      "permission": "wattanam.academic-management.view",
+      "parameters": [],
+      "dataSources": [
+        { "id": "studyYears", "method": "GET", "path": "study-years", "permission": "wattanam.academic-management.view" }
+      ],
+      "components": [
+        { "id": "heading", "type": "heading", "title": "Study Years" },
+        {
+          "id": "study-years-table",
+          "type": "table",
+          "title": "Study Years",
+          "source": "studyYears",
+          "fields": [
+            { "id": "year", "label": "Year", "sortable": true, "filterable": true },
+            { "id": "label", "label": "Label", "sortable": true },
+            { "id": "isCurrent", "label": "Current", "sortable": true },
+            { "id": "startDate", "label": "Start date", "sortable": true },
+            { "id": "endDate", "label": "End date", "sortable": true }
+          ],
+          "options": { "pageSize": 20, "selectable": false }
+        }
+      ]
+    },
+    {
+      "id": "classes",
+      "title": "Classes",
+      "routePath": "classes",
+      "permission": "wattanam.academic-management.view",
+      "parameters": [],
+      "dataSources": [
+        { "id": "classes", "method": "GET", "path": "classes", "permission": "wattanam.academic-management.view" }
+      ],
+      "components": [
+        { "id": "heading", "type": "heading", "title": "Classes" },
+        {
+          "id": "classes-table",
+          "type": "table",
+          "title": "Classes",
+          "source": "classes",
+          "fields": [
+            { "id": "name", "label": "Name", "sortable": true, "filterable": true },
+            { "id": "subject", "label": "Subject", "sortable": true },
+            { "id": "registrationStatus", "label": "Registration", "sortable": true },
+            { "id": "schedule", "label": "Schedule" },
+            { "id": "price", "label": "Price", "sortable": true }
+          ],
+          "options": { "pageSize": 20, "selectable": false }
+        }
+      ]
     }
   ]
 }

@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnApplicationBootstrap, OnApplicationShutdown, Optional } from '@nestjs/common';
 import path from 'path';
 import semver from 'semver';
+import bcrypt from 'bcryptjs';
 import { PrismaService } from '../database/prisma.service';
 import { readRuntimeConfig } from '../config/environment';
 import { trustedPluginKeys } from './plugin-config';
@@ -210,6 +211,9 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnApplicati
       },
       realtime: {
         notifyUser: (userId, event, payload) => { requireCapability('realtime.notify'); this.resourceQuota?.consume(id, 'realtime'); this.realtime.notifyUser(id, userId, event, payload); },
+      },
+      crypto: {
+        hashBcrypt: (plaintext, rounds = 12) => { requireCapability('crypto.hash'); return bcrypt.hash(plaintext, rounds); },
       },
     };
     try {

@@ -86,11 +86,84 @@ Extract Academic Management so core identity and accounts can run without academ
   concurrent commands under a transaction-scoped advisory lock (3/3 focused tests; TypeScript
   check). Namespaced data, plugin UI/routes and adoption remain open
   ([local evidence](../acceptance/mp2-study-year-boundary-2026-09-16.md)).
+- 2026-09-16 progress: certified StudyYear and Class write handlers are implemented in
+  `plugins/wattanam.academic-management/backend/index.js` (POST/PUT/set-current/DELETE for StudyYear;
+  POST/PUT/DELETE for Class). Core `StudyYearsController` and `ClassesController` mutations now
+  dispatch to these plugin routes when the corresponding `ACADEMIC_*_ROUTE_OWNER=plugin` switch is
+  set, while bulk CSV import remains fail-closed pending certification. Controller specs and the
+  plugin reference test are updated and pass; backend build passes.
 - [ ] Inventory all academic routes/pages and map each to core or academic plugin owner.
+- 2026-09-16 progress: Class read/write route ownership is wired end-to-end. Core `/classes`
+  compatibility routing supports plugin-owned list reads and certified writes (create/update/delete
+  and student-management mutations dispatch to the plugin), with legacy default and fail-closed
+  guards for uncertified operations. Plugin Class write handlers perform core `Student`/`User`
+  table writes for add/update/remove/cleanup. Controller specs and plugin reference test pass
+  ([local evidence](../acceptance/mp2-class-plugin-route-adoption-toolkit-2026-09-16.md)).
+- 2026-09-16 progress: `/classes` now has explicit compatibility ownership (`legacy` default;
+  optional plugin-owned list reads) with plugin-mode write fail-close guards in core. Initial
+  read-only plugin Class route and declarative Class list page are added in
+  `plugins/wattanam.academic-management` ([local evidence](../acceptance/mp2-class-plugin-route-adoption-toolkit-2026-09-16.md)).
 
 ### B. Contracts and runtime
 
 - [ ] MP2-003 Admissions and class-registration workflows moved behind plugin contracts.
+- 2026-09-16 progress: admissions public-class discovery now has an explicit compatibility seam.
+  Core `class-registrations/public/classes` can route to Academic Management plugin mode with
+  legacy default, and plugin route `admissions/public/classes` serves namespaced class data with
+  hidden-registration filtering and price redaction. Admissions write workflows remain legacy in
+  this step ([local evidence](../acceptance/mp2-admissions-public-classes-route-seam-2026-09-16.md)).
+- 2026-09-16 progress: admissions public form configuration now follows the same compatibility seam.
+  Core `class-registrations/public/form-config` can route to plugin mode with legacy default, and
+  plugin route `admissions/public/form-config` returns read-only singleton settings/defaults plus
+  enabled custom fields in deterministic order. Admissions mutations and resolve flow are still
+  legacy in this step ([local evidence](../acceptance/mp2-admissions-public-classes-route-seam-2026-09-16.md)).
+- 2026-09-16 progress: admissions admin reads now follow plugin-compatible ownership too.
+  Core `class-registrations/settings` and `class-registrations/fields` can route to plugin mode
+  with legacy default via read-only plugin routes (`admissions/settings`, `admissions/fields`),
+  while plugin-mode settings/field mutations now fail closed in core pending certified consistency
+  policy. Public submit and admin resolve still remain legacy in this step
+  ([local evidence](../acceptance/mp2-admissions-public-classes-route-seam-2026-09-16.md)).
+- 2026-09-16 progress: admissions workflow writes are now guarded against unsafe plugin-mode
+  execution. Core `class-registrations/public` and `class-registrations/:id` continue to use
+  legacy logic, but both now fail closed when plugin owner mode is enabled, ensuring plugin mode is
+  read-only until workflow contracts and migration readiness are certified
+  ([local evidence](../acceptance/mp2-admissions-public-classes-route-seam-2026-09-16.md)).
+- 2026-09-16 progress: Academic Management now registers admissions workflow contract stubs
+  (`admissions/public/submit`, `admissions/registrations/:id/resolve`) behind plugin permissions.
+  The stubs intentionally reject writes until migration and cutover certification is complete,
+  providing explicit plugin contract inventory without enabling mutation cutover yet
+  ([local evidence](../acceptance/mp2-admissions-public-classes-route-seam-2026-09-16.md)).
+- 2026-09-16 progress: class-registration workflow endpoints now cross the plugin boundary in
+  plugin mode. Core `class-registrations/public` and `class-registrations/:id` dispatch to plugin
+  contracts rather than invoking legacy write services directly, but plugin handlers remain
+  intentionally certification-blocked until namespaced admissions write adoption is implemented
+  ([local evidence](../acceptance/mp2-admissions-public-classes-route-seam-2026-09-16.md)).
+- 2026-09-16 progress: deterministic admissions migration preflight is now implemented for
+  `ClassRegistration`, `ClassRegistrationSettings` and `ClassRegistrationField`, with metadata-only
+  source fingerprinting and fail-closed target-table readiness checks for the three planned
+  namespaced admissions tables ([local evidence](../acceptance/mp2-admissions-adoption-preflight-2026-09-16.md)).
+- 2026-09-16 progress: admissions dry-run/adopt toolkit is now implemented with verified-backup
+  gating, journaled multi-phase resumable copy (registrations/settings/fields), and exact
+  source/target fingerprint reconciliation. Legacy admissions rows and route ownership remain
+  unchanged in this step ([local evidence](../acceptance/mp2-admissions-adoption-toolkit-2026-09-16.md)).
+- 2026-09-16 progress: additive namespaced admissions migrations are now created and
+  checksum-registered in the plugin manifest for `ClassRegistration`, `ClassRegistrationSettings`
+  and `ClassRegistrationField`, matching the preflight/adopt toolkit target tables
+  ([local evidence](../acceptance/mp2-admissions-namespaced-migrations-2026-09-16.md)).
+- 2026-09-16 progress: admissions rollback drill script and test are added, mirroring the
+  study-year/class pattern, and npm scripts are wired for `db:academic-admissions:rollback-drill`
+  and `test:academic-admissions:rollback-drill`.
+- 2026-09-16 progress: academic-management cutover-readiness now validates admissions
+  source/target parity for registrations/settings/fields, checks reconciled adoption journals,
+  active plugin, and no maintenance lock, and remains read-only. Its unit-test fixtures were
+  extended and static diagnostics pass.
+- 2026-09-16 progress: certified plugin-owned admissions write handlers are implemented and
+  tested. The plugin now serves submit, resolve, settings update, and custom-field CRUD/reorder
+  against namespaced admissions tables. Core subscribes to `academic.registration.approved.v1`
+  and creates the linked User/Student identity records. The plugin runtime gained the
+  `crypto.hash` capability for bcrypt hashing without bundling dependencies. Backend build,
+  controller spec, subscriber spec, and plugin reference test pass locally
+  ([local evidence](../acceptance/mp2-admissions-cutover-readiness-rollback-drill-2026-09-16.md)).
 - [ ] MP2-004 Publish roster contracts: class roster, enrollment-at-date, audience resolution.
 - 2026-09-15 progress: initial versioned contract scaffold and tests added (`backend/scripts/mp2-academic-contracts-scaffold.js`, `backend/scripts/mp2-academic-contracts-scaffold.test.js`).
 - 2026-09-15 progress: `DirectoryService` now supports optional CLASS-audience delegation through an academic provider boundary (`ACADEMIC_DIRECTORY_PROVIDER`).
@@ -126,6 +199,17 @@ Extract Academic Management so core identity and accounts can run without academ
 - 2026-09-15 progress: read-only department list declarative UI exists in the initial plugin
   package; creation/edit/delete remain disabled pending a consistency policy, while students,
   teachers, classes, years and registration remain open.
+- 2026-09-16 progress: read-only Study Year plugin API routes (`study-years`,
+  `study-years/current`) and declarative list page now exist in
+  `plugins/wattanam.academic-management`. Core `/study-years` compatibility routing supports
+  plugin-owned reads with legacy default while all writes fail closed in plugin mode until
+  certified consistency policy and adoption evidence are complete
+  ([local evidence](../acceptance/mp2-study-year-plugin-route-preflight-2026-09-16.md)).
+- 2026-09-16 progress: Study Year and Class write UI/API foundations are complete in the plugin.
+  Core `/study-years` and `/classes` mutations dispatch to plugin handlers in plugin mode; plugin
+  handlers enforce invariants (unique year, single current year, class-teacher/class-admin role
+  checks, study-year deletion guard, student add/update/remove/cleanup against core tables).
+  Controller specs and plugin reference test pass; backend build passes.
 - [~] MP2-007 Migration toolkit scripts: preflight, dry-run, adopt, reconcile, rollback.
 - 2026-09-15 progress: department/membership preflight and additive target migrations implemented;
   backup-bound zero-write dry-run plus two-phase journaled adoption/reconciliation are locally
@@ -134,6 +218,28 @@ Extract Academic Management so core identity and accounts can run without academ
 - 2026-09-16 progress: enrollment adoption adds a separate exact-fingerprint journal and
   reconciliation phase. Restored-backup execution and a combined rollback/cutover marker remain
   open.
+- 2026-09-16 progress: Study Year preflight script added with deterministic ordering, single-current
+  invariant checks and target-table readiness validation. Local script tests and package checks
+  pass; restored-backup execution and rollback evidence remain open
+  ([local evidence](../acceptance/mp2-study-year-plugin-route-preflight-2026-09-16.md)).
+- 2026-09-16 progress: Study Year dry-run/adopt script added with strict confirmation, backup-bound
+  journal identity, resumable chunked copy, unchanged-source verification and exact source/target
+  reconciliation. Focused script tests pass; restored-backup execution and rollback certification
+  remain open ([local evidence](../acceptance/mp2-study-year-adoption-toolkit-2026-09-16.md)).
+- 2026-09-16 progress: Class preflight and dry-run/adopt scripts are added with deterministic
+  chunking, backup-bound journal identity and exact source/target reconciliation for additive
+  namespaced Class copy. Class cutover-readiness and rollback drill extensions remain open
+  ([local evidence](../acceptance/mp2-class-plugin-route-adoption-toolkit-2026-09-16.md)).
+- 2026-09-16 progress: Academic cutover-readiness now checks Class source/target parity and
+  reconciled Class journal state, and a Class rollback drill script can restore compatibility
+  route ownership to legacy without deleting datasets. Command-output test capture is pending due
+  a terminal execution-output issue in this session
+  ([local evidence](../acceptance/mp2-class-cutover-readiness-rollback-drill-2026-09-16.md)).
+- 2026-09-16 progress: Academic cutover-readiness now includes Study Year source/target parity and
+  reconciled-journal verification. A Study Year rollback drill script now proves compatibility-route
+  restoration can be journaled without deleting source/target data. Local tests pass; hosted
+  restored-backup drill evidence remains open
+  ([local evidence](../acceptance/mp2-study-year-cutover-readiness-rollback-drill-2026-09-16.md)).
 - 2026-09-15 progress: `/departments` compatibility routing defaults to legacy; explicit plugin
   mode supports read-only restored-backup inspection and rejects create/update/delete. Reverting
   the switch restores legacy; full live cutover/rollback remains open.

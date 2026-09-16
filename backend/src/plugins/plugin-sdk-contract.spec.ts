@@ -42,6 +42,6 @@ describe('SDK 1.0 frozen contract surface', () => {
   });
 
   it('keeps new SDK 1.1 capabilities separate from the frozen 1.0 list', () => {
-    expect([...PLUGIN_CAPABILITIES_V1_1].sort()).toEqual(['events.durable', 'readmodels.publish', 'readmodels.read']);
+    expect([...PLUGIN_CAPABILITIES_V1_1].sort()).toEqual(['crypto.hash', 'events.durable', 'readmodels.publish', 'readmodels.read']);
   });
 });

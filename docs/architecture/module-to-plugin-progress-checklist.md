@@ -100,22 +100,109 @@ Date risk trigger by wave target:
     reversible; plugin reads use repeatable-read isolation, reject overlaps, and require current
     legacy parity (25/25 combined Directory tests). Production enablement awaits restored-backup
     adoption and live parity evidence.
+  - MP2 Study Year plugin read slice implemented: `/study-years` now supports explicit plugin-owned
+    reads with legacy default, plugin-mode writes fail closed, and the Academic Management plugin
+    package now includes read-only Study Year routes, declarative UI listing and additive namespaced
+    migration plus a deterministic read-only adoption preflight (12/12 focused tests, backend build
+    passed).
+  - MP2 Study Year adoption toolkit added: strict confirmation-gated dry-run and journaled adoption
+    now provide resumable copy/reconcile checks for namespaced StudyYear rows with unchanged-source
+    verification and fail-closed target/journal rules (6/6 focused script tests, backend build
+    passed).
+  - MP2 Study Year cutover safety added: Academic cutover-readiness now enforces Study Year
+    source/target parity and reconciled journal state, and a rollback drill script verifies
+    legacy-route restoration without dataset deletion (6/6 focused script tests, backend build
+    passed).
+  - MP2 Class extraction foundation added: `/classes` now supports plugin-owned list reads with
+    legacy default and plugin-mode write fail-close protection; Academic Management now includes
+    read-only Class route/UI, additive namespaced Class migration, and class preflight/adoption
+    scripts with focused tests wired in backend scripts.
+  - MP2 Class cutover safety implementation added: Academic cutover-readiness now includes Class
+    parity and Class journal reconciliation checks, and a Class rollback drill script restores
+    legacy route ownership without deleting datasets.
+  - MP2 Study Year certified write handlers added: plugin routes for POST/PUT/set-current/DELETE
+    study-years are implemented, and core `/study-years` mutations dispatch to them in plugin mode.
+    Controller specs and plugin reference test pass; backend build passes.
+  - MP2 Class certified write handlers added: plugin routes for POST/PUT/DELETE classes and
+    POST/PATCH/DELETE class-student management are implemented, and core `/classes` mutations
+    dispatch to them in plugin mode. Bulk CSV import remains fail-closed pending certification.
+    Controller specs and plugin reference test pass; backend build passes.
+  - MP2-003 admissions boundary started: `class-registrations/public/classes` now supports optional
+    plugin-owned routing with legacy default, and the Academic Management plugin exposes a
+    read-only admissions public-classes route backed by namespaced class/study-year data with
+    hidden-registration filtering and price redaction.
+  - MP2-003 admissions read seam expanded: `class-registrations/public/form-config` now supports
+    optional plugin-owned routing with legacy default, and the Academic Management plugin exposes a
+    read-only admissions form-config route returning singleton settings/defaults and enabled custom
+    fields in deterministic order.
+  - MP2-003 admissions admin seam added: `class-registrations/settings` and
+    `class-registrations/fields` now support optional plugin-owned reads with legacy default via
+    read-only plugin routes (`admissions/settings`, `admissions/fields`), and plugin-mode
+    settings/field mutations fail closed in core until consistency policy is certified.
+  - MP2-003 admissions workflow guard added: legacy-owned write routes
+    (`class-registrations/public`, `class-registrations/:id`) now also fail closed when plugin mode
+    is enabled, preventing unsafe admissions writes prior to workflow-contract and cutover
+    certification.
+  - MP2-003 admissions workflow contracts seeded: plugin routes
+    `POST admissions/public/submit` and `PATCH admissions/registrations/:id/resolve` are now
+    registered for explicit contract discovery, but intentionally reject writes until migration and
+    cutover certification completes.
+  - MP2-003 workflow boundary integration advanced: in plugin mode, core
+    `class-registrations/public` and `class-registrations/:id` now dispatch through those plugin
+    contracts instead of executing legacy write services directly; mutation behavior remains
+    certification-blocked by plugin stubs.
+  - MP2-003 migration-toolkit start: deterministic read-only admissions preflight is now added for
+    legacy `ClassRegistration`, `ClassRegistrationSettings` and `ClassRegistrationField`, including
+    source fingerprinting and fail-closed readiness checks for the three planned namespaced
+    admissions target tables.
+  - MP2-003 migration-toolkit advanced: admissions dry-run/adopt now includes strict confirmation,
+    verified-backup gating, journaled multi-phase resumable copy
+    (registrations/settings/fields), and exact source/target fingerprint reconciliation while
+    keeping legacy ownership unchanged.
+  - MP2-003 namespaced storage added: additive migrations for
+    `plugin_wattanam_academic_management_class_registration`,
+    `_class_registration_settings`, and `_class_registration_field` are created and
+    checksum-registered in the plugin manifest.
+  - MP2-003 rollback safety added: admissions rollback drill script
+    (`academic-admissions-rollback-drill.js`) and its test now exist, and npm scripts
+    `db:academic-admissions:rollback-drill` / `test:academic-admissions:rollback-drill`
+    are wired.
+  - MP2-003 cutover readiness extended: academic-management cutover-readiness now includes
+    admissions source/target parity checks (registrations/settings/fields), reconciled
+    journal validation, and reports ready/not-ready while remaining read-only. Test fixtures
+    and static diagnostics pass.
+  - MP2-003 certified plugin-owned write handlers implemented: submit, resolve, settings update,
+    and custom-field CRUD/reorder/delete now run against namespaced admissions tables. Core
+    subscribes to the `academic.registration.approved.v1` plugin event to create the User and
+    Student identity records and link them back to the namespaced registration. The plugin
+    gained `crypto.hash` capability (bcrypt hashing via runtime) and `notifications.send` for
+    email/in-app notifications. All touched scripts, Jest controller/spec/subscriber tests, and
+    the backend build pass locally.
 - In progress:
-  - MP2 Academic Management still lacks namespaced StudyYear/Class/admissions data, runtime/UI,
-    migration and hosted lifecycle evidence.
+  - MP2 Academic Management now has certified plugin-owned write handlers for admissions,
+    StudyYear and Class mutations; hosted lifecycle evidence and restored-backup cutover drills
+    for StudyYear/Class remain open.
   - MP1 Document Designer full-feature extraction and hosted certification remain open.
 - Blockers:
   - No local coding blocker; full-program completion requires real restored-backup, hosted, device,
     security and release approvals for each migration wave.
 - Next week:
-  - Add StudyYear target schema/adoption preflight and a read-only plugin route, then certify on a
-    restored school before any write cutover.
+  - Execute StudyYear restored-backup adoption and reconciliation drill, then run controlled
+    rollback verification before any plugin-mode write cutover.
+  - Extend the same toolkit pattern to classes/admissions ownership migration slices.
+  - Add Study Year hosted lifecycle proof tied to plugin activation/deactivation evidence.
 - Evidence added:
   - docs/acceptance/mp2-study-year-boundary-2026-09-16.md
   - docs/acceptance/mp1-document-designer-json-editor-2026-09-16.md
   - docs/acceptance/mp2-roster-enrollment-runtime-contract-2026-09-16.md
   - docs/acceptance/mp2-enrollment-interval-adoption-2026-09-16.md
   - docs/acceptance/mp2-enrollment-read-routing-2026-09-16.md
+  - docs/acceptance/mp2-study-year-plugin-route-preflight-2026-09-16.md
+  - docs/acceptance/mp2-study-year-adoption-toolkit-2026-09-16.md
+  - docs/acceptance/mp2-study-year-cutover-readiness-rollback-drill-2026-09-16.md
+  - docs/acceptance/mp2-class-plugin-route-adoption-toolkit-2026-09-16.md
+  - docs/acceptance/mp2-class-cutover-readiness-rollback-drill-2026-09-16.md
+  - docs/acceptance/mp2-admissions-public-classes-route-seam-2026-09-16.md
 
 ### Week of 2026-09-15
 

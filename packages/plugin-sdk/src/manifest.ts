@@ -25,7 +25,7 @@ export const PLUGIN_CAPABILITIES = [
   'storage.write',
   'ui.pages',
 ] as const;
-export const PLUGIN_CAPABILITIES_V1_1 = ['events.durable', 'readmodels.publish', 'readmodels.read'] as const;
+export const PLUGIN_CAPABILITIES_V1_1 = ['crypto.hash', 'events.durable', 'readmodels.publish', 'readmodels.read'] as const;
 export const PLUGIN_SUPPORTED_CAPABILITIES = [...PLUGIN_CAPABILITIES, ...PLUGIN_CAPABILITIES_V1_1] as const;
 export const PLUGIN_SDK_VERSION = '1.1.0';
 export const PLUGIN_RUNTIME_VERSION = '1.0.0';
