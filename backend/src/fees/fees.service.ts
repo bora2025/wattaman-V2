@@ -1,26 +1,42 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { DirectoryService } from '../directory/directory.service';
 
 @Injectable()
 export class FeesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private readonly directory: DirectoryService) {}
 
   // ─── Students list (for the "Add Fee" dropdown) ───────────────────────────
 
   async getStudents() {
-    const students = await this.prisma.student.findMany({
-      include: {
-        user: { select: { name: true } },
-        class: { select: { name: true } },
-      },
-      orderBy: { user: { name: 'asc' } },
+    const feeRecords = await this.prisma.feeRecord.findMany({
+      distinct: ['studentId'],
+      select: { studentId: true },
+      orderBy: { studentId: 'asc' },
     });
-    return students.map(s => ({
-      id: s.id,
-      studentNumber: s.studentNumber ?? '',
-      name: s.user.name,
-      class: s.class?.name ?? '',
-    }));
+    const studentIds = feeRecords.map((r) => r.studentId);
+    const result: Array<{ id: string; studentNumber: string; name: string; class: string }> = [];
+    for (const studentId of studentIds) {
+      const enrollment = await this.directory.getEnrollmentAtDate(studentId, await this.todayIso());
+      if (!enrollment.enrolled) continue;
+      result.push({
+        id: studentId,
+        studentNumber: '',
+        name: 'Student', // placeholder until read-model enrichment is published
+        class: enrollment.className ?? '',
+      });
+    }
+    return result;
+  }
+
+  private async todayIso(): Promise<string> {
+    const installation = await this.prisma.installation.findUnique({ where: { id: 'singleton' }, select: { timezone: true } });
+    if (!installation) throw new Error('Installation timezone is unavailable');
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: installation.timezone, year: 'numeric', month: '2-digit', day: '2-digit',
+    }).formatToParts(new Date());
+    const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value;
+    return `${part('year')}-${part('month')}-${part('day')}`;
   }
 
   // ─── Fee Records ──────────────────────────────────────────────────────────

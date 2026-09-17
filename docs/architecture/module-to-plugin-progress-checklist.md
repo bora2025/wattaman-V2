@@ -178,10 +178,24 @@ Date risk trigger by wave target:
     gained `crypto.hash` capability (bcrypt hashing via runtime) and `notifications.send` for
     email/in-app notifications. All touched scripts, Jest controller/spec/subscriber tests, and
     the backend build pass locally.
+  - MP2-005 lifecycle event contracts completed: plugin StudyYear/Class/student-management write
+    handlers publish versioned events (`academic.study-year.*.v1`, `academic.class.*.v1`,
+    `academic.student.*.v1`) with entity snapshots and principal, and also persist the same events
+    to the durable outbox via `tx.publish()` with deterministic idempotency keys. Plugin reference
+    test, backend build, controller specs, and the new core `AcademicLifecycleSubscriber` spec pass.
+  - MP2-006 Academic UI extension set completed locally: Study Years and Classes have full declarative
+    list/create/detail/edit pages; Registrations have list/detail/resolve pages; Class Students has a
+    roster list/add page; Teachers has a directory page. Navigation includes Departments, Study Years,
+    Classes, Teachers, and Registrations. Plugin reference test, backend build, and controller/subscriber
+    specs pass.
+  - MP2-008 dependent contract consumption advanced: `AttendanceService` now routes membership for
+    `recordAttendance`, `recordBulkAttendance`, `getStudentAttendanceRecords`, `getUserDailyAttendance`
+    and `wattamanScan` through the roster/enrollment contract (`DirectoryService`), and the focused
+    boundary spec passes 9/9. `FeesService.getStudents()` already uses `getEnrollmentAtDate()` with a
+    passing boundary spec (2/2). Full backend Jest suite is 515 pass / 3 pre-existing unrelated fail.
 - In progress:
-  - MP2 Academic Management now has certified plugin-owned write handlers for admissions,
-    StudyYear and Class mutations; hosted lifecycle evidence and restored-backup cutover drills
-    for StudyYear/Class remain open.
+  - MP2 Academic Management hosted lifecycle evidence and restored-backup cutover drills for
+    StudyYear/Class/Admissions remain open.
   - MP1 Document Designer full-feature extraction and hosted certification remain open.
 - Blockers:
   - No local coding blocker; full-program completion requires real restored-backup, hosted, device,
@@ -203,6 +217,7 @@ Date risk trigger by wave target:
   - docs/acceptance/mp2-class-plugin-route-adoption-toolkit-2026-09-16.md
   - docs/acceptance/mp2-class-cutover-readiness-rollback-drill-2026-09-16.md
   - docs/acceptance/mp2-admissions-public-classes-route-seam-2026-09-16.md
+  - docs/acceptance/mp2-academic-ui-extension-set-2026-09-16.md
 
 ### Week of 2026-09-15
 

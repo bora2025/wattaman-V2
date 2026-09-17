@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ClassRegistrationsController } from './class-registrations.controller';
 import { ClassRegistrationsService } from './class-registrations.service';
 import { ClassRegistrationApprovedSubscriber } from './class-registration-approved-subscriber.service';
+import { AcademicLifecycleSubscriber } from './academic-lifecycle-subscriber.service';
 import { DatabaseModule } from '../database/database.module';
 import { NotificationModule } from '../notification/notification.module';
 import { PluginsModule } from '../plugins/plugins.module';
@@ -9,6 +10,6 @@ import { PluginsModule } from '../plugins/plugins.module';
 @Module({
   imports: [DatabaseModule, NotificationModule, PluginsModule],
   controllers: [ClassRegistrationsController],
-  providers: [ClassRegistrationsService, ClassRegistrationApprovedSubscriber],
+  providers: [ClassRegistrationsService, ClassRegistrationApprovedSubscriber, AcademicLifecycleSubscriber],
 })
 export class ClassRegistrationsModule {}

@@ -66,7 +66,10 @@
     }
   ],
   "navigation": [
-    { "id": "departments", "label": "Academic Management", "href": "/plugins/wattanam.academic-management/departments", "permission": "wattanam.academic-management.view" }
+    { "id": "departments", "label": "Departments", "href": "/plugins/wattanam.academic-management/departments", "permission": "wattanam.academic-management.view" },
+    { "id": "study-years", "label": "Study Years", "href": "/plugins/wattanam.academic-management/study-years", "permission": "wattanam.academic-management.view" },
+    { "id": "classes", "label": "Classes", "href": "/plugins/wattanam.academic-management/classes", "permission": "wattanam.academic-management.view" },
+    { "id": "registrations", "label": "Registrations", "href": "/plugins/wattanam.academic-management/registrations", "permission": "wattanam.academic-management.manage" }
   ],
   "supportedLanguages": ["en", "km"]
 }

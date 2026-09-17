@@ -454,8 +454,9 @@ Gate: the first complete business plugin operates without rebuilding core.
   membership have provider-backed consumers; enrollment-at-date and full runtime plugin binding
   remain open.
 - [ ] **MP2-005 Event contracts** — student/class/enrollment lifecycle with outbox delivery.
-- [~] **MP2-006 UI** — initial read-only department list declarative UI exists;
-  administrators, teachers, students, classes, years, admissions and full CRUD remain open.
+- [~] **MP2-006 UI** — declarative plugin UI now covers departments, study years, classes,
+  class student roster, teacher directory, and registration list/detail/resolve. Hosted page-host
+  render certification remains open; full CRUD for student roster edit/remove is partially wired.
 - [~] **MP2-007 Migration** — read-only department/membership preflight has deterministic
   fingerprinting, orphan detection and target readiness checks, and its additive target migrations
   exist. Backup-bound dry-run and two-phase resumable copy/reconciliation pass locally. Department

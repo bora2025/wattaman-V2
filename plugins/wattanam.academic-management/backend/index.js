@@ -65,13 +65,33 @@ module.exports = {
       { id: 'wattanam.academic-management.manage', label: 'Manage academic structures and enrollment' },
     ]);
     context.navigation.register([
-      { id: 'departments', label: 'Academic Management', href: '/plugins/wattanam.academic-management/departments', permission: 'wattanam.academic-management.view' },
+      { id: 'departments', label: 'Departments', href: '/plugins/wattanam.academic-management/departments', permission: 'wattanam.academic-management.view' },
       { id: 'study-years', label: 'Study Years', href: '/plugins/wattanam.academic-management/study-years', permission: 'wattanam.academic-management.view' },
       { id: 'classes', label: 'Classes', href: '/plugins/wattanam.academic-management/classes', permission: 'wattanam.academic-management.view' },
+      { id: 'teachers', label: 'Teachers', href: '/plugins/wattanam.academic-management/teachers', permission: 'wattanam.academic-management.view' },
+      { id: 'registrations', label: 'Registrations', href: '/plugins/wattanam.academic-management/registrations', permission: 'wattanam.academic-management.manage' },
     ]);
     context.routes.register({
       method: 'GET', path: 'departments', permission: 'wattanam.academic-management.view',
       handler: () => context.database.query(`SELECT "id", "name", "nameKh", "description", "createdAt", "updatedAt" FROM ${DEPARTMENT} ORDER BY "name" ASC`),
+    });
+    context.routes.register({
+      method: 'GET', path: 'teachers', permission: 'wattanam.academic-management.view',
+      handler: async (request) => {
+        const query = request?.query || {};
+        const departmentId = Array.isArray(query.departmentId) ? query.departmentId[0] : query.departmentId;
+        const params = [];
+        const conditions = [`u."role" = 'TEACHER'`];
+        if (typeof departmentId === 'string' && departmentId) {
+          params.push(departmentId);
+          conditions.push(`u."departmentId" = $${params.length}`);
+        }
+        const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+        return context.database.query(
+          `SELECT u."id", u."name", u."email", u."phone", u."photo", u."role", jsonb_build_object('id', d."id", 'name', d."name") AS department FROM "User" u LEFT JOIN "Department" d ON d."id" = u."departmentId" ${where} ORDER BY u."name" ASC`,
+          params,
+        );
+      },
     });
     context.routes.register({
       method: 'GET', path: 'study-years', permission: 'wattanam.academic-management.view',
@@ -82,6 +102,15 @@ module.exports = {
       handler: async () => {
         const rows = await context.database.query(`SELECT "id", "year", "label", "startDate", "endDate", "isCurrent", "schoolName", "logoUrl", "createdAt", "updatedAt" FROM ${STUDY_YEAR} WHERE "isCurrent" = TRUE ORDER BY "year" DESC LIMIT 1`);
         return rows[0] ?? null;
+      },
+    });
+    context.routes.register({
+      method: 'GET', path: 'study-years/:id', permission: 'wattanam.academic-management.view',
+      handler: async (request) => {
+        const id = request?.params?.id;
+        const rows = await context.database.query(`SELECT "id", "year", "label", "startDate", "endDate", "isCurrent", "schoolName", "logoUrl", "createdAt", "updatedAt" FROM ${STUDY_YEAR} WHERE "id" = $1 LIMIT 1`, [id]);
+        if (!rows.length) throw new Error('Study year not found');
+        return rows[0];
       },
     });
     context.routes.register({
@@ -97,11 +126,24 @@ module.exports = {
         const endDate = body.endDate || null;
         const schoolName = body.schoolName || null;
         const logoUrl = body.logoUrl || null;
-        await context.database.execute(
-          `INSERT INTO ${STUDY_YEAR} ("id", "year", "label", "startDate", "endDate", "isCurrent", "schoolName", "logoUrl", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, FALSE, $6, $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-          [id, body.year, label, startDate, endDate, schoolName, logoUrl],
-        );
-        return context.database.query(`SELECT "id", "year", "label", "startDate", "endDate", "isCurrent", "schoolName", "logoUrl", "createdAt", "updatedAt" FROM ${STUDY_YEAR} WHERE "id" = $1 LIMIT 1`, [id]).then((rows) => rows[0]);
+        await context.database.transaction(async (tx) => {
+          await tx.execute(
+            `INSERT INTO ${STUDY_YEAR} ("id", "year", "label", "startDate", "endDate", "isCurrent", "schoolName", "logoUrl", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, FALSE, $6, $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+            [id, body.year, label, startDate, endDate, schoolName, logoUrl],
+          );
+          const created = await tx.query(`SELECT "id", "year", "label", "startDate", "endDate", "isCurrent", "schoolName", "logoUrl", "createdAt", "updatedAt" FROM ${STUDY_YEAR} WHERE "id" = $1 LIMIT 1`, [id]).then((rows) => rows[0]);
+          tx.publish({
+            event: 'wattanam.academic-management.study-year.created',
+            version: 1,
+            subjectKey: created.id,
+            payload: { studyYear: created, principal: request?.principal },
+            idempotencyKey: `study-year-created-${created.id}`,
+          });
+          return created;
+        });
+        const created = await context.database.query(`SELECT "id", "year", "label", "startDate", "endDate", "isCurrent", "schoolName", "logoUrl", "createdAt", "updatedAt" FROM ${STUDY_YEAR} WHERE "id" = $1 LIMIT 1`, [id]).then((rows) => rows[0]);
+        context.events.publish('academic.study-year.created.v1', { studyYear: created, principal: request?.principal });
+        return created;
       },
     });
     context.routes.register({
@@ -125,11 +167,24 @@ module.exports = {
         if (sets.length === 0) throw new Error('No valid study year updates provided');
         sets.push(`"updatedAt" = CURRENT_TIMESTAMP`);
         params.push(id);
-        await context.database.execute(
-          `UPDATE ${STUDY_YEAR} SET ${sets.join(', ')} WHERE "id" = $${params.length}`,
-          params,
-        );
-        return context.database.query(`SELECT "id", "year", "label", "startDate", "endDate", "isCurrent", "schoolName", "logoUrl", "createdAt", "updatedAt" FROM ${STUDY_YEAR} WHERE "id" = $1 LIMIT 1`, [id]).then((rows) => rows[0]);
+        await context.database.transaction(async (tx) => {
+          await tx.execute(
+            `UPDATE ${STUDY_YEAR} SET ${sets.join(', ')} WHERE "id" = $${params.length}`,
+            params,
+          );
+          const updated = await tx.query(`SELECT "id", "year", "label", "startDate", "endDate", "isCurrent", "schoolName", "logoUrl", "createdAt", "updatedAt" FROM ${STUDY_YEAR} WHERE "id" = $1 LIMIT 1`, [id]).then((rows) => rows[0]);
+          tx.publish({
+            event: 'wattanam.academic-management.study-year.updated',
+            version: 1,
+            subjectKey: updated.id,
+            payload: { studyYear: updated, principal: request?.principal },
+            idempotencyKey: `study-year-updated-${updated.id}-${Date.now()}`,
+          });
+          return updated;
+        });
+        const updated = await context.database.query(`SELECT "id", "year", "label", "startDate", "endDate", "isCurrent", "schoolName", "logoUrl", "createdAt", "updatedAt" FROM ${STUDY_YEAR} WHERE "id" = $1 LIMIT 1`, [id]).then((rows) => rows[0]);
+        context.events.publish('academic.study-year.updated.v1', { studyYear: updated, principal: request?.principal });
+        return updated;
       },
     });
     context.routes.register({
@@ -141,8 +196,19 @@ module.exports = {
           if (!target.length) throw new Error('Study year not found');
           await tx.execute(`UPDATE ${STUDY_YEAR} SET "isCurrent" = FALSE, "updatedAt" = CURRENT_TIMESTAMP WHERE "id" <> $1`, [id]);
           await tx.execute(`UPDATE ${STUDY_YEAR} SET "isCurrent" = TRUE, "updatedAt" = CURRENT_TIMESTAMP WHERE "id" = $1`, [id]);
+          const current = await tx.query(`SELECT "id", "year", "label", "startDate", "endDate", "isCurrent", "schoolName", "logoUrl", "createdAt", "updatedAt" FROM ${STUDY_YEAR} WHERE "id" = $1 LIMIT 1`, [id]).then((rows) => rows[0]);
+          tx.publish({
+            event: 'wattanam.academic-management.study-year.set-current',
+            version: 1,
+            subjectKey: current.id,
+            payload: { studyYear: current, principal: request?.principal },
+            idempotencyKey: `study-year-set-current-${current.id}-${Date.now()}`,
+          });
+          return current;
         });
-        return context.database.query(`SELECT "id", "year", "label", "startDate", "endDate", "isCurrent", "schoolName", "logoUrl", "createdAt", "updatedAt" FROM ${STUDY_YEAR} WHERE "id" = $1 LIMIT 1`, [id]).then((rows) => rows[0]);
+        const current = await context.database.query(`SELECT "id", "year", "label", "startDate", "endDate", "isCurrent", "schoolName", "logoUrl", "createdAt", "updatedAt" FROM ${STUDY_YEAR} WHERE "id" = $1 LIMIT 1`, [id]).then((rows) => rows[0]);
+        context.events.publish('academic.study-year.set-current.v1', { studyYear: current, principal: request?.principal });
+        return current;
       },
     });
     context.routes.register({
@@ -151,7 +217,17 @@ module.exports = {
         const id = request?.params?.id;
         const classCount = await context.database.query(`SELECT COUNT(*)::int AS "count" FROM ${CLASS} WHERE "studyYearId" = $1`, [id]);
         if (classCount[0]?.count > 0) throw new Error('Cannot delete study year that has classes. Remove or reassign classes first.');
-        await context.database.execute(`DELETE FROM ${STUDY_YEAR} WHERE "id" = $1`, [id]);
+        await context.database.transaction(async (tx) => {
+          await tx.execute(`DELETE FROM ${STUDY_YEAR} WHERE "id" = $1`, [id]);
+          tx.publish({
+            event: 'wattanam.academic-management.study-year.deleted',
+            version: 1,
+            subjectKey: id,
+            payload: { studyYearId: id, principal: request?.principal },
+            idempotencyKey: `study-year-deleted-${id}-${Date.now()}`,
+          });
+        });
+        context.events.publish('academic.study-year.deleted.v1', { studyYearId: id, principal: request?.principal });
         return { success: true };
       },
     });
@@ -170,27 +246,39 @@ module.exports = {
           if (!caRows.length || caRows[0].role !== 'CLASS_ADMIN') throw new Error('Only users with CLASS_ADMIN role can be assigned as class admin');
         }
         const id = crypto.randomUUID();
-        await context.database.execute(
-          `INSERT INTO ${CLASS} ("id", "name", "subject", "teacherId", "classAdminId", "studyYearId", "schedule", "registrationStatus", "thumbnail", "description", "price", "showPrice", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-          [
-            id,
-            body.name,
-            body.subject || null,
-            body.teacherId,
-            body.classAdminId || null,
-            body.studyYearId || null,
-            body.schedule || null,
-            body.registrationStatus || 'HIDDEN',
-            body.thumbnail || null,
-            body.description || null,
-            body.price ?? null,
-            body.showPrice === true,
-          ],
-        );
-        return context.database.query(
-          `SELECT c."id", c."name", c."subject", c."teacherId", c."classAdminId", c."studyYearId", c."schedule", c."registrationStatus", c."thumbnail", c."description", c."price", c."showPrice", c."createdAt", c."updatedAt", jsonb_build_object('name', t."name") AS teacher, jsonb_build_object('name', ca."name") AS "classAdmin", CASE WHEN sy."id" IS NULL THEN NULL ELSE jsonb_build_object('id', sy."id", 'year', sy."year", 'label', sy."label", 'isCurrent', sy."isCurrent") END AS "studyYear" FROM ${CLASS} c LEFT JOIN "User" t ON t."id" = c."teacherId" LEFT JOIN "User" ca ON ca."id" = c."classAdminId" LEFT JOIN ${STUDY_YEAR} sy ON sy."id" = c."studyYearId" WHERE c."id" = $1`,
-          [id],
-        ).then((rows) => rows[0]);
+        const created = await context.database.transaction(async (tx) => {
+          await tx.execute(
+            `INSERT INTO ${CLASS} ("id", "name", "subject", "teacherId", "classAdminId", "studyYearId", "schedule", "registrationStatus", "thumbnail", "description", "price", "showPrice", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+            [
+              id,
+              body.name,
+              body.subject || null,
+              body.teacherId,
+              body.classAdminId || null,
+              body.studyYearId || null,
+              body.schedule || null,
+              body.registrationStatus || 'HIDDEN',
+              body.thumbnail || null,
+              body.description || null,
+              body.price ?? null,
+              body.showPrice === true,
+            ],
+          );
+          const row = await tx.query(
+            `SELECT c."id", c."name", c."subject", c."teacherId", c."classAdminId", c."studyYearId", c."schedule", c."registrationStatus", c."thumbnail", c."description", c."price", c."showPrice", c."createdAt", c."updatedAt", jsonb_build_object('name', t."name") AS teacher, jsonb_build_object('name', ca."name") AS "classAdmin", CASE WHEN sy."id" IS NULL THEN NULL ELSE jsonb_build_object('id', sy."id", 'year', sy."year", 'label', sy."label", 'isCurrent', sy."isCurrent") END AS "studyYear" FROM ${CLASS} c LEFT JOIN "User" t ON t."id" = c."teacherId" LEFT JOIN "User" ca ON ca."id" = c."classAdminId" LEFT JOIN ${STUDY_YEAR} sy ON sy."id" = c."studyYearId" WHERE c."id" = $1`,
+            [id],
+          ).then((rows) => rows[0]);
+          tx.publish({
+            event: 'wattanam.academic-management.class.created',
+            version: 1,
+            subjectKey: row.id,
+            payload: { class: row, principal: request?.principal },
+            idempotencyKey: `class-created-${row.id}`,
+          });
+          return row;
+        });
+        context.events.publish('academic.class.created.v1', { class: created, principal: request?.principal });
+        return created;
       },
     });
     context.routes.register({
@@ -227,14 +315,26 @@ module.exports = {
         if (sets.length === 0) throw new Error('No valid class updates provided');
         sets.push(`"updatedAt" = CURRENT_TIMESTAMP`);
         params.push(id);
-        await context.database.execute(
-          `UPDATE ${CLASS} SET ${sets.join(', ')} WHERE "id" = $${params.length}`,
-          params,
-        );
-        return context.database.query(
-          `SELECT c."id", c."name", c."subject", c."teacherId", c."classAdminId", c."studyYearId", c."schedule", c."registrationStatus", c."thumbnail", c."description", c."price", c."showPrice", c."createdAt", c."updatedAt", jsonb_build_object('name', t."name") AS teacher, jsonb_build_object('name', ca."name") AS "classAdmin", CASE WHEN sy."id" IS NULL THEN NULL ELSE jsonb_build_object('id', sy."id", 'year', sy."year", 'label', sy."label", 'isCurrent', sy."isCurrent") END AS "studyYear" FROM ${CLASS} c LEFT JOIN "User" t ON t."id" = c."teacherId" LEFT JOIN "User" ca ON ca."id" = c."classAdminId" LEFT JOIN ${STUDY_YEAR} sy ON sy."id" = c."studyYearId" WHERE c."id" = $1`,
-          [id],
-        ).then((rows) => rows[0]);
+        const updated = await context.database.transaction(async (tx) => {
+          await tx.execute(
+            `UPDATE ${CLASS} SET ${sets.join(', ')} WHERE "id" = $${params.length}`,
+            params,
+          );
+          const row = await tx.query(
+            `SELECT c."id", c."name", c."subject", c."teacherId", c."classAdminId", c."studyYearId", c."schedule", c."registrationStatus", c."thumbnail", c."description", c."price", c."showPrice", c."createdAt", c."updatedAt", jsonb_build_object('name', t."name") AS teacher, jsonb_build_object('name', ca."name") AS "classAdmin", CASE WHEN sy."id" IS NULL THEN NULL ELSE jsonb_build_object('id', sy."id", 'year', sy."year", 'label', sy."label", 'isCurrent', sy."isCurrent") END AS "studyYear" FROM ${CLASS} c LEFT JOIN "User" t ON t."id" = c."teacherId" LEFT JOIN "User" ca ON ca."id" = c."classAdminId" LEFT JOIN ${STUDY_YEAR} sy ON sy."id" = c."studyYearId" WHERE c."id" = $1`,
+            [id],
+          ).then((rows) => rows[0]);
+          tx.publish({
+            event: 'wattanam.academic-management.class.updated',
+            version: 1,
+            subjectKey: row.id,
+            payload: { class: row, principal: request?.principal },
+            idempotencyKey: `class-updated-${row.id}-${Date.now()}`,
+          });
+          return row;
+        });
+        context.events.publish('academic.class.updated.v1', { class: updated, principal: request?.principal });
+        return updated;
       },
     });
     context.routes.register({
@@ -244,8 +344,28 @@ module.exports = {
         await context.database.transaction(async (tx) => {
           await tx.execute(`DELETE FROM ${REGISTRATION} WHERE "classId" = $1`, [id]);
           await tx.execute(`DELETE FROM ${CLASS} WHERE "id" = $1`, [id]);
+          tx.publish({
+            event: 'wattanam.academic-management.class.deleted',
+            version: 1,
+            subjectKey: id,
+            payload: { classId: id, principal: request?.principal },
+            idempotencyKey: `class-deleted-${id}-${Date.now()}`,
+          });
         });
+        context.events.publish('academic.class.deleted.v1', { classId: id, principal: request?.principal });
         return { success: true };
+      },
+    });
+    context.routes.register({
+      method: 'GET', path: 'classes/:id', permission: 'wattanam.academic-management.view',
+      handler: async (request) => {
+        const id = request?.params?.id;
+        const rows = await context.database.query(
+          `SELECT c."id", c."name", c."subject", c."teacherId", c."classAdminId", c."studyYearId", c."schedule", c."registrationStatus", c."thumbnail", c."description", c."price", c."showPrice", c."createdAt", c."updatedAt", jsonb_build_object('name', t."name") AS teacher, jsonb_build_object('name', ca."name") AS "classAdmin", CASE WHEN sy."id" IS NULL THEN NULL ELSE jsonb_build_object('id', sy."id", 'year', sy."year", 'label', sy."label", 'isCurrent', sy."isCurrent") END AS "studyYear" FROM ${CLASS} c LEFT JOIN "User" t ON t."id" = c."teacherId" LEFT JOIN "User" ca ON ca."id" = c."classAdminId" LEFT JOIN ${STUDY_YEAR} sy ON sy."id" = c."studyYearId" WHERE c."id" = $1 LIMIT 1`,
+          [id],
+        );
+        if (!rows.length) throw new Error('Class not found');
+        return rows[0];
       },
     });
     context.routes.register({
@@ -273,6 +393,16 @@ module.exports = {
         return context.database.query(
           `SELECT c."id", c."name", c."subject", c."teacherId", c."classAdminId", c."studyYearId", c."schedule", c."registrationStatus", c."thumbnail", c."description", c."price", c."showPrice", c."createdAt", c."updatedAt", jsonb_build_object('name', t."name") AS teacher, jsonb_build_object('name', ca."name") AS "classAdmin", CASE WHEN sy."id" IS NULL THEN NULL ELSE jsonb_build_object('id', sy."id", 'year', sy."year", 'label', sy."label", 'isCurrent', sy."isCurrent") END AS "studyYear" FROM ${CLASS} c LEFT JOIN "User" t ON t."id" = c."teacherId" LEFT JOIN "User" ca ON ca."id" = c."classAdminId" LEFT JOIN ${STUDY_YEAR} sy ON sy."id" = c."studyYearId" ${where} ORDER BY c."name" ASC`,
           params,
+        );
+      },
+    });
+    context.routes.register({
+      method: 'GET', path: 'classes/:id/students', permission: 'wattanam.academic-management.view',
+      handler: async (request) => {
+        const classId = request?.params?.id;
+        return context.database.query(
+          `SELECT s."id", s."userId", s."studentNumber", s."nameKh", s."qrCode", s."photo", s."sex", s."dateOfBirth", s."address", s."generation", s."customFieldValues", s."parentId", jsonb_build_object('id', u."id", 'name', u."name", 'email', u."email", 'phone', u."phone") AS user FROM "Student" s LEFT JOIN "User" u ON u."id" = s."userId" WHERE s."classId" = $1 ORDER BY s."studentNumber" ASC, u."name" ASC`,
+          [classId],
         );
       },
     });
@@ -314,28 +444,50 @@ module.exports = {
             const countRows = await context.database.query(`SELECT COUNT(*)::int AS "count" FROM "Student" WHERE "classId" = $1`, [classId]);
             studentNumber = String(countRows[0].count + 1).padStart(4, '0');
           }
-          await context.database.execute(
-            `UPDATE "Student" SET "classId" = $1, "studentNumber" = $2, "updatedAt" = CURRENT_TIMESTAMP WHERE "id" = $3`,
-            [classId, studentNumber, existing.id],
-          );
-          const updated = await context.database.query(
-            `SELECT s."id", s."userId", s."studentNumber", s."classId", jsonb_build_object('id', u."id", 'name', u."name", 'email', u."email", 'phone', u."phone") AS user, jsonb_build_object('id', c."id", 'name', c."name") AS class FROM "Student" s LEFT JOIN "User" u ON u."id" = s."userId" LEFT JOIN ${CLASS} c ON c."id" = s."classId" WHERE s."id" = $1 LIMIT 1`,
-            [existing.id],
-          );
-          return updated[0];
+          const added = await context.database.transaction(async (tx) => {
+            await tx.execute(
+              `UPDATE "Student" SET "classId" = $1, "studentNumber" = $2, "updatedAt" = CURRENT_TIMESTAMP WHERE "id" = $3`,
+              [classId, studentNumber, existing.id],
+            );
+            const row = await tx.query(
+              `SELECT s."id", s."userId", s."studentNumber", s."classId", jsonb_build_object('id', u."id", 'name', u."name", 'email', u."email", 'phone', u."phone") AS user, jsonb_build_object('id', c."id", 'name', c."name") AS class FROM "Student" s LEFT JOIN "User" u ON u."id" = s."userId" LEFT JOIN ${CLASS} c ON c."id" = s."classId" WHERE s."id" = $1 LIMIT 1`,
+              [existing.id],
+            ).then((rows) => rows[0]);
+            tx.publish({
+              event: 'wattanam.academic-management.student.added-to-class',
+              version: 1,
+              subjectKey: row.id,
+              payload: { student: row, classId, principal: request?.principal },
+              idempotencyKey: `student-added-to-class-${row.id}-${classId}-${Date.now()}`,
+            });
+            return row;
+          });
+          context.events.publish('academic.student.added-to-class.v1', { student: added, classId, principal: request?.principal });
+          return added;
         }
-        const countRows = await context.database.query(`SELECT COUNT(*)::int AS "count" FROM "Student" WHERE "classId" = $1`, [classId]);
-        const studentNumber = String(countRows[0].count + 1).padStart(4, '0');
-        const id = crypto.randomUUID();
-        await context.database.execute(
-          `INSERT INTO "Student" ("id", "userId", "classId", "studentNumber", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-          [id, studentId, classId, studentNumber],
-        );
-        const created = await context.database.query(
-          `SELECT s."id", s."userId", s."studentNumber", s."classId", jsonb_build_object('id', u."id", 'name', u."name", 'email', u."email", 'phone', u."phone") AS user, jsonb_build_object('id', c."id", 'name', c."name") AS class FROM "Student" s LEFT JOIN "User" u ON u."id" = s."userId" LEFT JOIN ${CLASS} c ON c."id" = s."classId" WHERE s."id" = $1 LIMIT 1`,
-          [id],
-        );
-        return created[0];
+        const added = await context.database.transaction(async (tx) => {
+          const countRowsInner = await tx.query(`SELECT COUNT(*)::int AS "count" FROM "Student" WHERE "classId" = $1`, [classId]);
+          const studentNumber = String(countRowsInner[0].count + 1).padStart(4, '0');
+          const sid = crypto.randomUUID();
+          await tx.execute(
+            `INSERT INTO "Student" ("id", "userId", "classId", "studentNumber", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+            [sid, studentId, classId, studentNumber],
+          );
+          const row = await tx.query(
+            `SELECT s."id", s."userId", s."studentNumber", s."classId", jsonb_build_object('id', u."id", 'name', u."name", 'email', u."email", 'phone', u."phone") AS user, jsonb_build_object('id', c."id", 'name', c."name") AS class FROM "Student" s LEFT JOIN "User" u ON u."id" = s."userId" LEFT JOIN ${CLASS} c ON c."id" = s."classId" WHERE s."id" = $1 LIMIT 1`,
+            [sid],
+          ).then((rows) => rows[0]);
+          tx.publish({
+            event: 'wattanam.academic-management.student.added-to-class',
+            version: 1,
+            subjectKey: row.id,
+            payload: { student: row, classId, principal: request?.principal },
+            idempotencyKey: `student-added-to-class-${row.id}-${classId}`,
+          });
+          return row;
+        });
+        context.events.publish('academic.student.added-to-class.v1', { student: added, classId, principal: request?.principal });
+        return added;
       },
     });
     context.routes.register({
@@ -368,7 +520,7 @@ module.exports = {
         const userParams = [];
         if (body.name !== undefined) { userSets.push(`"name" = $${userParams.length + 1}`); userParams.push(body.name); }
         if (body.phone !== undefined) { userSets.push(`"phone" = $${userParams.length + 1}`); userParams.push(body.phone); }
-        await context.database.transaction(async (tx) => {
+        const updated = await context.database.transaction(async (tx) => {
           if (studentSets.length) {
             studentSets.push(`"updatedAt" = CURRENT_TIMESTAMP`);
             studentParams.push(student.id);
@@ -378,30 +530,40 @@ module.exports = {
             userParams.push(student.userId);
             await tx.execute(`UPDATE "User" SET ${userSets.join(', ')} WHERE "id" = $${userParams.length}`, userParams);
           }
+          const rows = await tx.query(
+            `SELECT s."id", s."userId", s."studentNumber", s."nameKh", s."qrCode", s."photo", s."sex", s."dateOfBirth", s."address", s."generation", s."customFieldValues", s."parentId", u."name", u."email", u."phone", c."name" AS "className" FROM "Student" s LEFT JOIN "User" u ON u."id" = s."userId" LEFT JOIN ${CLASS} c ON c."id" = s."classId" WHERE s."id" = $1 LIMIT 1`,
+            [studentId],
+          );
+          const row = rows[0];
+          const result = {
+            id: row.id,
+            studentNumber: row.studentNumber || '',
+            userId: row.userId,
+            name: row.name,
+            nameKh: row.nameKh || '',
+            email: row.email,
+            phone: row.phone || '',
+            qrCode: row.qrCode,
+            photo: row.photo,
+            sex: row.sex,
+            dateOfBirth: row.dateOfBirth,
+            address: row.address || '',
+            generation: row.generation || '',
+            customFieldValues: row.customFieldValues || {},
+            parentId: row.parentId,
+            className: row.className || null,
+          };
+          tx.publish({
+            event: 'wattanam.academic-management.student.updated',
+            version: 1,
+            subjectKey: result.id,
+            payload: { student: result, principal: request?.principal },
+            idempotencyKey: `student-updated-${result.id}-${Date.now()}`,
+          });
+          return result;
         });
-        const updated = await context.database.query(
-          `SELECT s."id", s."userId", s."studentNumber", s."nameKh", s."qrCode", s."photo", s."sex", s."dateOfBirth", s."address", s."generation", s."customFieldValues", s."parentId", u."name", u."email", u."phone", c."name" AS "className" FROM "Student" s LEFT JOIN "User" u ON u."id" = s."userId" LEFT JOIN ${CLASS} c ON c."id" = s."classId" WHERE s."id" = $1 LIMIT 1`,
-          [studentId],
-        );
-        const row = updated[0];
-        return {
-          id: row.id,
-          studentNumber: row.studentNumber || '',
-          userId: row.userId,
-          name: row.name,
-          nameKh: row.nameKh || '',
-          email: row.email,
-          phone: row.phone || '',
-          qrCode: row.qrCode,
-          photo: row.photo,
-          sex: row.sex,
-          dateOfBirth: row.dateOfBirth,
-          address: row.address || '',
-          generation: row.generation || '',
-          customFieldValues: row.customFieldValues || {},
-          parentId: row.parentId,
-          className: row.className || null,
-        };
+        context.events.publish('academic.student.updated.v1', { student: updated, principal: request?.principal });
+        return updated;
       },
     });
     context.routes.register({
@@ -431,13 +593,21 @@ module.exports = {
           await tx.execute(`DELETE FROM "RefreshToken" WHERE "userId" = $1`, [userId]);
           await tx.execute(`DELETE FROM "Notification" WHERE "userId" = $1`, [userId]);
           await tx.execute(`DELETE FROM "User" WHERE "id" = $1 AND "role" = 'STUDENT'`, [userId]);
+          tx.publish({
+            event: 'wattanam.academic-management.student.removed-from-class',
+            version: 1,
+            subjectKey: studentId,
+            payload: { studentId, classId: request?.params?.id, principal: request?.principal },
+            idempotencyKey: `student-removed-from-class-${studentId}-${Date.now()}`,
+          });
         });
+        context.events.publish('academic.student.removed-from-class.v1', { studentId, classId: request?.params?.id, principal: request?.principal });
         return { success: true };
       },
     });
     context.routes.register({
       method: 'POST', path: 'classes/cleanup-orphaned-students', permission: 'wattanam.academic-management.manage',
-      handler: async () => {
+      handler: async (request) => {
         const orphaned = await context.database.query(`SELECT "id", "userId" FROM "Student" WHERE "classId" IS NULL`);
         if (!orphaned.length) return { deleted: 0 };
         const studentIds = orphaned.map((s) => s.id);
@@ -452,7 +622,15 @@ module.exports = {
             await tx.execute(`DELETE FROM "Notification" WHERE "userId" IN (${userIdList})`, userIds);
             await tx.execute(`DELETE FROM "User" WHERE "id" IN (${userIdList}) AND "role" = 'STUDENT'`, userIds);
           }
+          tx.publish({
+            event: 'wattanam.academic-management.students.cleaned-up',
+            version: 1,
+            subjectKey: 'orphaned',
+            payload: { studentIds, deleted: orphaned.length, principal: request?.principal },
+            idempotencyKey: `students-cleaned-up-${Date.now()}`,
+          });
         });
+        context.events.publish('academic.students.cleaned-up.v1', { studentIds, deleted: orphaned.length, principal: request?.principal });
         return { deleted: orphaned.length };
       },
     });
@@ -630,6 +808,92 @@ module.exports = {
       },
     });
     context.routes.register({
+      method: 'GET', path: 'admissions/registrations', permission: 'wattanam.academic-management.manage',
+      handler: async (request) => {
+        const query = request?.query || {};
+        const status = Array.isArray(query.status) ? query.status[0] : query.status;
+        const classId = Array.isArray(query.classId) ? query.classId[0] : query.classId;
+        const conditions = [];
+        const params = [];
+        if (typeof status === 'string' && status) {
+          params.push(status);
+          conditions.push(`r."status" = $${params.length}`);
+        }
+        if (typeof classId === 'string' && classId) {
+          params.push(classId);
+          conditions.push(`r."classId" = $${params.length}`);
+        }
+        const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+        return context.database.query(
+          `SELECT r."id", r."classId", r."nameKh", r."nameEn", r."email", r."phone", r."status", r."createdAt", r."resolvedAt", r."resolvedBy", jsonb_build_object('id', c."id", 'name', c."name") AS class FROM ${REGISTRATION} r LEFT JOIN ${CLASS} c ON c."id" = r."classId" ${where} ORDER BY r."createdAt" DESC`,
+          params,
+        );
+      },
+    });
+    context.routes.register({
+      method: 'GET', path: 'admissions/registrations/:id', permission: 'wattanam.academic-management.manage',
+      handler: async (request) => {
+        const id = request?.params?.id;
+        const rows = await context.database.query(
+          `SELECT r.*, jsonb_build_object('id', c."id", 'name', c."name") AS class FROM ${REGISTRATION} r LEFT JOIN ${CLASS} c ON c."id" = r."classId" WHERE r."id" = $1 LIMIT 1`,
+          [id],
+        );
+        if (!rows.length) throw new Error('Registration not found');
+        return rows[0];
+      },
+    });
+    context.routes.register({
+      method: 'PATCH', path: 'admissions/registrations/:id/resolve', permission: 'wattanam.academic-management.manage',
+      handler: async (request) => {
+        const id = request?.params?.id;
+        const body = request?.body || {};
+        const action = body.action;
+        if (action !== 'APPROVE' && action !== 'REJECT') throw new Error('action must be APPROVE or REJECT');
+        const regRows = await context.database.query(`SELECT * FROM ${REGISTRATION} WHERE "id" = $1 LIMIT 1`, [id]);
+        const reg = regRows[0];
+        if (!reg) throw new Error('Registration not found');
+        if (reg.status !== 'PENDING') throw new Error('Registration already resolved');
+        const resolvedAt = new Date().toISOString();
+        const resolvedBy = request?.principal?.userId;
+        if (action === 'REJECT') {
+          await context.database.execute(
+            `UPDATE ${REGISTRATION} SET "status" = 'REJECTED', "rejectReason" = $1, "resolvedAt" = $2, "resolvedBy" = $3 WHERE "id" = $4`,
+            [body.rejectReason?.trim() || null, resolvedAt, resolvedBy, id],
+          );
+          if (reg.email) {
+            try { await context.notifications.sendEmail(reg.email, 'Your class registration was not approved', `Hi ${reg.nameEn}, your registration was not approved${body.rejectReason ? `: ${body.rejectReason}` : '.'}`); } catch {}
+          }
+          return context.database.query(`SELECT * FROM ${REGISTRATION} WHERE "id" = $1 LIMIT 1`, [id]).then((rows) => rows[0]);
+        }
+        const password = reg.generatedPassword || generatePassword();
+        await context.database.execute(
+          `UPDATE ${REGISTRATION} SET "status" = 'APPROVED', "resolvedAt" = $1, "resolvedBy" = $2 WHERE "id" = $3`,
+          [resolvedAt, resolvedBy, id],
+        );
+        context.events.publish('academic.registration.approved.v1', {
+          registrationId: id,
+          classId: reg.classId,
+          nameEn: reg.nameEn,
+          nameKh: reg.nameKh,
+          email: reg.email,
+          phone: reg.phone,
+          passwordHash: reg.passwordHash,
+          photo: reg.photo,
+          sex: reg.sex,
+          dateOfBirth: reg.dateOfBirth,
+          address: reg.address,
+          generation: reg.generation,
+          customFieldValues: reg.customFieldValues,
+          resolvedBy,
+          resolvedAt,
+        });
+        if (reg.email) {
+          try { await context.notifications.sendEmail(reg.email, 'Your class registration is approved', `Hi ${reg.nameEn}, your registration has been approved. Your temporary password is: ${password}`); } catch {}
+        }
+        return context.database.query(`SELECT * FROM ${REGISTRATION} WHERE "id" = $1 LIMIT 1`, [id]).then((rows) => rows[0]);
+      },
+    });
+    context.routes.register({
       method: 'POST', path: 'admissions/public/submit', permission: 'wattanam.academic-management.manage',
       handler: async (request) => {
         const body = request?.body || {};
@@ -741,55 +1005,6 @@ module.exports = {
           }
         } catch {}
 
-        return context.database.query(`SELECT * FROM ${REGISTRATION} WHERE "id" = $1 LIMIT 1`, [id]).then((rows) => rows[0]);
-      },
-    });
-    context.routes.register({
-      method: 'PATCH', path: 'admissions/registrations/:id/resolve', permission: 'wattanam.academic-management.manage',
-      handler: async (request) => {
-        const id = request?.params?.id;
-        const body = request?.body || {};
-        const action = body.action;
-        if (action !== 'APPROVE' && action !== 'REJECT') throw new Error('action must be APPROVE or REJECT');
-        const regRows = await context.database.query(`SELECT * FROM ${REGISTRATION} WHERE "id" = $1 LIMIT 1`, [id]);
-        const reg = regRows[0];
-        if (!reg) throw new Error('Registration not found');
-        if (reg.status !== 'PENDING') throw new Error('Registration already resolved');
-        const resolvedAt = new Date().toISOString();
-        const resolvedBy = request?.principal?.userId;
-        if (action === 'REJECT') {
-          await context.database.execute(
-            `UPDATE ${REGISTRATION} SET "status" = 'REJECTED', "rejectReason" = $1, "resolvedAt" = $2, "resolvedBy" = $3 WHERE "id" = $4`,
-            [body.rejectReason?.trim() || null, resolvedAt, resolvedBy, id],
-          );
-          if (reg.email) {
-            try {
-              await context.notifications.sendEmail(reg.email, 'Your class registration was not approved', `Hi ${reg.nameEn}, your registration was not approved${body.rejectReason ? `: ${body.rejectReason}` : '.'}`);
-            } catch {}
-          }
-          return context.database.query(`SELECT * FROM ${REGISTRATION} WHERE "id" = $1 LIMIT 1`, [id]).then((rows) => rows[0]);
-        }
-        await context.database.execute(
-          `UPDATE ${REGISTRATION} SET "status" = 'APPROVED', "resolvedAt" = $1, "resolvedBy" = $2 WHERE "id" = $3`,
-          [resolvedAt, resolvedBy, id],
-        );
-        context.events.publish('academic.registration.approved.v1', {
-          registrationId: id,
-          classId: reg.classId,
-          nameEn: reg.nameEn,
-          nameKh: reg.nameKh,
-          email: reg.email,
-          phone: reg.phone,
-          passwordHash: reg.passwordHash,
-          photo: reg.photo,
-          sex: reg.sex,
-          dateOfBirth: reg.dateOfBirth,
-          address: reg.address,
-          generation: reg.generation,
-          customFieldValues: reg.customFieldValues,
-          resolvedBy,
-          resolvedAt,
-        });
         return context.database.query(`SELECT * FROM ${REGISTRATION} WHERE "id" = $1 LIMIT 1`, [id]).then((rows) => rows[0]);
       },
     });

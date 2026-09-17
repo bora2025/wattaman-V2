@@ -185,26 +185,39 @@ Extract Academic Management so core identity and accounts can run without academ
   closed; current-day results must match legacy membership, while historical reads use interval
   history. Legacy remains default (25/25 combined Directory tests; TypeScript check)
   ([evidence](../acceptance/mp2-enrollment-read-routing-2026-09-16.md)).
-- [ ] MP2-005 Publish lifecycle/outbox event contracts for student/class/enrollment changes.
-- [ ] MP2-008 Dependent fixtures prove Attendance/Timetable/Exam/Learning/Finance compatibility.
+- [x] MP2-005 Publish lifecycle/outbox event contracts for student/class/enrollment changes.
+- 2026-09-16 progress: plugin write handlers now publish versioned lifecycle events for StudyYear
+  (`created`, `updated`, `set-current`, `deleted`), Class (`created`, `updated`, `deleted`), and
+  student class membership (`added-to-class`, `updated`, `removed-from-class`, `cleaned-up`).
+  Events carry the mutated entity snapshot and the acting principal. Plugin reference test covers
+  all StudyYear/Class/student events; build and controller specs pass.
+- 2026-09-16 progress: durable outbox publishing is wired inside every StudyYear/Class/student
+  write transaction via `tx.publish()` using deterministic idempotency keys. The outbox event
+  model supports idempotent insert (`ON CONFLICT` by plugin and idempotency key), retry/backoff,
+  dead-letter capture, and replay. Plugin reference test and backend build pass.
+- 2026-09-16 progress: a core subscriber (`AcademicLifecycleSubscriber`) now listens to all
+  StudyYear/Class/student lifecycle events on `PluginEventBus` so dependent core modules can react
+  without coupling to the plugin schema. A focused Jest spec covers study-year, class, and student
+  membership events; it passes alongside the approved-registration subscriber spec.
+- [~] MP2-008 Dependent fixtures prove Attendance/Timetable/Exam/Learning/Finance compatibility.
 - 2026-09-15 progress: fixture consumers for attendance/timetable/finance pass in scaffold test; runtime integration is partially evidenced by targeted plugin runtime proof for provider-backed class lookup and membership resolution (1 pass, 9 skipped in focused run).
 - 2026-09-15 progress: first real dependent service integration completed for scoring class-admin sheet scoping via `DirectoryService.classesForUser`, with focused service tests passing (2/2) and direct `prisma.class.findMany` avoided on the migrated path.
 - 2026-09-15 progress: second dependent service integration completed for attendance record and bulk record paths; CLASS_ADMIN class access now resolves through `DirectoryService.classesForUser` before student/class attendance writes, with focused attendance tests passing (3/3 across targeted runs).
 - 2026-09-15 progress: third dependent service integration completed for exam student list scoping; `ExamService.getStudentExams` now resolves student class memberships via `DirectoryService.classesForUser` and retains global-exam fallback, with focused exam tests passing (2/2).
 - 2026-09-15 progress: fourth dependent service integration completed for learning/courses student listing; `CoursesService.getStudentCourses` now resolves class scope via `DirectoryService.classesForUser` while preserving enrollment-based visibility, with focused courses tests passing (3/3).
+- 2026-09-16 progress: dependent fixture contract-consumer tests pass end-to-end for Attendance, Timetable, Exam, Learning and Finance (`backend/scripts/mp2-dependent-fixtures.test.js` 6/6). `FeesService.getStudents()` now resolves current enrollment via `DirectoryService.getEnrollmentAtDate()` with a passing boundary spec (2/2). `AttendanceService` now validates `recordAttendance`, `recordBulkAttendance`, `getStudentAttendanceRecords`, `getUserDailyAttendance` and `wattamanScan` through the roster/enrollment contract, with a focused boundary spec passing (9/9); full backend Jest suite is 515 pass / 3 pre-existing unrelated fail.
 
 ### C. UI and operations
 
 - [~] MP2-006 Academic UI extension set: students, teachers, classes, years, registration.
-- 2026-09-15 progress: read-only department list declarative UI exists in the initial plugin
-  package; creation/edit/delete remain disabled pending a consistency policy, while students,
-  teachers, classes, years and registration remain open.
-- 2026-09-16 progress: read-only Study Year plugin API routes (`study-years`,
-  `study-years/current`) and declarative list page now exist in
-  `plugins/wattanam.academic-management`. Core `/study-years` compatibility routing supports
-  plugin-owned reads with legacy default while all writes fail closed in plugin mode until
-  certified consistency policy and adoption evidence are complete
-  ([local evidence](../acceptance/mp2-study-year-plugin-route-preflight-2026-09-16.md)).
+- 2026-09-16 progress: Study Years and Classes now have full declarative list/create/detail/edit
+  UI pages in `plugins/wattanam.academic-management`, backed by new plugin-owned GET-by-ID routes.
+  Registrations have list/detail/resolve pages backed by new admin routes including
+  `PATCH admissions/registrations/:id/resolve`. Class Students has a roster list/add page backed by
+  `GET classes/:id/students` and `POST classes/:id/students`. Teachers has a directory page backed
+  by `GET teachers`. Navigation includes Departments, Study Years, Classes, Teachers, and
+  Registrations. Plugin reference test, backend build, and controller/subscriber specs pass
+  ([local evidence](../acceptance/mp2-academic-ui-extension-set-2026-09-16.md)).
 - 2026-09-16 progress: Study Year and Class write UI/API foundations are complete in the plugin.
   Core `/study-years` and `/classes` mutations dispatch to plugin handlers in plugin mode; plugin
   handlers enforce invariants (unique year, single current year, class-teacher/class-admin role

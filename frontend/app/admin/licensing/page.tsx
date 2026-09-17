@@ -37,6 +37,7 @@ export default function LicensingPage() {
   const [status, setStatus] = useState<InstallationStatus | null>(null);
   const [entitlements, setEntitlements] = useState<EntitlementRecord[]>([]);
   const [accountId, setAccountId] = useState('');
+  const [showAdvancedAccount, setShowAdvancedAccount] = useState(false);
   const [label, setLabel] = useState('');
   const [enrollmentToken, setEnrollmentToken] = useState('');
   const [offlinePluginId, setOfflinePluginId] = useState('');
@@ -75,16 +76,16 @@ export default function LicensingPage() {
     // Either identifies this school to the marketplace: an enrollment token was minted by a
     // platform operator against a named customer school, and is the path for a school the operator
     // provisioned. An account ID is the self-serve path.
-    if (!accountId.trim() && !enrollmentToken.trim()) {
-      return setError('Enter the enrollment token issued for this school, or the marketplace account ID that owns its licence.');
+    if (!enrollmentToken.trim() && !accountId.trim()) {
+      return setError('Enter the one-time enrollment token from your platform operator.');
     }
     return run('register', '/api/admin/marketplace/installation/register',
       {
-        ...(accountId.trim() ? { accountId: accountId.trim() } : {}),
+        ...(!enrollmentToken.trim() && accountId.trim() ? { accountId: accountId.trim() } : {}),
         ...(enrollmentToken.trim() ? { enrollmentToken: enrollmentToken.trim() } : {}),
         ...(label.trim() ? { label: label.trim() } : {}),
       },
-      'This installation is now registered with the marketplace.');
+      'This school is registered. Next, open Plugin Manager and link the marketplace owner account to browse and install plugins.');
   }
 
   function rotate() {
@@ -164,7 +165,7 @@ export default function LicensingPage() {
                 </p>
               ) : (
                 <p className="mt-1 text-sm text-slate-500">
-                  Registration proves this server holds the private key before the marketplace will bind it to a customer school.
+                  Ask your platform operator for this school’s one-time enrollment token, then register here. Registration proves this server holds its private key. After registration, link an owner account in Plugin Manager.
                 </p>
               )}
               {!status?.registered && <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -172,13 +173,15 @@ export default function LicensingPage() {
                   <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Enrollment token</span>
                   <input value={enrollmentToken} onChange={(event) => setEnrollmentToken(event.target.value)} placeholder="wtn_enr_…"
                     className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs" />
-                  <span className="mt-1 block text-xs font-normal text-slate-500">Issued by the platform operator for this school. Shown once, and spent when registration succeeds.</span>
+                  <span className="mt-1 block text-xs font-normal text-slate-500">Get this from Platform Admin → Customer schools → your school → Installation enrollment. It is shown once and consumed on successful registration.</span>
                 </label>
-                <label className="text-sm">
+                <button className="text-left text-xs text-indigo-700 underline sm:col-span-2" type="button" onClick={() => setShowAdvancedAccount(value => !value)} aria-expanded={showAdvancedAccount}>Advanced: register with an existing marketplace account ID</button>
+                {showAdvancedAccount && <label className="text-sm">
                   <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Marketplace account ID</span>
                   <input value={accountId} onChange={(event) => setAccountId(event.target.value)} placeholder="00000000-0000-0000-0000-000000000000"
                     className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs" />
-                </label>
+                  <span className="mt-1 block text-xs font-normal text-slate-500">Self-managed installations only. For a platform-managed customer school, use its enrollment token instead.</span>
+                </label>}
                 <label className="text-sm">
                   <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Label (optional)</span>
                   <input value={label} onChange={(event) => setLabel(event.target.value)} placeholder="Main campus"
@@ -189,6 +192,7 @@ export default function LicensingPage() {
                 {!status?.registered && <button className="btn btn-primary" disabled={!!busy || !status?.marketplaceConfigured} onClick={register}>
                   {busy === 'register' ? 'Registering…' : 'Register this installation'}
                 </button>}
+                {status?.registered && <a className="btn btn-primary" href="/admin/plugins">Next: link marketplace account</a>}
                 <button className="btn btn-secondary" disabled={!!busy || !status?.marketplaceConfigured || !status?.hasLocalKey} onClick={rotate}>
                   {busy === 'rotate' ? 'Rotating…' : 'Rotate signing key'}
                 </button>

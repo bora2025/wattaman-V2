@@ -6,6 +6,7 @@ const path = require('node:path');
 const test = require('node:test');
 const plugin = require('../../plugins/wattanam.academic-management/backend/index.js');
 
+const STUDY_YEAR = 'plugin_wattanam_academic_management_study_year';
 const CLASS = 'plugin_wattanam_academic_management_class';
 const REGISTRATION = 'plugin_wattanam_academic_management_class_registration';
 const SETTINGS = 'plugin_wattanam_academic_management_class_registration_settings';
@@ -36,8 +37,10 @@ test('registers the initial department routes, permissions, and navigation', asy
   const result = await activate();
   assert.deepEqual(result.routes.map((route) => `${route.method}:${route.path}`), [
     'GET:departments',
+    'GET:teachers',
     'GET:study-years',
     'GET:study-years/current',
+    'GET:study-years/:id',
     'POST:study-years',
     'PUT:study-years/:id',
     'POST:study-years/:id/set-current',
@@ -45,7 +48,9 @@ test('registers the initial department routes, permissions, and navigation', asy
     'POST:classes',
     'PUT:classes/:id',
     'DELETE:classes/:id',
+    'GET:classes/:id',
     'GET:classes',
+    'GET:classes/:id/students',
     'POST:classes/:id/students',
     'PATCH:classes/:classId/students/:studentId',
     'DELETE:classes/:id/students/:studentId',
@@ -59,8 +64,10 @@ test('registers the initial department routes, permissions, and navigation', asy
     'PATCH:admissions/fields/:id',
     'POST:admissions/fields/reorder',
     'DELETE:admissions/fields/:id',
-    'POST:admissions/public/submit',
+    'GET:admissions/registrations',
+    'GET:admissions/registrations/:id',
     'PATCH:admissions/registrations/:id/resolve',
+    'POST:admissions/public/submit',
   ]);
   assert.deepEqual(result.permissions.map((permission) => permission.id), [
     'wattanam.academic-management.view', 'wattanam.academic-management.manage',
@@ -68,23 +75,96 @@ test('registers the initial department routes, permissions, and navigation', asy
   assert.equal(result.navigation[0].href, '/plugins/wattanam.academic-management/departments');
   assert.equal(result.navigation[1].href, '/plugins/wattanam.academic-management/study-years');
   assert.equal(result.navigation[2].href, '/plugins/wattanam.academic-management/classes');
+  assert.equal(result.navigation[3].href, '/plugins/wattanam.academic-management/teachers');
+  assert.equal(result.navigation[4].href, '/plugins/wattanam.academic-management/registrations');
 });
 
 test('exposes read-only routes without database writes', async () => {
   const calls = [];
   const result = await activate({
-    query: async () => [],
+    query: async (sql, params) => {
+      if (sql.includes(`FROM ${STUDY_YEAR} WHERE "id" = $1 LIMIT 1`)) return [{ id: params[0], year: 2026 }];
+      if (sql.includes(`FROM ${CLASS} c LEFT JOIN`)) return [{ id: params[0], name: 'Class A' }];
+      if (sql.includes(`FROM ${REGISTRATION} r LEFT JOIN`)) return [{ id: params[0], nameEn: 'Student' }];
+      return [];
+    },
     execute: async (sql, params) => { calls.push({ sql, params }); return { count: 1 }; },
+    transaction: async (fn) => fn({ query: async () => [], execute: async (sql, params) => { calls.push({ sql, params }); return { count: 1 }; }, publish: () => undefined }),
   });
   await result.routes[0].handler();            // departments
-  await result.routes[1].handler();            // study-years
-  await result.routes[2].handler();            // study-years/current
-  await result.routes[10].handler({ query: {} }); // classes
-  await result.routes[15].handler();           // admissions/public/classes
-  await result.routes[16].handler();           // admissions/public/form-config
-  await result.routes[17].handler();           // admissions/settings
-  await result.routes[18].handler();           // admissions/fields
+  await result.routes[1].handler();            // teachers
+  await result.routes[2].handler();            // study-years
+  await result.routes[3].handler();            // study-years/current
+  await result.routes[4].handler({ params: { id: '00000000-0000-0000-0000-000000000000' } }); // study-years/:id
+  await result.routes[12].handler({ params: { id: '00000000-0000-0000-0000-000000000000' } }); // classes/:id
+  await result.routes[13].handler({ query: {} }); // classes
+  await result.routes[14].handler({ params: { id: '00000000-0000-0000-0000-000000000000' } }); // classes/:id/students
+  await result.routes[19].handler();           // admissions/public/classes
+  await result.routes[20].handler();           // admissions/public/form-config
+  await result.routes[21].handler();           // admissions/settings
+  await result.routes[22].handler();           // admissions/fields
+  await result.routes[28].handler({ query: {} }); // admissions/registrations
+  await result.routes[29].handler({ params: { id: '00000000-0000-0000-0000-000000000000' } }); // admissions/registrations/:id
   assert.equal(calls.length, 0);
+});
+
+test('study-year and class write handlers publish lifecycle events', async () => {
+  const events = [];
+  const db = {
+    query: async (sql, params = []) => {
+      if (sql.includes(`FROM ${STUDY_YEAR} WHERE "id"`)) return [{ id: params[0], year: 2026 }];
+      if (sql.includes(`FROM ${STUDY_YEAR} WHERE "year"`)) return [];
+      if (sql.includes(`FROM ${CLASS} WHERE "id"`)) return [{ id: params[0] }];
+      if (sql.includes(`FROM ${CLASS} c LEFT JOIN`)) {
+        return [{
+          id: params[0], name: 'Class A', subject: null, teacherId: 't1', classAdminId: null, studyYearId: null,
+          schedule: null, registrationStatus: 'HIDDEN', thumbnail: null, description: null, price: null, showPrice: false,
+          createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), teacher: { name: 'Teacher' }, classAdmin: null, studyYear: null,
+        }];
+      }
+      if (sql.includes('FROM "User" WHERE "id"')) return [{ id: params[0], role: 'TEACHER' }];
+      if (sql.includes('COUNT(*)::int AS "count"')) return [{ count: 0 }];
+      return [];
+    },
+    execute: async () => ({ count: 1 }),
+    transaction: async (fn) => fn({ query: db.query, execute: db.execute, publish: () => undefined }),
+  };
+  const result = await activate(db, { events });
+  const createStudyYear = result.routes.find((r) => r.method === 'POST' && r.path === 'study-years');
+  const updateStudyYear = result.routes.find((r) => r.method === 'PUT' && r.path === 'study-years/:id');
+  const setCurrent = result.routes.find((r) => r.method === 'POST' && r.path === 'study-years/:id/set-current');
+  const deleteStudyYear = result.routes.find((r) => r.method === 'DELETE' && r.path === 'study-years/:id');
+  const createClass = result.routes.find((r) => r.method === 'POST' && r.path === 'classes');
+  const updateClass = result.routes.find((r) => r.method === 'PUT' && r.path === 'classes/:id');
+  const deleteClass = result.routes.find((r) => r.method === 'DELETE' && r.path === 'classes/:id');
+
+  await createStudyYear.handler({ body: { year: 2026 }, principal: { userId: 'a1' } });
+  assert.ok(events.some((e) => e.event === 'academic.study-year.created.v1'));
+
+  events.length = 0;
+  await updateStudyYear.handler({ params: { id: 'y1' }, body: { label: '2026-2027' }, principal: { userId: 'a1' } });
+  assert.ok(events.some((e) => e.event === 'academic.study-year.updated.v1'));
+
+  events.length = 0;
+  await setCurrent.handler({ params: { id: 'y1' }, principal: { userId: 'a1' } });
+  assert.ok(events.some((e) => e.event === 'academic.study-year.set-current.v1'));
+
+  events.length = 0;
+  await deleteStudyYear.handler({ params: { id: 'y1' }, principal: { userId: 'a1' } });
+  assert.ok(events.some((e) => e.event === 'academic.study-year.deleted.v1'));
+
+  events.length = 0;
+  await createClass.handler({ body: { name: 'G1', teacherId: 't1', registrationStatus: 'HIDDEN' }, principal: { userId: 'a1' } });
+  assert.ok(events.some((e) => e.event === 'academic.class.created.v1'));
+
+  events.length = 0;
+  await updateClass.handler({ params: { id: 'c1' }, body: { name: 'G1A' }, principal: { userId: 'a1' } });
+  assert.ok(events.some((e) => e.event === 'academic.class.updated.v1'));
+
+  events.length = 0;
+  await deleteClass.handler({ params: { id: 'c1' }, principal: { userId: 'a1' } });
+  assert.ok(events.some((e) => e.event === 'academic.class.deleted.v1'));
+  assert.ok(events.some((e) => e.event === 'academic.class.deleted.v1'));
 });
 
 test('admissions write handlers perform namespaced plugin writes', async () => {
@@ -182,33 +262,42 @@ test('class student-management write handlers perform core table writes', async 
       return [];
     },
     execute: async (sql, params = []) => { calls.push({ type: 'execute', sql, params }); return { count: 1 }; },
-    transaction: async (fn) => fn({ query: db.query, execute: db.execute }),
+    transaction: async (fn) => fn({ query: db.query, execute: db.execute, publish: () => undefined }),
   };
-  const result = await activate(db);
+  const events = [];
+  const result = await activate(db, { events });
   const addRoute = result.routes.find((r) => r.method === 'POST' && r.path === 'classes/:id/students');
   const updateRoute = result.routes.find((r) => r.method === 'PATCH' && r.path === 'classes/:classId/students/:studentId');
   const removeRoute = result.routes.find((r) => r.method === 'DELETE' && r.path === 'classes/:id/students/:studentId');
   const cleanupRoute = result.routes.find((r) => r.method === 'POST' && r.path === 'classes/cleanup-orphaned-students');
 
-  await addRoute.handler({ params: { id: 'c1' }, body: { studentId: 'u1' } });
+  await addRoute.handler({ params: { id: 'c1' }, body: { studentId: 'u1' }, principal: { userId: 'a1' } });
   assert.ok(calls.some((c) => c.type === 'execute' && c.sql.includes('INSERT INTO "Student"')));
+  assert.ok(events.some((e) => e.event === 'academic.student.added-to-class.v1' && e.payload.classId === 'c1'));
 
   calls.length = 0;
-  await updateRoute.handler({ params: { classId: 'c1', studentId: 's1' }, body: { name: 'Bopha', nameKh: 'បុប្ផា' } });
+  events.length = 0;
+  await updateRoute.handler({ params: { classId: 'c1', studentId: 's1' }, body: { name: 'Bopha', nameKh: 'បុប្ផា' }, principal: { userId: 'a1' } });
   assert.ok(calls.some((c) => c.type === 'execute' && c.sql.includes('UPDATE "Student"')));
   assert.ok(calls.some((c) => c.type === 'execute' && c.sql.includes('UPDATE "User"')));
+  assert.ok(events.some((e) => e.event === 'academic.student.updated.v1'));
 
   calls.length = 0;
+  events.length = 0;
   await assert.rejects(updateRoute.handler({ params: { classId: 'c1', studentId: 's1' }, body: { parentId: 'u1' } }), /parentId must reference a user with role PARENT/);
 
   calls.length = 0;
-  await removeRoute.handler({ params: { id: 'c1', studentId: 's1' } });
+  events.length = 0;
+  await removeRoute.handler({ params: { id: 'c1', studentId: 's1' }, principal: { userId: 'a1' } });
   assert.ok(calls.some((c) => c.type === 'execute' && c.sql.includes('DELETE FROM "Student"')));
   assert.ok(calls.some((c) => c.type === 'execute' && c.sql.includes('DELETE FROM "User"')));
+  assert.ok(events.some((e) => e.event === 'academic.student.removed-from-class.v1' && e.payload.studentId === 's1'));
 
   calls.length = 0;
-  await cleanupRoute.handler({ params: {}, body: {} });
+  events.length = 0;
+  await cleanupRoute.handler({ params: {}, body: {}, principal: { userId: 'a1' } });
   assert.ok(calls.some((c) => c.type === 'execute' && c.sql.includes('DELETE FROM "Student"')));
+  assert.ok(events.some((e) => e.event === 'academic.students.cleaned-up.v1' && e.payload.deleted === 1));
 });
 
 test('manifest, UI, and additive namespaced migrations align with the preflight contract', () => {
@@ -217,6 +306,20 @@ test('manifest, UI, and additive namespaced migrations align with the preflight 
   assert.equal(page.pages[0].permission, 'wattanam.academic-management.view');
   assert.equal(page.pages[0].dataSources.length, 1);
   assert.equal(page.pages[0].dataSources[0].method, 'GET');
+  const pageIds = page.pages.map((p) => p.id);
+  assert.ok(pageIds.includes('study-years'));
+  assert.ok(pageIds.includes('study-year-detail'));
+  assert.ok(pageIds.includes('study-year-edit'));
+  assert.ok(pageIds.includes('classes'));
+  assert.ok(pageIds.includes('class-detail'));
+  assert.ok(pageIds.includes('class-edit'));
+  assert.ok(pageIds.includes('class-students'));
+  assert.ok(pageIds.includes('registrations'));
+  assert.ok(pageIds.includes('registration-detail'));
+  const navIds = manifest.navigation.map((n) => n.id);
+  assert.ok(navIds.includes('study-years'));
+  assert.ok(navIds.includes('classes'));
+  assert.ok(navIds.includes('registrations'));
   assert.equal(manifest.migrations.length, 8);
   for (const migration of manifest.migrations) {
     const sql = fs.readFileSync(path.resolve(__dirname, '..', '..', 'plugins/wattanam.academic-management', migration.path), 'utf8');

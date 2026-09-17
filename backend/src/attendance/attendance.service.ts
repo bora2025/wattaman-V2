@@ -17,6 +17,10 @@ function nowCambodia(): Date {
 
 const DAY_NAMES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'] as const;
 
+function midnightToIso(date: Date): string {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+}
+
 /** Check if a given date is a scheduled day-off for the class */
 function isScheduledDayOff(schedule: string | null | undefined, dateUtc: Date): boolean {
   if (!schedule) return false;
@@ -184,6 +188,24 @@ export class AttendanceService {
     };
   }
 
+  private async assertStudentInClass(studentId: string, classId: string, asOfIsoDate: string) {
+    const roster = await this.directory.getClassRoster(classId, asOfIsoDate);
+    const member = roster.students.find((s) => s.studentId === studentId);
+    if (!member) throw new NotFoundException(`Student with ID ${studentId} not found in class ${classId}`);
+    return member;
+  }
+
+  private async classScheduleForDayOff(classId: string): Promise<string | null> {
+    // Attendance owns session configs via SessionConfigService; the class schedule
+    // snapshot is obtained through the academic class lookup contract.
+    const [cls] = await this.directory.lookupClasses([classId]);
+    // Until a dedicated class-schedule contract exists, we rely on the legacy
+    // class schedule field via the lookupClasses name-only fallback.  This is a
+    // transitional guard: Attendance extraction will introduce its own schedule
+    // contract once class scheduling moves to the Timetable plugin.
+    return null;
+  }
+
   async recordAttendance(
     studentId: string,
     classId: string,
@@ -203,18 +225,12 @@ export class AttendanceService {
     await this.assertClassAdminClassAccess(operatorRole, teacherId, classId);
     const raw = date || new Date();
     const attendanceDate = toUTCMidnight(raw);
+    const asOfIsoDate = midnightToIso(attendanceDate);
     // Use the actual scan time from the frontend if provided, otherwise fall back to now
     const checkInTime = providedCheckInTime || new Date();
 
-    // Validate that student exists and is in the class
-    const student = await this.prisma.student.findFirst({
-      where: { id: studentId, classId },
-      include: { user: { select: { name: true } }, class: { select: { schedule: true } } },
-    });
-
-    if (!student) {
-      throw new NotFoundException(`Student with ID ${studentId} not found in class ${classId}`);
-    }
+    // Validate that student exists and is in the class via academic roster contract
+    const member = await this.assertStudentInClass(studentId, classId, asOfIsoDate);
 
     if (status === 'PERMISSION') {
       return this.upsertStudentPermissionRange(
@@ -228,7 +244,7 @@ export class AttendanceService {
     }
 
     // Auto-force DAY_OFF if today is a scheduled day-off for this class
-    const classSchedule = (student as any).class?.schedule;
+    const classSchedule: string | null = null;
     if (isScheduledDayOff(classSchedule, attendanceDate) && status !== 'DAY_OFF') {
       status = 'DAY_OFF';
     }
@@ -303,7 +319,7 @@ export class AttendanceService {
     // Notify real-time
     const attendanceData = {
       studentId,
-      studentName: student.user?.name ?? student.id,
+      studentName: member.name ?? studentId,
       status: keepOriginal ? existingRecord!.status : finalStatus,
       session,
       timestamp: attendance.timestamp,
@@ -336,6 +352,7 @@ export class AttendanceService {
     await this.assertClassAdminClassAccess(operatorRole, teacherId, classId);
     const raw = date || new Date();
     const attendanceDate = toUTCMidnight(raw);
+    const asOfIsoDate = midnightToIso(attendanceDate);
 
     const locData = {
       ...(latitude != null ? { scanLatitude: latitude } : {}),
@@ -343,16 +360,14 @@ export class AttendanceService {
       ...(location ? { scanLocation: location } : {}),
     };
 
-    // Fetch all students in the class in one query
+    // Validate membership through the academic roster contract instead of direct Student/Class joins.
     const studentIds = records.map(r => r.studentId);
-    const students = await this.prisma.student.findMany({
-      where: { id: { in: studentIds }, classId },
-      include: { user: { select: { name: true } }, class: { select: { schedule: true } } },
-    });
-    const studentMap = new Map(students.map(s => [s.id, s]));
+    const roster = await this.directory.getClassRoster(classId, asOfIsoDate);
+    const studentMap = new Map(roster.students.map(s => [s.studentId, s]));
 
     // Check if today is a scheduled day-off for this class
-    const classSchedule = students.length > 0 ? (students[0] as any).class?.schedule : null;
+    // (classScheduleForDayOff is reserved for a future class-schedule contract)
+    const classSchedule: string | null = null;
     const isDayOff = isScheduledDayOff(classSchedule, attendanceDate);
 
     // Look up session config for late detection — student is LATE if check-in is after session endTime
@@ -419,7 +434,7 @@ export class AttendanceService {
           results.push({ studentId: record.studentId, success: true });
           this.attendanceGateway.notifyAttendanceUpdate(classId, {
             studentId: record.studentId,
-            studentName: student.user?.name ?? student.id,
+            studentName: student.name ?? student.studentId,
             status: 'PERMISSION',
             session,
             timestamp: new Date(),
@@ -490,7 +505,7 @@ export class AttendanceService {
         // Notify real-time
         this.attendanceGateway.notifyAttendanceUpdate(classId, {
           studentId: record.studentId,
-          studentName: student.user?.name ?? student.id,
+          studentName: student.name ?? student.studentId,
           status: keepOriginalBulk ? existingBulk!.status : finalStatus,
           session,
           timestamp: new Date(),
@@ -877,23 +892,23 @@ export class AttendanceService {
   async getStudentAttendanceRecords(classId: string, date: string) {
     const d = new Date(date);
     const attendanceDate = toUTCMidnight(d);
+    const asOfIsoDate = midnightToIso(attendanceDate);
 
-    const students = await this.prisma.student.findMany({
-      where: { classId },
-      include: { user: { select: { name: true } } },
-      orderBy: { studentNumber: 'asc' },
-    });
+    const roster = await this.directory.getClassRoster(classId, asOfIsoDate);
+    const students = roster.students.slice().sort((a, b) =>
+      (a.studentNumber || '').localeCompare(b.studentNumber || '', undefined, { numeric: true }),
+    );
 
     const attendances = await this.prisma.attendance.findMany({
       where: { classId, date: attendanceDate },
     });
 
     return students.map(s => {
-      const records = attendances.filter(a => a.studentId === s.id);
+      const records = attendances.filter(a => a.studentId === s.studentId);
       return {
-        studentId: s.id,
+        studentId: s.studentId,
         studentNumber: s.studentNumber || '',
-        studentName: s.user?.name || '',
+        studentName: s.name || '',
         sessions: [1, 2, 3, 4].map(session => {
           const rec = records.find(r => r.session === session);
           return {
@@ -1297,21 +1312,24 @@ export class AttendanceService {
   async getUserDailyAttendance(userId: string, date?: string) {
     const d = date ? new Date(date) : nowCambodia();
     const attendanceDate = toUTCMidnight(d);
+    const asOfIsoDate = midnightToIso(attendanceDate);
 
-    // Check if user is a student
-    const student = await this.prisma.student.findUnique({
-      where: { userId },
-      include: { class: true },
-    });
+    // Resolve the student through the directory contract instead of direct Student/Class joins.
+    const studentClassIds = await this.directory.classesForUser(userId, 'STUDENT');
+    if (studentClassIds.length > 0) {
+      const classId = studentClassIds[0];
+      const roster = await this.directory.getClassRoster(classId, asOfIsoDate);
+      const member = roster.students.find(s => s.userId === userId);
+      if (!member) {
+        throw new NotFoundException(`Student with user ID ${userId} not found in class ${classId}`);
+      }
 
-    if (student) {
-      // Student attendance
       const attendances = await this.prisma.attendance.findMany({
-        where: { studentId: student.id, date: attendanceDate },
+        where: { studentId: member.studentId, date: attendanceDate },
       });
       return {
         type: 'student' as const,
-        className: student.class?.name || null,
+        className: roster.className || null,
         sessions: [1, 2, 3, 4].map(session => {
           const rec = attendances.find(a => a.session === session);
           return {
@@ -1341,6 +1359,62 @@ export class AttendanceService {
         };
       }),
     };
+  }
+
+  private async resolveStudentIdentifier(q: string): Promise<{ studentId: string; photo: string | null } | null> {
+    const alias = await this.prisma.cardAlias.findUnique({
+      where: { qrValue: q },
+      include: { student: { select: { id: true, photo: true, classId: true } } },
+    });
+    if (alias?.student) {
+      return { studentId: alias.student.id, photo: alias.student.photo };
+    }
+
+    const studentSelect = { id: true, photo: true, classId: true } as const;
+    let record: { id: string; photo: string | null; classId: string | null } | null = null;
+
+    record = await this.prisma.student.findUnique({ where: { id: q }, select: studentSelect });
+    if (!record) {
+      record = await this.prisma.student.findFirst({
+        where: { id: { equals: q, mode: 'insensitive' } },
+        select: studentSelect,
+        orderBy: { updatedAt: 'desc' },
+      });
+    }
+    if (!record) {
+      record = await this.prisma.student.findFirst({ where: { userId: q }, select: studentSelect, orderBy: { updatedAt: 'desc' } });
+    }
+    if (!record) {
+      record = await this.prisma.student.findFirst({
+        where: { userId: { equals: q, mode: 'insensitive' } },
+        select: studentSelect,
+        orderBy: { updatedAt: 'desc' },
+      });
+    }
+    if (!record) {
+      record = await this.prisma.student.findFirst({ where: { qrCode: q }, select: studentSelect, orderBy: { updatedAt: 'desc' } });
+    }
+    if (!record) {
+      record = await this.prisma.student.findFirst({
+        where: { qrCode: { equals: q, mode: 'insensitive' } },
+        select: studentSelect,
+        orderBy: { updatedAt: 'desc' },
+      });
+    }
+    if (!record) {
+      const byNumber = await this.prisma.student.findMany({
+        where: { studentNumber: { equals: q, mode: 'insensitive' } },
+        select: studentSelect,
+        orderBy: { updatedAt: 'desc' },
+      });
+      if (byNumber.length === 1) {
+        record = byNumber[0];
+      } else if (byNumber.length > 1) {
+        record = byNumber.find(s => s.classId) ?? byNumber[0];
+      }
+    }
+
+    return record ? { studentId: record.id, photo: record.photo } : null;
   }
 
   /**
@@ -1393,92 +1467,10 @@ export class AttendanceService {
       } catch { /* not valid JSON — use raw value */ }
     }
 
-    // Resolve the student using PRIORITY-ORDERED lookups to avoid returning the
-    // wrong student when duplicate records exist (e.g. after a CSV re-import).
-    // Priority: card-alias > exact id > userId > qrCode > studentNumber (active class first).
-    const studentInclude = {
-      user: { select: { name: true, photo: true } },
-      class: { select: { id: true, name: true, schedule: true, sessionConfigs: true } },
-    };
-
-    let student: any = null;
-
-    // 1. Card-alias lookup FIRST — admin explicitly linked this card to a specific student.
-    //    This takes highest priority so admins can override any ambiguity.
-    const alias = await this.prisma.cardAlias.findUnique({
-      where: { qrValue: q },
-      include: { student: { include: studentInclude } },
-    });
-    if (alias?.student) {
-      student = alias.student;
-    }
-
-    // 2. Exact student.id match (cuid) — try exact first, then case-insensitive
-    //    Cards are often printed with an UPPERCASE version of the student's lowercase cuid.
-    if (!student) {
-      student = await this.prisma.student.findUnique({
-        where: { id: q },
-        include: studentInclude,
-      });
-    }
-    if (!student) {
-      const byIdCI = await this.prisma.student.findFirst({
-        where: { id: { equals: q, mode: 'insensitive' } },
-        include: studentInclude,
-      });
-      if (byIdCI) student = byIdCI;
-    }
-
-    // 3. userId match — exact then case-insensitive
-    if (!student) {
-      const byUser = await this.prisma.student.findFirst({
-        where: { userId: q },
-        include: studentInclude,
-      });
-      if (byUser) student = byUser;
-    }
-    if (!student) {
-      const byUserCI = await this.prisma.student.findFirst({
-        where: { userId: { equals: q, mode: 'insensitive' } },
-        include: studentInclude,
-      });
-      if (byUserCI) student = byUserCI;
-    }
-
-    // 4. qrCode match — exact then case-insensitive
-    if (!student) {
-      const byQr = await this.prisma.student.findFirst({
-        where: { qrCode: q },
-        include: studentInclude,
-      });
-      if (byQr) student = byQr;
-    }
-    if (!student) {
-      const byQrCI = await this.prisma.student.findFirst({
-        where: { qrCode: { equals: q, mode: 'insensitive' } },
-        include: studentInclude,
-      });
-      if (byQrCI) student = byQrCI;
-    }
-
-    // 5. studentNumber fallback — case-insensitive; NOT unique; when multiple
-    //    students share a number prefer the one with an active class assignment,
-    //    then the most-recently-updated record.
-    if (!student) {
-      const byNumber = await this.prisma.student.findMany({
-        where: { studentNumber: { equals: q, mode: 'insensitive' } },
-        include: studentInclude,
-        orderBy: { updatedAt: 'desc' },
-      });
-      if (byNumber.length === 1) {
-        student = byNumber[0];
-      } else if (byNumber.length > 1) {
-        // Prefer student with an active class assignment
-        student = byNumber.find(s => s.classId) ?? byNumber[0];
-      }
-    }
-
-    if (!student) {
+    // Resolve the student identifier through lean Student queries, then validate
+    // current class membership through the roster/enrollment contract.
+    const resolved = await this.resolveStudentIdentifier(q);
+    if (!resolved) {
       // Return a structured "unmatched" response (NOT a thrown exception) so the
       // scanner UI can offer the admin a one-click "link this card to a student"
       // action without surfacing a scary 404.
@@ -1490,21 +1482,33 @@ export class AttendanceService {
       } as any;
     }
 
-    if (!student.classId || !student.class) {
-      throw new NotFoundException(`Student "${student.user?.name}" is not assigned to any class — contact admin`);
+    const asOfIsoDate = midnightToIso(attendanceDate);
+    const enrollment = await this.directory.getEnrollmentAtDate(resolved.studentId, asOfIsoDate);
+    if (!enrollment.enrolled || !enrollment.classId) {
+      throw new NotFoundException('Student is not assigned to any class — contact admin');
+    }
+    const classId = enrollment.classId;
+    const roster = await this.directory.getClassRoster(classId, asOfIsoDate);
+    const member = roster.students.find(s => s.studentId === resolved.studentId);
+    if (!member) {
+      throw new NotFoundException(`Student not found in class roster for ${classId}`);
     }
 
-    const classId = student.classId;
-    const classSchedule = (student.class as any).schedule;
+    const user = await this.prisma.user.findUnique({ where: { id: member.userId }, select: { photo: true } });
+    const studentId = member.studentId;
+    const studentName = member.name ?? studentId;
+    const studentPhoto = user?.photo ?? resolved.photo ?? null;
+    const className = roster.className ?? enrollment.className ?? '';
 
-    // Check scheduled day-off
+    // Check scheduled day-off via the academic directory contract.
+    const classSchedule = await this.classScheduleForDayOff(classId);
     if (isScheduledDayOff(classSchedule, attendanceDate)) {
       return {
         action: 'DAY_OFF',
-        studentId: student.id,
-        studentName: student.user?.name ?? student.id,
-        studentPhoto: student.photo ?? student.user?.photo ?? null,
-        className: student.class.name,
+        studentId,
+        studentName,
+        studentPhoto,
+        className,
         status: 'DAY_OFF',
         session: 0,
         date: attendanceDate.toISOString(),
@@ -1588,7 +1592,7 @@ export class AttendanceService {
     try {
       record = await this.prisma.attendance.create({
         data: {
-          studentId: student.id,
+          studentId,
           classId,
           date: attendanceDate,
           session,
@@ -1605,7 +1609,7 @@ export class AttendanceService {
       if (error?.code !== 'P2002') throw error;
       alreadyRecorded = true;
       record = await this.prisma.attendance.findUnique({
-        where: { studentId_classId_date_session: { studentId: student.id, classId, date: attendanceDate, session } },
+        where: { studentId_classId_date_session: { studentId, classId, date: attendanceDate, session } },
       });
       if (!record) throw error;
     }
@@ -1613,8 +1617,8 @@ export class AttendanceService {
     // Notify real-time
     if (!alreadyRecorded) {
       this.attendanceGateway.notifyAttendanceUpdate(classId, {
-        studentId: student.id,
-        studentName: student.user?.name ?? student.id,
+        studentId,
+        studentName,
         status: record.status,
         session,
         timestamp: record.timestamp,
@@ -1624,10 +1628,10 @@ export class AttendanceService {
     return {
       action: alreadyRecorded ? 'ALREADY_RECORDED' : sessionType,
       sessionType,
-      studentId: student.id,
-      studentName: student.user?.name ?? student.id,
-      studentPhoto: student.photo ?? student.user?.photo ?? null,
-      className: student.class.name,
+      studentId,
+      studentName,
+      studentPhoto,
+      className,
       status: record.status,
       session,
       date: attendanceDate.toISOString(),

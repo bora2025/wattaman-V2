@@ -27,7 +27,8 @@
       "permission": "wattanam.academic-management.view",
       "parameters": [],
       "dataSources": [
-        { "id": "studyYears", "method": "GET", "path": "study-years", "permission": "wattanam.academic-management.view" }
+        { "id": "studyYears", "method": "GET", "path": "study-years", "permission": "wattanam.academic-management.view" },
+        { "id": "createStudyYear", "method": "POST", "path": "study-years", "permission": "wattanam.academic-management.manage" }
       ],
       "components": [
         { "id": "heading", "type": "heading", "title": "Study Years" },
@@ -39,9 +40,108 @@
           "fields": [
             { "id": "year", "label": "Year", "sortable": true, "filterable": true },
             { "id": "label", "label": "Label", "sortable": true },
-            { "id": "isCurrent", "label": "Current", "sortable": true },
-            { "id": "startDate", "label": "Start date", "sortable": true },
-            { "id": "endDate", "label": "End date", "sortable": true }
+            { "id": "isCurrent", "label": "Current", "sortable": true, "format": "boolean" },
+            { "id": "startDate", "label": "Start date", "sortable": true, "format": "date" },
+            { "id": "endDate", "label": "End date", "sortable": true, "format": "date" }
+          ],
+          "options": { "pageSize": 20, "selectable": false }
+        },
+        {
+          "id": "study-year-create-form",
+          "type": "form",
+          "title": "Create study year",
+          "source": "createStudyYear",
+          "fields": [
+            { "id": "year", "type": "number", "label": "Year", "required": true, "min": 2000, "max": 2100 },
+            { "id": "label", "type": "text", "label": "Label", "required": true, "minLength": 1, "maxLength": 120 },
+            { "id": "startDate", "type": "date", "label": "Start date" },
+            { "id": "endDate", "type": "date", "label": "End date" },
+            { "id": "schoolName", "type": "text", "label": "School name", "maxLength": 200 },
+            { "id": "logoUrl", "type": "text", "label": "Logo URL", "maxLength": 500 }
+          ],
+          "options": { "submitLabel": "Create", "successMessage": "Study year created" }
+        }
+      ]
+    },
+    {
+      "id": "study-year-detail",
+      "title": "Study Year",
+      "routePath": "study-years/:id",
+      "permission": "wattanam.academic-management.view",
+      "parameters": [{ "name": "id", "type": "uuid", "maximumLength": 36 }],
+      "dataSources": [
+        { "id": "studyYear", "method": "GET", "path": "study-years/:id", "permission": "wattanam.academic-management.view" }
+      ],
+      "components": [
+        { "id": "heading", "type": "heading", "title": "Study Year" },
+        {
+          "id": "study-year-detail-card",
+          "type": "detail",
+          "title": "Details",
+          "source": "studyYear",
+          "fields": [
+            { "label": "Year", "path": "year" },
+            { "label": "Label", "path": "label" },
+            { "label": "Current", "path": "isCurrent", "format": "boolean" },
+            { "label": "Start date", "path": "startDate", "format": "date" },
+            { "label": "End date", "path": "endDate", "format": "date" },
+            { "label": "School name", "path": "schoolName" },
+            { "label": "Logo URL", "path": "logoUrl" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "study-year-edit",
+      "title": "Edit Study Year",
+      "routePath": "study-years/edit/:id",
+      "permission": "wattanam.academic-management.manage",
+      "parameters": [{ "name": "id", "type": "uuid", "maximumLength": 36 }],
+      "dataSources": [
+        { "id": "studyYear", "method": "GET", "path": "study-years/:id", "permission": "wattanam.academic-management.view" },
+        { "id": "saveStudyYear", "method": "PUT", "path": "study-years/:id", "permission": "wattanam.academic-management.manage" }
+      ],
+      "components": [
+        { "id": "heading", "type": "heading", "title": "Edit Study Year" },
+        {
+          "id": "study-year-edit-form",
+          "type": "form",
+          "title": "Edit study year",
+          "source": "saveStudyYear",
+          "fields": [
+            { "id": "year", "type": "number", "label": "Year", "required": true, "min": 2000, "max": 2100 },
+            { "id": "label", "type": "text", "label": "Label", "required": true, "minLength": 1, "maxLength": 120 },
+            { "id": "startDate", "type": "date", "label": "Start date" },
+            { "id": "endDate", "type": "date", "label": "End date" },
+            { "id": "schoolName", "type": "text", "label": "School name", "maxLength": 200 },
+            { "id": "logoUrl", "type": "text", "label": "Logo URL", "maxLength": 500 }
+          ],
+          "options": { "initialSource": "studyYear", "submitLabel": "Save", "successMessage": "Study year saved" }
+        }
+      ]
+    },
+    {
+      "id": "teachers",
+      "title": "Teachers",
+      "routePath": "teachers",
+      "permission": "wattanam.academic-management.view",
+      "parameters": [],
+      "dataSources": [
+        { "id": "teachers", "method": "GET", "path": "teachers", "permission": "wattanam.academic-management.view" },
+        { "id": "departments", "method": "GET", "path": "departments", "permission": "wattanam.academic-management.view" }
+      ],
+      "components": [
+        { "id": "heading", "type": "heading", "title": "Teachers" },
+        {
+          "id": "teachers-table",
+          "type": "table",
+          "title": "Teachers",
+          "source": "teachers",
+          "fields": [
+            { "id": "name", "label": "Name", "sortable": true, "filterable": true },
+            { "id": "email", "label": "Email", "sortable": true },
+            { "id": "phone", "label": "Phone", "sortable": true },
+            { "id": "department.name", "label": "Department", "path": "department.name" }
           ],
           "options": { "pageSize": 20, "selectable": false }
         }
@@ -54,7 +154,8 @@
       "permission": "wattanam.academic-management.view",
       "parameters": [],
       "dataSources": [
-        { "id": "classes", "method": "GET", "path": "classes", "permission": "wattanam.academic-management.view" }
+        { "id": "classes", "method": "GET", "path": "classes", "permission": "wattanam.academic-management.view" },
+        { "id": "createClass", "method": "POST", "path": "classes", "permission": "wattanam.academic-management.manage" }
       ],
       "components": [
         { "id": "heading", "type": "heading", "title": "Classes" },
@@ -67,10 +168,223 @@
             { "id": "name", "label": "Name", "sortable": true, "filterable": true },
             { "id": "subject", "label": "Subject", "sortable": true },
             { "id": "registrationStatus", "label": "Registration", "sortable": true },
-            { "id": "schedule", "label": "Schedule" },
+            { "id": "teacher.name", "label": "Teacher", "path": "teacher.name" },
+            { "id": "studyYear.label", "label": "Study year", "path": "studyYear.label" },
             { "id": "price", "label": "Price", "sortable": true }
           ],
           "options": { "pageSize": 20, "selectable": false }
+        },
+        {
+          "id": "class-create-form",
+          "type": "form",
+          "title": "Create class",
+          "source": "createClass",
+          "fields": [
+            { "id": "name", "type": "text", "label": "Name", "required": true, "minLength": 1, "maxLength": 120 },
+            { "id": "subject", "type": "text", "label": "Subject", "maxLength": 120 },
+            { "id": "teacherId", "type": "text", "label": "Teacher ID", "required": true, "maxLength": 36 },
+            { "id": "classAdminId", "type": "text", "label": "Class admin ID", "maxLength": 36 },
+            { "id": "studyYearId", "type": "text", "label": "Study year ID", "maxLength": 36 },
+            { "id": "schedule", "type": "textarea", "label": "Schedule", "maxLength": 2000 },
+            { "id": "registrationStatus", "type": "select", "label": "Registration status", "required": true, "options": [
+              { "label": "Available", "value": "AVAILABLE" },
+              { "label": "Unavailable", "value": "UNAVAILABLE" },
+              { "label": "Hidden", "value": "HIDDEN" }
+            ] },
+            { "id": "thumbnail", "type": "text", "label": "Thumbnail URL", "maxLength": 500 },
+            { "id": "description", "type": "textarea", "label": "Description", "maxLength": 4000 },
+            { "id": "price", "type": "number", "label": "Price", "min": 0 },
+            { "id": "showPrice", "type": "checkbox", "label": "Show price" }
+          ],
+          "options": { "submitLabel": "Create", "successMessage": "Class created" }
+        }
+      ]
+    },
+    {
+      "id": "class-detail",
+      "title": "Class",
+      "routePath": "classes/:id",
+      "permission": "wattanam.academic-management.view",
+      "parameters": [{ "name": "id", "type": "uuid", "maximumLength": 36 }],
+      "dataSources": [
+        { "id": "class", "method": "GET", "path": "classes/:id", "permission": "wattanam.academic-management.view" }
+      ],
+      "components": [
+        { "id": "heading", "type": "heading", "title": "Class" },
+        {
+          "id": "class-detail-card",
+          "type": "detail",
+          "title": "Details",
+          "source": "class",
+          "fields": [
+            { "label": "Name", "path": "name" },
+            { "label": "Subject", "path": "subject" },
+            { "label": "Teacher", "path": "teacher.name" },
+            { "label": "Class admin", "path": "classAdmin.name" },
+            { "label": "Study year", "path": "studyYear.label" },
+            { "label": "Schedule", "path": "schedule" },
+            { "label": "Registration", "path": "registrationStatus" },
+            { "label": "Thumbnail", "path": "thumbnail" },
+            { "label": "Description", "path": "description" },
+            { "label": "Price", "path": "price" },
+            { "label": "Show price", "path": "showPrice", "format": "boolean" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "class-edit",
+      "title": "Edit Class",
+      "routePath": "classes/edit/:id",
+      "permission": "wattanam.academic-management.manage",
+      "parameters": [{ "name": "id", "type": "uuid", "maximumLength": 36 }],
+      "dataSources": [
+        { "id": "class", "method": "GET", "path": "classes/:id", "permission": "wattanam.academic-management.view" },
+        { "id": "saveClass", "method": "PUT", "path": "classes/:id", "permission": "wattanam.academic-management.manage" }
+      ],
+      "components": [
+        { "id": "heading", "type": "heading", "title": "Edit Class" },
+        {
+          "id": "class-edit-form",
+          "type": "form",
+          "title": "Edit class",
+          "source": "saveClass",
+          "fields": [
+            { "id": "name", "type": "text", "label": "Name", "required": true, "minLength": 1, "maxLength": 120 },
+            { "id": "subject", "type": "text", "label": "Subject", "maxLength": 120 },
+            { "id": "teacherId", "type": "text", "label": "Teacher ID", "required": true, "maxLength": 36 },
+            { "id": "classAdminId", "type": "text", "label": "Class admin ID", "maxLength": 36 },
+            { "id": "studyYearId", "type": "text", "label": "Study year ID", "maxLength": 36 },
+            { "id": "schedule", "type": "textarea", "label": "Schedule", "maxLength": 2000 },
+            { "id": "registrationStatus", "type": "select", "label": "Registration status", "required": true, "options": [
+              { "label": "Available", "value": "AVAILABLE" },
+              { "label": "Unavailable", "value": "UNAVAILABLE" },
+              { "label": "Hidden", "value": "HIDDEN" }
+            ] },
+            { "id": "thumbnail", "type": "text", "label": "Thumbnail URL", "maxLength": 500 },
+            { "id": "description", "type": "textarea", "label": "Description", "maxLength": 4000 },
+            { "id": "price", "type": "number", "label": "Price", "min": 0 },
+            { "id": "showPrice", "type": "checkbox", "label": "Show price" }
+          ],
+          "options": { "initialSource": "class", "submitLabel": "Save", "successMessage": "Class saved" }
+        }
+      ]
+    },
+    {
+      "id": "class-students",
+      "title": "Class Students",
+      "routePath": "classes/:id/students",
+      "permission": "wattanam.academic-management.view",
+      "parameters": [{ "name": "id", "type": "uuid", "maximumLength": 36 }],
+      "dataSources": [
+        { "id": "class", "method": "GET", "path": "classes/:id", "permission": "wattanam.academic-management.view" },
+        { "id": "students", "method": "GET", "path": "classes/:id/students", "permission": "wattanam.academic-management.view" },
+        { "id": "addStudent", "method": "POST", "path": "classes/:id/students", "permission": "wattanam.academic-management.manage" }
+      ],
+      "components": [
+        { "id": "heading", "type": "heading", "title": "Class Students" },
+        {
+          "id": "class-students-table",
+          "type": "table",
+          "title": "Students",
+          "source": "students",
+          "fields": [
+            { "id": "studentNumber", "label": "Student number", "sortable": true },
+            { "id": "user.name", "label": "Name", "path": "user.name" },
+            { "id": "user.email", "label": "Email", "path": "user.email" },
+            { "id": "user.phone", "label": "Phone", "path": "user.phone" },
+            { "id": "nameKh", "label": "Khmer name" }
+          ],
+          "options": { "pageSize": 20, "selectable": false }
+        },
+        {
+          "id": "add-student-form",
+          "type": "form",
+          "title": "Add student to class",
+          "source": "addStudent",
+          "fields": [
+            { "id": "studentId", "type": "text", "label": "Student user ID", "required": true, "maxLength": 36 }
+          ],
+          "options": { "submitLabel": "Add", "successMessage": "Student added" }
+        }
+      ]
+    },
+    {
+      "id": "registrations",
+      "title": "Registrations",
+      "routePath": "registrations",
+      "permission": "wattanam.academic-management.manage",
+      "parameters": [],
+      "dataSources": [
+        { "id": "registrations", "method": "GET", "path": "admissions/registrations", "permission": "wattanam.academic-management.manage" }
+      ],
+      "components": [
+        { "id": "heading", "type": "heading", "title": "Class Registrations" },
+        {
+          "id": "registrations-table",
+          "type": "table",
+          "title": "Registrations",
+          "source": "registrations",
+          "fields": [
+            { "id": "nameEn", "label": "English name", "sortable": true, "filterable": true },
+            { "id": "nameKh", "label": "Khmer name", "sortable": true },
+            { "id": "email", "label": "Email", "sortable": true },
+            { "id": "phone", "label": "Phone", "sortable": true },
+            { "id": "status", "label": "Status", "sortable": true },
+            { "id": "class.name", "label": "Class", "path": "class.name" },
+            { "id": "createdAt", "label": "Submitted", "sortable": true, "format": "datetime" }
+          ],
+          "options": { "pageSize": 20, "selectable": false }
+        }
+      ]
+    },
+    {
+      "id": "registration-detail",
+      "title": "Registration",
+      "routePath": "registrations/:id",
+      "permission": "wattanam.academic-management.manage",
+      "parameters": [{ "name": "id", "type": "uuid", "maximumLength": 36 }],
+      "dataSources": [
+        { "id": "registration", "method": "GET", "path": "admissions/registrations/:id", "permission": "wattanam.academic-management.manage" },
+        { "id": "resolveRegistration", "method": "PATCH", "path": "admissions/registrations/:id/resolve", "permission": "wattanam.academic-management.manage" }
+      ],
+      "components": [
+        { "id": "heading", "type": "heading", "title": "Registration" },
+        {
+          "id": "registration-detail-card",
+          "type": "detail",
+          "title": "Details",
+          "source": "registration",
+          "fields": [
+            { "label": "English name", "path": "nameEn" },
+            { "label": "Khmer name", "path": "nameKh" },
+            { "label": "Email", "path": "email" },
+            { "label": "Phone", "path": "phone" },
+            { "label": "Class", "path": "class.name" },
+            { "label": "Status", "path": "status" },
+            { "label": "Sex", "path": "sex" },
+            { "label": "Date of birth", "path": "dateOfBirth", "format": "date" },
+            { "label": "Address", "path": "address" },
+            { "label": "Generation", "path": "generation" },
+            { "label": "Submitted", "path": "createdAt", "format": "datetime" },
+            { "label": "Resolved at", "path": "resolvedAt", "format": "datetime" },
+            { "label": "Resolved by", "path": "resolvedBy" },
+            { "label": "Reject reason", "path": "rejectReason" }
+          ]
+        },
+        {
+          "id": "registration-resolve-form",
+          "type": "form",
+          "title": "Resolve registration",
+          "source": "resolveRegistration",
+          "fields": [
+            { "id": "action", "type": "select", "label": "Action", "required": true, "options": [
+              { "label": "Approve", "value": "APPROVE" },
+              { "label": "Reject", "value": "REJECT" }
+            ] },
+            { "id": "rejectReason", "type": "textarea", "label": "Reject reason", "maxLength": 500, "visibleWhen": { "field": "action", "equals": "REJECT" } }
+          ],
+          "options": { "submitLabel": "Resolve", "successMessage": "Registration resolved" }
         }
       ]
     }

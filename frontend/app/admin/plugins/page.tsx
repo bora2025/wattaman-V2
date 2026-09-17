@@ -58,6 +58,7 @@ export default function PluginsPage() {
   const [extensions, setExtensions] = useState<PluginExtensions>({ navigation: [] });
   const [runtime, setRuntime] = useState<{ safeMode: boolean; loaded: string[] } | null>(null);
   const [linkStatus, setLinkStatus] = useState<MarketplaceLinkStatus | null>(null);
+  const [registration, setRegistration] = useState<{ registered: boolean; marketplaceConfigured: boolean } | null>(null);
   const [linking, setLinking] = useState(false);
   const [catalog, setCatalog] = useState<CatalogProduct[]>([]);
   const [catalogError, setCatalogError] = useState('');
@@ -73,6 +74,8 @@ export default function PluginsPage() {
     if (extensionsResponse.ok) setExtensions(await extensionsResponse.json());
     if (runtimeResponse.ok) setRuntime(await runtimeResponse.json());
     const status = await loadLinkStatus();
+    const registrationResponse = await apiFetch('/api/admin/marketplace/installation');
+    if (registrationResponse.ok) setRegistration(await registrationResponse.json());
     if (status?.linked) { await loadCatalog(); await loadOrders(); }
   }
 
@@ -126,6 +129,9 @@ export default function PluginsPage() {
   }
 
   async function startLink() {
+    // Reserve the tab during the click. Opening it after the network round trip is blocked by
+    // popup protection in several browsers, leaving the owner with an invisible approval step.
+    const approvalTab = window.open('about:blank', '_blank');
     setLinking(true); setError('');
     try {
       const response = await apiFetch('/api/admin/marketplace/link/start', { method: 'POST' });
@@ -137,9 +143,15 @@ export default function PluginsPage() {
       // through the frontend's allowlisted server-side marketplace proxy.
       const requestId = String(result.requestId || '');
       if (!/^[0-9a-f-]{36}$/i.test(requestId)) throw new Error('Marketplace returned an invalid link request');
-      window.open(`/marketplace/link/${encodeURIComponent(requestId)}`, '_blank', 'noopener,noreferrer');
+      const approvalUrl = `/marketplace/link/${encodeURIComponent(requestId)}`;
+      if (approvalTab) { approvalTab.opener = null; approvalTab.location.href = approvalUrl; }
+      else {
+        setError('Your browser blocked the approval tab. Use the Open approval page link below, then choose Finish linking.');
+        await loadLinkStatus();
+        return;
+      }
       await awaitApproval();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Linking failed'); }
+    } catch (cause) { approvalTab?.close(); setError(cause instanceof Error ? cause.message : 'Linking failed'); }
     finally { setLinking(false); }
   }
 
@@ -245,7 +257,8 @@ export default function PluginsPage() {
 
             <section className="card p-6">
               <h2 className="font-semibold text-slate-800">Marketplace</h2>
-              <p className="mt-1 text-sm text-slate-500">Link this installation to a marketplace account to browse and buy new plugins directly from this panel.</p>
+              <p className="mt-1 text-sm text-slate-500">After registering this school in Licensing, its marketplace account owner approves a link here. The owner signs in with MFA; school administrators never need their password.</p>
+              {registration && !registration.registered && <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">This school is not registered with the marketplace yet. <a className="font-semibold underline" href="/admin/licensing">Open Licensing</a> and enter the one-time token from Platform Admin first.</div>}
               {linkStatus?.linked ? (
                 <>
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
@@ -286,13 +299,14 @@ export default function PluginsPage() {
                     <>
                       <div className="flex flex-wrap items-center gap-2">
                         <button className="btn btn-primary" disabled={linking} onClick={resumeLink}>{linking ? 'Checking…' : 'Finish linking'}</button>
+                        <a className="btn btn-secondary" href={`/marketplace/link/${encodeURIComponent(linkStatus.pending.requestId)}`} target="_blank" rel="noopener noreferrer">Open approval page ↗</a>
                         <button className="btn" disabled={linking} onClick={startLink}>Start over</button>
                       </div>
                       <p className="mt-2 text-xs text-slate-500">A link request from {new Date(linkStatus.pending.startedAt).toLocaleString()} is still waiting. If the account owner has approved it, finishing completes the link without asking them again.</p>
                     </>
                   ) : (
                     <>
-                      <button className="btn btn-primary" disabled={linking} onClick={startLink}>{linking ? 'Waiting for approval…' : 'Link marketplace account'}</button>
+                        <button className="btn btn-primary" disabled={linking || registration?.registered === false} onClick={startLink}>{linking ? 'Waiting for approval…' : 'Link marketplace account'}</button>
                       <p className="mt-2 text-xs text-slate-500">Opens the marketplace in a new tab, where the account owner reviews and approves the requested permissions.</p>
                     </>
                   )}
