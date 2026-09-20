@@ -390,7 +390,7 @@ export class PublisherGovernanceService {
       const review = await tx.submissionReview.create({ data: input as any });
       const decisions = [...submission.reviews, review];
       const rejected = decisions.some((item) => item.decision === 'REJECT');
-      const requiredApprovals = submission.riskLevel === 'HIGH' ? 2 : 1;
+      const requiredApprovals = ['HIGH', 'CRITICAL'].includes(submission.riskLevel) ? 2 : 1;
       const approved = decisions.filter((item) => item.decision === 'APPROVE').length >= requiredApprovals;
       if (rejected || approved) {
         const status = rejected ? 'REJECTED' : 'APPROVED';

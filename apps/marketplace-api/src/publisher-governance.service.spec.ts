@@ -147,6 +147,20 @@ describe('PublisherGovernanceService', () => {
     expect(prisma.pluginVersion.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ reviewStatus: 'APPROVED' }) }));
   });
 
+  it('requires two approvals for critical-risk submissions', async () => {
+    const firstReview = { id: 'review-c1', submissionId: id(60), reviewerId: id(2), decision: 'APPROVE', notes: 'one', evidence: {} };
+    const submission = { id: id(60), status: 'NEEDS_REVIEW', riskLevel: 'CRITICAL', submittedBy: id(1), pluginVersionId: id(6), reviews: [], pluginVersion: { pluginId: 'vendor.plugin' } };
+    const prisma: any = {
+      pluginSubmission: { findUnique: jest.fn().mockResolvedValueOnce(submission).mockResolvedValueOnce({ ...submission, reviews: [firstReview] }), update: jest.fn() },
+      publisherMember: { findFirst: jest.fn().mockResolvedValue({ id: 'reviewer' }) },
+      submissionReview: { create: jest.fn().mockResolvedValueOnce(firstReview).mockResolvedValueOnce({ ...firstReview, id: 'review-c2', reviewerId: id(3) }) },
+      pluginVersion: { update: jest.fn() }, marketplacePlugin: { update: jest.fn() },
+    };
+    const service = serviceWith(prisma);
+    await expect(service.review({ submissionId: id(60), reviewerId: id(2), decision: 'APPROVE', notes: 'Critical review part one', evidence: { checks: ['static-analysis'], artifacts: ['sandbox-log'], ticket: 'SEC-2001' } })).resolves.toMatchObject({ requiredApprovals: 2, approved: false });
+    await expect(service.review({ submissionId: id(60), reviewerId: id(3), decision: 'APPROVE', notes: 'Critical review part two', evidence: { checks: ['runtime-validation'], artifacts: ['policy-checklist'], ticket: 'SEC-2002' } })).resolves.toMatchObject({ requiredApprovals: 2, approved: true });
+  });
+
   it('rejects review evidence without checks for normal risk submissions', async () => {
     const submission = { id: id(50), status: 'NEEDS_REVIEW', riskLevel: 'NORMAL', submittedBy: id(1), pluginVersionId: id(6), reviews: [], pluginVersion: { pluginId: 'vendor.plugin' } };
     const prisma: any = {
