@@ -18,9 +18,12 @@ export default function PluginsPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-bold">Plugins</h1>
+      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+        Empty table usually means no approved plugin releases are published yet. Publish signed <code className="font-mono">.wtp</code> packages to <code className="font-mono">/admin/v1/plugin-releases</code> first, then refresh this page.
+      </div>
       <CursorTable<PluginRow>
         path="plugins"
-        emptyMessage="No plugins are in the catalog yet."
+        emptyMessage="No catalog plugins found. Publish at least one approved release and refresh."
         filters={[
           { key: 'publisher', label: 'Publisher slug', placeholder: 'publisher' },
           { key: 'status', label: 'Status', type: 'select', options: ['DRAFT', 'IN_REVIEW', 'APPROVED', 'REJECTED', 'WITHDRAWN'].map(value => ({ value, label: value.toLowerCase().replaceAll('_', ' ') })) },

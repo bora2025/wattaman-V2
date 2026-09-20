@@ -282,7 +282,12 @@ export default function PluginsPage() {
                     </div>
                     );
                   })}</div>}
-                  {catalog.length === 0 && !catalogError && <p className="mt-4 text-sm text-slate-500">No compatible plugins found in the catalog yet.</p>}
+                  {catalog.length === 0 && !catalogError && (
+                    <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                      <p className="font-semibold">This school is linked, but the marketplace catalog is empty.</p>
+                      <p className="mt-1">Ask a platform operator to publish at least one approved plugin release in Marketplace Admin.</p>
+                    </div>
+                  )}
                   {orders.length > 0 && <div className="mt-6 border-t border-slate-100 pt-4">
                     <div className="flex items-center justify-between"><h3 className="text-sm font-semibold text-slate-700">Orders</h3><button className="btn btn-secondary" onClick={loadOrders}>Refresh</button></div>
                     <div className="mt-3 space-y-2">{orders.map((order) => <div key={order.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-3 text-sm">

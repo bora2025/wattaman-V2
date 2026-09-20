@@ -20,6 +20,11 @@
     "schema:core:write": "node tools/generate-core-prisma-schema.js --write",
     "schema:core:check": "node tools/generate-core-prisma-schema.js --check",
     "verify:control-plane": "node tools/verify-control-plane-config.js",
+    "marketplace:publish:packages": "node tools/publish-plugin-packages.js",
+    "marketplace:pack-and-publish": "node tools/pack-and-publish-plugins.js",
+    "marketplace:check-publish-env": "node tools/check-marketplace-publish-env.js",
+    "marketplace:bootstrap:catalog": "node tools/complete-plugin-catalog-bootstrap.js",
+    "marketplace:fix-now": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/fix-marketplace-catalog.ps1",
     "test:tools:live": "node --test tools/*.live-test.js",
     "install:all": "cd backend && npm install && cd ../frontend && npm install && cd ../apps/mobile && npm install"
   },

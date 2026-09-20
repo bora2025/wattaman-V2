@@ -8,6 +8,109 @@ function serviceWith(prisma: any) {
 }
 
 describe('PublisherGovernanceService', () => {
+  it('lists only publishers where the current account is a verified active member', async () => {
+    const prisma: any = {
+      publisher: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: id(1), slug: 'acme', displayName: 'Acme Plugins', status: 'VERIFIED', createdAt: new Date('2026-01-01T00:00:00.000Z'),
+            members: [{ role: 'OWNER', verifiedAt: new Date('2026-01-01T00:00:00.000Z'), suspendedAt: null }],
+            _count: { plugins: 2, keys: 1, submissions: 3, members: 2 },
+          },
+        ]),
+      },
+    };
+    const result: any = await serviceWith(prisma).myPublishers(id(10), { limit: '20' });
+    expect(prisma.publisher.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { members: { some: { accountId: id(10), verifiedAt: { not: null }, suspendedAt: null } } } }));
+    expect(result.items[0]).toMatchObject({ id: id(1), slug: 'acme', myRoles: ['OWNER'] });
+    expect(result.nextCursor).toBeNull();
+  });
+
+  it('lists only submissions visible to the current publisher member', async () => {
+    const prisma: any = {
+      pluginSubmission: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: id(20), publisherId: id(1), status: 'NEEDS_REVIEW', riskLevel: 'HIGH', submittedAt: new Date('2026-09-01T00:00:00.000Z'), decidedAt: null,
+            publisher: { id: id(1), slug: 'acme', displayName: 'Acme Plugins' },
+            pluginVersion: { id: id(30), pluginId: 'acme.plugin', version: '0.1.0', channel: 'BETA', reviewStatus: 'IN_REVIEW', publishedAt: null, withdrawnAt: null },
+            _count: { reviews: 1 },
+          },
+        ]),
+      },
+    };
+    const result: any = await serviceWith(prisma).mySubmissions(id(10), { publisherId: id(1), status: 'NEEDS_REVIEW', limit: '20' });
+    expect(prisma.pluginSubmission.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ publisherId: id(1), status: 'NEEDS_REVIEW', publisher: { members: { some: { accountId: id(10), verifiedAt: { not: null }, suspendedAt: null } } } }) }));
+    expect(result.items[0]).toMatchObject({ id: id(20), status: 'NEEDS_REVIEW' });
+    expect(result.nextCursor).toBeNull();
+  });
+
+  it('adds a verified publisher member when verifier role and MFA requirements are satisfied', async () => {
+    const prisma: any = {
+      publisherMember: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValueOnce({ id: 'owner-role' })
+          .mockResolvedValueOnce({ id: 'new-member', role: 'SUPPORT', verifiedAt: new Date() }),
+        create: jest.fn().mockResolvedValue({ id: 'new-member', role: 'SUPPORT', verifiedAt: new Date() }),
+      },
+      marketplaceAccount: { findUnique: jest.fn().mockResolvedValue({ id: id(11), emailVerifiedAt: new Date(), mfaEnabled: true }) },
+      marketplaceAuditEvent: { create: jest.fn().mockResolvedValue({ id: 'audit-1' }) },
+    };
+    const result: any = await serviceWith(prisma).addVerifiedMember({ publisherId: id(1), accountId: id(11), role: 'SUPPORT', verifiedBy: id(10) });
+    expect(prisma.publisherMember.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ publisherId: id(1), accountId: id(11), role: 'SUPPORT' }) }));
+    expect(result).toMatchObject({ id: 'new-member', role: 'SUPPORT' });
+  });
+
+  it('prevents suspending the final active owner', async () => {
+    const prisma: any = {
+      publisherMember: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'owner-role' }),
+        findUnique: jest.fn().mockResolvedValue({ id: id(12), publisherId: id(1), accountId: id(11), role: 'OWNER', suspendedAt: null }),
+        count: jest.fn().mockResolvedValue(1),
+      },
+    };
+    await expect(serviceWith(prisma).suspendMember({ publisherId: id(1), memberId: id(12), verifiedBy: id(10) })).rejects.toThrow('final active owner');
+  });
+
+  it('reactivates a suspended member when verified by owner/admin', async () => {
+    const prisma: any = {
+      publisherMember: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'owner-role' }),
+        findUnique: jest.fn().mockResolvedValue({ id: id(13), publisherId: id(1), accountId: id(11), role: 'SUPPORT', suspendedAt: new Date() }),
+        update: jest.fn().mockResolvedValue({ id: id(13), publisherId: id(1), accountId: id(11), role: 'SUPPORT', suspendedAt: null }),
+      },
+      marketplaceAuditEvent: { create: jest.fn().mockResolvedValue({ id: 'audit-reactivate' }) },
+    };
+    const result: any = await serviceWith(prisma).reactivateMember({ publisherId: id(1), memberId: id(13), verifiedBy: id(10) });
+    expect(prisma.publisherMember.update).toHaveBeenCalledWith({ where: { id: id(13) }, data: { suspendedAt: null } });
+    expect(result).toMatchObject({ id: id(13), suspendedAt: null });
+  });
+
+  it('lists reviewer queue submissions only for reviewer identities', async () => {
+    const prisma: any = {
+      publisherMember: { findFirst: jest.fn().mockResolvedValue({ id: 'reviewer-role' }) },
+      pluginSubmission: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: id(40), status: 'NEEDS_REVIEW', riskLevel: 'HIGH', submittedAt: new Date('2026-09-01T00:00:00.000Z'), decidedAt: null,
+            publisher: { id: id(1), slug: 'acme', displayName: 'Acme Plugins' },
+            pluginVersion: { id: id(30), pluginId: 'acme.plugin', version: '1.0.0', channel: 'STABLE', reviewStatus: 'IN_REVIEW', publishedAt: null, withdrawnAt: null },
+            _count: { reviews: 1 },
+          },
+        ]),
+      },
+    };
+    const result: any = await serviceWith(prisma).reviewerSubmissions(id(10), { status: 'NEEDS_REVIEW', limit: '20' });
+    expect(prisma.pluginSubmission.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { status: 'NEEDS_REVIEW' } }));
+    expect(result.items[0]).toMatchObject({ id: id(40), status: 'NEEDS_REVIEW' });
+  });
+
+  it('blocks reviewer queue access for non-reviewer accounts', async () => {
+    const prisma: any = { publisherMember: { findFirst: jest.fn().mockResolvedValue(null) } };
+    await expect(serviceWith(prisma).reviewerSubmissions(id(99), { limit: '20' })).rejects.toThrow('Reviewer role is not authorized');
+  });
+
   it('requires two different reviewers before publisher identity becomes verified', async () => {
     const approvals: any[] = [];
     const prisma: any = {
@@ -39,9 +142,33 @@ describe('PublisherGovernanceService', () => {
       pluginVersion: { update: jest.fn() }, marketplacePlugin: { update: jest.fn() },
     };
     const service = serviceWith(prisma);
-    await expect(service.review({ submissionId: id(5), reviewerId: id(2), decision: 'APPROVE', notes: 'Static and migration review passed', evidence: { run: 'one' } })).resolves.toMatchObject({ requiredApprovals: 2, approved: false });
-    await expect(service.review({ submissionId: id(5), reviewerId: id(3), decision: 'APPROVE', notes: 'Independent reproduction passed', evidence: { run: 'two' } })).resolves.toMatchObject({ requiredApprovals: 2, approved: true });
+    await expect(service.review({ submissionId: id(5), reviewerId: id(2), decision: 'APPROVE', notes: 'Static and migration review passed', evidence: { checks: ['static-analysis', 'migration-review'], artifacts: ['sandbox-log'], ticket: 'SEC-1001' } })).resolves.toMatchObject({ requiredApprovals: 2, approved: false });
+    await expect(service.review({ submissionId: id(5), reviewerId: id(3), decision: 'APPROVE', notes: 'Independent reproduction passed', evidence: { checks: ['repro-validation'], artifacts: ['policy-checklist'], ticket: 'SEC-1002' } })).resolves.toMatchObject({ requiredApprovals: 2, approved: true });
     expect(prisma.pluginVersion.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ reviewStatus: 'APPROVED' }) }));
+  });
+
+  it('rejects review evidence without checks for normal risk submissions', async () => {
+    const submission = { id: id(50), status: 'NEEDS_REVIEW', riskLevel: 'NORMAL', submittedBy: id(1), pluginVersionId: id(6), reviews: [], pluginVersion: { pluginId: 'vendor.plugin' } };
+    const prisma: any = {
+      pluginSubmission: { findUnique: jest.fn().mockResolvedValue(submission), update: jest.fn() },
+      publisherMember: { findFirst: jest.fn().mockResolvedValue({ id: 'reviewer' }) },
+      submissionReview: { create: jest.fn() },
+      pluginVersion: { update: jest.fn() }, marketplacePlugin: { update: jest.fn() },
+    };
+    await expect(serviceWith(prisma).review({ submissionId: id(50), reviewerId: id(2), decision: 'APPROVE', notes: 'Looks good', evidence: {} })).rejects.toThrow('checks[]');
+    expect(prisma.submissionReview.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects high-risk evidence without artifacts and ticket', async () => {
+    const submission = { id: id(51), status: 'NEEDS_REVIEW', riskLevel: 'HIGH', submittedBy: id(1), pluginVersionId: id(6), reviews: [], pluginVersion: { pluginId: 'vendor.plugin' } };
+    const prisma: any = {
+      pluginSubmission: { findUnique: jest.fn().mockResolvedValue(submission), update: jest.fn() },
+      publisherMember: { findFirst: jest.fn().mockResolvedValue({ id: 'reviewer' }) },
+      submissionReview: { create: jest.fn() },
+      pluginVersion: { update: jest.fn() }, marketplacePlugin: { update: jest.fn() },
+    };
+    await expect(serviceWith(prisma).review({ submissionId: id(51), reviewerId: id(2), decision: 'APPROVE', notes: 'Looks good', evidence: { checks: ['static-analysis'] } })).rejects.toThrow(/artifact|ticket/);
+    expect(prisma.submissionReview.create).not.toHaveBeenCalled();
   });
 
   it('records exact sale allocations idempotently in integer minor units', async () => {

@@ -233,17 +233,53 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   app.post('/v1/publishers', requireSession, async (request: Request & { accountId?: string }, response, next) => {
     try { response.status(201).json(await publisherGovernance.createPublisher({ ...request.body, ownerAccountId: request.accountId })); } catch (error) { next(error); }
   });
+  app.get('/v1/publishers', requireSession, async (request: Request & { accountId?: string }, response, next) => {
+    try { response.json(await publisherGovernance.myPublishers(request.accountId!, request.query)); } catch (error) { next(error); }
+  });
+  app.get('/v1/publishers/:publisherId', requireSession, async (request: Request & { accountId?: string }, response, next) => {
+    try { response.json(await publisherGovernance.myPublisher(request.accountId!, String(request.params.publisherId))); } catch (error) { next(error); }
+  });
   app.post('/v1/publishers/:publisherId/policies/:policyId/accept', requireSession, async (request: Request & { accountId?: string }, response, next) => {
     try { response.status(201).json(await publisherGovernance.acceptPolicy({ policyId: request.params.policyId, publisherId: request.params.publisherId, accountId: request.accountId, ip: request.ip, userAgent: request.header('user-agent') })); } catch (error) { next(error); }
   });
   app.post('/v1/publishers/:publisherId/keys', requireSession, async (request: Request & { accountId?: string }, response, next) => {
     try { response.status(201).json(await publisherGovernance.requestKey({ ...request.body, publisherId: request.params.publisherId, requestedBy: request.accountId })); } catch (error) { next(error); }
   });
+  app.post('/v1/publisher-keys/:keyRecordId/approve', requireSession, async (request: Request & { accountId?: string }, response, next) => {
+    try { response.json(await publisherGovernance.approveKey({ keyRecordId: request.params.keyRecordId, approvedBy: request.accountId })); } catch (error) { next(error); }
+  });
+  app.post('/v1/publisher-keys/:keyRecordId/revoke', requireSession, async (request: Request & { accountId?: string }, response, next) => {
+    try { response.json(await publisherGovernance.revokeKey({ keyRecordId: request.params.keyRecordId, approvedBy: request.accountId })); } catch (error) { next(error); }
+  });
+  app.post('/v1/publishers/:publisherId/members', requireSession, async (request: Request & { accountId?: string }, response, next) => {
+    try { response.status(201).json(await publisherGovernance.addVerifiedMember({ ...request.body, publisherId: request.params.publisherId, verifiedBy: request.accountId })); } catch (error) { next(error); }
+  });
+  app.post('/v1/publishers/:publisherId/members/:memberId/suspend', requireSession, async (request: Request & { accountId?: string }, response, next) => {
+    try { response.json(await publisherGovernance.suspendMember({ publisherId: request.params.publisherId, memberId: request.params.memberId, verifiedBy: request.accountId })); } catch (error) { next(error); }
+  });
+  app.post('/v1/publishers/:publisherId/members/:memberId/reactivate', requireSession, async (request: Request & { accountId?: string }, response, next) => {
+    try { response.json(await publisherGovernance.reactivateMember({ publisherId: request.params.publisherId, memberId: request.params.memberId, verifiedBy: request.accountId })); } catch (error) { next(error); }
+  });
   app.post('/v1/publisher-submissions', requireSession, upload.single('package'), async (request: Request & { accountId?: string }, response, next) => {
     try {
       if (!request.file?.buffer || !request.file.originalname.endsWith('.wtp')) throw new HttpError(400, 'A .wtp package is required');
       response.status(201).json(await publisherGovernance.submit(request.body, request.file.buffer, request.accountId!));
     } catch (error) { next(error); }
+  });
+  app.get('/v1/publisher-submissions', requireSession, async (request: Request & { accountId?: string }, response, next) => {
+    try { response.json(await publisherGovernance.mySubmissions(request.accountId!, request.query)); } catch (error) { next(error); }
+  });
+  app.get('/v1/publisher-submissions/:submissionId', requireSession, async (request: Request & { accountId?: string }, response, next) => {
+    try { response.json(await publisherGovernance.mySubmission(request.accountId!, String(request.params.submissionId))); } catch (error) { next(error); }
+  });
+  app.get('/v1/reviewer/submissions', requireSession, async (request: Request & { accountId?: string }, response, next) => {
+    try { response.json(await publisherGovernance.reviewerSubmissions(request.accountId!, request.query)); } catch (error) { next(error); }
+  });
+  app.get('/v1/reviewer/submissions/:submissionId', requireSession, async (request: Request & { accountId?: string }, response, next) => {
+    try { response.json(await publisherGovernance.reviewerSubmission(request.accountId!, String(request.params.submissionId))); } catch (error) { next(error); }
+  });
+  app.post('/v1/reviewer/submissions/:submissionId/reviews', requireSession, async (request: Request & { accountId?: string }, response, next) => {
+    try { response.status(201).json(await publisherGovernance.review({ ...request.body, submissionId: request.params.submissionId, reviewerId: request.accountId })); } catch (error) { next(error); }
   });
 
   app.post('/v1/installations/challenges', async (request, response, next) => {
@@ -678,7 +714,12 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
 
   app.use((_request, _response, next) => next(new HttpError(404, 'Not found')));
   app.use((error: unknown, _request: Request, response: Response, _next: NextFunction) => {
-    if (error instanceof HttpError) return response.status(error.status).json({ error: error.message });
+    if (error instanceof HttpError) {
+      const body: Record<string, unknown> = { error: error.message };
+      if (error.code) body.code = error.code;
+      if (error.details !== undefined) body.details = error.details;
+      return response.status(error.status).json(body);
+    }
     if (error instanceof ZodError) return response.status(400).json({ error: 'Invalid request', details: error.issues.map((issue) => ({ path: issue.path.join('.'), message: issue.message })) });
     if (error instanceof SyntaxError) return response.status(400).json({ error: 'Invalid JSON' });
     if (error instanceof multer.MulterError) return response.status(400).json({ error: error.message });

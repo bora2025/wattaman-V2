@@ -23,9 +23,183 @@ const correctionInput = z.object({ entryId: uuid, grossMinor: z.number().int(), 
 const payoutInput = z.object({ publisherId: uuid, currency: z.string().regex(/^[A-Z]{3}$/), entryIds: z.array(uuid).min(1), requestedBy: uuid }).strict();
 const payoutApprovalInput = z.object({ payoutId: uuid, approvedBy: uuid }).strict();
 const payoutPaidInput = z.object({ payoutId: uuid, paidBy: uuid, providerReference: z.string().min(1).max(200) }).strict();
+const memberActionInput = z.object({ publisherId: uuid, memberId: uuid, verifiedBy: uuid }).strict();
+const selfPageInput = z.object({
+  cursor: z.string().uuid().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+}).passthrough();
+const selfSubmissionQueryInput = selfPageInput.extend({
+  publisherId: uuid.optional(),
+  status: z.enum(['ANALYZING', 'NEEDS_REVIEW', 'APPROVED', 'REJECTED', 'WITHDRAWN']).optional(),
+}).passthrough();
+const reviewerSubmissionQueryInput = selfPageInput.extend({
+  status: z.enum(['ANALYZING', 'NEEDS_REVIEW', 'APPROVED', 'REJECTED', 'WITHDRAWN']).optional(),
+  riskLevel: z.enum(['LOW', 'NORMAL', 'HIGH', 'CRITICAL']).optional(),
+}).passthrough();
 
 export class PublisherGovernanceService {
   constructor(private readonly prisma: PrismaClient, private readonly repository: RepositoryService) {}
+
+  async myPublishers(accountId: string, query: unknown) {
+    const input = selfPageInput.parse(query || {});
+    const rows = await this.prisma.publisher.findMany({
+      take: input.limit + 1,
+      ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
+      orderBy: { id: 'asc' },
+      where: { members: { some: { accountId, verifiedAt: { not: null }, suspendedAt: null } } },
+      select: {
+        id: true,
+        slug: true,
+        displayName: true,
+        status: true,
+        createdAt: true,
+        members: { where: { accountId }, select: { role: true, verifiedAt: true, suspendedAt: true } },
+        _count: { select: { plugins: true, keys: true, submissions: true, members: true } },
+      },
+    });
+    const items = rows.slice(0, input.limit).map((row) => ({
+      ...row,
+      myRoles: row.members.map((member) => member.role),
+    }));
+    const nextCursor = rows.length > input.limit ? items[items.length - 1]?.id || null : null;
+    return { items, nextCursor };
+  }
+
+  async myPublisher(accountId: string, publisherId: string) {
+    const publisher = await this.prisma.publisher.findFirst({
+      where: {
+        id: publisherId,
+        members: { some: { accountId, verifiedAt: { not: null }, suspendedAt: null } },
+      },
+      select: {
+        id: true,
+        slug: true,
+        displayName: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        members: { select: { id: true, role: true, verifiedAt: true, suspendedAt: true, account: { select: { id: true, displayName: true, email: true, mfaEnabled: true } } } },
+        keys: { select: { id: true, keyId: true, createdAt: true, approvedAt: true, revokedAt: true }, orderBy: { createdAt: 'desc' } },
+        plugins: { select: { id: true, name: true, status: true, isPaid: true, createdAt: true }, orderBy: { id: 'asc' } },
+        acceptances: { select: { acceptedAt: true, policy: { select: { id: true, policyKey: true, version: true, title: true, effectiveAt: true } } }, orderBy: { acceptedAt: 'desc' } },
+        _count: { select: { submissions: true, plugins: true, members: true, keys: true } },
+      },
+    });
+    if (!publisher) throw new HttpError(404, 'Publisher not found');
+    return publisher;
+  }
+
+  async mySubmissions(accountId: string, query: unknown) {
+    const input = selfSubmissionQueryInput.parse(query || {});
+    const rows = await this.prisma.pluginSubmission.findMany({
+      take: input.limit + 1,
+      ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
+      orderBy: { id: 'asc' },
+      where: {
+        ...(input.publisherId ? { publisherId: input.publisherId } : {}),
+        ...(input.status ? { status: input.status } : {}),
+        publisher: { members: { some: { accountId, verifiedAt: { not: null }, suspendedAt: null } } },
+      },
+      select: {
+        id: true,
+        publisherId: true,
+        status: true,
+        riskLevel: true,
+        submittedAt: true,
+        decidedAt: true,
+        publisher: { select: { id: true, slug: true, displayName: true } },
+        pluginVersion: { select: { id: true, pluginId: true, version: true, channel: true, reviewStatus: true, publishedAt: true, withdrawnAt: true } },
+        _count: { select: { reviews: true } },
+      },
+    });
+    const items = rows.slice(0, input.limit);
+    const nextCursor = rows.length > input.limit ? items[items.length - 1]?.id || null : null;
+    return { items, nextCursor };
+  }
+
+  async mySubmission(accountId: string, submissionId: string) {
+    const submission = await this.prisma.pluginSubmission.findFirst({
+      where: {
+        id: submissionId,
+        publisher: { members: { some: { accountId, verifiedAt: { not: null }, suspendedAt: null } } },
+      },
+      select: {
+        id: true,
+        status: true,
+        riskLevel: true,
+        analysisReport: true,
+        submittedBy: true,
+        submittedAt: true,
+        decidedAt: true,
+        publisher: { select: { id: true, slug: true, displayName: true } },
+        pluginVersion: { select: { id: true, pluginId: true, version: true, channel: true, reviewStatus: true, publishedAt: true, withdrawnAt: true, changelog: true } },
+        reviews: { select: { id: true, decision: true, notes: true, evidence: true, createdAt: true, reviewer: { select: { id: true, displayName: true } } }, orderBy: { createdAt: 'asc' } },
+      },
+    });
+    if (!submission) throw new HttpError(404, 'Submission not found');
+    return submission;
+  }
+
+  async reviewerSubmissions(accountId: string, query: unknown) {
+    await requireAnyReviewer(this.prisma, accountId);
+    const input = reviewerSubmissionQueryInput.parse(query || {});
+    const rows = await this.prisma.pluginSubmission.findMany({
+      take: input.limit + 1,
+      ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
+      orderBy: { id: 'asc' },
+      where: {
+        ...(input.status ? { status: input.status } : {}),
+        ...(input.riskLevel ? { riskLevel: input.riskLevel } : {}),
+      },
+      select: {
+        id: true,
+        status: true,
+        riskLevel: true,
+        submittedAt: true,
+        decidedAt: true,
+        publisher: { select: { id: true, slug: true, displayName: true } },
+        pluginVersion: { select: { id: true, pluginId: true, version: true, channel: true, reviewStatus: true, publishedAt: true, withdrawnAt: true } },
+        _count: { select: { reviews: true } },
+      },
+    });
+    const items = rows.slice(0, input.limit);
+    const nextCursor = rows.length > input.limit ? items[items.length - 1]?.id || null : null;
+    return { items, nextCursor };
+  }
+
+  async reviewerSubmission(accountId: string, submissionId: string) {
+    await requireAnyReviewer(this.prisma, accountId);
+    const submission = await this.prisma.pluginSubmission.findUnique({
+      where: { id: submissionId },
+      select: {
+        id: true,
+        status: true,
+        riskLevel: true,
+        analysisReport: true,
+        submittedBy: true,
+        submittedAt: true,
+        decidedAt: true,
+        publisher: { select: { id: true, slug: true, displayName: true, status: true } },
+        pluginVersion: {
+          select: {
+            id: true,
+            pluginId: true,
+            version: true,
+            requiresCore: true,
+            channel: true,
+            reviewStatus: true,
+            artifact: { select: { sha256: true, sizeBytes: true, publisherKeyId: true } },
+          },
+        },
+        reviews: {
+          select: { id: true, decision: true, notes: true, evidence: true, createdAt: true, reviewer: { select: { id: true, displayName: true } } },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
+    if (!submission) throw new HttpError(404, 'Submission not found');
+    return submission;
+  }
 
   publishPolicy(value: unknown) {
     const input = policyInput.parse(value);
@@ -86,6 +260,40 @@ export class PublisherGovernanceService {
       const member = await tx.publisherMember.create({ data: { publisherId: input.publisherId, accountId: input.accountId, role: input.role, verifiedAt: new Date() } });
       await audit(tx, input.verifiedBy, 'publisher_member_verified', { publisherId: input.publisherId, memberId: member.id, role: input.role });
       return member;
+    });
+  }
+
+  async suspendMember(value: unknown) {
+    const input = memberActionInput.parse(value);
+    return this.prisma.$transaction(async (tx) => {
+      await requirePublisherRole(tx, input.publisherId, input.verifiedBy, ['OWNER', 'ADMIN']);
+      const member = await tx.publisherMember.findUnique({ where: { id: input.memberId } });
+      if (!member || member.publisherId !== input.publisherId) throw new HttpError(404, 'Publisher member not found');
+      if (member.accountId === input.verifiedBy) throw new HttpError(409, 'Member suspension requires a second person');
+      if (member.suspendedAt) return member;
+      if (member.role === 'OWNER') {
+        const activeOwners = await tx.publisherMember.count({
+          where: { publisherId: input.publisherId, role: 'OWNER', verifiedAt: { not: null }, suspendedAt: null },
+        });
+        if (activeOwners <= 1) throw new HttpError(409, 'Cannot suspend the final active owner');
+      }
+      const updated = await tx.publisherMember.update({ where: { id: member.id }, data: { suspendedAt: new Date() } });
+      await audit(tx, input.verifiedBy, 'publisher_member_suspended', { publisherId: input.publisherId, memberId: member.id, role: member.role });
+      return updated;
+    });
+  }
+
+  async reactivateMember(value: unknown) {
+    const input = memberActionInput.parse(value);
+    return this.prisma.$transaction(async (tx) => {
+      await requirePublisherRole(tx, input.publisherId, input.verifiedBy, ['OWNER', 'ADMIN']);
+      const member = await tx.publisherMember.findUnique({ where: { id: input.memberId } });
+      if (!member || member.publisherId !== input.publisherId) throw new HttpError(404, 'Publisher member not found');
+      if (member.accountId === input.verifiedBy) throw new HttpError(409, 'Member reactivation requires a second person');
+      if (!member.suspendedAt) return member;
+      const updated = await tx.publisherMember.update({ where: { id: member.id }, data: { suspendedAt: null } });
+      await audit(tx, input.verifiedBy, 'publisher_member_reactivated', { publisherId: input.publisherId, memberId: member.id, role: member.role });
+      return updated;
     });
   }
 
@@ -178,6 +386,7 @@ export class PublisherGovernanceService {
       if (!submission || submission.status !== 'NEEDS_REVIEW') throw new HttpError(409, 'Submission is not reviewable');
       if (submission.submittedBy === input.reviewerId) throw new HttpError(409, 'Submitter cannot review their own release');
       await requireAnyReviewer(tx, input.reviewerId);
+      validateReviewEvidenceForRisk(input.evidence, submission.riskLevel);
       const review = await tx.submissionReview.create({ data: input as any });
       const decisions = [...submission.reviews, review];
       const rejected = decisions.some((item) => item.decision === 'REJECT');
@@ -294,6 +503,37 @@ async function requirePublisherRole(tx: any, publisherId: string, accountId: str
 async function requireAnyReviewer(tx: any, accountId: string) {
   const member = await tx.publisherMember.findFirst({ where: { accountId, role: 'REVIEWER', verifiedAt: { not: null }, suspendedAt: null, publisher: { slug: 'wattanam', status: 'VERIFIED' } } });
   if (!member) throw new HttpError(403, 'Reviewer role is not authorized');
+}
+
+function validateReviewEvidenceForRisk(evidence: Record<string, unknown>, riskLevel: string) {
+  if (!evidence || typeof evidence !== 'object' || Array.isArray(evidence)) {
+    throw new HttpError(400, 'Review evidence must be a JSON object', 'REVIEW_EVIDENCE_INVALID_OBJECT', {
+      field: 'evidence',
+      expected: 'object',
+    });
+  }
+  const checks = Array.isArray(evidence.checks) ? evidence.checks.filter((item) => typeof item === 'string' && item.trim().length > 0) : [];
+  if (!checks.length) {
+    throw new HttpError(400, 'Review evidence must include at least one check in checks[]', 'REVIEW_EVIDENCE_MISSING_CHECKS', {
+      field: 'checks',
+      expected: 'string[]',
+      minItems: 1,
+    });
+  }
+  if (riskLevel === 'HIGH' || riskLevel === 'CRITICAL') {
+    const missing: string[] = [];
+    const artifacts = Array.isArray(evidence.artifacts) ? evidence.artifacts.filter((item) => typeof item === 'string' && item.trim().length > 0) : [];
+    if (!artifacts.length) missing.push('artifacts');
+    if (typeof evidence.ticket !== 'string' || !evidence.ticket.trim()) missing.push('ticket');
+    if (missing.length) {
+      throw new HttpError(
+        400,
+        'High-risk reviews require artifacts[] and a non-empty ticket',
+        'REVIEW_EVIDENCE_MISSING_REQUIREMENTS',
+        { riskLevel, missingRequirements: missing },
+      );
+    }
+  }
 }
 
 /** Wattanam's share of a sale, in basis points. 1500 = 15%, which is what the manual endpoint has
