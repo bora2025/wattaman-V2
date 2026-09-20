@@ -23,7 +23,7 @@ type ReviewerSubmissionPage = {
 function evidenceTemplate(riskLevel: ReviewerSubmission['riskLevel'], decision: 'APPROVE' | 'REJECT') {
   const base = {
     checks: ['manifest-validation', 'signature-verification'],
-    artifacts: ['analysis-report'],
+    artifacts: ['analysis-report:package-analysis-v1'],
     ticket: '',
     summary: decision === 'APPROVE' ? 'Independent review passed.' : 'Release blocked by reviewer findings.',
   };
@@ -31,7 +31,7 @@ function evidenceTemplate(riskLevel: ReviewerSubmission['riskLevel'], decision: 
     return {
       ...base,
       checks: [...base.checks, 'malware-scan', 'dependency-advisory-review', 'migration-risk-review'],
-      artifacts: [...base.artifacts, 'sandbox-log', 'policy-checklist'],
+      artifacts: [...base.artifacts, 'sandbox-log:runtime-sandbox-01', 'policy-checklist:review-policy-v1'],
     };
   }
   return base;

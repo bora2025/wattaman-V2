@@ -142,8 +142,8 @@ describe('PublisherGovernanceService', () => {
       pluginVersion: { update: jest.fn() }, marketplacePlugin: { update: jest.fn() },
     };
     const service = serviceWith(prisma);
-    await expect(service.review({ submissionId: id(5), reviewerId: id(2), decision: 'APPROVE', notes: 'Static and migration review passed', evidence: { checks: ['static-analysis', 'migration-review'], artifacts: ['sandbox-log'], ticket: 'SEC-1001' } })).resolves.toMatchObject({ requiredApprovals: 2, approved: false });
-    await expect(service.review({ submissionId: id(5), reviewerId: id(3), decision: 'APPROVE', notes: 'Independent reproduction passed', evidence: { checks: ['repro-validation'], artifacts: ['policy-checklist'], ticket: 'SEC-1002' } })).resolves.toMatchObject({ requiredApprovals: 2, approved: true });
+    await expect(service.review({ submissionId: id(5), reviewerId: id(2), decision: 'APPROVE', notes: 'Static and migration review passed', evidence: { checks: ['static-analysis', 'migration-review'], artifacts: ['sandbox-log:run-001'], ticket: 'SEC-1001' } })).resolves.toMatchObject({ requiredApprovals: 2, approved: false });
+    await expect(service.review({ submissionId: id(5), reviewerId: id(3), decision: 'APPROVE', notes: 'Independent reproduction passed', evidence: { checks: ['repro-validation'], artifacts: ['policy-checklist:item-002'], ticket: 'SEC-1002' } })).resolves.toMatchObject({ requiredApprovals: 2, approved: true });
     expect(prisma.pluginVersion.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ reviewStatus: 'APPROVED' }) }));
   });
 
@@ -157,8 +157,8 @@ describe('PublisherGovernanceService', () => {
       pluginVersion: { update: jest.fn() }, marketplacePlugin: { update: jest.fn() },
     };
     const service = serviceWith(prisma);
-    await expect(service.review({ submissionId: id(60), reviewerId: id(2), decision: 'APPROVE', notes: 'Critical review part one', evidence: { checks: ['static-analysis'], artifacts: ['sandbox-log'], ticket: 'SEC-2001' } })).resolves.toMatchObject({ requiredApprovals: 2, approved: false });
-    await expect(service.review({ submissionId: id(60), reviewerId: id(3), decision: 'APPROVE', notes: 'Critical review part two', evidence: { checks: ['runtime-validation'], artifacts: ['policy-checklist'], ticket: 'SEC-2002' } })).resolves.toMatchObject({ requiredApprovals: 2, approved: true });
+    await expect(service.review({ submissionId: id(60), reviewerId: id(2), decision: 'APPROVE', notes: 'Critical review part one', evidence: { checks: ['static-analysis'], artifacts: ['sandbox-log:run-crit-1'], ticket: 'SEC-2001' } })).resolves.toMatchObject({ requiredApprovals: 2, approved: false });
+    await expect(service.review({ submissionId: id(60), reviewerId: id(3), decision: 'APPROVE', notes: 'Critical review part two', evidence: { checks: ['runtime-validation'], artifacts: ['policy-checklist:crit-2'], ticket: 'SEC-2002' } })).resolves.toMatchObject({ requiredApprovals: 2, approved: true });
   });
 
   it('rejects review evidence without checks for normal risk submissions', async () => {
@@ -205,7 +205,31 @@ describe('PublisherGovernanceService', () => {
       submissionReview: { create: jest.fn() },
       pluginVersion: { update: jest.fn() }, marketplacePlugin: { update: jest.fn() },
     };
-    await expect(serviceWith(prisma).review({ submissionId: id(53), reviewerId: id(2), decision: 'APPROVE', notes: 'Looks good', evidence: { checks: ['static-analysis'], artifacts: ['sandbox-log'], ticket: 'ticket-123' } })).rejects.toThrow('ticket format is invalid');
+    await expect(serviceWith(prisma).review({ submissionId: id(53), reviewerId: id(2), decision: 'APPROVE', notes: 'Looks good', evidence: { checks: ['static-analysis'], artifacts: ['sandbox-log:run-001'], ticket: 'ticket-123' } })).rejects.toThrow('ticket format is invalid');
+    expect(prisma.submissionReview.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects artifact evidence without required type:reference format', async () => {
+    const submission = { id: id(54), status: 'NEEDS_REVIEW', riskLevel: 'HIGH', submittedBy: id(1), pluginVersionId: id(6), reviews: [], pluginVersion: { pluginId: 'vendor.plugin' } };
+    const prisma: any = {
+      pluginSubmission: { findUnique: jest.fn().mockResolvedValue(submission), update: jest.fn() },
+      publisherMember: { findFirst: jest.fn().mockResolvedValue({ id: 'reviewer' }) },
+      submissionReview: { create: jest.fn() },
+      pluginVersion: { update: jest.fn() }, marketplacePlugin: { update: jest.fn() },
+    };
+    await expect(serviceWith(prisma).review({ submissionId: id(54), reviewerId: id(2), decision: 'APPROVE', notes: 'Looks good', evidence: { checks: ['static-analysis'], artifacts: ['sandbox-log'], ticket: 'SEC-3001' } })).rejects.toThrow('artifact format is invalid');
+    expect(prisma.submissionReview.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects unsupported artifact evidence types', async () => {
+    const submission = { id: id(55), status: 'NEEDS_REVIEW', riskLevel: 'HIGH', submittedBy: id(1), pluginVersionId: id(6), reviews: [], pluginVersion: { pluginId: 'vendor.plugin' } };
+    const prisma: any = {
+      pluginSubmission: { findUnique: jest.fn().mockResolvedValue(submission), update: jest.fn() },
+      publisherMember: { findFirst: jest.fn().mockResolvedValue({ id: 'reviewer' }) },
+      submissionReview: { create: jest.fn() },
+      pluginVersion: { update: jest.fn() }, marketplacePlugin: { update: jest.fn() },
+    };
+    await expect(serviceWith(prisma).review({ submissionId: id(55), reviewerId: id(2), decision: 'APPROVE', notes: 'Looks good', evidence: { checks: ['static-analysis'], artifacts: ['external-proof:item-1'], ticket: 'SEC-3002' } })).rejects.toThrow('unsupported artifact types');
     expect(prisma.submissionReview.create).not.toHaveBeenCalled();
   });
 

@@ -34,7 +34,7 @@ type ReviewerSubmissionDetail = {
 function buildEvidenceTemplate(riskLevel: string, decision: 'APPROVE' | 'REJECT') {
   const base = {
     checks: ['manifest-validation', 'signature-verification'],
-    artifacts: ['analysis-report'],
+    artifacts: ['analysis-report:package-analysis-v1'],
     ticket: '',
     summary: decision === 'APPROVE' ? 'Independent review passed.' : 'Release blocked by reviewer findings.',
   };
@@ -42,7 +42,7 @@ function buildEvidenceTemplate(riskLevel: string, decision: 'APPROVE' | 'REJECT'
     return {
       ...base,
       checks: [...base.checks, 'malware-scan', 'dependency-advisory-review', 'migration-risk-review'],
-      artifacts: [...base.artifacts, 'sandbox-log', 'policy-checklist'],
+      artifacts: [...base.artifacts, 'sandbox-log:runtime-sandbox-01', 'policy-checklist:review-policy-v1'],
     };
   }
   return base;
@@ -53,10 +53,15 @@ function validateEvidenceForRisk(evidence: unknown, riskLevel: string) {
   const record = evidence as Record<string, unknown>;
   const checks = Array.isArray(record.checks) ? record.checks.filter((item) => typeof item === 'string' && item.trim().length > 0) : [];
   if (checks.length === 0) return 'Evidence must include at least one non-empty check in checks[].';
+  const artifacts = Array.isArray(record.artifacts) ? record.artifacts.filter((item) => typeof item === 'string' && item.trim().length > 0) : [];
+  const artifactPattern = /^([a-z][a-z0-9-]{1,40}):([A-Za-z0-9._:-]{3,120})$/;
+  if (artifacts.some((value) => !artifactPattern.test(value))) return 'Artifact format is invalid. Use <type>:<reference>.';
+  const ticket = typeof record.ticket === 'string' ? record.ticket.trim() : '';
+  const ticketPattern = /^[A-Z][A-Z0-9_]{1,15}-\d{1,8}$/;
+  if (ticket && !ticketPattern.test(ticket)) return 'Ticket format is invalid. Use format like SEC-1234.';
   if (riskLevel === 'HIGH' || riskLevel === 'CRITICAL') {
-    const artifacts = Array.isArray(record.artifacts) ? record.artifacts.filter((item) => typeof item === 'string' && item.trim().length > 0) : [];
     if (artifacts.length === 0) return 'High/critical submissions require at least one artifact in artifacts[].';
-    if (typeof record.ticket !== 'string' || !record.ticket.trim()) return 'High/critical submissions require a non-empty ticket field.';
+    if (!ticket) return 'High/critical submissions require a non-empty ticket field.';
   }
   return null;
 }

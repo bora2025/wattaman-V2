@@ -517,7 +517,13 @@ const ALLOWED_REVIEW_CHECKS = new Set([
   'runtime-validation',
   'manual-review',
 ]);
+const ALLOWED_REVIEW_ARTIFACT_TYPES = new Set([
+  'analysis-report',
+  'sandbox-log',
+  'policy-checklist',
+]);
 const TICKET_FORMAT = /^[A-Z][A-Z0-9_]{1,15}-\d{1,8}$/;
+const ARTIFACT_ITEM_FORMAT = /^([a-z][a-z0-9-]{1,40}):([A-Za-z0-9._:-]{3,120})$/;
 
 function validateReviewEvidenceForRisk(evidence: Record<string, unknown>, riskLevel: string) {
   if (!evidence || typeof evidence !== 'object' || Array.isArray(evidence)) {
@@ -543,6 +549,26 @@ function validateReviewEvidenceForRisk(evidence: Record<string, unknown>, riskLe
     });
   }
 
+  const artifacts = Array.isArray(evidence.artifacts) ? evidence.artifacts.filter((item) => typeof item === 'string' && item.trim().length > 0) : [];
+  const invalidArtifacts = artifacts.filter((value) => !ARTIFACT_ITEM_FORMAT.test(value));
+  if (invalidArtifacts.length) {
+    throw new HttpError(400, 'Review evidence artifact format is invalid', 'REVIEW_EVIDENCE_INVALID_ARTIFACT_FORMAT', {
+      field: 'artifacts',
+      invalidArtifacts,
+      requiredPattern: '<type>:<reference>',
+      example: 'sandbox-log:run-2026-09-20',
+    });
+  }
+  const artifactTypes = artifacts.map((value) => value.split(':', 1)[0]);
+  const unsupportedArtifactTypes = artifactTypes.filter((type) => !ALLOWED_REVIEW_ARTIFACT_TYPES.has(type));
+  if (unsupportedArtifactTypes.length) {
+    throw new HttpError(400, 'Review evidence includes unsupported artifact types', 'REVIEW_EVIDENCE_INVALID_ARTIFACT_TYPE', {
+      field: 'artifacts',
+      unsupportedArtifactTypes,
+      allowedArtifactTypes: [...ALLOWED_REVIEW_ARTIFACT_TYPES],
+    });
+  }
+
   const ticket = typeof evidence.ticket === 'string' ? evidence.ticket.trim() : '';
   if (ticket && !TICKET_FORMAT.test(ticket)) {
     throw new HttpError(400, 'Review evidence ticket format is invalid', 'REVIEW_EVIDENCE_INVALID_TICKET_FORMAT', {
@@ -554,7 +580,6 @@ function validateReviewEvidenceForRisk(evidence: Record<string, unknown>, riskLe
 
   if (riskLevel === 'HIGH' || riskLevel === 'CRITICAL') {
     const missing: string[] = [];
-    const artifacts = Array.isArray(evidence.artifacts) ? evidence.artifacts.filter((item) => typeof item === 'string' && item.trim().length > 0) : [];
     if (!artifacts.length) missing.push('artifacts');
     if (!ticket) missing.push('ticket');
     if (missing.length) {
