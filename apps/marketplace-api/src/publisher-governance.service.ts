@@ -505,6 +505,20 @@ async function requireAnyReviewer(tx: any, accountId: string) {
   if (!member) throw new HttpError(403, 'Reviewer role is not authorized');
 }
 
+const ALLOWED_REVIEW_CHECKS = new Set([
+  'manifest-validation',
+  'signature-verification',
+  'malware-scan',
+  'dependency-advisory-review',
+  'migration-risk-review',
+  'static-analysis',
+  'migration-review',
+  'repro-validation',
+  'runtime-validation',
+  'manual-review',
+]);
+const TICKET_FORMAT = /^[A-Z][A-Z0-9_]{1,15}-\d{1,8}$/;
+
 function validateReviewEvidenceForRisk(evidence: Record<string, unknown>, riskLevel: string) {
   if (!evidence || typeof evidence !== 'object' || Array.isArray(evidence)) {
     throw new HttpError(400, 'Review evidence must be a JSON object', 'REVIEW_EVIDENCE_INVALID_OBJECT', {
@@ -520,11 +534,29 @@ function validateReviewEvidenceForRisk(evidence: Record<string, unknown>, riskLe
       minItems: 1,
     });
   }
+  const invalidChecks = checks.filter((value) => !ALLOWED_REVIEW_CHECKS.has(value));
+  if (invalidChecks.length) {
+    throw new HttpError(400, 'Review evidence includes unsupported check names', 'REVIEW_EVIDENCE_INVALID_CHECKS', {
+      field: 'checks',
+      invalidChecks,
+      allowedChecks: [...ALLOWED_REVIEW_CHECKS],
+    });
+  }
+
+  const ticket = typeof evidence.ticket === 'string' ? evidence.ticket.trim() : '';
+  if (ticket && !TICKET_FORMAT.test(ticket)) {
+    throw new HttpError(400, 'Review evidence ticket format is invalid', 'REVIEW_EVIDENCE_INVALID_TICKET_FORMAT', {
+      field: 'ticket',
+      requiredPattern: '^[A-Z][A-Z0-9_]{1,15}-\\d{1,8}$',
+      example: 'SEC-1234',
+    });
+  }
+
   if (riskLevel === 'HIGH' || riskLevel === 'CRITICAL') {
     const missing: string[] = [];
     const artifacts = Array.isArray(evidence.artifacts) ? evidence.artifacts.filter((item) => typeof item === 'string' && item.trim().length > 0) : [];
     if (!artifacts.length) missing.push('artifacts');
-    if (typeof evidence.ticket !== 'string' || !evidence.ticket.trim()) missing.push('ticket');
+    if (!ticket) missing.push('ticket');
     if (missing.length) {
       throw new HttpError(
         400,

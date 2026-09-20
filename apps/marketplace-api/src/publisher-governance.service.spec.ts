@@ -185,6 +185,30 @@ describe('PublisherGovernanceService', () => {
     expect(prisma.submissionReview.create).not.toHaveBeenCalled();
   });
 
+  it('rejects unsupported evidence check names', async () => {
+    const submission = { id: id(52), status: 'NEEDS_REVIEW', riskLevel: 'NORMAL', submittedBy: id(1), pluginVersionId: id(6), reviews: [], pluginVersion: { pluginId: 'vendor.plugin' } };
+    const prisma: any = {
+      pluginSubmission: { findUnique: jest.fn().mockResolvedValue(submission), update: jest.fn() },
+      publisherMember: { findFirst: jest.fn().mockResolvedValue({ id: 'reviewer' }) },
+      submissionReview: { create: jest.fn() },
+      pluginVersion: { update: jest.fn() }, marketplacePlugin: { update: jest.fn() },
+    };
+    await expect(serviceWith(prisma).review({ submissionId: id(52), reviewerId: id(2), decision: 'APPROVE', notes: 'Looks good', evidence: { checks: ['unsupported-check'] } })).rejects.toThrow('unsupported check names');
+    expect(prisma.submissionReview.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects invalid ticket format when provided', async () => {
+    const submission = { id: id(53), status: 'NEEDS_REVIEW', riskLevel: 'HIGH', submittedBy: id(1), pluginVersionId: id(6), reviews: [], pluginVersion: { pluginId: 'vendor.plugin' } };
+    const prisma: any = {
+      pluginSubmission: { findUnique: jest.fn().mockResolvedValue(submission), update: jest.fn() },
+      publisherMember: { findFirst: jest.fn().mockResolvedValue({ id: 'reviewer' }) },
+      submissionReview: { create: jest.fn() },
+      pluginVersion: { update: jest.fn() }, marketplacePlugin: { update: jest.fn() },
+    };
+    await expect(serviceWith(prisma).review({ submissionId: id(53), reviewerId: id(2), decision: 'APPROVE', notes: 'Looks good', evidence: { checks: ['static-analysis'], artifacts: ['sandbox-log'], ticket: 'ticket-123' } })).rejects.toThrow('ticket format is invalid');
+    expect(prisma.submissionReview.create).not.toHaveBeenCalled();
+  });
+
   it('records exact sale allocations idempotently in integer minor units', async () => {
     const upsert = jest.fn(async ({ create }: any) => create);
     const prisma: any = {
