@@ -23,6 +23,12 @@ describe('marketplace signing configuration', () => {
     expect(config.entitlementKeyId).toBe('entitlement-1');
   });
 
+  it('normalizes an accidental UTF-8 BOM around the admin bearer token', () => {
+    const env = environment(privateKey(), privateKey());
+    env.MARKETPLACE_ADMIN_TOKEN = `\uFEFF${'a'.repeat(32)} `;
+    expect(readConfig(env).adminTokens).toEqual(['a'.repeat(32)]);
+  });
+
   it('rejects reuse of the repository key for entitlements', () => {
     const key = privateKey();
     expect(() => readConfig(environment(key, key))).toThrow('must be distinct');

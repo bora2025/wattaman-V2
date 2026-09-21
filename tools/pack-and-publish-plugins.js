@@ -8,7 +8,9 @@ const { loadMarketplaceEnv } = require('./marketplace-env-loader');
 function required(name) {
   const value = process.env[name];
   if (!value) throw new Error(`${name} is required`);
-  return value;
+  // Environment files written by Windows tools may carry a UTF-8 BOM into the first value. A BOM
+  // is invisible to operators but invalid in an HTTP ByteString header such as Authorization.
+  return value.replace(/\uFEFF/g, '').trim();
 }
 
 function optional(name, fallback) {

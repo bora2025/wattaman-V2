@@ -7,7 +7,7 @@ const { loadMarketplaceEnv } = require('./marketplace-env-loader');
 function required(name) {
   const value = process.env[name];
   if (!value) throw new Error(`${name} is required`);
-  return value;
+  return value.replace(/\uFEFF/g, '').trim();
 }
 
 function readBool(name, defaultValue) {

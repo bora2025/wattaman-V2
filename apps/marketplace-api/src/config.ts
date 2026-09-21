@@ -102,7 +102,7 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): MarketplaceCon
     port: value.PORT,
     databaseUrl: value.DATABASE_URL,
     publicBaseUrl: value.PUBLIC_BASE_URL,
-    adminTokens: [value.MARKETPLACE_ADMIN_TOKEN, ...parseSecondaryTokens(value.MARKETPLACE_SECONDARY_ADMIN_TOKENS_JSON, 'MARKETPLACE_SECONDARY_ADMIN_TOKENS_JSON')],
+    adminTokens: [normalizeBearerSecret(value.MARKETPLACE_ADMIN_TOKEN), ...parseSecondaryTokens(value.MARKETPLACE_SECONDARY_ADMIN_TOKENS_JSON, 'MARKETPLACE_SECONDARY_ADMIN_TOKENS_JSON').map(normalizeBearerSecret)],
     signingPrivateKey,
     signingKeyId: value.METADATA_SIGNING_KEY_ID,
     signingKeys,
@@ -116,6 +116,12 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): MarketplaceCon
     identityEncryptionKeys,
     transactionalEmail: { provider: value.TRANSACTIONAL_EMAIL_PROVIDER, apiKey: value.SENDGRID_API_KEY, from: value.TRANSACTIONAL_EMAIL_FROM },
   };
+}
+
+/** BOMs can be introduced by Windows-written environment files. They cannot be represented in an
+ * HTTP Authorization ByteString, so retaining one would make an otherwise correct token unusable. */
+function normalizeBearerSecret(value: string): string {
+  return value.replace(/\uFEFF/g, '').trim();
 }
 
 /** Shared shape for a "still-trusted retiring bearer tokens" rotation list -- no key id needed
