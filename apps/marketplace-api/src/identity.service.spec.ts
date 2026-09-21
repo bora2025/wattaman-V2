@@ -121,7 +121,7 @@ describe('login, lockout, and MFA', () => {
     };
     const service = new IdentityService(prismaWith(tx), config());
     const result = await service.login({ email: account.email, password: 'correct-password' });
-    expect(result).toMatchObject({ status: 'authenticated', sessionToken: expect.any(String) });
+    expect(result).toMatchObject({ status: 'authenticated', accountId: 'account-1', sessionToken: expect.any(String) });
     expect(tx.marketplaceAccount.update).toHaveBeenCalledWith({ where: { id: 'account-1' }, data: { failedLoginCount: 0, lockedUntil: null } });
   });
 

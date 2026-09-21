@@ -78,7 +78,8 @@ export default function SchoolsPage() {
       <button className="pa-btn-primary" disabled={busy} type="submit">{busy ? 'Creating…' : 'Create school'}</button>
     </form>}
 
-    <CursorTable<SchoolRow> path="schools" emptyMessage="No customer school records found." filters={[
+    <p className="text-xs text-slate-500">Terminated schools are archived and hidden by default. Select <strong>terminated</strong> in the lifecycle filter to view or restore them.</p>
+    <CursorTable<SchoolRow> path="schools" emptyMessage="No active customer school records found." filters={[
       { key: 'name', label: 'School name', placeholder: 'Bora School' },
       { key: 'status', label: 'Lifecycle', type: 'select', options: ['PROSPECT', 'AWAITING_CLAIM', 'ACTIVE', 'SUSPENDED', 'TERMINATED'].map(value => ({ value, label: value.toLowerCase().replace('_', ' ') })) },
       { key: 'claimed', label: 'Installation', type: 'select', options: [{ value: 'true', label: 'Claimed' }, { value: 'false', label: 'Not claimed' }] },

@@ -18,6 +18,17 @@ describe('CustomerSchoolService', () => {
     expect(query.select).not.toHaveProperty('enrollmentTokens');
   });
 
+  it('hides terminated schools by default while allowing the archived filter explicitly', async () => {
+    const prisma = { customerSchool: { findMany: jest.fn().mockResolvedValue([]) } } as any;
+    const service = new CustomerSchoolService(prisma);
+
+    await service.schools({});
+    expect(prisma.customerSchool.findMany.mock.calls[0][0].where.status).toEqual({ not: 'TERMINATED' });
+
+    await service.schools({ status: 'TERMINATED' });
+    expect(prisma.customerSchool.findMany.mock.calls[1][0].where.status).toBe('TERMINATED');
+  });
+
   it('never selects an enrollment token hash when reading a school', async () => {
     const prisma = {
       customerSchool: {
@@ -167,6 +178,26 @@ describe('CustomerSchoolService', () => {
     await new CustomerSchoolService(prisma).terminate('school-1', 'operator-1', { internalReason: 'Contract ended and retention approved.' }, context);
     expect(tx.schoolEnrollmentToken.updateMany).toHaveBeenCalled();
     expect(tx.platformAuditEvent.create.mock.calls[0][0].data.metadata).toEqual({ revokedEnrollmentTokens: 2 });
+  });
+
+  it('archives a school whose Railway project was deleted and clears stale infrastructure', async () => {
+    const tx = {
+      customerSchool: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'school-1', status: 'ACTIVE', railwayProjectId: 'railway-1', gatewayOrigin: 'https://school.example' }),
+        update: jest.fn().mockResolvedValue({ id: 'school-1', status: 'TERMINATED', railwayProjectId: null, gatewayOrigin: null, contactEmail: null, domains: [] }),
+      },
+      schoolEnrollmentToken: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      platformAuditEvent: { create: jest.fn() },
+    };
+    const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
+
+    await new CustomerSchoolService(prisma).recordRailwayDeleted('school-1', 'operator-1', { internalReason: 'Railway project deletion confirmed.' }, context);
+
+    expect(tx.customerSchool.update.mock.calls[0][0].data).toMatchObject({ status: 'TERMINATED', railwayProjectId: null, gatewayOrigin: null });
+    expect(tx.platformAuditEvent.create.mock.calls[0][0].data).toMatchObject({
+      action: 'customer_school_railway_deleted',
+      metadata: { previousRailwayProjectId: 'railway-1', previousGatewayOrigin: 'https://school.example', revokedEnrollmentTokens: 1 },
+    });
   });
 
   it('restores only a terminated school and clears termination metadata', async () => {

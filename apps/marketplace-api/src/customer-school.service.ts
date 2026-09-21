@@ -112,7 +112,10 @@ export class CustomerSchoolService {
       orderBy: { id: 'asc' },
       where: {
         ...(input.name ? { name: { contains: input.name, mode: 'insensitive' } } : {}),
-        ...(input.status ? { status: input.status } : {}),
+        // Terminated schools are retained for audit, billing, and possible restoration, but they
+        // are archives rather than live customers. An explicit TERMINATED filter remains the
+        // operator's way to inspect that archive.
+        ...(input.status ? { status: input.status } : { status: { not: SchoolLifecycleStatus.TERMINATED } }),
         ...(input.claimed === 'true' ? { installation: { is: {} } } : {}),
         ...(input.claimed === 'false' ? { installation: { is: null } } : {}),
       },
@@ -405,6 +408,42 @@ export class CustomerSchoolService {
       await this.audit(tx, operatorId, context, {
         action: 'customer_school_terminated', targetId: schoolId, reason: input.internalReason,
         metadata: { revokedEnrollmentTokens: revoked.count },
+      });
+      return { ...school, contactEmail: maskEmail(school.contactEmail) };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
+  /** Records an infrastructure deletion that already happened outside the control plane.
+   * The commercial/audit record is archived, while stale Railway coordinates are released so a
+   * replacement deployment can safely reuse them. This never calls Railway or deletes data. */
+  async recordRailwayDeleted(schoolId: string, operatorId: string, value: unknown, context: PlatformActionContext, now = new Date()) {
+    const input = lifecycleInput.parse(value);
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.customerSchool.findUnique({
+        where: { id: schoolId },
+        select: { id: true, status: true, railwayProjectId: true, gatewayOrigin: true },
+      });
+      if (!existing) throw new HttpError(404, 'Customer school not found');
+      if (existing.status === 'TERMINATED') throw new HttpError(409, 'Customer school is already terminated');
+
+      const revoked = await tx.schoolEnrollmentToken.updateMany({
+        where: { customerSchoolId: schoolId, consumedAt: null, revokedAt: null }, data: { revokedAt: now },
+      });
+      const school = await tx.customerSchool.update({
+        where: { id: schoolId },
+        data: {
+          status: 'TERMINATED', terminatedAt: now, terminatedReason: input.internalReason,
+          railwayProjectId: null, gatewayOrigin: null,
+        },
+        select: SCHOOL_SELECT,
+      });
+      await this.audit(tx, operatorId, context, {
+        action: 'customer_school_railway_deleted', targetId: schoolId, reason: input.internalReason,
+        metadata: {
+          previousRailwayProjectId: existing.railwayProjectId,
+          previousGatewayOrigin: existing.gatewayOrigin,
+          revokedEnrollmentTokens: revoked.count,
+        },
       });
       return { ...school, contactEmail: maskEmail(school.contactEmail) };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });

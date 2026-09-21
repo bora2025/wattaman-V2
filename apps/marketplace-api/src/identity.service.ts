@@ -123,7 +123,10 @@ export class IdentityService {
       await tx.marketplaceAccount.update({ where: { id: account.id }, data: { failedLoginCount: 0, lockedUntil: null } });
       const session = await this.createSession(tx, account.id, now);
       await this.audit(tx, { accountId: account.id, action: 'login_succeeded', success: true });
-      return { ok: true as const, value: { status: 'authenticated' as const, ...session } };
+      // The account id is safe identity metadata (not a credential). Returning it lets a school
+      // registration authenticated through the same-origin marketplace proxy bind the enrollment
+      // token and owner in one operation, instead of asking a customer to find and paste a UUID.
+      return { ok: true as const, value: { status: 'authenticated' as const, accountId: account.id, ...session } };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     if (!result.ok) throw new HttpError(result.status, result.message);
     return result.value;

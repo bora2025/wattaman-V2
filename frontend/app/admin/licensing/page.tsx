@@ -38,6 +38,9 @@ export default function LicensingPage() {
   const [entitlements, setEntitlements] = useState<EntitlementRecord[]>([]);
   const [accountId, setAccountId] = useState('');
   const [showAdvancedAccount, setShowAdvancedAccount] = useState(false);
+  const [ownerEmail, setOwnerEmail] = useState('');
+  const [ownerPassword, setOwnerPassword] = useState('');
+  const [ownerCode, setOwnerCode] = useState('');
   const [label, setLabel] = useState('');
   const [enrollmentToken, setEnrollmentToken] = useState('');
   const [offlinePluginId, setOfflinePluginId] = useState('');
@@ -72,20 +75,42 @@ export default function LicensingPage() {
     finally { setBusy(''); }
   }
 
-  function register() {
+  async function register() {
     // Either identifies this school to the marketplace: an enrollment token was minted by a
     // platform operator against a named customer school, and is the path for a school the operator
     // provisioned. An account ID is the self-serve path.
     if (!enrollmentToken.trim() && !accountId.trim()) {
       return setError('Enter the one-time enrollment token from your platform operator.');
     }
-    return run('register', '/api/admin/marketplace/installation/register',
-      {
-        ...(!enrollmentToken.trim() && accountId.trim() ? { accountId: accountId.trim() } : {}),
-        ...(enrollmentToken.trim() ? { enrollmentToken: enrollmentToken.trim() } : {}),
-        ...(label.trim() ? { label: label.trim() } : {}),
-      },
-      'This school is registered. Next, open Plugin Manager and link the marketplace owner account to browse and install plugins.');
+    setBusy('register'); setError(''); setNotice('');
+    try {
+      let verifiedAccountId = accountId.trim();
+      if (enrollmentToken.trim()) {
+        if (!ownerEmail.trim() || !ownerPassword) throw new Error('Enter the marketplace owner email and password.');
+        const loginResponse = await fetch('/api/marketplace/sessions', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ email: ownerEmail.trim(), password: ownerPassword, ...(ownerCode.trim() ? { code: ownerCode.trim() } : {}) }),
+        });
+        const login = await loginResponse.json().catch(() => ({}));
+        if (!loginResponse.ok) throw new Error(login.error || 'Marketplace owner sign-in failed');
+        if (login.status === 'mfa_required') throw new Error('Enter the owner’s MFA or recovery code, then try again.');
+        if (typeof login.accountId !== 'string' || !login.accountId) throw new Error('Marketplace sign-in did not return an account identity');
+        verifiedAccountId = login.accountId;
+      }
+      const response = await apiFetch('/api/admin/marketplace/installation/register', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({
+          accountId: verifiedAccountId,
+          ...(enrollmentToken.trim() ? { enrollmentToken: enrollmentToken.trim() } : {}),
+          ...(label.trim() ? { label: label.trim() } : {}),
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(Array.isArray(result.message) ? result.message.join('. ') : result.message || `Registration failed (${response.status})`);
+      setOwnerPassword(''); setOwnerCode('');
+      setNotice('School claimed, registered, and linked to the marketplace account. You can now install plugins.');
+      await load();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Registration failed'); }
+    finally { setBusy(''); }
   }
 
   function rotate() {
@@ -165,7 +190,7 @@ export default function LicensingPage() {
                 </p>
               ) : (
                 <p className="mt-1 text-sm text-slate-500">
-                  Ask your platform operator for this school’s one-time enrollment token, then register here. Registration proves this server holds its private key. After registration, link an owner account in Plugin Manager.
+                  Enter the school’s one-time token and sign in as its marketplace owner. One secure action claims the installation and links Plugin Manager automatically.
                 </p>
               )}
               {!status?.registered && <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -175,6 +200,15 @@ export default function LicensingPage() {
                     className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs" />
                   <span className="mt-1 block text-xs font-normal text-slate-500">Get this from Platform Admin → Customer schools → your school → Installation enrollment. It is shown once and consumed on successful registration.</span>
                 </label>
+                <div className="sm:col-span-2 rounded-xl border border-indigo-100 bg-indigo-50 p-4">
+                  <h3 className="text-sm font-semibold text-indigo-950">Marketplace owner</h3>
+                  <p className="mt-1 text-xs text-indigo-800">Credentials go directly to the marketplace through this school’s secure proxy. They are never stored by the school.</p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                    <input aria-label="Marketplace owner email" type="email" autoComplete="username" className="rounded-lg border px-3 py-2" placeholder="Owner email" value={ownerEmail} onChange={event => setOwnerEmail(event.target.value)} />
+                    <input aria-label="Marketplace owner password" type="password" autoComplete="current-password" className="rounded-lg border px-3 py-2" placeholder="Password" value={ownerPassword} onChange={event => setOwnerPassword(event.target.value)} />
+                    <input aria-label="Marketplace owner MFA code" inputMode="numeric" autoComplete="one-time-code" className="rounded-lg border px-3 py-2" placeholder="MFA / recovery code" value={ownerCode} onChange={event => setOwnerCode(event.target.value)} />
+                  </div>
+                </div>
                 <button className="text-left text-xs text-indigo-700 underline sm:col-span-2" type="button" onClick={() => setShowAdvancedAccount(value => !value)} aria-expanded={showAdvancedAccount}>Advanced: register with an existing marketplace account ID</button>
                 {showAdvancedAccount && <label className="text-sm">
                   <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Marketplace account ID</span>
@@ -190,7 +224,7 @@ export default function LicensingPage() {
               </div>}
               <div className="mt-4 flex flex-wrap gap-3">
                 {!status?.registered && <button className="btn btn-primary" disabled={!!busy || !status?.marketplaceConfigured} onClick={register}>
-                  {busy === 'register' ? 'Registering…' : 'Register this installation'}
+                  {busy === 'register' ? 'Claiming and linking…' : 'Claim and link marketplace'}
                 </button>}
                 {status?.registered && <a className="btn btn-primary" href="/admin/plugins">Next: link marketplace account</a>}
                 <button className="btn btn-secondary" disabled={!!busy || !status?.marketplaceConfigured || !status?.hasLocalKey} onClick={rotate}>
