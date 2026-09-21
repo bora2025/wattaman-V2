@@ -16,7 +16,7 @@ Source plan: [Wattanam Business Modules to Official Plugins Migration Plan](./mo
 - [x] MP-0 gate: ownership and data-classification inventory gate passes in CI (`architecture:inventory:gate`).
 - [x] MP-1 gate: one low-risk plugin re-certified end to end from marketplace install to restore.
 - [ ] MP-2 gate: Academic Management extracted with contract tests passing for dependents.
-- [ ] MP-3 gate: Attendance/Timetable/Examination/Learning extracted and device/report workflows certified.
+- [ ] MP-3 gate: Attendance Manager/Timetable/Examination/Learning extracted and device/report workflows certified.
 - [ ] MP-4 gate: Finance/HR/Communication/Parent Portal extracted with privacy and authorization review.
 - [ ] MP-5 gate: Reporting extracted; legacy business pages/routes/tables removed after support window.
 
@@ -346,6 +346,27 @@ Date risk trigger by wave target:
   - docs/architecture/mp2-identity-split-worksheet.md
   - docs/acceptance/mp2-academic-contracts-2026-09-15.md
   - docs/acceptance/mp2-academic-department-preflight-2026-09-15.md
+
+### Week of 2026-09-21 — MP-3 Attendance Manager kickoff
+
+- Overall status: [x] On track [ ] At risk [ ] Blocked
+- Completed locally:
+  - Created official package source `plugins/wattanam.attendance-manager` version `0.1.0`.
+  - Consolidated target ownership for Study Years and student, teacher, and staff attendance under
+    Attendance Manager; Academic Management and Human Resources become contract consumers.
+  - Added additive namespaced storage for Study Years, sessions, holidays, scan identifiers, and a
+    unified person-attendance record with camera, USB, and manual provenance.
+  - Added permission-gated record, scanner, summary-report, and Study Year routes plus declarative
+    UI for recent attendance, camera/keyboard-wedge scanning, print/CSV/PDF reports, and Study Years.
+  - Plugin CLI validation/activation, UI-v2 schema tests, and backend build pass.
+- In progress:
+  - Legacy preflight/adoption/reconciliation and compatibility route dispatch.
+  - Full behavior parity for corrections, sessions, holidays, alerts, realtime, absence rules, and
+    detailed student/staff reports.
+- Publication blocker:
+  - The package must not be published as Stable until restored-backup adoption, rollback, real
+    camera/USB device, report-parity, entitlement, and hosted lifecycle gates pass.
+  - Live marketplace publication additionally requires a current platform admin bearer token.
 
 ## 8. Weekly update template
 

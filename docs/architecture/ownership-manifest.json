@@ -25,7 +25,14 @@
     },
     "wattanam.attendance": {
       "kind": "official-plugin",
-      "scope": "Student school-day attendance: manual entry, camera/QR/card/USB scanning, corrections, sessions, holidays, card aliases, realtime status, alerts, reports and printing.",
+      "scope": "Compatibility owner identifier retained while Attendance Manager migration is in progress.",
+      "dependsOn": [
+        "wattanam.academic-management"
+      ]
+    },
+    "wattanam.attendance-manager": {
+      "kind": "official-plugin",
+      "scope": "Study years plus student, teacher and staff attendance: manual entry, camera/QR/card/USB scanning, corrections, sessions, holidays, identifiers, alerts, reports, printing and exports.",
       "dependsOn": [
         "wattanam.academic-management"
       ]
@@ -248,34 +255,34 @@
       "owner": "wattanam.academic-management"
     },
     "StudyYear": {
-      "owner": "wattanam.academic-management"
+      "owner": "wattanam.attendance-manager"
     },
     "Department": {
       "owner": "wattanam.academic-management"
     },
     "Attendance": {
-      "owner": "wattanam.attendance"
+      "owner": "wattanam.attendance-manager"
     },
     "SessionConfig": {
-      "owner": "wattanam.attendance"
+      "owner": "wattanam.attendance-manager"
     },
     "Holiday": {
-      "owner": "wattanam.attendance"
+      "owner": "wattanam.attendance-manager"
     },
     "CardAlias": {
-      "owner": "wattanam.attendance"
+      "owner": "wattanam.attendance-manager"
     },
     "AttendanceFormatRule": {
-      "owner": "wattanam.attendance"
+      "owner": "wattanam.attendance-manager"
     },
     "TimetableTeacherAttendance": {
       "owner": "wattanam.timetable"
     },
     "StaffAttendance": {
-      "owner": "wattanam.human-resources"
+      "owner": "wattanam.attendance-manager"
     },
     "StaffWeeklySchedule": {
-      "owner": "wattanam.human-resources"
+      "owner": "wattanam.attendance-manager"
     },
     "Salary": {
       "owner": "wattanam.human-resources"
@@ -450,7 +457,7 @@
     },
     {
       "match": "^backend/src/attendance/",
-      "owner": "wattanam.attendance",
+      "owner": "wattanam.attendance-manager",
       "splitPlan": "attendance-staff"
     },
     {
@@ -472,7 +479,7 @@
     },
     {
       "match": "^backend/src/card-aliases/",
-      "owner": "wattanam.attendance"
+      "owner": "wattanam.attendance-manager"
     },
     {
       "match": "^backend/src/card-templates/",
@@ -528,7 +535,7 @@
     },
     {
       "match": "^backend/src/holidays/",
-      "owner": "wattanam.attendance"
+      "owner": "wattanam.attendance-manager"
     },
     {
       "match": "^backend/src/installation/",
@@ -576,7 +583,7 @@
     },
     {
       "match": "^backend/src/reports/",
-      "owner": "wattanam.attendance",
+      "owner": "wattanam.attendance-manager",
       "splitPlan": "reports-by-domain"
     },
     {
@@ -589,7 +596,7 @@
     },
     {
       "match": "^backend/src/session-config/",
-      "owner": "wattanam.attendance",
+      "owner": "wattanam.attendance-manager",
       "splitPlan": "session-config-staff"
     },
     {
@@ -606,7 +613,7 @@
     },
     {
       "match": "^backend/src/study-years/",
-      "owner": "wattanam.academic-management"
+      "owner": "wattanam.attendance-manager"
     },
     {
       "match": "^backend/src/timetable/",
@@ -686,7 +693,7 @@
     },
     {
       "match": "^frontend/lib/offline-attendance\\.ts$",
-      "owner": "wattanam.attendance"
+      "owner": "wattanam.attendance-manager"
     },
     {
       "match": "^frontend/components/(AuthGuard|Sidebar|Icons|ConfirmModal|EmptyState|ProgressBar|StatCard|RichText|RichTextEditor|MathText)\\.tsx$",
@@ -776,6 +783,16 @@
       "match": "^plugins/wattanam\\.document-designer/",
       "owner": "wattanam.document-designer",
       "note": "Official Document Designer plugin package and runtime artifacts."
+    },
+    {
+      "match": "^plugins/wattanam\\.academic-management/",
+      "owner": "wattanam.academic-management",
+      "note": "Official Academic Management plugin package and runtime artifacts."
+    },
+    {
+      "match": "^plugins/wattanam\\.attendance-manager/",
+      "owner": "wattanam.attendance-manager",
+      "note": "Official Attendance Manager plugin package and runtime artifacts."
     }
   ],
   "routes": [

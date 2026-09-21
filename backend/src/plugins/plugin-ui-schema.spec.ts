@@ -183,6 +183,17 @@ describe('Plugin UI v2 schema', () => {
     expect(() => parsePluginUiBundle(value, 'wattanam.test', permissions)).toThrow('modes');
   });
 
+  it('validates the Attendance Manager camera/USB, report, and study-year UI bundle', () => {
+    const pluginRoot = path.resolve(__dirname, '../../../plugins/wattanam.attendance-manager');
+    const manifest = JSON.parse(readFileSync(path.join(pluginRoot, 'plugin.json'), 'utf8'));
+    const descriptor = JSON.parse(readFileSync(path.join(pluginRoot, 'frontend/page.json'), 'utf8'));
+    const bundle = parsePluginUiBundle(descriptor, manifest.id, new Set(manifest.permissions));
+
+    expect(bundle.pages.map((page) => page.id)).toEqual(['attendance', 'scanner', 'reports', 'study-years', 'settings']);
+    expect(bundle.pages.find((page) => page.id === 'scanner')?.components[1]).toMatchObject({ type: 'scanner' });
+    expect(bundle.pages.find((page) => page.id === 'reports')?.components[2]).toMatchObject({ type: 'print' });
+  });
+
   it('validates bounded launch-language translations', () => {
     const value: any = valid();
     value.pages[0].defaultLanguage = 'en';

@@ -53,7 +53,7 @@ compiled business pages after the applicable compatibility window closes.
 | Plugin ID | Current backend candidates | Complete feature scope |
 |---|---|---|
 | `wattanam.academic-management` | `classes`, `departments`, `study-years`, `class-registrations`; academic portions currently coupled to users/students | Academic student profiles, admissions, classes, enrollment, study years, departments and subjects shared by dependent plugins |
-| `wattanam.attendance` | `attendance`, `session-config`, `holidays`, attendance-related `card-aliases` | Student attendance, manual entry, camera/QR/card/USB scan, corrections, absence logic, sessions, holidays, realtime status, alerts, reports and printing |
+| `wattanam.attendance-manager` | `study-years`, `attendance`, `session-config`, `holidays`, attendance-related `card-aliases`, staff/teacher attendance and attendance reports | **Attendance Manager**: academic years plus student, teacher and staff attendance, manual entry, camera/QR/card/USB scan, corrections, absence logic, sessions, holidays, realtime status, alerts, reports, printing and exports |
 | `wattanam.timetable` | `timetable` | Subjects, classrooms, schedules, teacher schedules and timetable reports; attendance records themselves belong to Attendance |
 | `wattanam.examination` | `exam`, `scoring` | Exams, questions, attempts, grades, score sheets, gradebook, reports and printing |
 | `wattanam.learning` | `courses`, `assignments`, `h5p` | Courses, lessons, assignments, quizzes, interactive content, course engagement and course-specific attendance if product-approved |
@@ -81,12 +81,12 @@ rather than treating these numbers as permanent architecture.
 |---|---|---|---|
 | Announcements | `backend/src/announcements` | Compatibility proxy | Keep only during legacy URL window; business owner is existing `plugins/announcements`, later merge/retain per Communication ADR |
 | Assignments | `backend/src/assignments` | Business module | `wattanam.learning` |
-| Attendance | `backend/src/attendance` | Business module | `wattanam.attendance` |
+| Attendance | `backend/src/attendance` | Business module | `wattanam.attendance-manager` |
 | Audit | `backend/src/audit` | Core infrastructure | Lean core |
 | Auth | `backend/src/auth` | Core, currently coupled to user/profile data | Lean-core account/authentication parts; split academic/employee profiles during ownership design |
 | Backup | `backend/src/backup` | Core infrastructure | Lean core |
 | Bus | `backend/src/bus` | Business module | `wattanam.transportation` |
-| Card Aliases | `backend/src/card-aliases` | Mixed/shared identifier feature | Attendance aliases to `wattanam.attendance`; other device aliases require inventory decision |
+| Card Aliases | `backend/src/card-aliases` | Mixed/shared identifier feature | Attendance aliases to `wattanam.attendance-manager`; other device aliases require inventory decision |
 | Card Templates | `backend/src/card-templates` | Business module | `wattanam.document-designer` |
 | Classes | `backend/src/classes` | Business module | `wattanam.academic-management` |
 | Class Registrations | `backend/src/class-registrations` | Business module | `wattanam.academic-management` admissions/intake |
@@ -98,7 +98,7 @@ rather than treating these numbers as permanent architecture.
 | Exam | `backend/src/exam` | Business module | `wattanam.examination` |
 | Fees | `backend/src/fees` | Business module | `wattanam.finance` |
 | Health | `backend/src/health` | Core infrastructure | Lean core plus plugin health aggregation |
-| Holidays | `backend/src/holidays` | Attendance business support | `wattanam.attendance`, unless a future calendar ADR creates a shared calendar contract |
+| Holidays | `backend/src/holidays` | Attendance business support | `wattanam.attendance-manager`, unless a future calendar ADR creates a shared calendar contract |
 | Installation | `backend/src/installation` | Core infrastructure | Lean core |
 | Marketplace | `backend/src/marketplace` | Core commercial client | Lean core |
 | School Access | `backend/src/marketplace/school-access.module.ts` | Core billing enforcement | Lean core |
@@ -111,11 +111,11 @@ rather than treating these numbers as permanent architecture.
 | Reports | `backend/src/reports` | Mixed aggregation module | Domain reports move with owners; cross-feature aggregation to `wattanam.reporting` |
 | Salary | `backend/src/salary` | Sensitive business module | `wattanam.human-resources` |
 | Scoring | `backend/src/scoring` | Business module | `wattanam.examination` |
-| Session Config | `backend/src/session-config` | Attendance business support | `wattanam.attendance` |
+| Session Config | `backend/src/session-config` | Attendance business support | `wattanam.attendance-manager` |
 | Site Settings | `backend/src/site-settings` | Core configuration | Lean core; plugin settings use scoped plugin settings |
 | Staff CV | `backend/src/staff-cv` | Sensitive business module | `wattanam.human-resources` |
 | Storage | `backend/src/storage` | Shared infrastructure | Lean core capability adapter |
-| Study Years | `backend/src/study-years` | Business module | `wattanam.academic-management` |
+| Study Years | `backend/src/study-years` | Attendance calendar boundary | `wattanam.attendance-manager`; Academic Management consumes the published study-year contract |
 | Timetable | `backend/src/timetable` | Mixed scheduling and teacher-attendance data | Scheduling to `wattanam.timetable`; attendance records to the approved Attendance/HR owner |
 | Updates | `backend/src/updates` | Core infrastructure | Lean core |
 
@@ -133,8 +133,8 @@ not just the Nest directory that happens to access it:
 | Lean core identity/security | `User`, `RefreshToken`, `PasswordResetToken`, `AuditLog`, `AuditCleanupSchedule`, generic parts of `Notification` and `NotificationPreference` |
 | Lean core installation/plugin platform | `Installation`, `PluginInstallation`, `MarketplaceRegistration`, `MarketplaceSchoolControl`, `MarketplacePendingLink`, `MarketplaceProxyLink`, `PluginPermissionGrant`, `PluginNotificationUsage`, `PluginMigration`, `PluginSetting`, `PluginJobDefinition`, `PluginJobRun`, `PluginEntitlementCache` |
 | Academic Management | `Class`, `Student`, `ClassRegistration`, `ClassRegistrationSettings`, `ClassRegistrationField`, `StudyYear`, `Department`; timetable subject/class ownership must be normalized |
-| Attendance | `Attendance`, `SessionConfig`, `Holiday`, `CardAlias`, `AttendanceFormatRule`; staff and course attendance follow their separate decisions |
-| Human Resources | `StaffAttendance`, `StaffWeeklySchedule`, `Salary`, `StaffProfile`, `StaffEducation`, `StaffWorkExperience`, `StaffCertification` |
+| Attendance Manager | `StudyYear`, `Attendance`, `StaffAttendance`, `StaffWeeklySchedule`, `SessionConfig`, `Holiday`, `CardAlias`, `AttendanceFormatRule`; teacher attendance uses the unified person-attendance model |
+| Human Resources | `Salary`, `StaffProfile`, `StaffEducation`, `StaffWorkExperience`, `StaffCertification`; consumes Attendance Manager staff-attendance contracts |
 | Document Designer | `CardTemplate` plus any certificate/QR persistence discovered outside Prisma |
 | Finance | `FeeRecord`, `FeePayment`, `FeeSettings` |
 | Timetable | `Timetable`, `TimetableSubject`, `TimetableClass`, `TimetableClassroom`, `TimetableTeacher`, `TimetableLesson`, `TimetableEntry`; `TimetableTeacherAttendance` requires ownership decision |
@@ -157,12 +157,12 @@ inventory even when no same-named Nest module exists:
 | Dashboard and Search | `/admin`, `/admin/search` | Lean-core shell with plugin-contributed cards/search providers |
 | User Management | `/admin/users`, `/admin/profile` | Lean core generic accounts; domain profiles split out |
 | Teacher, Student and Employee Management | `/admin/teachers`, `/admin/students`, `/admin/employees`, employee CV/print | Academic Management for student/teacher academic profiles; Human Resources for employee/CV data |
-| Classes and Study Years | `/admin/classes`, `/admin/study-years` | Academic Management |
+| Classes and Study Years | `/admin/classes`, `/admin/study-years` | Classes: Academic Management; Study Years: Attendance Manager |
 | Class Registration | `/admin/class-registrations`, `/register` | Academic Management admissions/intake |
 | Attendance | admin/teacher attendance and edit pages | Attendance |
 | Camera, QR, Card and USB Scan | `/admin/camera`, `/teacher/camera`, `/employee/scan`, `/wattaman/scan`, `/wattaman/teacher-scan`, `/wattaman/usb-scan` | Attendance, except HR-owned staff-attendance flows |
 | Session Settings and Holidays | `/admin/session-settings`, `/teacher/session-settings`, `/admin/holidays` | Attendance |
-| Staff Attendance | `/admin/staff-attendance`, edit and teacher staff-attendance pages | Human Resources, using shared attendance-engine contract if approved |
+| Staff Attendance | `/admin/staff-attendance`, edit and teacher staff-attendance pages | Attendance Manager; Human Resources consumes its staff-attendance contract |
 | Timetable | `/admin/timetable/*` including subjects, classrooms, lessons, schedules and teachers | Timetable |
 | Examination, Scoring and Gradebook | `/admin/exams`, `/admin/scoring`, student/teacher exam and score routes | Examination |
 | Courses and Assignments | student/teacher course, lesson, assignment, quiz, engagement and course-attendance routes | Learning |
@@ -379,12 +379,13 @@ An inventory item without a target owner blocks extraction.
 - Remove compatibility proxies in the announced release.
 - Update architecture inventory and attach final evidence.
 
-## 10. Attendance extraction blueprint
+## 10. Attendance Manager extraction blueprint
 
-Attendance is treated as one complete vertical plugin:
+Attendance Manager (`wattanam.attendance-manager`) is treated as one complete vertical plugin:
 
 ```text
-wattanam.attendance
+wattanam.attendance-manager
+├── study years / attendance calendar
 ├── take attendance
 ├── manual entry and correction
 ├── camera / QR / card / USB scanning
@@ -402,8 +403,8 @@ Move `attendance`, `session-config`, `holidays`, attendance-specific aliases, at
 scanner pages, teacher reports and attendance print views. Generic authentication, audit,
 notification transport, realtime transport and job scheduling remain core capabilities.
 
-Staff attendance requires an explicit decision: recommended ownership is Human Resources, while
-the Attendance plugin may provide a shared attendance engine contract. Course-session attendance
+Staff and teacher attendance use Attendance Manager's unified person-attendance engine; Human
+Resources consumes its versioned staff-attendance contract. Course-session attendance
 is recommended to remain with Learning because its lifecycle is tied to course meetings. These
 records must not be silently mixed into student school-day attendance.
 
@@ -424,14 +425,10 @@ server under an approved clock policy.
 ### 10.4 Required permissions
 
 ```text
-wattanam.attendance.view
-wattanam.attendance.scan
-wattanam.attendance.mark
-wattanam.attendance.correct
-wattanam.attendance.report
-wattanam.attendance.print
-wattanam.attendance.configure
-wattanam.attendance.manage-devices
+wattanam.attendance-manager.view
+wattanam.attendance-manager.scan
+wattanam.attendance-manager.manage
+wattanam.attendance-manager.export
 ```
 
 Authorization includes row scope: teachers cannot operate on unrelated classes merely because they
