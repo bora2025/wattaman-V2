@@ -503,6 +503,9 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   app.post('/platform/v1/schools/:schoolId/terminate', requirePlatformOperator, P('schools.manage'), async (request: PlatformRequest, response, next) => {
     try { response.json(await customerSchools.terminate(String(request.params.schoolId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
   });
+  app.post('/platform/v1/schools/:schoolId/restore', requirePlatformOperator, P('schools.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await customerSchools.restore(String(request.params.schoolId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
   app.post('/platform/v1/schools/:schoolId/domains', requirePlatformOperator, P('schools.manage'), async (request: PlatformRequest, response, next) => {
     try { response.status(201).json(await customerSchools.addDomain(String(request.params.schoolId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
   });

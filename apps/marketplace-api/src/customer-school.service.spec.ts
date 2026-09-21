@@ -169,6 +169,20 @@ describe('CustomerSchoolService', () => {
     expect(tx.platformAuditEvent.create.mock.calls[0][0].data.metadata).toEqual({ revokedEnrollmentTokens: 2 });
   });
 
+  it('restores only a terminated school and clears termination metadata', async () => {
+    const tx = {
+      customerSchool: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'school-1', status: 'TERMINATED' }),
+        update: jest.fn().mockResolvedValue({ id: 'school-1', status: 'ACTIVE', contactEmail: null, domains: [] }),
+      },
+      platformAuditEvent: { create: jest.fn() },
+    };
+    const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
+    await new CustomerSchoolService(prisma).restore('school-1', 'operator-1', { internalReason: 'Customer requested reinstatement.' }, context);
+    expect(tx.customerSchool.update.mock.calls[0][0].data).toEqual({ status: 'ACTIVE', terminatedAt: null, terminatedReason: null, suspendedAt: null, suspendedReason: null });
+    expect(tx.platformAuditEvent.create.mock.calls[0][0].data.action).toBe('customer_school_restored');
+  });
+
   it('reports only marketplace-observed usage for a school', async () => {
     const prisma = { customerSchool: { findUnique: jest.fn().mockResolvedValue({
       id: 'school-1', status: 'ACTIVE', installation: {

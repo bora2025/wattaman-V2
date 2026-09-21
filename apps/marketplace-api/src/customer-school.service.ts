@@ -410,6 +410,28 @@ export class CustomerSchoolService {
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 
+  /**
+   * Reverses a prior termination without recreating the school record.
+   *
+   * Restore does not mint enrollment tokens or change installation ownership; it only returns the
+   * lifecycle to ACTIVE and clears termination metadata.
+   */
+  async restore(schoolId: string, operatorId: string, value: unknown, context: PlatformActionContext) {
+    const input = lifecycleInput.parse(value);
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.customerSchool.findUnique({ where: { id: schoolId }, select: { id: true, status: true } });
+      if (!existing) throw new HttpError(404, 'Customer school not found');
+      if (existing.status !== 'TERMINATED') throw new HttpError(409, 'Only a terminated school can be restored');
+      const school = await tx.customerSchool.update({
+        where: { id: schoolId },
+        data: { status: 'ACTIVE', terminatedAt: null, terminatedReason: null, suspendedAt: null, suspendedReason: null },
+        select: SCHOOL_SELECT,
+      });
+      await this.audit(tx, operatorId, context, { action: 'customer_school_restored', targetId: schoolId, reason: input.internalReason });
+      return { ...school, contactEmail: maskEmail(school.contactEmail) };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
   async usage(schoolId: string) {
     const school = await this.prisma.customerSchool.findUnique({
       where: { id: schoolId },
