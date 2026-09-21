@@ -10,6 +10,7 @@ describe('InstallationRegistrationService', () => {
   let prisma: any;
   let keys: InstallationKeyService;
   let service: InstallationRegistrationService;
+  let tokenStore: { write: jest.Mock };
 
   beforeEach(() => {
     keyDir = mkdtempSync(path.join(os.tmpdir(), 'wattanam-installation-registration-'));
@@ -29,9 +30,11 @@ describe('InstallationRegistrationService', () => {
       installation: { findUnique: jest.fn().mockResolvedValue({ installationId: 'school-public-id' }) },
       marketplaceRegistration: store('registration'),
       marketplaceProxyLink: store('proxyLink'),
+      marketplacePendingLink: store('pendingLink'),
     };
+    tokenStore = { write: jest.fn().mockResolvedValue(undefined) };
     keys = new InstallationKeyService();
-    service = new InstallationRegistrationService(prisma, keys);
+    service = new InstallationRegistrationService(prisma, keys, tokenStore as any);
   });
 
   afterEach(() => { rmSync(keyDir, { recursive: true, force: true }); jest.restoreAllMocks(); });
@@ -140,6 +143,30 @@ describe('InstallationRegistrationService', () => {
     const status = await service.status();
     expect(status).toMatchObject({ registered: true, registrationInferred: false });
     expect(status.registeredAt).toBeTruthy();
+  });
+
+  it('automatically persists delegated marketplace link state when registration returns autoLink', async () => {
+    jest.spyOn(global, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ challengeId: 'challenge-1', nonce: 'n'.repeat(64), purpose: 'register', expiresAt: '2099-01-01T00:00:00.000Z' }), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        installationId: 'school-public-id',
+        accountId: '00000000-0000-4000-8000-000000000020',
+        keyFingerprint: 'fp',
+        autoLink: {
+          grantId: 'grant-1',
+          accountId: '00000000-0000-4000-8000-000000000020',
+          accountEmail: 'owner@example.com',
+          scope: 'catalog:browse purchase:create download:artifact',
+          grantExpiresAt: '2099-01-01T00:00:00.000Z',
+          sessionToken: 'token-raw',
+          sessionExpiresAt: '2098-01-01T00:00:00.000Z',
+        },
+      }), { status: 201 }));
+
+    await service.register('00000000-0000-4000-8000-000000000020', 'Bora School', `wtn_enr_${'a'.repeat(64)}`);
+
+    expect(tokenStore.write).toHaveBeenCalledWith('token-raw');
+    expect(prisma.marketplaceProxyLink.upsert).toHaveBeenCalled();
   });
 
   it('does not record a registration the marketplace rejected', async () => {

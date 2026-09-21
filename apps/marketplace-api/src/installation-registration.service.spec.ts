@@ -218,9 +218,12 @@ describe('installation registration with a school enrollment token', () => {
   function tx(overrides: Partial<Record<string, any>> = {}) {
     return {
       installationRegistrationChallenge: { findUnique: jest.fn().mockResolvedValue(challenge), update: jest.fn().mockResolvedValue({}) },
-      marketplaceAccount: { findUnique: jest.fn().mockResolvedValue({ id: accountId }) },
-      installationRegistration: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'registration-1' }), update: jest.fn().mockResolvedValue({}) },
+      marketplaceAccount: { findUnique: jest.fn().mockResolvedValue({ id: accountId, email: 'owner@example.com' }) },
+      installationRegistration: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'registration-1', accountId }), update: jest.fn().mockResolvedValue({}) },
       installationRegistrationKey: { create: jest.fn().mockResolvedValue({}) },
+      installationMarketplaceGrant: { upsert: jest.fn().mockResolvedValue({ id: 'grant-1', expiresAt: new Date(now.getTime() + 7_776_000_000) }) },
+      installationMarketplaceGrantRequest: { create: jest.fn().mockResolvedValue({ id: 'request-1' }) },
+      marketplaceSession: { create: jest.fn().mockResolvedValue({}) },
       marketplaceAuditEvent: { create: jest.fn().mockResolvedValue({}) },
       schoolEnrollmentToken: {
         findUnique: jest.fn().mockResolvedValue({ id: 'token-1', customerSchoolId: 'school-1', consumedAt: null, revokedAt: null, expiresAt: new Date(now.getTime() + 86_400_000) }),
@@ -252,6 +255,7 @@ describe('installation registration with a school enrollment token', () => {
     expect(state.schoolEnrollmentToken.update.mock.calls[0][0].data).toEqual({ consumedAt: now, consumedByInstallationId: installationId });
     expect(state.installationRegistration.update.mock.calls[0][0].data).toEqual({ customerSchoolId: 'school-1' });
     expect(state.customerSchool.update.mock.calls[0][0].data).toEqual({ status: 'ACTIVE' });
+    expect(result).toHaveProperty('autoLink.sessionToken');
   });
 
   it('registers without a token exactly as before, touching no directory record', async () => {

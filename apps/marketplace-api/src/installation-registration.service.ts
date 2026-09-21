@@ -3,10 +3,14 @@ import { createHash, createPublicKey, randomBytes, verify } from 'node:crypto';
 import { z } from 'zod';
 import { MarketplaceConfig } from './config';
 import { HttpError } from './http-error';
-import { hashToken } from './identity-crypto';
+import { hashToken, newOpaqueToken } from './identity-crypto';
 import { canonicalJson } from './signing';
 
 const CHALLENGE_LIFETIME_MS = 5 * 60 * 1000;
+const REQUEST_LIFETIME_MS = 15 * 60 * 1000;
+const SESSION_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
+const GRANT_LIFETIME_MS = 90 * 24 * 60 * 60 * 1000;
+const LINK_SCOPE = 'catalog:browse purchase:create download:artifact';
 
 const challengeInput = z.object({
   installationId: z.string().uuid(),
@@ -84,9 +88,11 @@ export class InstallationRegistrationService {
     const input = registerInput.parse(value);
     return this.prisma.$transaction(async (tx) => {
       const challenge = await this.consumeChallenge(tx, { challengeId: input.challengeId, installationId: input.installationId, purpose: 'REGISTER', now });
+      let accountEmail: string | null = null;
       if (input.accountId) {
-        const account = await tx.marketplaceAccount.findUnique({ where: { id: input.accountId }, select: { id: true } });
+        const account = await tx.marketplaceAccount.findUnique({ where: { id: input.accountId }, select: { id: true, email: true } });
         if (!account) throw new HttpError(404, 'Account not found');
+        accountEmail = account.email;
       }
 
       const existing = await tx.installationRegistration.findUnique({
@@ -124,6 +130,15 @@ export class InstallationRegistrationService {
         ? await this.redeemEnrollmentToken(tx, { token: input.enrollmentToken, registrationId: registration.id, installationId: input.installationId, now })
         : null;
 
+      const autoLink = input.enrollmentToken && registration.accountId
+        ? await this.autoLinkEnrollmentRegistration(tx, {
+          registrationId: registration.id,
+          accountId: registration.accountId,
+          accountEmail,
+          now,
+        })
+        : null;
+
       await this.audit(tx, {
         action: 'installation_registered', success: true,
         metadata: { installationId: input.installationId, accountId: registration.accountId, keyFingerprint: fingerprint, ...(school ? { customerSchoolId: school.id, customerSchoolSlug: school.slug } : {}) },
@@ -131,8 +146,76 @@ export class InstallationRegistrationService {
       return {
         installationId: input.installationId, accountId: registration.accountId, keyFingerprint: fingerprint, registeredAt: now,
         ...(school ? { school: { id: school.id, name: school.name, slug: school.slug } } : {}),
+        ...(autoLink ? { autoLink } : {}),
       };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
+  private async autoLinkEnrollmentRegistration(
+    tx: Prisma.TransactionClient,
+    input: { registrationId: string; accountId: string; accountEmail: string | null; now: Date },
+  ) {
+    const grant = await tx.installationMarketplaceGrant.upsert({
+      where: { installationRegistrationId: input.registrationId },
+      create: {
+        installationRegistrationId: input.registrationId,
+        accountId: input.accountId,
+        scope: LINK_SCOPE,
+        consentedAt: input.now,
+        expiresAt: new Date(input.now.getTime() + GRANT_LIFETIME_MS),
+      },
+      update: {
+        accountId: input.accountId,
+        scope: LINK_SCOPE,
+        consentedAt: input.now,
+        expiresAt: new Date(input.now.getTime() + GRANT_LIFETIME_MS),
+        revokedAt: null,
+        revokedReason: null,
+      },
+    });
+
+    const request = await tx.installationMarketplaceGrantRequest.create({
+      data: {
+        installationRegistrationId: input.registrationId,
+        requestedScope: LINK_SCOPE,
+        status: 'DELIVERED',
+        expiresAt: new Date(input.now.getTime() + REQUEST_LIFETIME_MS),
+        respondedAt: input.now,
+        deliveredAt: input.now,
+        grantId: grant.id,
+      },
+      select: { id: true },
+    });
+
+    const session = newOpaqueToken();
+    const sessionExpiresAt = new Date(input.now.getTime() + SESSION_LIFETIME_MS);
+    await tx.marketplaceSession.create({
+      data: {
+        accountId: input.accountId,
+        tokenHash: session.hash,
+        scope: 'COMMERCE_PROXY',
+        sourceGrantId: grant.id,
+        expiresAt: sessionExpiresAt,
+      },
+    });
+
+    await this.audit(tx, {
+      accountId: input.accountId,
+      action: 'installation_link_auto_approved',
+      success: true,
+      metadata: { registrationId: input.registrationId, requestId: request.id, grantId: grant.id },
+    });
+
+    return {
+      requestId: request.id,
+      grantId: grant.id,
+      accountId: input.accountId,
+      accountEmail: input.accountEmail,
+      scope: LINK_SCOPE,
+      grantExpiresAt: grant.expiresAt,
+      sessionToken: session.raw,
+      sessionExpiresAt,
+    };
   }
 
   async rotateKey(value: unknown, now = new Date()) {
@@ -238,7 +321,7 @@ export class InstallationRegistrationService {
     return { challengeId: challenge.id, nonce: challenge.nonce, purpose: challenge.purpose.toLowerCase(), expiresAt: challenge.expiresAt };
   }
 
-  private async audit(tx: Prisma.TransactionClient, entry: { action: string; success: boolean; metadata?: Prisma.InputJsonValue }) {
+  private async audit(tx: Prisma.TransactionClient, entry: { accountId?: string; action: string; success: boolean; metadata?: Prisma.InputJsonValue }) {
     await tx.marketplaceAuditEvent.create({ data: entry });
   }
 }

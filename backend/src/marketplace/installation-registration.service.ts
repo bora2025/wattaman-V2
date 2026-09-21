@@ -2,11 +2,16 @@ import { BadGatewayException, BadRequestException, Injectable, ServiceUnavailabl
 import { createHash, createPublicKey, generateKeyPairSync } from 'crypto';
 import { PrismaService } from '../database/prisma.service';
 import { InstallationKeyService } from './installation-key.service';
+import { MarketplaceLinkTokenStore } from './marketplace-link-token.store';
 import { MarketplaceIdentityConfig, readMarketplaceIdentityConfig } from './marketplace-identity-config';
 
 @Injectable()
 export class InstallationRegistrationService {
-  constructor(private readonly prisma: PrismaService, private readonly keys: InstallationKeyService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly keys: InstallationKeyService,
+    private readonly tokenStore: MarketplaceLinkTokenStore,
+  ) {}
 
   /**
    * Local-only status. Deliberately never contacts the marketplace: an outage must not make the
@@ -74,7 +79,64 @@ export class InstallationRegistrationService {
       create: { id: 'singleton', installationId, keyFingerprint: fingerprint, accountId: result?.accountId ?? account ?? null, label },
       update: { installationId, keyFingerprint: fingerprint, accountId: result?.accountId ?? account ?? null, label, registeredAt: new Date() },
     });
+
+    const autoLink = this.asAutoLinkPayload(result?.autoLink);
+    if (autoLink) {
+      await this.tokenStore.write(autoLink.sessionToken);
+      await this.prisma.marketplaceProxyLink.upsert({
+        where: { id: 'singleton' },
+        create: {
+          id: 'singleton',
+          grantId: autoLink.grantId,
+          accountId: autoLink.accountId,
+          accountEmailMasked: maskEmail(autoLink.accountEmail),
+          scope: autoLink.scope,
+          linkedAt: new Date(),
+          expiresAt: new Date(autoLink.grantExpiresAt),
+          sessionExpiresAt: new Date(autoLink.sessionExpiresAt),
+        },
+        update: {
+          grantId: autoLink.grantId,
+          accountId: autoLink.accountId,
+          accountEmailMasked: maskEmail(autoLink.accountEmail),
+          scope: autoLink.scope,
+          linkedAt: new Date(),
+          expiresAt: new Date(autoLink.grantExpiresAt),
+          sessionExpiresAt: new Date(autoLink.sessionExpiresAt),
+          revokedAt: null,
+        },
+      });
+      await this.prisma.marketplacePendingLink.deleteMany({ where: { id: 'singleton' } });
+    }
     return result;
+  }
+
+  private asAutoLinkPayload(value: unknown): {
+    sessionToken: string;
+    sessionExpiresAt: string;
+    grantId: string;
+    grantExpiresAt: string;
+    accountId: string;
+    accountEmail?: string;
+    scope: string;
+  } | null {
+    if (!value || typeof value !== 'object') return null;
+    const row = value as Record<string, unknown>;
+    if (typeof row.sessionToken !== 'string' || !row.sessionToken.trim()) return null;
+    if (typeof row.sessionExpiresAt !== 'string' || Number.isNaN(Date.parse(row.sessionExpiresAt))) return null;
+    if (typeof row.grantId !== 'string' || !row.grantId.trim()) return null;
+    if (typeof row.grantExpiresAt !== 'string' || Number.isNaN(Date.parse(row.grantExpiresAt))) return null;
+    if (typeof row.accountId !== 'string' || !row.accountId.trim()) return null;
+    if (typeof row.scope !== 'string' || !row.scope.trim()) return null;
+    return {
+      sessionToken: row.sessionToken,
+      sessionExpiresAt: row.sessionExpiresAt,
+      grantId: row.grantId,
+      grantExpiresAt: row.grantExpiresAt,
+      accountId: row.accountId,
+      accountEmail: typeof row.accountEmail === 'string' ? row.accountEmail : undefined,
+      scope: row.scope,
+    };
   }
 
   async rotateKey() {
@@ -133,6 +195,14 @@ export class InstallationRegistrationService {
     }
     return payload;
   }
+}
+
+function maskEmail(email?: string): string | undefined {
+  if (!email) return undefined;
+  const [local, domain] = email.split('@');
+  if (!domain) return email;
+  const visible = local.slice(0, 1);
+  return `${visible}${'*'.repeat(Math.max(local.length - 1, 1))}@${domain}`;
 }
 
 function fingerprintOf(publicKeyPem: string): string {
