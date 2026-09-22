@@ -1,12 +1,13 @@
 ﻿'use client'
 
 import { useState, useEffect, useCallback, useRef, Fragment } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import Sidebar from '../../../components/Sidebar'
 import AuthGuard from '../../../components/AuthGuard'
 import { adminNav } from '../../../lib/admin-nav'
 import { apiFetch } from '../../../lib/api'
 import { useLanguage } from '../../../lib/i18n'
+import { pluginTimetableFetch } from '../../../lib/timetable-plugin-api'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -161,12 +162,16 @@ function TimeOffEditor({ rules, onChange }: { rules: TimeOffRule[]; onChange: (r
 
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
-export default function TimetablePage() {
+function TimetableWorkspace({ pluginMode = false }: { pluginMode?: boolean }) {
   const { t } = useLanguage()
   const DAY_LABELS = [t('timetable.mon'), t('timetable.tue'), t('timetable.wed'), t('timetable.thu'), t('timetable.fri'), t('timetable.sat'), t('timetable.sun')]
   const WIZARD_STEPS = [t('timetable.schoolInfo'), t('timetable.subjects'), t('timetable.classes'), t('timetable.classrooms'), t('timetable.teachersContracts')]
   const router = useRouter()
   const pathname = usePathname()
+  const timetableFetch = pluginMode ? pluginTimetableFetch : apiFetch
+  const timetablePath = (child = '') => pluginMode
+    ? `/plugins/wattanam.timetable/${child || 'timetables'}`
+    : `/admin/timetable${child ? `/${child}` : ''}`
 
   const [timetableList, setTimetableList] = useState<TimetableListItem[]>([])
   const [current, setCurrent] = useState<Timetable | null>(null)
@@ -303,7 +308,7 @@ export default function TimetablePage() {
   }
 
   const fetchList = useCallback(async () => {
-    const res = await apiFetch('/api/timetable')
+    const res = await timetableFetch('/api/timetable')
     if (res.ok) {
       const list: TimetableListItem[] = await res.json()
       setTimetableList(list)
@@ -314,7 +319,7 @@ export default function TimetablePage() {
 
   const loadTimetable = useCallback(async (id: string) => {
     setLoading(true)
-    const res = await apiFetch(`/api/timetable/${id}`)
+    const res = await timetableFetch(`/api/timetable/${id}`)
     if (res.ok) setCurrent(await res.json())
     setLoading(false)
   }, [])
@@ -380,7 +385,7 @@ export default function TimetablePage() {
     if (wizardStep === 0) {
       // Step 1 → create timetable, only advance on success
       setWizardSaving(true)
-      const res = await apiFetch('/api/timetable', {
+      const res = await timetableFetch('/api/timetable', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: wSchoolName || 'New Timetable', academicYear: wAcademicYear,
@@ -422,7 +427,7 @@ export default function TimetablePage() {
     const id = ttId(); if (!id) return
     const isEdit = !!editingItem
     const url = isEdit ? `/api/timetable/subjects/${editingItem.id}` : `/api/timetable/${id}/subjects`
-    const res = await apiFetch(url, { method: isEdit ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' },
+    const res = await timetableFetch(url, { method: isEdit ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: fSubName, short: fSubShort, color: fSubColor, classroomCount: fSubRooms,
         customFields: fSubCustom ? { note: fSubCustom } : undefined }) })
     if (res.ok) {
@@ -432,7 +437,7 @@ export default function TimetablePage() {
   }
   async function removeSubject(subId: string, name: string) {
     const id = ttId(); if (!id) return
-    const res = await apiFetch(`/api/timetable/subjects/${subId}`, { method: 'DELETE' })
+    const res = await timetableFetch(`/api/timetable/subjects/${subId}`, { method: 'DELETE' })
     if (res.ok) { showToast(`Subject "${name}" removed.`); await loadTimetable(id) }
     else showToast('Failed to remove subject.', false)
   }
@@ -440,7 +445,7 @@ export default function TimetablePage() {
     const id = ttId(); if (!id) return
     const isEdit = !!editingItem
     const url = isEdit ? `/api/timetable/classes/${editingItem.id}` : `/api/timetable/${id}/classes`
-    const res = await apiFetch(url, { method: isEdit ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' },
+    const res = await timetableFetch(url, { method: isEdit ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: fClsName, short: fClsShort, color: fClsColor,
         printSubjectPicture: fClsPrint, customFields: fClsCustom ? { note: fClsCustom } : undefined }) })
     if (res.ok) {
@@ -450,7 +455,7 @@ export default function TimetablePage() {
   }
   async function removeClass(clsId: string, name: string) {
     const id = ttId(); if (!id) return
-    const res = await apiFetch(`/api/timetable/classes/${clsId}`, { method: 'DELETE' })
+    const res = await timetableFetch(`/api/timetable/classes/${clsId}`, { method: 'DELETE' })
     if (res.ok) { showToast(`Class "${name}" removed.`); await loadTimetable(id) }
     else showToast('Failed to remove class.', false)
   }
@@ -458,7 +463,7 @@ export default function TimetablePage() {
     const id = ttId(); if (!id) return
     const isEdit = !!editingItem
     const url = isEdit ? `/api/timetable/classrooms/${editingItem.id}` : `/api/timetable/${id}/classrooms`
-    const res = await apiFetch(url, { method: isEdit ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' },
+    const res = await timetableFetch(url, { method: isEdit ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: fRmName, short: fRmShort, color: fRmColor,
         customFields: fRmCustom ? { note: fRmCustom } : undefined }) })
     if (res.ok) {
@@ -468,7 +473,7 @@ export default function TimetablePage() {
   }
   async function removeClassroom(rmId: string, name: string) {
     const id = ttId(); if (!id) return
-    const res = await apiFetch(`/api/timetable/classrooms/${rmId}`, { method: 'DELETE' })
+    const res = await timetableFetch(`/api/timetable/classrooms/${rmId}`, { method: 'DELETE' })
     if (res.ok) { showToast(`Classroom "${name}" removed.`); await loadTimetable(id) }
     else showToast('Failed to remove classroom.', false)
   }
@@ -476,7 +481,7 @@ export default function TimetablePage() {
     const id = ttId(); if (!id) return
     const isEdit = !!editingItem
     const url = isEdit ? `/api/timetable/teachers/${editingItem.id}` : `/api/timetable/${id}/teachers`
-    const res = await apiFetch(url, { method: isEdit ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' },
+    const res = await timetableFetch(url, { method: isEdit ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ lastName: fTLast, firstName: fTFirst, khmerName: fTKhmer || null, short: fTShort,
         sex: fTSex || null, email: fTEmail || null, phone: fTPhone || null,
         color: fTColor, classTeacherId: fTClassTeacher || null }) })
@@ -492,7 +497,7 @@ export default function TimetablePage() {
   }
   async function removeTeacher(tchId: string, name: string) {
     const id = ttId(); if (!id) return
-    const res = await apiFetch(`/api/timetable/teachers/${tchId}`, { method: 'DELETE' })
+    const res = await timetableFetch(`/api/timetable/teachers/${tchId}`, { method: 'DELETE' })
     if (res.ok) { showToast(`Teacher "${name}" removed.`); await loadTimetable(id) }
     else showToast('Failed to remove teacher.', false)
   }
@@ -500,7 +505,7 @@ export default function TimetablePage() {
     const id = ttId(); if (!id) return
     const isEdit = !!editingItem
     const url = isEdit ? `/api/timetable/lessons/${editingItem.id}` : `/api/timetable/${id}/lessons`
-    const res = await apiFetch(url, { method: isEdit ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' },
+    const res = await timetableFetch(url, { method: isEdit ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ teacherId: fLTeacher, subjectId: fLSubject, classId: fLClass,
         perWeek: fLPerWeek, lessonType: fLType }) })
     if (res.ok) {
@@ -510,14 +515,14 @@ export default function TimetablePage() {
   }
   async function removeLesson(lsnId: string) {
     const id = ttId(); if (!id) return
-    const res = await apiFetch(`/api/timetable/lessons/${lsnId}`, { method: 'DELETE' })
+    const res = await timetableFetch(`/api/timetable/lessons/${lsnId}`, { method: 'DELETE' })
     if (res.ok) { showToast('Lesson contract removed.'); await loadTimetable(id) }
     else showToast('Failed to remove lesson.', false)
   }
   async function handleGenerate() {
     const id = current?.id; if (!id) return
     setGenerating(true)
-    const res = await apiFetch(`/api/timetable/${id}/generate`, { method: 'POST' })
+    const res = await timetableFetch(`/api/timetable/${id}/generate`, { method: 'POST' })
     if (res.ok) {
       const data = await res.json()
       showToast(`Timetable generated — ${data.generated} entries created.`)
@@ -527,7 +532,7 @@ export default function TimetablePage() {
   }
   async function handleSave() {
     if (!current) return
-    const res = await apiFetch(`/api/timetable/${current.id}`, { method: 'PUT',
+    const res = await timetableFetch(`/api/timetable/${current.id}`, { method: 'PUT',
       headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: current.status }) })
     if (res.ok) showToast(t('timetable.saved'))
     else showToast(t('timetable.saveFailed'), false)
@@ -536,7 +541,7 @@ export default function TimetablePage() {
   async function saveSettings() {
     if (!current) return
     setSavingSettings(true)
-    const res = await apiFetch(`/api/timetable/${current.id}`, {
+    const res = await timetableFetch(`/api/timetable/${current.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ periodsPerDay: sPeriods, numberOfDays: sDays, weekend: sWeekend, timeOffRules: serializeTimeOffRules(sTimeOffRules) }),
@@ -564,7 +569,7 @@ export default function TimetablePage() {
       return
     }
     if (!window.confirm(`Delete "${name}"?\n\nThis will permanently remove the timetable and all its subjects, classes, classrooms, teachers, lessons and entries.`)) return
-    const res = await apiFetch(`/api/timetable/${id}`, { method: 'DELETE' })
+    const res = await timetableFetch(`/api/timetable/${id}`, { method: 'DELETE' })
     if (res.ok) {
       showToast(`Timetable "${name}" deleted.`)
       if (current?.id === id) setCurrent(null)
@@ -602,7 +607,7 @@ export default function TimetablePage() {
       showToast(`Conflict: ${lesson.teacher.short} already has ${conflict.subject.short} (${conflict.class.short}) at this slot`, false)
       return false
     }
-    const res = await apiFetch(`/api/timetable/${current.id}/entries`, {
+    const res = await timetableFetch(`/api/timetable/${current.id}/entries`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -627,7 +632,7 @@ export default function TimetablePage() {
   }
 
   async function removeEntry(entry: TEntry) {
-    const res = await apiFetch(`/api/timetable/entries/${entry.id}`, { method: 'DELETE' })
+    const res = await timetableFetch(`/api/timetable/entries/${entry.id}`, { method: 'DELETE' })
     if (res.ok) {
       setCurrent(prev => prev ? { ...prev, entries: prev.entries.filter(e => e.id !== entry.id) } : prev)
     } else {
@@ -692,7 +697,7 @@ export default function TimetablePage() {
     if (!current) return
     setSavingPeriods(true)
     const normalised = periodInputs.map(to24h)
-    const res = await apiFetch(`/api/timetable/${current.id}`, {
+    const res = await timetableFetch(`/api/timetable/${current.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ periodTimes: JSON.stringify(normalised) }),
@@ -804,7 +809,7 @@ export default function TimetablePage() {
             }
             const ok = await placeEntry(cls.id, day, period, lesson, srcId)
             if (ok && srcId) {
-              const delRes = await apiFetch(`/api/timetable/entries/${srcId}`, { method: 'DELETE' })
+              const delRes = await timetableFetch(`/api/timetable/entries/${srcId}`, { method: 'DELETE' })
               if (delRes.ok) setCurrent(prev => prev ? { ...prev, entries: prev.entries.filter(e => e.id !== srcId) } : prev)
             }
           }}
@@ -969,7 +974,7 @@ export default function TimetablePage() {
               <div className="flex flex-col items-center border-r border-gray-200 px-1">
                 <div className="flex items-end gap-1 py-1.5 flex-1">
                   {/* Subjects */}
-                  <button onClick={() => router.push('/admin/timetable/subjects')}
+                  <button onClick={() => router.push(timetablePath('subjects'))}
                     className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-md hover:bg-blue-50 text-blue-700 transition-colors min-w-[44px]">
                     <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
@@ -977,7 +982,7 @@ export default function TimetablePage() {
                     <span className="text-[10px] leading-none">{t('timetable.subjects')}</span>
                   </button>
                   {/* Classes */}
-                  <button onClick={() => router.push('/admin/timetable/classes')}
+                  <button onClick={() => router.push(timetablePath('classes'))}
                     className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-md hover:bg-blue-50 text-blue-700 transition-colors min-w-[44px]">
                     <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
@@ -985,7 +990,7 @@ export default function TimetablePage() {
                     <span className="text-[10px] leading-none">{t('timetable.classes')}</span>
                   </button>
                   {/* Classrooms */}
-                  <button onClick={() => router.push('/admin/timetable/classrooms')}
+                  <button onClick={() => router.push(timetablePath('classrooms'))}
                     className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-md hover:bg-blue-50 text-blue-700 transition-colors min-w-[44px]">
                     <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" />
@@ -993,7 +998,7 @@ export default function TimetablePage() {
                     <span className="text-[10px] leading-none">{t('timetable.rooms')}</span>
                   </button>
                   {/* Teachers */}
-                  <button onClick={() => router.push('/admin/timetable/teachers')}
+                  <button onClick={() => router.push(timetablePath('teachers'))}
                     className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-md hover:bg-blue-50 text-blue-700 transition-colors min-w-[44px]">
                     <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5" />
@@ -1001,7 +1006,7 @@ export default function TimetablePage() {
                     <span className="text-[10px] leading-none">{t('timetable.teachers')}</span>
                   </button>
                   {/* Lessons */}
-                  <button onClick={() => router.push('/admin/timetable/lessons')}
+                  <button onClick={() => router.push(timetablePath('lessons'))}
                     className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-md hover:bg-blue-50 text-blue-700 transition-colors min-w-[44px]">
                     <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
@@ -1080,7 +1085,7 @@ export default function TimetablePage() {
               <div className="flex flex-col items-center border-r border-gray-200 px-1">
                 <div className="flex items-end gap-1 py-1.5 flex-1">
                   {/* Schedule */}
-                  <button onClick={() => router.push('/admin/timetable/schedule')}
+                  <button onClick={() => router.push(timetablePath('schedule'))}
                     className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-md bg-emerald-700 hover:bg-emerald-800 text-white transition-colors min-w-[52px]">
                     <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
@@ -2554,4 +2559,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       {children}
     </div>
   )
+}
+
+export default function TimetablePage() {
+  const searchParams = useSearchParams()
+  return <TimetableWorkspace pluginMode={searchParams.get('source') === 'plugin'} />
 }

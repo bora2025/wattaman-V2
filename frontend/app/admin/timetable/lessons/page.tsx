@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Sidebar from '../../../../components/Sidebar'
 import AuthGuard from '../../../../components/AuthGuard'
 import { adminNav } from '../../../../lib/admin-nav'
 import { apiFetch } from '../../../../lib/api'
+import { pluginTimetableFetch } from '../../../../lib/timetable-plugin-api'
 
 interface TimetableListItem { id: string; name: string; academicYear: string }
 interface TTeacher { id: string; lastName: string; firstName: string; short: string; color: string | null }
@@ -25,6 +26,8 @@ const LESSON_TYPES = [
 ]
 
 export default function LessonsPage() {
+  const pluginMode = useSearchParams().get('source') === 'plugin'
+  const timetableFetch = pluginMode ? pluginTimetableFetch : apiFetch
   const router = useRouter()
   const [timetables, setTimetables] = useState<TimetableListItem[]>([])
   const [selectedTT, setSelectedTT] = useState('')
@@ -50,7 +53,7 @@ export default function LessonsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null)
 
   const fetchTimetables = useCallback(async () => {
-    const res = await apiFetch('/api/timetable')
+    const res = await timetableFetch('/api/timetable')
     if (res.ok) {
       const list = await res.json()
       setTimetables(list)
@@ -61,7 +64,7 @@ export default function LessonsPage() {
   const fetchData = useCallback(async () => {
     if (!selectedTT) return
     setLoading(true)
-    const res = await apiFetch(`/api/timetable/${selectedTT}`)
+    const res = await timetableFetch(`/api/timetable/${selectedTT}`)
     if (res.ok) {
       const tt = await res.json()
       setLessons(tt.lessons ?? [])
@@ -95,7 +98,7 @@ export default function LessonsPage() {
     const url = editing
       ? `/api/timetable/lessons/${editing.id}`
       : `/api/timetable/${selectedTT}/lessons`
-    const res = await apiFetch(url, {
+    const res = await timetableFetch(url, {
       method: editing ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ teacherId: fTeacher, subjectId: fSubject, classId: fClass, perWeek: fPerWeek, lessonType: fType }),
@@ -112,7 +115,7 @@ export default function LessonsPage() {
   }
 
   async function handleDelete(id: string) {
-    await apiFetch(`/api/timetable/lessons/${id}`, { method: 'DELETE' })
+    await timetableFetch(`/api/timetable/lessons/${id}`, { method: 'DELETE' })
     sessionStorage.setItem('timetable_needs_refresh', '1')
     await fetchData(); setDeleteId(null)
   }
@@ -138,7 +141,7 @@ export default function LessonsPage() {
           {/* Header */}
           <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
             <div>
-              <button onClick={() => router.push('/admin/timetable')} className="text-indigo-600 text-sm hover:underline mb-1">← Back to Timetable</button>
+              <button onClick={() => router.push(pluginMode ? '/plugins/wattanam.timetable/timetables' : '/admin/timetable')} className="text-indigo-600 text-sm hover:underline mb-1">← Back to Timetable</button>
               <h1 className="text-xl font-bold text-gray-800">Lesson Contracts</h1>
               <p className="text-sm text-gray-500">Manage teacher–subject–class assignments and lessons per week</p>
             </div>

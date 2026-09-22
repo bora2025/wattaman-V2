@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Sidebar from '../../../../components/Sidebar'
 import AuthGuard from '../../../../components/AuthGuard'
 import { adminNav } from '../../../../lib/admin-nav'
 import { apiFetch } from '../../../../lib/api'
+import { pluginTimetableFetch } from '../../../../lib/timetable-plugin-api'
 
 interface TimetableListItem { id: string; name: string; academicYear: string }
 interface TClassroom { id: string; name: string; short: string; color: string | null }
@@ -16,6 +17,8 @@ const COLOR_PALETTE = [
 ]
 
 export default function ClassroomsPage() {
+  const pluginMode = useSearchParams().get('source') === 'plugin'
+  const timetableFetch = pluginMode ? pluginTimetableFetch : apiFetch
   const router = useRouter()
   const [timetables, setTimetables] = useState<TimetableListItem[]>([])
   const [selectedTT, setSelectedTT] = useState('')
@@ -31,7 +34,7 @@ export default function ClassroomsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null)
 
   const fetchTimetables = useCallback(async () => {
-    const res = await apiFetch('/api/timetable')
+    const res = await timetableFetch('/api/timetable')
     if (res.ok) {
       const list = await res.json()
       setTimetables(list)
@@ -42,7 +45,7 @@ export default function ClassroomsPage() {
   const fetchClassrooms = useCallback(async () => {
     if (!selectedTT) return
     setLoading(true)
-    const res = await apiFetch(`/api/timetable/${selectedTT}`)
+    const res = await timetableFetch(`/api/timetable/${selectedTT}`)
     if (res.ok) { const tt = await res.json(); setClassrooms(tt.classrooms ?? []) }
     setLoading(false)
   }, [selectedTT])
@@ -60,7 +63,7 @@ export default function ClassroomsPage() {
     if (!selectedTT || !fName || !fShort) return
     setSaving(true)
     const url = editing ? `/api/timetable/classrooms/${editing.id}` : `/api/timetable/${selectedTT}/classrooms`
-    await apiFetch(url, {
+    await timetableFetch(url, {
       method: editing ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: fName, short: fShort, color: fColor }),
@@ -70,7 +73,7 @@ export default function ClassroomsPage() {
   }
 
   async function handleDelete(id: string) {
-    await apiFetch(`/api/timetable/classrooms/${id}`, { method: 'DELETE' })
+    await timetableFetch(`/api/timetable/classrooms/${id}`, { method: 'DELETE' })
     sessionStorage.setItem('timetable_needs_refresh', '1')
     await fetchClassrooms(); setDeleteId(null)
   }
@@ -82,7 +85,7 @@ export default function ClassroomsPage() {
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
             <div>
-              <button onClick={() => router.push('/admin/timetable')} className="text-indigo-600 text-sm hover:underline mb-1">← Back to Timetable</button>
+              <button onClick={() => router.push(pluginMode ? '/plugins/wattanam.timetable/timetables' : '/admin/timetable')} className="text-indigo-600 text-sm hover:underline mb-1">← Back to Timetable</button>
               <h1 className="text-xl font-bold text-gray-800">Classrooms</h1>
               <p className="text-sm text-gray-500">Manage classrooms for your timetable</p>
             </div>

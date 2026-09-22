@@ -22,6 +22,10 @@ Source plan: [Wattanam Business Modules to Official Plugins Migration Plan](./mo
 
 ## 3. Wave tracker
 
+Timetable MP-3 extraction has started as a non-cutover first slice; see [Timetable plugin extraction worksheet](./timetable-plugin-extraction.md). The MP-3 gate remains open until full workflow, adoption, and lifecycle evidence exists.
+
+- [~] Timetable plugin source: seven namespaced scheduling tables, permission-gated CRUD, generator preview/atomic save, declarative fallbacks, and the existing rich wizard/entity/schedule/print UI running through plugin APIs. Version 0.1.0 is Stable; 0.1.1 contains the shared rich UI work. Legacy timetable and teacher-attendance routes still serve existing schools; adoption and data cutover remain open.
+
 Planning note: target dates below are execution targets and should be re-baselined after each gate.
 
 | Wave | Status | Owner | Target date | Evidence doc |

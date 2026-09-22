@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 2,
+  "kind": "declarative-ui",
+  "pages": [
+    {
+      "id": "timetables",
+      "title": "Timetables",
+      "routePath": "timetables",
+      "permission": "wattanam.timetable.view",
+      "parameters": [],
+      "dataSources": [
+        { "id": "list", "method": "GET", "path": "timetables", "permission": "wattanam.timetable.view" },
+        { "id": "create", "method": "POST", "path": "timetables", "permission": "wattanam.timetable.manage" }
+      ],
+      "components": [
+        { "id": "heading", "type": "heading", "title": "Timetable" },
+        { "id": "list", "type": "table", "title": "Timetable documents", "source": "list", "fields": [
+          { "id": "name", "label": "Name", "sortable": true },
+          { "id": "academicYear", "label": "Academic year" },
+          { "id": "periodsPerDay", "label": "Periods per day" },
+          { "id": "numberOfDays", "label": "Days per week" },
+          { "id": "status", "label": "Status" }
+        ], "options": { "pageSize": 25, "selectable": false } },
+        { "id": "create-form", "type": "form", "title": "Create timetable", "source": "create", "fields": [
+          { "id": "name", "type": "text", "label": "Name", "required": true },
+          { "id": "short", "type": "text", "label": "Short name" },
+          { "id": "academicYear", "type": "text", "label": "Academic year", "required": true },
+          { "id": "periodsPerDay", "type": "number", "label": "Periods per day", "required": true, "min": 1, "max": 24 },
+          { "id": "numberOfDays", "type": "number", "label": "Days per week", "required": true, "min": 1, "max": 7 }
+        ], "options": { "submitLabel": "Create", "successMessage": "Timetable created" } }
+      ]
+    },
+    {
+      "id": "subjects", "title": "Timetable Subjects", "routePath": "subjects", "permission": "wattanam.timetable.view", "parameters": [],
+      "dataSources": [
+        { "id": "list", "method": "GET", "path": "subjects", "permission": "wattanam.timetable.view" },
+        { "id": "create", "method": "POST", "path": "subjects", "permission": "wattanam.timetable.manage" }
+      ],
+      "components": [
+        { "id": "list", "type": "table", "title": "Subjects", "source": "list", "fields": [
+          { "id": "timetableId", "label": "Timetable ID" }, { "id": "name", "label": "Name" }, { "id": "short", "label": "Short" }, { "id": "color", "label": "Color" }
+        ], "options": { "pageSize": 25, "selectable": false } },
+        { "id": "create-form", "type": "form", "title": "Add subject", "source": "create", "fields": [
+          { "id": "timetableId", "type": "text", "label": "Timetable ID", "required": true },
+          { "id": "name", "type": "text", "label": "Name", "required": true }, { "id": "short", "type": "text", "label": "Short", "required": true },
+          { "id": "color", "type": "text", "label": "Color" }
+        ], "options": { "submitLabel": "Add subject", "successMessage": "Subject added" } }
+      ]
+    },
+    {
+      "id": "classes", "title": "Timetable Classes", "routePath": "classes", "permission": "wattanam.timetable.view", "parameters": [],
+      "dataSources": [
+        { "id": "list", "method": "GET", "path": "classes", "permission": "wattanam.timetable.view" },
+        { "id": "create", "method": "POST", "path": "classes", "permission": "wattanam.timetable.manage" }
+      ],
+      "components": [
+        { "id": "list", "type": "table", "title": "Classes", "source": "list", "fields": [
+          { "id": "timetableId", "label": "Timetable ID" }, { "id": "name", "label": "Name" }, { "id": "short", "label": "Short" }
+        ], "options": { "pageSize": 25, "selectable": false } },
+        { "id": "create-form", "type": "form", "title": "Add class", "source": "create", "fields": [
+          { "id": "timetableId", "type": "text", "label": "Timetable ID", "required": true },
+          { "id": "name", "type": "text", "label": "Name", "required": true }, { "id": "short", "type": "text", "label": "Short", "required": true }
+        ], "options": { "submitLabel": "Add class", "successMessage": "Class added" } }
+      ]
+    },
+    {
+      "id": "classrooms", "title": "Timetable Classrooms", "routePath": "classrooms", "permission": "wattanam.timetable.view", "parameters": [],
+      "dataSources": [
+        { "id": "list", "method": "GET", "path": "classrooms", "permission": "wattanam.timetable.view" },
+        { "id": "create", "method": "POST", "path": "classrooms", "permission": "wattanam.timetable.manage" }
+      ],
+      "components": [
+        { "id": "list", "type": "table", "title": "Classrooms", "source": "list", "fields": [
+          { "id": "timetableId", "label": "Timetable ID" }, { "id": "name", "label": "Name" }, { "id": "short", "label": "Short" }
+        ], "options": { "pageSize": 25, "selectable": false } },
+        { "id": "create-form", "type": "form", "title": "Add classroom", "source": "create", "fields": [
+          { "id": "timetableId", "type": "text", "label": "Timetable ID", "required": true },
+          { "id": "name", "type": "text", "label": "Name", "required": true }, { "id": "short", "type": "text", "label": "Short", "required": true }
+        ], "options": { "submitLabel": "Add classroom", "successMessage": "Classroom added" } }
+      ]
+    },
+    {
+      "id": "teachers", "title": "Timetable Teachers", "routePath": "teachers", "permission": "wattanam.timetable.view", "parameters": [],
+      "dataSources": [
+        { "id": "list", "method": "GET", "path": "teachers", "permission": "wattanam.timetable.view" },
+        { "id": "create", "method": "POST", "path": "teachers", "permission": "wattanam.timetable.manage" }
+      ],
+      "components": [
+        { "id": "list", "type": "table", "title": "Teachers", "source": "list", "fields": [
+          { "id": "timetableId", "label": "Timetable ID" }, { "id": "firstName", "label": "First name" }, { "id": "lastName", "label": "Last name" }, { "id": "short", "label": "Short" }
+        ], "options": { "pageSize": 25, "selectable": false } },
+        { "id": "create-form", "type": "form", "title": "Add teacher", "source": "create", "fields": [
+          { "id": "timetableId", "type": "text", "label": "Timetable ID", "required": true },
+          { "id": "firstName", "type": "text", "label": "First name", "required": true },
+          { "id": "lastName", "type": "text", "label": "Last name", "required": true },
+          { "id": "short", "type": "text", "label": "Short", "required": true }
+        ], "options": { "submitLabel": "Add teacher", "successMessage": "Teacher added" } }
+      ]
+    },
+    {
+      "id": "lessons", "title": "Timetable Lessons", "routePath": "lessons", "permission": "wattanam.timetable.view", "parameters": [],
+      "dataSources": [
+        { "id": "list", "method": "GET", "path": "lessons", "permission": "wattanam.timetable.view" },
+        { "id": "create", "method": "POST", "path": "lessons", "permission": "wattanam.timetable.manage" }
+      ],
+      "components": [
+        { "id": "list", "type": "table", "title": "Lessons", "source": "list", "fields": [
+          { "id": "timetableId", "label": "Timetable ID" }, { "id": "teacherId", "label": "Teacher ID" }, { "id": "subjectId", "label": "Subject ID" }, { "id": "classId", "label": "Class ID" }, { "id": "perWeek", "label": "Per week" }
+        ], "options": { "pageSize": 25, "selectable": false } },
+        { "id": "create-form", "type": "form", "title": "Add lesson", "source": "create", "fields": [
+          { "id": "timetableId", "type": "text", "label": "Timetable ID", "required": true },
+          { "id": "teacherId", "type": "text", "label": "Teacher ID", "required": true },
+          { "id": "subjectId", "type": "text", "label": "Subject ID", "required": true },
+          { "id": "classId", "type": "text", "label": "Class ID", "required": true },
+          { "id": "perWeek", "type": "number", "label": "Lessons per week", "required": true, "min": 1, "max": 168 }
+        ], "options": { "submitLabel": "Add lesson", "successMessage": "Lesson added" } }
+      ]
+    },
+    {
+      "id": "entries", "title": "Schedule Entries", "routePath": "entries", "permission": "wattanam.timetable.view", "parameters": [],
+      "dataSources": [
+        { "id": "list", "method": "GET", "path": "entries", "permission": "wattanam.timetable.view" },
+        { "id": "create", "method": "POST", "path": "entries", "permission": "wattanam.timetable.manage" }
+      ],
+      "components": [
+        { "id": "list", "type": "table", "title": "Scheduled periods", "source": "list", "fields": [
+          { "id": "timetableId", "label": "Timetable ID" }, { "id": "classId", "label": "Class ID" }, { "id": "teacherId", "label": "Teacher ID" }, { "id": "day", "label": "Day" }, { "id": "period", "label": "Period" }
+        ], "options": { "pageSize": 25, "selectable": false } },
+        { "id": "create-form", "type": "form", "title": "Schedule period", "source": "create", "fields": [
+          { "id": "timetableId", "type": "text", "label": "Timetable ID", "required": true },
+          { "id": "classId", "type": "text", "label": "Class ID", "required": true },
+          { "id": "teacherId", "type": "text", "label": "Teacher ID", "required": true },
+          { "id": "subjectId", "type": "text", "label": "Subject ID", "required": true },
+          { "id": "classroomId", "type": "text", "label": "Classroom ID" },
+          { "id": "day", "type": "number", "label": "Day (Monday=1)", "required": true, "min": 1, "max": 7 },
+          { "id": "period", "type": "number", "label": "Period", "required": true, "min": 1, "max": 24 }
+        ], "options": { "submitLabel": "Schedule", "successMessage": "Period scheduled" } }
+      ]
+    }
+  ]
+}

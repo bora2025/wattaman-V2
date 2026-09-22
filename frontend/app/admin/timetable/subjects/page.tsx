@@ -7,6 +7,7 @@ import AuthGuard from '../../../../components/AuthGuard'
 import { adminNav } from '../../../../lib/admin-nav'
 import { apiFetch } from '../../../../lib/api'
 import { useLanguage } from '../../../../lib/i18n'
+import { pluginTimetableFetch } from '../../../../lib/timetable-plugin-api'
 
 interface TimetableListItem { id: string; name: string; academicYear: string }
 interface TSubject {
@@ -20,6 +21,8 @@ const COLOR_PALETTE = [
 ]
 
 export default function SubjectsPage() {
+  const pluginMode = useSearchParams().get('source') === 'plugin'
+  const timetableFetch = pluginMode ? pluginTimetableFetch : apiFetch
   const { t } = useLanguage()
   const router = useRouter()
   const [timetables, setTimetables] = useState<TimetableListItem[]>([])
@@ -38,7 +41,7 @@ export default function SubjectsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null)
 
   const fetchTimetables = useCallback(async () => {
-    const res = await apiFetch('/api/timetable')
+    const res = await timetableFetch('/api/timetable')
     if (res.ok) {
       const list = await res.json()
       setTimetables(list)
@@ -49,7 +52,7 @@ export default function SubjectsPage() {
   const fetchSubjects = useCallback(async () => {
     if (!selectedTT) return
     setLoading(true)
-    const res = await apiFetch(`/api/timetable/${selectedTT}`)
+    const res = await timetableFetch(`/api/timetable/${selectedTT}`)
     if (res.ok) {
       const tt = await res.json()
       setSubjects(tt.subjects ?? [])
@@ -74,7 +77,7 @@ export default function SubjectsPage() {
     setSaving(true)
     const url = editing ? `/api/timetable/subjects/${editing.id}` : `/api/timetable/${selectedTT}/subjects`
     const method = editing ? 'PUT' : 'POST'
-    await apiFetch(url, {
+    await timetableFetch(url, {
       method, headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: fName, short: fShort, color: fColor, classroomCount: fRooms }),
     })
@@ -85,7 +88,7 @@ export default function SubjectsPage() {
   }
 
   async function handleDelete(id: string) {
-    await apiFetch(`/api/timetable/subjects/${id}`, { method: 'DELETE' })
+    await timetableFetch(`/api/timetable/subjects/${id}`, { method: 'DELETE' })
     sessionStorage.setItem('timetable_needs_refresh', '1')
     await fetchSubjects()
     setDeleteId(null)
@@ -99,7 +102,7 @@ export default function SubjectsPage() {
           {/* Header */}
           <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
             <div>
-              <button onClick={() => router.push('/admin/timetable')} className="text-indigo-600 text-sm hover:underline mb-1 flex items-center gap-1">
+              <button onClick={() => router.push(pluginMode ? '/plugins/wattanam.timetable/timetables' : '/admin/timetable')} className="text-indigo-600 text-sm hover:underline mb-1 flex items-center gap-1">
                 ← Back to Timetable
               </button>
               <h1 className="text-xl font-bold text-gray-800">Subjects</h1>

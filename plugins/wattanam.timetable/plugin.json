@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "id": "wattanam.timetable",
+  "name": "Timetable",
+  "description": "School timetable documents and scheduling configuration.",
+  "version": "0.1.1",
+  "requiresCore": ">=0.1.0-0 <1.0.0",
+  "publisher": "wattanam",
+  "license": "commercial",
+  "backendEntry": "backend/index.js",
+  "frontendEntry": "frontend/page.json",
+  "sdkVersion": "1.1.0",
+  "runtimeVersion": "1.0.0",
+  "capabilities": ["api.routes", "database.read", "database.write", "events.durable", "navigation.register", "permissions.register", "ui.pages"],
+  "permissions": ["wattanam.timetable.view", "wattanam.timetable.manage"],
+  "dependencies": {},
+  "optionalDependencies": {},
+  "migrations": [
+    { "id": "001_create_timetable", "path": "migrations/001_create_timetable.sql", "checksum": "f483ddb8822412720ffb4e18671632c15a73d75ded69fd92da2d59de9603197a", "destructive": false },
+    { "id": "002_create_subject", "path": "migrations/002_create_subject.sql", "checksum": "946870cddd183858ebd90a2aab184472902b12be2ac8fa0f6b4eccd41c68bedc", "destructive": false },
+    { "id": "003_create_class", "path": "migrations/003_create_class.sql", "checksum": "762425d886492bac3d1137f8f68dd5c47db29518e1824ecfa5dff452dbb4815c", "destructive": false },
+    { "id": "004_create_classroom", "path": "migrations/004_create_classroom.sql", "checksum": "f11111e4efc382c533a1980e6e8f222ae01044272cd9b98f8f3b6f95a193d10f", "destructive": false },
+    { "id": "005_create_teacher", "path": "migrations/005_create_teacher.sql", "checksum": "1a65f591adeeebc4a46c105e45e10f4b8401d508aaa8a6c7d23d08ca308edba8", "destructive": false },
+    { "id": "006_create_lesson", "path": "migrations/006_create_lesson.sql", "checksum": "e04a89e1cd370f9f7825f9d77c305a781b65dda63660a30438330d86d5d9b3d6", "destructive": false },
+    { "id": "007_create_entry", "path": "migrations/007_create_entry.sql", "checksum": "8fceabd21c462d7d0c64af591b08addafba6df4779cc53710317ec68eb8cbab9", "destructive": false }
+  ],
+  "navigation": [
+    { "id": "timetables", "label": "Timetable", "href": "/plugins/wattanam.timetable/timetables", "permission": "wattanam.timetable.view" },
+    { "id": "subjects", "label": "Timetable Subjects", "href": "/plugins/wattanam.timetable/subjects", "permission": "wattanam.timetable.view" },
+    { "id": "classes", "label": "Timetable Classes", "href": "/plugins/wattanam.timetable/classes", "permission": "wattanam.timetable.view" },
+    { "id": "classrooms", "label": "Classrooms", "href": "/plugins/wattanam.timetable/classrooms", "permission": "wattanam.timetable.view" },
+    { "id": "teachers", "label": "Timetable Teachers", "href": "/plugins/wattanam.timetable/teachers", "permission": "wattanam.timetable.view" },
+    { "id": "lessons", "label": "Lessons", "href": "/plugins/wattanam.timetable/lessons", "permission": "wattanam.timetable.view" },
+    { "id": "entries", "label": "Schedule", "href": "/plugins/wattanam.timetable/schedule", "permission": "wattanam.timetable.view" }
+  ],
+  "supportedLanguages": ["en", "km"]
+}

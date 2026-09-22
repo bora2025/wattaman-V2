@@ -4,7 +4,9 @@ import { useState, useEffect, useCallback, useRef, DragEvent } from 'react'
 import Sidebar from '../../../../components/Sidebar'
 import AuthGuard from '../../../../components/AuthGuard'
 import { adminNav } from '../../../../lib/admin-nav'
+import { useSearchParams } from 'next/navigation'
 import { apiFetch } from '../../../../lib/api'
+import { pluginTimetableFetch } from '../../../../lib/timetable-plugin-api'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -57,7 +59,8 @@ function badge(color: string | null, text: string) {
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
-export default function SchedulePage() {
+function TimetableScheduleWorkspace({ pluginMode = false }: { pluginMode?: boolean }) {
+  const timetableFetch = pluginMode ? pluginTimetableFetch : apiFetch
   const [timetables, setTimetables] = useState<TimetableListItem[]>([])
   const [selectedId, setSelectedId] = useState('')
   const [tt, setTt] = useState<Timetable | null>(null)
@@ -85,7 +88,7 @@ export default function SchedulePage() {
   // ─── Data loading ──────────────────────────────────────────────────
 
   const fetchList = useCallback(async () => {
-    const res = await apiFetch('/api/timetable')
+    const res = await timetableFetch('/api/timetable')
     if (res.ok) {
       const list: TimetableListItem[] = await res.json()
       setTimetables(list)
@@ -95,7 +98,7 @@ export default function SchedulePage() {
 
   const loadTt = useCallback(async (id: string) => {
     setLoading(true)
-    const res = await apiFetch(`/api/timetable/${id}`)
+    const res = await timetableFetch(`/api/timetable/${id}`)
     if (res.ok) setTt(await res.json())
     setLoading(false)
   }, [])
@@ -162,7 +165,7 @@ export default function SchedulePage() {
         showToast('That slot is already occupied. Remove the existing card first.', false)
         setSaving(false); return
       }
-      const res = await apiFetch(`/api/timetable/${tt.id}/entries`, {
+      const res = await timetableFetch(`/api/timetable/${tt.id}/entries`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           lessonId: lesson.id, classId: lesson.classId,
@@ -192,8 +195,8 @@ export default function SchedulePage() {
       if (!oldEntry) { setSaving(false); return }
 
       // Delete old, create new
-      await apiFetch(`/api/timetable/entries/${payload.entryId}`, { method: 'DELETE' })
-      const res = await apiFetch(`/api/timetable/${tt.id}/entries`, {
+      await timetableFetch(`/api/timetable/entries/${payload.entryId}`, { method: 'DELETE' })
+      const res = await timetableFetch(`/api/timetable/${tt.id}/entries`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           lessonId: oldEntry.lessonId, classId: oldEntry.classId,
@@ -212,7 +215,7 @@ export default function SchedulePage() {
   async function removeEntry(entryId: string) {
     if (!tt) return
     setSaving(true)
-    const res = await apiFetch(`/api/timetable/entries/${entryId}`, { method: 'DELETE' })
+    const res = await timetableFetch(`/api/timetable/entries/${entryId}`, { method: 'DELETE' })
     if (res.ok) { showToast('Card removed from schedule.'); await loadTt(tt.id) }
     else showToast('Failed to remove card.', false)
     setSaving(false)
@@ -223,7 +226,7 @@ export default function SchedulePage() {
     setSaving(true)
     const entry = tt.entries.find(e => e.id === entryId)
     if (!entry) { setSaving(false); return }
-    const res = await apiFetch(`/api/timetable/${tt.id}/entries`, {
+    const res = await timetableFetch(`/api/timetable/${tt.id}/entries`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         lessonId: entry.lessonId, classId: entry.classId,
@@ -511,7 +514,7 @@ export default function SchedulePage() {
                   Saving…
                 </span>
               )}
-              <a href="/admin/timetable" className="text-xs text-indigo-600 hover:underline">← Back to Timetable</a>
+              <a href={pluginMode ? '/plugins/wattanam.timetable/timetables' : '/admin/timetable'} className="text-xs text-indigo-600 hover:underline">← Back to Timetable</a>
             </div>
           </div>
 
@@ -603,6 +606,11 @@ export default function SchedulePage() {
       </div>
     </AuthGuard>
   )
+}
+
+export default function SchedulePage() {
+  const searchParams = useSearchParams()
+  return <TimetableScheduleWorkspace pluginMode={searchParams.get('source') === 'plugin'} />
 }
 
 // ─── Entry Card Component ─────────────────────────────────────────────────────
