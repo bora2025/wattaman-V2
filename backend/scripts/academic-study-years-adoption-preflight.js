@@ -1,10 +1,10 @@
 'use strict';
 
-// Read-only prerequisite for moving legacy study years into the Academic Management plugin
+// Read-only prerequisite for moving legacy study years into the Attendance Manager plugin
 // namespace. The report includes only counts, blockers, and a deterministic hash.
 const crypto = require('node:crypto');
 
-const TARGET_TABLE = 'plugin_wattanam_academic_management_study_year';
+const TARGET_TABLE = 'plugin_wattanam_attendance_manager_study_year';
 
 function updateHash(hash, row) {
   hash.update(JSON.stringify([
@@ -61,7 +61,7 @@ async function inspect(adapter, { batchSize = 250 } = {}) {
   if (target.exists && Number(target.rowCount) > 0) blockers.push(`target table ${TARGET_TABLE} is not empty`);
 
   return {
-    format: 'wattanam-academic-study-years-adoption-preflight-v1',
+    format: 'wattanam-attendance-study-years-adoption-preflight-v1',
     readOnly: true,
     ready: blockers.length === 0,
     blockers,
@@ -108,7 +108,7 @@ async function main() {
 
 if (require.main === module) {
   main().catch((error) => {
-    process.stderr.write(`Academic study-year preflight failed: ${error.message}\n`);
+    process.stderr.write(`Attendance study-year preflight failed: ${error.message}\n`);
     process.exitCode = 1;
   });
 }

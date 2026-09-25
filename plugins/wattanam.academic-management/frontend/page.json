@@ -9,7 +9,8 @@
       "permission": "wattanam.academic-management.view",
       "parameters": [],
       "dataSources": [
-        { "id": "departments", "method": "GET", "path": "departments", "permission": "wattanam.academic-management.view" }
+        { "id": "departments", "method": "GET", "path": "departments", "permission": "wattanam.academic-management.view" },
+        { "id": "createDepartment", "method": "POST", "path": "departments", "permission": "wattanam.academic-management.manage" }
       ],
       "components": [
         { "id": "heading", "type": "heading", "title": "Departments" },
@@ -17,106 +18,99 @@
           { "id": "name", "label": "Name", "sortable": true, "filterable": true },
           { "id": "nameKh", "label": "Khmer name", "sortable": true },
           { "id": "description", "label": "Description" }
-        ], "options": { "pageSize": 20, "selectable": false } }
+        ], "options": { "pageSize": 20, "selectable": false, "rowRoute": "departments/edit/:id", "rowParameterMap": { "id": "id" } } },
+        { "id": "department-create-form", "type": "form", "title": "Create department", "source": "createDepartment", "fields": [
+          { "id": "name", "type": "text", "label": "Name", "required": true, "minLength": 1, "maxLength": 120 },
+          { "id": "nameKh", "type": "text", "label": "Khmer name", "maxLength": 120 },
+          { "id": "description", "type": "textarea", "label": "Description", "maxLength": 2000 }
+        ], "options": { "submitLabel": "Create", "successMessage": "Department created" } }
       ]
     },
     {
-      "id": "study-years",
-      "title": "Study Years",
-      "routePath": "study-years",
+      "id": "department-edit",
+      "title": "Edit Department",
+      "routePath": "departments/edit/:id",
+      "permission": "wattanam.academic-management.manage",
+      "parameters": [{ "name": "id", "type": "string", "maximumLength": 64 }],
+      "dataSources": [
+        { "id": "department", "method": "GET", "path": "departments/:id", "permission": "wattanam.academic-management.view" },
+        { "id": "saveDepartment", "method": "PUT", "path": "departments/:id", "permission": "wattanam.academic-management.manage" }
+      ],
+      "components": [
+        { "id": "heading", "type": "heading", "title": "Edit department" },
+        { "id": "department-edit-form", "type": "form", "title": "Department details", "source": "saveDepartment", "fields": [
+          { "id": "name", "type": "text", "label": "Name", "required": true, "minLength": 1, "maxLength": 120 },
+          { "id": "nameKh", "type": "text", "label": "Khmer name", "maxLength": 120 },
+          { "id": "description", "type": "textarea", "label": "Description", "maxLength": 2000 }
+        ], "options": { "initialSource": "department", "submitLabel": "Save", "successMessage": "Department saved" } }
+      ]
+    },
+    {
+      "id": "subjects",
+      "title": "Subjects",
+      "routePath": "subjects",
       "permission": "wattanam.academic-management.view",
       "parameters": [],
       "dataSources": [
-        { "id": "studyYears", "method": "GET", "path": "study-years", "permission": "wattanam.academic-management.view" },
-        { "id": "createStudyYear", "method": "POST", "path": "study-years", "permission": "wattanam.academic-management.manage" }
+        { "id": "subjects", "method": "GET", "path": "subjects", "permission": "wattanam.academic-management.view" },
+        { "id": "createSubject", "method": "POST", "path": "subjects", "permission": "wattanam.academic-management.manage" }
       ],
       "components": [
-        { "id": "heading", "type": "heading", "title": "Study Years" },
+        { "id": "heading", "type": "heading", "title": "Teaching subjects" },
         {
-          "id": "study-years-table",
+          "id": "subjects-table",
           "type": "table",
-          "title": "Study Years",
-          "source": "studyYears",
+          "title": "Subjects",
+          "source": "subjects",
           "fields": [
-            { "id": "year", "label": "Year", "sortable": true, "filterable": true },
-            { "id": "label", "label": "Label", "sortable": true },
-            { "id": "isCurrent", "label": "Current", "sortable": true, "format": "boolean" },
-            { "id": "startDate", "label": "Start date", "sortable": true, "format": "date" },
-            { "id": "endDate", "label": "End date", "sortable": true, "format": "date" }
+            { "id": "code", "label": "Code", "sortable": true, "filterable": true },
+            { "id": "name", "label": "Name", "sortable": true, "filterable": true },
+            { "id": "nameKh", "label": "Khmer name", "sortable": true },
+            { "id": "description", "label": "Description" },
+            { "id": "active", "label": "Active", "format": "boolean", "sortable": true }
           ],
-          "options": { "pageSize": 20, "selectable": false }
+          "options": { "pageSize": 20, "selectable": false, "rowRoute": "subjects/edit/:id", "rowParameterMap": { "id": "id" } }
         },
         {
-          "id": "study-year-create-form",
+          "id": "subject-create-form",
           "type": "form",
-          "title": "Create study year",
-          "source": "createStudyYear",
+          "title": "Create subject",
+          "source": "createSubject",
           "fields": [
-            { "id": "year", "type": "number", "label": "Year", "required": true, "min": 2000, "max": 2100 },
-            { "id": "label", "type": "text", "label": "Label", "required": true, "minLength": 1, "maxLength": 120 },
-            { "id": "startDate", "type": "date", "label": "Start date" },
-            { "id": "endDate", "type": "date", "label": "End date" },
-            { "id": "schoolName", "type": "text", "label": "School name", "maxLength": 200 },
-            { "id": "logoUrl", "type": "text", "label": "Logo URL", "maxLength": 500 }
+            { "id": "code", "type": "text", "label": "Code", "required": true, "minLength": 1, "maxLength": 32 },
+            { "id": "name", "type": "text", "label": "Name", "required": true, "minLength": 1, "maxLength": 120 },
+            { "id": "nameKh", "type": "text", "label": "Khmer name", "maxLength": 120 },
+            { "id": "description", "type": "textarea", "label": "Description", "maxLength": 2000 }
           ],
-          "options": { "submitLabel": "Create", "successMessage": "Study year created" }
+          "options": { "submitLabel": "Create", "successMessage": "Subject created" }
         }
       ]
     },
     {
-      "id": "study-year-detail",
-      "title": "Study Year",
-      "routePath": "study-years/:id",
-      "permission": "wattanam.academic-management.view",
-      "parameters": [{ "name": "id", "type": "uuid", "maximumLength": 36 }],
-      "dataSources": [
-        { "id": "studyYear", "method": "GET", "path": "study-years/:id", "permission": "wattanam.academic-management.view" }
-      ],
-      "components": [
-        { "id": "heading", "type": "heading", "title": "Study Year" },
-        {
-          "id": "study-year-detail-card",
-          "type": "detail",
-          "title": "Details",
-          "source": "studyYear",
-          "fields": [
-            { "label": "Year", "path": "year" },
-            { "label": "Label", "path": "label" },
-            { "label": "Current", "path": "isCurrent", "format": "boolean" },
-            { "label": "Start date", "path": "startDate", "format": "date" },
-            { "label": "End date", "path": "endDate", "format": "date" },
-            { "label": "School name", "path": "schoolName" },
-            { "label": "Logo URL", "path": "logoUrl" }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "study-year-edit",
-      "title": "Edit Study Year",
-      "routePath": "study-years/edit/:id",
+      "id": "subject-edit",
+      "title": "Edit Subject",
+      "routePath": "subjects/edit/:id",
       "permission": "wattanam.academic-management.manage",
-      "parameters": [{ "name": "id", "type": "uuid", "maximumLength": 36 }],
+      "parameters": [{ "name": "id", "type": "string", "maximumLength": 64 }],
       "dataSources": [
-        { "id": "studyYear", "method": "GET", "path": "study-years/:id", "permission": "wattanam.academic-management.view" },
-        { "id": "saveStudyYear", "method": "PUT", "path": "study-years/:id", "permission": "wattanam.academic-management.manage" }
+        { "id": "subject", "method": "GET", "path": "subjects/:id", "permission": "wattanam.academic-management.view" },
+        { "id": "saveSubject", "method": "PUT", "path": "subjects/:id", "permission": "wattanam.academic-management.manage" }
       ],
       "components": [
-        { "id": "heading", "type": "heading", "title": "Edit Study Year" },
+        { "id": "heading", "type": "heading", "title": "Edit teaching subject" },
         {
-          "id": "study-year-edit-form",
+          "id": "subject-edit-form",
           "type": "form",
-          "title": "Edit study year",
-          "source": "saveStudyYear",
+          "title": "Subject details",
+          "source": "saveSubject",
           "fields": [
-            { "id": "year", "type": "number", "label": "Year", "required": true, "min": 2000, "max": 2100 },
-            { "id": "label", "type": "text", "label": "Label", "required": true, "minLength": 1, "maxLength": 120 },
-            { "id": "startDate", "type": "date", "label": "Start date" },
-            { "id": "endDate", "type": "date", "label": "End date" },
-            { "id": "schoolName", "type": "text", "label": "School name", "maxLength": 200 },
-            { "id": "logoUrl", "type": "text", "label": "Logo URL", "maxLength": 500 }
+            { "id": "code", "type": "text", "label": "Code", "required": true, "minLength": 1, "maxLength": 32 },
+            { "id": "name", "type": "text", "label": "Name", "required": true, "minLength": 1, "maxLength": 120 },
+            { "id": "nameKh", "type": "text", "label": "Khmer name", "maxLength": 120 },
+            { "id": "description", "type": "textarea", "label": "Description", "maxLength": 2000 },
+            { "id": "active", "type": "checkbox", "label": "Active" }
           ],
-          "options": { "initialSource": "studyYear", "submitLabel": "Save", "successMessage": "Study year saved" }
+          "options": { "initialSource": "subject", "submitLabel": "Save", "successMessage": "Subject saved" }
         }
       ]
     },
@@ -279,7 +273,9 @@
       "dataSources": [
         { "id": "class", "method": "GET", "path": "classes/:id", "permission": "wattanam.academic-management.view" },
         { "id": "students", "method": "GET", "path": "classes/:id/students", "permission": "wattanam.academic-management.view" },
-        { "id": "addStudent", "method": "POST", "path": "classes/:id/students", "permission": "wattanam.academic-management.manage" }
+        { "id": "addStudent", "method": "POST", "path": "classes/:id/students", "permission": "wattanam.academic-management.manage" },
+        { "id": "removeStudent", "method": "DELETE", "path": "classes/:id/students/:studentId", "parameters": ["studentId"], "autoload": false, "permission": "wattanam.academic-management.manage" },
+        { "id": "cleanupOrphanedStudents", "method": "POST", "path": "classes/cleanup-orphaned-students", "permission": "wattanam.academic-management.manage" }
       ],
       "components": [
         { "id": "heading", "type": "heading", "title": "Class Students" },
@@ -295,7 +291,38 @@
             { "id": "user.phone", "label": "Phone", "path": "user.phone" },
             { "id": "nameKh", "label": "Khmer name" }
           ],
-          "options": { "pageSize": 20, "selectable": false }
+          "options": {
+            "pageSize": 20,
+            "selectable": true,
+            "rowRoute": "classes/:id/students/:studentId",
+            "rowParameterMap": { "studentId": "id" }
+          }
+        },
+        {
+          "id": "student-actions",
+          "type": "actions",
+          "options": {
+            "actions": [
+              {
+                "id": "remove-selected-students",
+                "label": "Remove selected students",
+                "mode": "bulk",
+                "source": "removeStudent",
+                "selectionSource": "students",
+                "idParameter": "studentId",
+                "confirmation": "End the selected students' current class enrollments? Their profiles, accounts, and history will be preserved.",
+                "destructive": true
+              },
+              {
+                "id": "cleanup-orphaned-students",
+                "label": "Clean up orphaned students",
+                "mode": "single",
+                "source": "cleanupOrphanedStudents",
+                "confirmation": "Delete plugin profiles that have never had an enrollment? Core accounts are preserved.",
+                "destructive": true
+              }
+            ]
+          }
         },
         {
           "id": "add-student-form",
@@ -306,6 +333,46 @@
             { "id": "studentId", "type": "text", "label": "Student user ID", "required": true, "maxLength": 36 }
           ],
           "options": { "submitLabel": "Add", "successMessage": "Student added" }
+        }
+      ]
+    },
+    {
+      "id": "class-student-edit",
+      "title": "Edit Student",
+      "routePath": "classes/:id/students/:studentId",
+      "permission": "wattanam.academic-management.manage",
+      "parameters": [
+        { "name": "id", "type": "uuid", "maximumLength": 36 },
+        { "name": "studentId", "type": "uuid", "maximumLength": 36 }
+      ],
+      "dataSources": [
+        { "id": "student", "method": "GET", "path": "classes/:id/students/:studentId", "permission": "wattanam.academic-management.view" },
+        { "id": "saveStudent", "method": "PATCH", "path": "classes/:id/students/:studentId", "permission": "wattanam.academic-management.manage" }
+      ],
+      "components": [
+        { "id": "heading", "type": "heading", "title": "Edit Student" },
+        {
+          "id": "student-editor",
+          "type": "form",
+          "title": "Student profile",
+          "source": "saveStudent",
+          "fields": [
+            { "id": "nameKh", "type": "text", "label": "Khmer name", "maxLength": 160 },
+            { "id": "studentNumber", "type": "text", "label": "Student number", "maxLength": 80 },
+            { "id": "sex", "type": "select", "label": "Sex", "options": [
+              { "label": "Not specified", "value": "" },
+              { "label": "Male", "value": "MALE" },
+              { "label": "Female", "value": "FEMALE" },
+              { "label": "Other", "value": "OTHER" }
+            ] },
+            { "id": "dateOfBirth", "type": "date", "label": "Date of birth" },
+            { "id": "address", "type": "textarea", "label": "Address", "maxLength": 1000 },
+            { "id": "generation", "type": "text", "label": "Generation", "maxLength": 120 },
+            { "id": "photo", "type": "text", "label": "Photo URL", "maxLength": 500 },
+            { "id": "parentId", "type": "text", "label": "Parent user ID", "maxLength": 36 },
+            { "id": "customFieldValues", "type": "json", "label": "Custom fields" }
+          ],
+          "options": { "initialSource": "student", "submitLabel": "Save student", "successMessage": "Student updated" }
         }
       ]
     },

@@ -14,16 +14,16 @@ function parseInput(env) {
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug || '') || slug.length > 80) {
     throw new Error('ACADEMIC_SCHOOL_SLUG is invalid');
   }
-  if (env.ACADEMIC_STUDY_YEARS_ROLLBACK_DRILL !== 'true') {
-    throw new Error('ACADEMIC_STUDY_YEARS_ROLLBACK_DRILL=true is required');
+  if ((env.ATTENDANCE_STUDY_YEARS_ROLLBACK_DRILL ?? env.ACADEMIC_STUDY_YEARS_ROLLBACK_DRILL) !== 'true') {
+    throw new Error('ATTENDANCE_STUDY_YEARS_ROLLBACK_DRILL=true is required');
   }
   return { slug };
 }
 
-function routingRegistry(owner = process.env.ACADEMIC_STUDY_YEARS_ROUTE_OWNER) {
+function routingRegistry(owner = process.env.ATTENDANCE_STUDY_YEARS_ROUTE_OWNER ?? process.env.ACADEMIC_STUDY_YEARS_ROUTE_OWNER) {
   const value = String(owner || 'legacy').trim().toLowerCase();
   if (value !== 'legacy' && value !== 'plugin') {
-    throw new Error('ACADEMIC_STUDY_YEARS_ROUTE_OWNER must be legacy or plugin');
+    throw new Error('ATTENDANCE_STUDY_YEARS_ROUTE_OWNER must be legacy or plugin');
   }
   return {
     routeOwner: value,
@@ -39,7 +39,7 @@ async function drill({ adapter, directory, backupName, slug, registry = routingR
     throw new Error(`study-year rollback drill is blocked: ${blockers.join('; ')}`);
   }
 
-  const identity = `academic-study-years:${slug}:${preflight.source.sha256}:${backup.sha256}`;
+  const identity = `attendance-study-years:${slug}:${preflight.source.sha256}:${backup.sha256}`;
   const file = journalPath(directory, slug);
   if (!fs.existsSync(file)) throw new Error('study-years adoption journal is absent');
   const journal = loadJournal(file, identity);
@@ -55,7 +55,7 @@ async function drill({ adapter, directory, backupName, slug, registry = routingR
   });
 
   return {
-    format: 'wattanam-academic-study-years-rollback-drill-v1',
+    format: 'wattanam-attendance-study-years-rollback-drill-v1',
     rolledBack: rolled.stage === 'rolled_back',
     schoolSlug: slug,
     source: preflight.source,
@@ -112,7 +112,7 @@ async function main() {
 
 if (require.main === module) {
   main().catch((error) => {
-    process.stderr.write(`Academic study-year rollback drill failed: ${error.message}\n`);
+    process.stderr.write(`Attendance study-year rollback drill failed: ${error.message}\n`);
     process.exitCode = 1;
   });
 }

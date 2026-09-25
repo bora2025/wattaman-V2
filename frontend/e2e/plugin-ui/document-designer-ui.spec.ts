@@ -18,7 +18,7 @@ const template = {
   isActive: true,
   updatedAt: '2026-09-15T09:00:00.000Z',
   createdAt: '2026-09-15T08:00:00.000Z',
-  design: { width: 85, height: 54 },
+  design: { page: { width: 400, height: 240, background: '#ffffff' }, elements: [{ id: 'name', type: 'text', x: 20, y: 20, width: 180, height: 40, rotation: 0, text: 'Student name', color: '#111827', fontSize: 18, fontWeight: 'normal', textAlign: 'left' }] },
 };
 
 test.beforeEach(async ({ page }) => {
@@ -69,17 +69,32 @@ test('renders document-designer detail page route via plugin host', async ({ pag
   await expect(page.getByRole('button', { name: 'Save design' })).toHaveCount(0);
 });
 
-test('edits a design object through a permission-separated declarative page', async ({ page }) => {
+test('moves and resizes a bounded design element through the host visual editor', async ({ page }) => {
   await page.goto('/plugins/wattanam.document-designer/templates/edit/template-1');
   await expect(page.getByRole('heading', { name: 'Edit document template' })).toBeVisible();
-  await expect(page.getByLabel('Design JSON')).toHaveValue(/"width": 85/);
-  await page.getByLabel('Design JSON').fill('{broken');
-  await page.getByRole('button', { name: 'Save design' }).click();
-  await expect(page.getByText('Enter valid JSON.')).toBeVisible();
+  const element = page.getByRole('button', { name: 'text name' });
+  const box = await element.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + 40, box!.y + 20);
+  await page.mouse.down();
+  await page.mouse.move(box!.x + 80, box!.y + 50);
+  await page.mouse.up();
+  await expect(page.getByLabel('x', { exact: true })).toHaveValue('60');
+  await expect(page.getByLabel('y', { exact: true })).toHaveValue('50');
 
-  await page.getByLabel('Design JSON').fill('{"width": 90, "height": 54}');
+  const resize = page.getByRole('separator', { name: 'Resize name' });
+  const handle = await resize.boundingBox();
+  await page.mouse.move(handle!.x + 4, handle!.y + 4);
+  await page.mouse.down();
+  await page.mouse.move(handle!.x + 34, handle!.y + 24);
+  await page.mouse.up();
+  await expect(page.getByLabel('width', { exact: true })).toHaveValue('210');
+  await expect(page.getByLabel('height', { exact: true })).toHaveValue('60');
+
   const request = page.waitForRequest((candidate) => candidate.method() === 'PATCH' && candidate.url().endsWith('/templates/template-1'));
   await page.getByRole('button', { name: 'Save design' }).click();
-  expect((await request).postDataJSON()).toEqual({ name: 'Student Card', design: { width: 90, height: 54 } });
-  await expect(page.getByRole('status')).toContainText('Template design saved');
+  const payload = (await request).postDataJSON();
+  expect(payload.name).toBe('Student Card');
+  expect(payload.design.elements[0]).toMatchObject({ id: 'name', x: 60, y: 50, width: 210, height: 60 });
+  await expect(page.getByRole('status')).toContainText('Design saved');
 });

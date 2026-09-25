@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { artifactKey, LocalArtifactStorage } from './artifact-storage';
+import { artifactKey, LocalArtifactStorage, S3ArtifactStorage } from './artifact-storage';
 
 async function consume(stream: NodeJS.ReadableStream) { const chunks: Buffer[] = []; for await (const chunk of stream) chunks.push(Buffer.from(chunk)); return Buffer.concat(chunks); }
 
@@ -31,5 +31,43 @@ describe('content-addressed artifact storage', () => {
     const storage = new LocalArtifactStorage(root);
     expect(() => artifactKey('../escape')).toThrow('digest');
     await expect(storage.open('../escape')).rejects.toThrow('unsafe');
+  });
+
+  it('treats a verified concurrent S3 create winner as an idempotent success', async () => {
+    const bytes = Buffer.from('concurrent signed plugin bytes');
+    const sha256 = createHash('sha256').update(bytes).digest('hex');
+    let headCalls = 0;
+    const client = { send: jest.fn(async (command: any) => {
+      if (command.constructor.name === 'HeadObjectCommand') {
+        headCalls += 1;
+        if (headCalls === 1) throw { name: 'NotFound', $metadata: { httpStatusCode: 404 } };
+        return { Metadata: { sha256 }, ContentLength: bytes.length };
+      }
+      if (command.constructor.name === 'PutObjectCommand') {
+        throw { name: 'PreconditionFailed', $metadata: { httpStatusCode: 412 } };
+      }
+      throw new Error('Unexpected S3 command');
+    }) };
+    const storage = new S3ArtifactStorage({ bucket: 'artifacts', region: 'us-east-1', forcePathStyle: true }, client as any);
+
+    await expect(storage.putImmutable(sha256, bytes)).resolves.toBe(artifactKey(sha256));
+    expect(headCalls).toBe(2);
+  });
+
+  it('rejects a concurrent S3 winner whose immutable metadata does not match', async () => {
+    const bytes = Buffer.from('expected signed plugin bytes');
+    const sha256 = createHash('sha256').update(bytes).digest('hex');
+    let headCalls = 0;
+    const client = { send: jest.fn(async (command: any) => {
+      if (command.constructor.name === 'HeadObjectCommand') {
+        headCalls += 1;
+        if (headCalls === 1) throw { name: 'NotFound', $metadata: { httpStatusCode: 404 } };
+        return { Metadata: { sha256: '0'.repeat(64) }, ContentLength: bytes.length };
+      }
+      throw { name: 'PreconditionFailed', $metadata: { httpStatusCode: 412 } };
+    }) };
+    const storage = new S3ArtifactStorage({ bucket: 'artifacts', region: 'us-east-1', forcePathStyle: true }, client as any);
+
+    await expect(storage.putImmutable(sha256, bytes)).rejects.toThrow('different metadata');
   });
 });

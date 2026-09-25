@@ -64,8 +64,10 @@ const legacyAdminItems = [
   { label: 'nav.sessionSettings', href: '/admin/session-settings', icon: 'clock', section: 'nav.section.settings' },
   { label: 'nav.holidays', href: '/admin/holidays', icon: 'holiday' },
   { label: 'Backup & Restore', href: '/admin/backup', icon: 'briefcase' },
-  { label: 'Plugin Manager', href: '/admin/plugins', icon: 'settings' },
-  { label: 'Marketplace', href: '/marketplace', icon: 'briefcase' },
+  // School administrators use the installation's delegated marketplace session here. The
+  // standalone /marketplace portal has its own account session and would incorrectly ask them to
+  // sign in again even when this school is already linked.
+  { label: 'Marketplace & Plugins', href: '/admin/plugins', icon: 'briefcase' },
   { label: 'Updates & Health', href: '/admin/system', icon: 'chart' },
   { label: 'Licensing', href: '/admin/licensing', icon: 'certificate' },
   { label: 'Audit & Security', href: '/admin/audit', icon: 'clipboard' },

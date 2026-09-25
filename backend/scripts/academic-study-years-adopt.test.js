@@ -84,10 +84,10 @@ test('requires exact confirmation and dry-run performs zero writes', async () =>
   try {
     const preflight = await inspect(sample.adapter);
     assert.throws(() => parseConfirmation({
-      ACADEMIC_STUDY_YEARS_NON_INTERACTIVE: 'true',
+      ATTENDANCE_STUDY_YEARS_NON_INTERACTIVE: 'true',
       ACADEMIC_SCHOOL_SLUG: 'bora-school',
       ACADEMIC_CONFIRM_SLUG: 'wrong',
-      ACADEMIC_STUDY_YEARS_SOURCE_SHA256: preflight.source.sha256,
+      ATTENDANCE_STUDY_YEARS_SOURCE_SHA256: preflight.source.sha256,
     }), /exactly match/);
 
     const result = await dryRun({

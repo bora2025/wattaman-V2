@@ -53,6 +53,13 @@ describe('PluginContractRuntimeService', () => {
     const service = new PluginContractRuntimeService(prisma);
     await service.putReadModel('wattanam.students', 'directory', 2, 'student:1', { name: 'A' });
     await expect(service.readModel('wattanam.students', 'directory', [2])).resolves.toEqual([{ key: 'student:1', version: 2, data: { name: 'A' }, updatedAt: new Date(0) }]);
+    await service.readModel('wattanam.students', 'directory', [2], 'student:1');
+    expect(prisma.$queryRawUnsafe).toHaveBeenLastCalledWith(expect.stringContaining('"recordKey"=$4'), 'wattanam.students', 'directory', [2], 'student:1');
+    await service.readModel('wattanam.students', 'directory', [2], ['student:1', 'student:2', 'student:1']);
+    expect(prisma.$queryRawUnsafe).toHaveBeenLastCalledWith(expect.stringContaining('ANY($4::text[])'), 'wattanam.students', 'directory', [2], ['student:1', 'student:2']);
+    await expect(service.readModel('wattanam.students', 'directory', [2], '')).rejects.toThrow('invalid');
+    await expect(service.readModel('wattanam.students', 'directory', [2], [])).rejects.toThrow('invalid');
+    await expect(service.readModel('wattanam.students', 'directory', [2], Array.from({ length: 501 }, (_, index) => `student:${index}`))).rejects.toThrow('invalid');
   });
 
   it('reports dead-letter health and requeues an operator-approved replay', async () => {

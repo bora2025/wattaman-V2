@@ -23,6 +23,7 @@ tsc_output.txt
 .env.development.local
 .env.test.local
 .env.production.local
+.env.*.local
 secrets/
 *.pem
 *.key
@@ -35,6 +36,7 @@ backups/
 *.dump.partial
 plugins-installed/
 logs/
+*.log
 pids/
 *.pid
 *.pid.lock
@@ -67,7 +69,9 @@ jspm_packages/
 Thumbs.db
 
 # Local scratch files
+tmp/
 temp_settings.txt
+tools/create-customer-school-bora3.ps1
 backend/.tmp-mp1/
 backend/.tmp-mp1-seed.sql
 frontend/test-results/

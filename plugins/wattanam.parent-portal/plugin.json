@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "id": "wattanam.parent-portal",
+  "name": "Parent Portal",
+  "description": "Parent linking and parent-facing child views composed from optional plugin read models.",
+  "version": "0.1.1",
+  "requiresCore": ">=0.1.0-0 <1.0.0",
+  "publisher": "wattanam",
+  "license": "commercial",
+  "backendEntry": "backend/index.js",
+  "frontendEntry": "frontend/page.json",
+  "sdkVersion": "1.1.0",
+  "runtimeVersion": "1.0.0",
+  "capabilities": ["accounts.guardian.assign", "accounts.parent.resolve", "api.routes", "crypto.hash", "database.read", "database.write", "directory.read", "navigation.register", "permissions.register", "readmodels.read", "realtime.notify", "ui.pages"],
+  "permissions": ["wattanam.parent-portal.view", "wattanam.parent-portal.request", "wattanam.parent-portal.manage"],
+  "dependencies": {},
+  "optionalDependencies": {
+    "wattanam.academic-management": ">=0.1.0 <1.0.0",
+    "wattanam.attendance-manager": ">=0.1.0 <1.0.0",
+    "wattanam.finance": ">=0.1.0 <1.0.0",
+    "wattanam.examination": ">=0.1.0 <1.0.0",
+    "wattanam.transportation": ">=0.1.0 <1.0.0",
+    "wattanam.communication": ">=0.1.0 <1.0.0"
+  },
+  "migrations": [
+    { "id": "001_create_parent_link_request", "path": "migrations/001_create_parent_link_request.sql", "checksum": "499d6674c09d609b402702f184468d7c07800162d614673f29c65dc87e089037", "destructive": false }
+  ],
+  "navigation": [
+    { "id": "parent-portal", "label": "Parent Portal", "href": "/plugins/wattanam.parent-portal/children", "permission": "wattanam.parent-portal.view" },
+    { "id": "parent-link", "label": "Parent link", "href": "/plugins/wattanam.parent-portal/link", "permission": "wattanam.parent-portal.request" },
+    { "id": "parent-requests", "label": "Parent requests", "href": "/plugins/wattanam.parent-portal/requests", "permission": "wattanam.parent-portal.manage" }
+  ],
+  "supportedLanguages": ["en", "km"]
+}

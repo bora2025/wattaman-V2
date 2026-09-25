@@ -48,6 +48,15 @@ describe('createTestContext', () => {
       directory: {
         resolveAudience: async () => [{ id: 'u1', email: 'u1@example.com', phone: null, role: 'PARENT', channels: { inApp: true, email: true, sms: false } }],
         lookupUsers: async () => [], lookupClasses: async () => [], classesForUser: async () => [],
+        getClassRoster: async (classId, asOfIsoDate) => ({
+          contract: { id: 'wattanam.academic-management.roster', version: '1.0.0' },
+          classId, className: 'Grade 1A', asOfIsoDate, source: 'plugin-enrollment-interval', students: [],
+        }),
+        getEnrollmentAtDate: async (studentId, asOfIsoDate) => ({
+          contract: { id: 'wattanam.academic-management.roster', version: '1.0.0' },
+          studentId, classId: 'class-1', className: 'Grade 1A', enrolled: true, asOfIsoDate,
+          source: 'plugin-enrollment-interval',
+        }),
       },
     });
     await expect(harness.context.database.query('SELECT * FROM plugin_acme_widget_rows', [])).resolves.toEqual([{ id: 'row-1' }]);

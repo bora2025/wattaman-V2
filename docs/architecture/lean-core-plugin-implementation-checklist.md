@@ -2,7 +2,7 @@
 
 Status: **LC-0, LC-1, LC-2, LC-3 and LC-5 complete; LC-4 partially accepted;
 MP-1 underway; MP-2 through MP-9 and LC-F not complete**
-Last focused MP-1 audit: 2026-09-15 — **118 complete, 55 open, 4 partial, 0 blocked**.
+Last full checklist reconciliation: 2026-09-25 — **121 complete, 45 open, 11 partial, 0 blocked**.
 Created: 2026-09-11  
 Architecture plan: [Wattanam Lean Core and Plugin-First Architecture](./wattanam-lean-core-plugin-first-plan.md)  
 Migration plan: [Business Modules to Official Plugins](./module-to-plugin-migration-plan.md)
@@ -309,8 +309,10 @@ Evidence: `docs/acceptance/lean-core/lc3-plugin-ui-v2.md`
 ### LC-4A Artifact distribution
 
 - [~] **LC4-001 Artifact origin** — SHA-256-addressed local/S3 providers, provider-boundary digest
-  checks, create-only S3 writes and streaming reads are implemented and tested; a production-shaped
-  S3 live immutability drill remains.
+  checks, create-only S3 writes and streaming reads are implemented and tested. Concurrent API
+  create races now converge only after validating the winning object's immutable metadata, and a
+  checked-in restart/multi-instance/overwrite live-drill command exists; execution against the
+  production-shaped S3 service and its non-secret evidence record remain.
 - [x] **LC4-002 API cache** — each API process seeds/fetches a digest-addressed package, verifies the
   archive and publisher signature, and atomically rebuilds a missing/damaged runtime directory
   before activation.
@@ -411,18 +413,36 @@ Recommended first plugin: **`wattanam.document-designer`**.
 - [~] **MP1-004 Data** — namespaced create-table migration, read-only preflight and
   backup-bound zero-write dry-run plus journaled copy/reconciliation are implemented with local
   crash/retry tests; explicit compatibility routing defaults to legacy and supports a
-  non-destructive configuration rollback. Real backup restore, hosted adoption, rendered-output
+  backup-bound non-destructive rollback drill that passes locally
+  ([rollback evidence](../acceptance/mp1-document-designer-rollback-drill-2026-09-25.md)). Real backup restore, hosted adoption, rendered-output
   comparison and live rollback certification remain open
   ([evidence](../acceptance/mp1-document-designer-adoption-preflight-2026-09-15.md)).
 - [~] **MP1-005 UI** — list/detail remain declarative; a separate permission-gated edit page now
   submits validated JSON-object designs through the plugin route. Actual descriptor/schema tests
   pass; three desktop browser assertions passed but Playwright teardown hung, so clean browser
-  certification is open. Discoverable editor navigation, rich canvas preview, bulk generation
-  and print remain open ([evidence](../acceptance/mp1-document-designer-json-editor-2026-09-16.md)).
+  certification is open. The detail page now submits bounded generation input and consumes the
+  mutation result through the host print/CSV/PDF renderer. Discoverable editor navigation, rich
+  version 0.1.3 now produces a bounded positioned document preview and live visual editor through
+  safe host-owned components; table rows link directly to the editor. Bounded pointer drag/resize
+  behavior passes three focused desktop browser scenarios
+  with a clean zero exit
+  ([evidence](../acceptance/mp1-document-designer-drag-resize-2026-09-25.md)). Hosted pixel/output parity certification
+  remain open ([editor evidence](../acceptance/mp1-document-designer-json-editor-2026-09-16.md),
+  [render-model evidence](../acceptance/mp1-document-designer-render-model-2026-09-23.md)).
 - [~] **MP1-006 Permissions** — the manifest/runtime separates view, edit, generate and print;
   adoption idempotently preserves authenticated legacy active-design reads and administrator
-  mutation access. Generate/print UI actions and their row-scope tests remain open.
-- [ ] **MP1-007 Storage** — migrate templates/assets through scoped shared storage.
+  mutation access. Version 0.1.2 adds a bounded `generate` route that only accepts records already
+  authorized by the caller and performs no cross-domain lookup. Its result is connected to the
+  host print/CSV surface; version 0.1.3 adds a normalized positioned document model and safe
+  print/Save-as-PDF renderer. Academic class-roster row scope is locally proven end to end: an
+  unassigned teacher is denied and the renderer performs no Academic lookup. Version 0.1.4 adds a
+  bounded staff source using Directory identity plus Human Resources' privacy-minimized title
+  projection ([evidence](../acceptance/mp1-document-designer-staff-source-2026-09-25.md)). Hosted
+  authorization, browser staff-card generation and pixel/output parity tests remain open.
+- [~] **MP1-007 Storage** — version 0.1.1 adds host-quota-enforced scoped asset upload/list/read/delete
+  routes with generated IDs, canonical base64 and a bounded MIME allowlist. Version 0.1.2 connects
+  safe image types to the host upload/preview/download/delete UI; legacy asset discovery, adoption,
+  reconciliation and restored-backup certification remain open.
 - [ ] **MP1-008 Fresh certification** — install from marketplace on clean core.
 - [ ] **MP1-009 Legacy certification** — adopt existing data and compare rendered output.
 - [~] **MP1-010 Lifecycle/recovery** — local reactivation preserves template data and compatibility
@@ -439,32 +459,97 @@ Gate: the first complete business plugin operates without rebuilding core.
   now cross an explicit provider boundary; delete uses a deterministic idempotency key and the
   legacy adapter owns its transaction. Identity list/detail/search contain no academic relation
   fallback, department assignment/clearing uses a provider command, and login/refresh always use
-  core-only projections. Parent assignment/clearing also has no direct fallback. Installed-plugin
-  binding and remaining mixed User concerns still prevent completion; Session Configuration now
-  consumes department membership through the academic directory contract.
+  core-only projections. Parent assignment/clearing also has no direct fallback. Department reads
+  now dispatch to a self-or-administrator scoped owner route only while Academic is active and fail
+  closed in plugin mode; the core directory provider's private membership SQL was removed. The
+  Department assignment, guardian assignment, and Academic identity detach now also have explicit
+  plugin-owner modes using administrator-only idempotent owner commands; lifecycle unload fails
+  closed, conflicting shadow settings are rejected, and plugin detach touches no Attendance or
+  Finance tables. When both Department and Student Profile read owners are `plugin`, auth profile
+  enrichment now uses a bounded owner-side batch contract with exact response coverage instead of
+  core cross-schema SQL. Core-only password validation, ADMIN registration/session issuance,
+  list/search/detail/update, and deletion now pass without an Academic provider or any academic
+  Prisma client, closing the gate's core-identity-works-without-Academic assertion. Mixed migration
+  modes, remaining mixed User concerns, and hosted cutover evidence still prevent completion;
+  Session Configuration consumes the runtime-bound department contract
+  ([runtime-isolation evidence](../acceptance/mp2-academic-runtime-sql-isolation-2026-09-23.md)).
 - [~] **MP2-002 Academic schema** — ownership manifests identify the target models and Departments
-  CRUD is provider-backed with atomic legacy deletion. The initial plugin owns additive namespaced
-  Department/membership migrations; Student/Class/Enrollment/StudyYear/Subject remain open.
+  CRUD is provider-backed with atomic legacy deletion. Academic Management 0.1.7 now provides
+  namespaced list/detail/create/update/delete routes; the explicit plugin owner switch dispatches
+  every compatibility operation to those routes, and delete atomically clears plugin memberships
+  with a deterministic command key. Legacy-default rollback remains intact. Additive namespaced Department/membership,
+  Enrollment, Class, Admissions and Student profile migrations now exist. Academic's earlier
+  StudyYear table is retained only as rollback data; Attendance Manager is the sole active owner.
+  Student
+  profile preflight and journaled adoption pass locally with exact count/hash reconciliation;
+  explicit plugin read routing and atomic parity-checked shadow writes pass focused tests. Hosted
+  route certification and final removal of legacy schema remain open. Academic Management 0.1.10
+  now owns canonical teaching-subject identities through an immutable namespaced migration,
+  administrator-only mutations, a bounded active-subject contract, and declarative list/create/edit
+  management UI that supports both UUID and adopted legacy identifiers;
+  deterministic backup-bound legacy-value adoption, exact reconciliation, guarded rollback, and
+  unified cutover-gate enforcement pass locally. Timetable retains only schedule-local mappings.
+  Class parent-directory, single/bounded-batch roster, available-student reads and bounded CSV
+  import now dispatch to owner-side scoped routes in plugin mode. CSV identity creation/update uses
+  journaled capability-gated core commands while profile/enrollment writes remain plugin-owned
+  ([student-profile evidence](../acceptance/mp2-student-profile-schema-2026-09-23.md),
+  [department evidence](../acceptance/mp2-academic-department-ownership-2026-09-25.md),
+  [subject evidence](../acceptance/mp2-academic-subject-ownership-2026-09-25.md),
+  [compatibility-read evidence](../acceptance/mp2-class-compatibility-reads-2026-09-25.md),
+  [CSV import evidence](../acceptance/mp2-academic-csv-roster-import-2026-09-25.md)).
 - [~] **MP2-003 Admissions** — compatibility seam, fail-closed legacy writes, namespaced
   migrations, deterministic preflight, journaled adopt/dry-run toolkit, rollback drill,
   cutover-readiness parity, and certified plugin-owned submit/resolve/settings/fields write
-  handlers are implemented and locally tested. Full production-shaped cutover evidence remains
-  open.
-- [~] **MP2-004 Roster contracts** — class audience, class membership, class lookup and department
-  membership have provider-backed consumers; enrollment-at-date and full runtime plugin binding
-  remain open.
-- [ ] **MP2-005 Event contracts** — student/class/enrollment lifecycle with outbox delivery.
-- [~] **MP2-006 UI** — declarative plugin UI now covers departments, study years, classes,
-  class student roster, teacher directory, and registration list/detail/resolve. Hosted page-host
-  render certification remains open; full CRUD for student roster edit/remove is partially wired.
+  handlers are implemented and locally tested. Approved registration now creates only the stable
+  core User through the replica-serialized, journaled and audited `accounts.student.create`
+  capability; Academic atomically owns the Student Profile, Enrollment Interval, registration link
+  and durable v2 event, and the legacy v1 Student subscriber is no longer active. Full
+  production-shaped cutover evidence remains open
+  ([account-boundary evidence](../acceptance/mp2-admissions-core-account-boundary-2026-09-25.md)).
+- [x] **MP2-004 Roster contracts** — class audience, class membership, class lookup and department
+  membership have provider-backed consumers. Class list/detail, roster reads and roster mutations
+  now enforce assigned teacher/class-admin scope; Class structure mutations and all private
+  Admissions administration additionally require an administrator principal and fail before
+  database access even if a route permission is broadly granted. The plugin now publishes
+  versioned historical class-roster and enrollment-at-date routes from its own interval tables,
+  validates exact ISO dates, detects overlap/missing-profile corruption, and applies originating
+  domain row scope (11/11 reference tests; 17/17 with dependent fixtures;
+  [authorization evidence](../acceptance/mp2-academic-authorization-boundary-2026-09-25.md)).
+  Core roster/enrollment, audience, reverse membership, and lookup reads now bind to owner routes
+  only while Academic is active, reject
+  invalid responses, unbind on deactivation, and fail closed rather than falling back to private
+  table SQL in plugin-read mode. The core directory provider no longer contains Academic Class,
+  Student Profile, or Enrollment Interval SQL (35/35 focused provider/Directory/runtime tests;
+  [contract evidence](../acceptance/mp2-plugin-roster-contract-2026-09-25.md)).
+- [x] **MP2-005 Event contracts** — Academic-owned Class and student class-membership writes publish
+  versioned lifecycle events both after mutation and transactionally through the durable outbox,
+  using deterministic idempotency keys; the core subscriber and reference-plugin tests pass.
+  Study Year lifecycle events moved to its canonical Attendance Manager owner and are verified
+  separately ([MP2 reconciliation](../acceptance/mp2-master-reconciliation-2026-09-22.md),
+  [MP3 ownership evidence](../acceptance/mp3-study-year-ownership-contract-2026-09-23.md)).
+- [~] **MP2-006 UI** — declarative plugin UI now covers departments, teaching-subject
+  list/create/edit, classes,
+  class student roster, teacher directory, and registration list/detail/resolve. Student roster
+  add/edit/remove and orphan cleanup are now locally wired through validated declarative pages;
+  mutations enforce class-and-student scope. Hosted page-host render certification remains open.
 - [~] **MP2-007 Migration** — read-only department/membership preflight has deterministic
   fingerprinting, orphan detection and target readiness checks, and its additive target migrations
   exist. Backup-bound dry-run and two-phase resumable copy/reconciliation pass locally. Department
   reads have legacy-default/plugin-explicit routing; plugin-mode writes fail closed until certified
-  consistency. Restored-backup and
-  hosted cutover/rollback proofs plus the remaining academic entities are open.
-- [ ] **MP2-008 Dependent fixtures** — prove Attendance/Timetable/Exam/Learning/Finance can consume
-  contracts without database joins.
+  consistency. Student profiles now also have deterministic preflight plus backup-bound, resumable,
+  idempotent adoption with exact reconciliation, and a fail-closed non-destructive routing rollback
+  drill. A legacy-default/plugin-explicit read seam and atomic shadow-write mode are locally tested.
+  The unified read-only cutover gate now requires Student Profile count/hash parity and its
+  backup-bound reconciled journal. Restored-backup and hosted cutover/rollback proofs plus the
+  remaining academic entities are open. Canonical Subjects now have the same deterministic
+  backup-bound preflight/adopt/rollback and unified parity/journal gate locally. A combined
+  2026-09-25 local recheck passes all Student
+  Profile, Class, and Admissions preflight/adopt/rollback suites plus the unified cutover gate
+  (30/30; [evidence](../acceptance/mp2-local-migration-toolkit-recheck-2026-09-25.md)).
+- [x] **MP2-008 Dependent fixtures** — Attendance, Timetable, Examination, Learning and Finance
+  fixture consumers pass against only the roster/enrollment provider contract, including malformed
+  date rejection, without direct Student/Class access
+  ([reconciliation evidence](../acceptance/mp2-master-reconciliation-2026-09-22.md)).
 - [ ] **MP2-009 Certification and pilot** — full lifecycle, recovery and production-shaped adoption.
 
 Gate: core-only identity administration works with Academic Management absent.
@@ -473,21 +558,60 @@ Gate: core-only identity administration works with Academic Management absent.
 
 Do not start this gate until LC-3, LC-4, LC-5 and MP-2 are complete.
 
-- [ ] **MP3-001 Inventory** — attendance, session config, holidays, aliases, all scanners, reports,
-  print pages, notifications, jobs, gateways and mobile flows.
-- [ ] **MP3-002 Ownership split** — remove staff, timetable-teacher and course attendance from the
-  student school-day attendance boundary according to LC0-012.
-- [ ] **MP3-003 Data schema** — records, sessions, corrections, scans, holidays, aliases and alerts.
-- [ ] **MP3-004 Historical snapshots** — preserve required student/class/user display values.
-- [ ] **MP3-005 Academic integration** — roster/enrollment contracts only; no cross-plugin SQL.
-- [ ] **MP3-006 Unified command** — all scan methods use one idempotent server command.
-- [ ] **MP3-007 Device security** — authorization, session/timezone, duplicate and clock policies.
-- [ ] **MP3-008 Permissions** — view, scan, mark, correct, report, print, configure, manage devices.
-- [ ] **MP3-009 Row scope** — teachers/classes/students/parents see only authorized records.
-- [ ] **MP3-010 UI** — admin, teacher, scanner, corrections, settings and holidays.
-- [ ] **MP3-011 Reports** — administrator/teacher summaries, filters, CSV/PDF and print.
-- [ ] **MP3-012 Realtime/jobs** — safe disable, suspension and retry behavior.
-- [ ] **MP3-013 Data adoption** — journaled historical migration and total comparison.
+- [x] **MP3-001 Inventory** — attendance, session config, holidays, aliases, all scanners, reports,
+  print pages, notifications, jobs, gateways and mobile flows are exhaustively assigned, including
+  the ADR-mandated staff/lesson/course exclusions
+  ([inventory](./mp3-attendance-surface-inventory.md)).
+- [x] **MP3-002 Ownership split** — Attendance Manager 0.1.3 accepts only student school-day
+  attendance; staff is assigned to Human Resources, lesson attendance to Timetable and
+  course-session attendance to Learning. An additive database constraint rejects future boundary
+  violations without deleting historical rows
+  ([evidence](../acceptance/mp3-attendance-ownership-boundary-2026-09-25.md)).
+- [~] **MP3-003 Data schema** — Attendance Manager 0.1.6 now declares records, sessions,
+  corrections, idempotent scans, holidays, aliases, alerts and historical snapshot fields through
+  immutable migrations; manifest/checksum/source tests pass, but a real PostgreSQL migration drill
+  is still required ([local evidence](../acceptance/mp3-attendance-data-foundation-2026-09-25.md)).
+- [x] **MP3-004 Historical snapshots** — every accepted write snapshots student name/number, class
+  name and Study Year label; conflict updates retain the original display state
+  ([evidence](../acceptance/mp3-attendance-academic-snapshot-contract-2026-09-25.md)).
+- [x] **MP3-005 Academic integration** — Attendance consumes the dated
+  `wattanam.academic-management.roster@1.0.0` directory contract, fails closed for non-membership,
+  and has no cross-plugin SQL
+  ([evidence](../acceptance/mp3-attendance-academic-snapshot-contract-2026-09-25.md)).
+- [~] **MP3-006 Unified command** — the plugin now has one transactionally idempotent camera/QR/
+  card/USB command with advisory locking, hashed-code ledger and once-only durable/transient events;
+  legacy web/mobile/offline callers and real-PostgreSQL concurrency proof remain
+  ([local evidence](../acceptance/mp3-unified-scan-command-2026-09-25.md)).
+- [x] **MP3-007 Device security** — permission plus operator-role authorization, configurable IANA
+  timezone, server-selected active sessions, holiday rejection, bounded offline/future clocks and
+  transactionally idempotent duplicates are enforced before mutation
+  ([evidence](../acceptance/mp3-device-security-policy-2026-09-25.md)).
+- [x] **MP3-008 Permissions** — view, scan, mark, correct, report, print, configure and device
+  management are declared and enforced by their respective routes/UI; deprecated coarse IDs have no
+  active route ([evidence](../acceptance/mp3-granular-permissions-2026-09-25.md)).
+- [x] **MP3-009 Row scope** — administrators, scanner operators, assigned teachers/class admins,
+  students and parents are filtered through one Academic-contract-backed scope policy across writes,
+  corrections, reads and reports ([evidence](../acceptance/mp3-attendance-row-scope-2026-09-25.md)).
+- [~] **MP3-010 UI** — declarative admin/teacher attendance, scanner, correction, Study Year,
+  settings, identifier and holiday flows are implemented; scanner submissions include required
+  class/session context plus retry-stable idempotency. Schema/source tests and the production
+  frontend build pass. Hosted role-based browser proof remains
+  ([local evidence](../acceptance/mp3-attendance-declarative-ui-2026-09-25.md)).
+- [~] **MP3-011 Reports** — shared validated, row-scoped projections now cover status summary,
+  daily grid, student detail, monthly trend, class progress, detailed print data and UTF-8 CSV;
+  declarative class/student/date/session/status filters and browser print/CSV/PDF use immutable
+  snapshots. Hosted legacy-parity proof remains
+  ([local evidence](../acceptance/mp3-attendance-reports-2026-09-25.md)).
+- [x] **MP3-012 Realtime/jobs** — the absence evaluator uses core scheduling, distributed locking,
+  non-overlap, suspension checks and disable/drain teardown; stable alert keys plus the immutable
+  per-recipient/channel delivery ledger make retries selective, while notification and realtime
+  delivery remain core-quota/audit/namespacing controlled
+  ([evidence](../acceptance/mp3-attendance-alert-lifecycle-2026-09-25.md)).
+- [~] **MP3-013 Data adoption** — the read-only six-dataset preflight and additive lossless target
+  schema, backup-bound multi-dataset journal, resumable idempotent copier, exact canonical
+  reconciliation and non-destructive rollback drill are complete locally. A real-PostgreSQL run
+  against a verified school-bound backup remains
+  ([local evidence](../acceptance/mp3-attendance-adoption-preflight-2026-09-25.md)).
 - [ ] **MP3-014 Real-device certification** — camera, QR/card and USB scanners.
 - [ ] **MP3-015 Full lifecycle/recovery** — clean install through production pilot.
 
@@ -498,12 +622,47 @@ business implementation or compiled attendance page remains in lean core.
 
 Apply the same per-plugin gate in the migration plan.
 
-- [ ] **MP4 Timetable** — scheduling, classrooms, subjects, teachers, reports and print.
-- [ ] **MP5 Examination** — exams, questions, attempts, scoring, gradebook and reports.
-- [ ] **MP6 Learning** — courses, lessons, assignments, quizzes, H5P and engagement.
-- [ ] **MP7 Transportation and Communication** — complete location/realtime and messaging flows.
-- [ ] **MP8 Finance and Human Resources** — specialist financial, payroll, privacy and audit review.
-- [ ] **MP9 Parent Portal and Reporting** — optional adapters and stable read models only.
+- [~] **MP4 Timetable** — scheduling, classrooms, subjects, teachers, reports and print. Local
+  extraction and adoption tooling are implemented; real-PostgreSQL, hosted parity and lifecycle
+  certification remain open.
+- [~] **MP5 Examination** — exams, questions, attempts, scoring, gradebook and reports. Local rich
+  workflows and adoption tooling are implemented; real-PostgreSQL, hosted parity and lifecycle
+  certification remain open.
+- [~] **MP6 Learning** — courses, lessons, assignments, quizzes, rich interactive questions,
+  engagement and course attendance are implemented locally in 0.1.2; adoption tooling, rich UI,
+  real-PostgreSQL and lifecycle certification remain open.
+- [~] **MP7 Transportation and Communication** — Transportation 0.1.1 has a local five-table,
+  permission-gated CRUD/tracking foundation, dated-roster parent model and guarded adoption tooling.
+  Communication 0.1.1 has isolated Message/Post/outbox storage, dated-roster safeguarding,
+  retryable delivery, host-rendered authoring and guarded adoption/rollback tooling while
+  Announcements remains standalone. Both require restored-backup/hosted certification; Communication
+  additionally requires rich composition, outbox delivery and privacy review.
+- [~] **MP8 Finance and Human Resources** — Finance 0.1.0 has an isolated minor-unit fee/receipt
+  foundation with transactional immutable receipts plus a privacy-safe, exact-only read preflight
+  for its three legacy datasets passing 7 tests; it blocks rather than rounds unrepresentable money
+  ([evidence](../acceptance/mp8-finance-adoption-preflight-2026-09-25.md)); its guarded backup-bound
+  adoption, exact reconciliation and metadata-only rollback suite passes 4 more tests. Human
+  Resources 0.1.0 has
+  normalized employee, CV, minor-unit payroll and staff-attendance storage with three-party payroll
+  segregation plus an exact-only six-dataset read preflight passing 7 tests that blocks invalid net
+  salary/paid provenance and records the missing legacy approver identity
+  ([evidence](../acceptance/mp8-human-resources-adoption-preflight-2026-09-25.md)); its backup-bound
+  resumable adoption, exact six-dataset reconciliation and metadata-only rollback suite passes 4
+  more tests. Restored-backup execution for both plugins, row scope, hosted proof and specialist
+  approvals remain open.
+- [~] **MP9 Parent Portal and Reporting** — Parent Portal 0.1.1 has an isolated parent-link workflow,
+  dated-roster child scope, optional read-model composition and audited idempotent parent/guardian
+  core commands passing 17 focused backend tests plus 8 SDK tests
+  ([evidence](../acceptance/mp9-parent-portal-foundation-2026-09-25.md)). Key-scoped core read-model
+  retrieval plus privacy-minimized Attendance, Finance, Examination, Transportation and
+  Communication projections are implemented locally. Its guarded adoption/reconciliation/rollback
+  toolkit also passes locally. Reporting 0.1.1 now composes those five optional student-keyed
+  projections behind a dated Academic roster and administrator scope, with a schema-v2 filtered
+  table and host-owned print/CSV/PDF output, plus dated staff attendance from an actor-free Human
+  Resources v1 projection; the focused HR/Reporting source/behavior suites pass 14 tests
+  ([worksheet](./reporting-plugin-extraction.md),
+  [evidence](../acceptance/mp9-reporting-foundation-2026-09-25.md)). Hosted PostgreSQL, lifecycle,
+  restored-backup parity, privacy/accessibility review and legacy cutover remain open for MP9.
 
 For every plugin:
 
@@ -526,7 +685,7 @@ For every plugin:
 - [ ] **LCF-004 No optional schema** — clean core database contains no business-plugin tables.
 - [ ] **LCF-005 No optional UI** — core build contains no compiled business pages or static links.
 - [ ] **LCF-006 No optional runtime** — core starts no business jobs, gateways or providers.
-- [ ] **LCF-007 Upgrade path** — every supported existing school has a migration path or documented
+- [~] **LCF-007 Upgrade path** — the [existing-school upgrade runbook](../operations/existing-school-lean-core-upgrade-runbook.md) provides the migration/exception process, command matrix, staged ownership cutover and non-destructive rollback rules; every supported existing school still needs its own restored-backup rehearsal and accepted evidence before this item can close.
   exception.
 - [ ] **LCF-008 Hosted proof** — clean Railway school installation, marketplace link, plugin install,
   disable, update, restore and core upgrade pass.
@@ -547,6 +706,6 @@ order; a later gate must not be used to bypass an earlier gate's acceptance evid
 5. Run LC-F hosted and Docker proofs and obtain security, privacy, legal, finance, support and
    operations approval before changing new installations from `legacy-full` to `core`.
 
-The 61 open lines include gate items, acceptance statements and the nine reusable per-plugin
+The 48 unfinished lines (25 open and 23 partial) include gate items, acceptance statements and the nine reusable per-plugin
 certification requirements. External live drills, real-device checks, pilots and organizational
 approvals must remain open until their durable evidence exists; local unit tests cannot close them.

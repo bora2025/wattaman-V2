@@ -17,7 +17,7 @@ export default function PluginForm({ pluginId, source, params, fields, options, 
   fields: Field[];
   options?: { submitLabel?: string; confirmation?: string; successMessage?: string };
   initialData?: unknown;
-  onSuccess(): void | Promise<void>;
+  onSuccess(result: unknown): void | Promise<void>;
 }) {
   const initial = useMemo(() => initialData && typeof initialData === 'object' && !Array.isArray(initialData) ? initialData as Record<string, unknown> : {}, [initialData]);
   const [values, setValues] = useState<Record<string, unknown>>({});
@@ -71,7 +71,7 @@ export default function PluginForm({ pluginId, source, params, fields, options, 
         throw new Error(Array.isArray(result.message) ? result.message.join(' ') : result.message || `Request failed (${response.status})`);
       }
       setSuccess(options?.successMessage || 'Saved successfully.');
-      await onSuccess();
+      await onSuccess(result);
     } catch (cause) { setServerError(cause instanceof Error ? cause.message : 'The form could not be saved.'); }
     finally { setBusy(false); }
   }

@@ -1,0 +1,24 @@
+-- wattanam-plugin-migration: 006_add_legacy_adoption_fields
+ALTER TABLE "plugin_wattanam_attendance_manager_record"
+  ADD COLUMN IF NOT EXISTS "permissionStartDate" DATE,
+  ADD COLUMN IF NOT EXISTS "permissionEndDate" DATE;
+
+ALTER TABLE "plugin_wattanam_attendance_manager_identifier"
+  ADD COLUMN IF NOT EXISTS "createdById" TEXT;
+
+CREATE TABLE IF NOT EXISTS "plugin_wattanam_attendance_manager_format_rule" (
+  "id" TEXT PRIMARY KEY,
+  "organizationId" TEXT NOT NULL DEFAULT '',
+  "permissionsPerAbsent" INTEGER NOT NULL DEFAULT 3 CHECK ("permissionsPerAbsent" > 0),
+  "latesPerAbsentHalf" INTEGER NOT NULL DEFAULT 3 CHECK ("latesPerAbsentHalf" > 0),
+  "absentSessionsForDayAbsent" INTEGER NOT NULL DEFAULT 3 CHECK ("absentSessionsForDayAbsent" >= 0),
+  "caseStudyABEnabled" BOOLEAN NOT NULL DEFAULT TRUE,
+  "enabled" BOOLEAN NOT NULL DEFAULT FALSE,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE ("organizationId")
+);
+
+ALTER TABLE "plugin_wattanam_attendance_manager_record"
+  ADD CONSTRAINT "attendance_manager_permission_date_order"
+  CHECK ("permissionEndDate" IS NULL OR "permissionStartDate" IS NULL OR "permissionEndDate" >= "permissionStartDate") NOT VALID;

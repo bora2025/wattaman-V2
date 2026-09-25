@@ -52,7 +52,7 @@ compiled business pages after the applicable compatibility window closes.
 
 | Plugin ID | Current backend candidates | Complete feature scope |
 |---|---|---|
-| `wattanam.academic-management` | `classes`, `departments`, `study-years`, `class-registrations`; academic portions currently coupled to users/students | Academic student profiles, admissions, classes, enrollment, study years, departments and subjects shared by dependent plugins |
+| `wattanam.academic-management` | `classes`, `departments`, `class-registrations`; academic portions currently coupled to users/students | Academic student profiles, admissions, classes, enrollment, departments and subjects shared by dependent plugins; consumes Attendance Manager's Study Year read model |
 | `wattanam.attendance-manager` | `study-years`, `attendance`, `session-config`, `holidays`, attendance-related `card-aliases`, staff/teacher attendance and attendance reports | **Attendance Manager**: academic years plus student, teacher and staff attendance, manual entry, camera/QR/card/USB scan, corrections, absence logic, sessions, holidays, realtime status, alerts, reports, printing and exports |
 | `wattanam.timetable` | `timetable` | Subjects, classrooms, schedules, teacher schedules and timetable reports; attendance records themselves belong to Attendance |
 | `wattanam.examination` | `exam`, `scoring` | Exams, questions, attempts, grades, score sheets, gradebook, reports and printing |
@@ -132,7 +132,7 @@ not just the Nest directory that happens to access it:
 |---|---|
 | Lean core identity/security | `User`, `RefreshToken`, `PasswordResetToken`, `AuditLog`, `AuditCleanupSchedule`, generic parts of `Notification` and `NotificationPreference` |
 | Lean core installation/plugin platform | `Installation`, `PluginInstallation`, `MarketplaceRegistration`, `MarketplaceSchoolControl`, `MarketplacePendingLink`, `MarketplaceProxyLink`, `PluginPermissionGrant`, `PluginNotificationUsage`, `PluginMigration`, `PluginSetting`, `PluginJobDefinition`, `PluginJobRun`, `PluginEntitlementCache` |
-| Academic Management | `Class`, `Student`, `ClassRegistration`, `ClassRegistrationSettings`, `ClassRegistrationField`, `StudyYear`, `Department`; timetable subject/class ownership must be normalized |
+| Academic Management | `Class`, `Student`, `ClassRegistration`, `ClassRegistrationSettings`, `ClassRegistrationField`, `Department`; timetable subject/class ownership must be normalized; its earlier Study Year table is rollback-only |
 | Attendance Manager | `StudyYear`, `Attendance`, `StaffAttendance`, `StaffWeeklySchedule`, `SessionConfig`, `Holiday`, `CardAlias`, `AttendanceFormatRule`; teacher attendance uses the unified person-attendance model |
 | Human Resources | `Salary`, `StaffProfile`, `StaffEducation`, `StaffWorkExperience`, `StaffCertification`; consumes Attendance Manager staff-attendance contracts |
 | Document Designer | `CardTemplate` plus any certificate/QR persistence discovered outside Prisma |
@@ -427,8 +427,12 @@ server under an approved clock policy.
 ```text
 wattanam.attendance-manager.view
 wattanam.attendance-manager.scan
-wattanam.attendance-manager.manage
-wattanam.attendance-manager.export
+wattanam.attendance-manager.mark
+wattanam.attendance-manager.correct
+wattanam.attendance-manager.report
+wattanam.attendance-manager.print
+wattanam.attendance-manager.configure
+wattanam.attendance-manager.devices.manage
 ```
 
 Authorization includes row scope: teachers cannot operate on unrelated classes merely because they
@@ -519,7 +523,9 @@ Gate: finance, payroll, child-data privacy and messaging authorization receive s
 
 ### Wave MP-5 — Aggregation and cleanup
 
-- [ ] Extract Reporting using published read models only.
+- [~] Extract Reporting using published read models only. Version 0.1.0 now composes five bounded,
+  student-keyed projections behind a dated Academic roster and administrator scope, with no database
+  capability or migrations; hosted lifecycle, restored-backup parity and legacy cutover remain.
 - [ ] Remove remaining compiled business navigation and pages from core.
 - [ ] Remove expired compatibility proxies and legacy tables.
 - [ ] Make core-only the default production installer profile.

@@ -1,0 +1,2 @@
+-- wattanam-plugin-migration: 003_create_vehicle
+CREATE TABLE plugin_wattanam_transportation_vehicle ("id" TEXT PRIMARY KEY,"name" TEXT NOT NULL,"plateNumber" TEXT NOT NULL UNIQUE,"capacity" INTEGER NOT NULL DEFAULT 40 CHECK ("capacity" > 0),"status" TEXT NOT NULL DEFAULT 'ACTIVE' CHECK ("status" IN ('ACTIVE','INACTIVE','MAINTENANCE')),"driverDirectoryUserId" TEXT,"routeId" TEXT REFERENCES plugin_wattanam_transportation_route("id") ON DELETE SET NULL,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP);

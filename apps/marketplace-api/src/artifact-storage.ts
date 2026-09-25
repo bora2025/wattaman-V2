@@ -33,14 +33,28 @@ export class LocalArtifactStorage implements ArtifactStorage {
 }
 
 export class S3ArtifactStorage implements ArtifactStorage {
-  readonly provider = 's3' as const; private readonly client: S3Client;
-  constructor(private readonly settings: NonNullable<MarketplaceConfig['artifactS3']>) { this.client = new S3Client({ region: settings.region, endpoint: settings.endpoint, forcePathStyle: settings.forcePathStyle, credentials: settings.accessKeyId ? { accessKeyId: settings.accessKeyId, secretAccessKey: settings.secretAccessKey! } : undefined }); }
+  readonly provider = 's3' as const;
+  constructor(
+    private readonly settings: NonNullable<MarketplaceConfig['artifactS3']>,
+    private readonly client: S3Client = new S3Client({ region: settings.region, endpoint: settings.endpoint, forcePathStyle: settings.forcePathStyle, credentials: settings.accessKeyId ? { accessKeyId: settings.accessKeyId, secretAccessKey: settings.secretAccessKey! } : undefined }),
+  ) {}
+  private async verifyExisting(key: string, sha256: string, byteLength: number) {
+    const head = await this.client.send(new HeadObjectCommand({ Bucket: this.settings.bucket, Key: key }));
+    if (head.Metadata?.sha256 !== sha256 || Number(head.ContentLength) !== byteLength) throw new Error('Immutable artifact key contains different metadata');
+  }
   async putImmutable(sha256: string, value: Buffer) {
     if (createHash('sha256').update(value).digest('hex') !== sha256) throw new Error('Artifact bytes do not match their digest');
     const key = artifactKey(sha256);
-    try { const head = await this.client.send(new HeadObjectCommand({ Bucket: this.settings.bucket, Key: key })); if (head.Metadata?.sha256 !== sha256 || Number(head.ContentLength) !== value.length) throw new Error('Immutable artifact key contains different metadata'); return key; }
+    try { await this.verifyExisting(key, sha256, value.length); return key; }
     catch (error: any) { if (error?.$metadata?.httpStatusCode !== 404 && error?.name !== 'NotFound') throw error; }
-    await this.client.send(new PutObjectCommand({ Bucket: this.settings.bucket, Key: key, Body: value, ContentType: 'application/vnd.wattanam.plugin+zip', CacheControl: 'public, max-age=31536000, immutable', Metadata: { sha256 }, ChecksumSHA256: createHash('sha256').update(value).digest('base64'), IfNoneMatch: '*' }));
+    try {
+      await this.client.send(new PutObjectCommand({ Bucket: this.settings.bucket, Key: key, Body: value, ContentType: 'application/vnd.wattanam.plugin+zip', CacheControl: 'public, max-age=31536000, immutable', Metadata: { sha256 }, ChecksumSHA256: createHash('sha256').update(value).digest('base64'), IfNoneMatch: '*' }));
+    } catch (error: any) {
+      // Another API instance may win the create-only race after our HEAD. Treat that as an
+      // idempotent success only after independently verifying the immutable winner.
+      if (error?.$metadata?.httpStatusCode !== 412 && error?.name !== 'PreconditionFailed') throw error;
+      await this.verifyExisting(key, sha256, value.length);
+    }
     return key;
   }
   async open(storageKey: string) { const result = await this.client.send(new GetObjectCommand({ Bucket: this.settings.bucket, Key: storageKey, ChecksumMode: 'ENABLED' })); if (!result.Body) throw new Error('Artifact body is missing'); return result.Body as Readable; }

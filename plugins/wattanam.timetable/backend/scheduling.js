@@ -6,9 +6,9 @@ const DOCUMENT = `${PREFIX}document`;
 
 const resources = {
   subjects: { table: `${PREFIX}subject`, fields: { name: 'text', short: 'text', color: 'optional', picture: 'optional', classroomCount: 'positive', customFields: 'json' }, required: ['name', 'short'] },
-  classes: { table: `${PREFIX}class`, fields: { name: 'text', short: 'text', color: 'optional', picture: 'optional', printSubjectPicture: 'boolean', customFields: 'json' }, required: ['name', 'short'] },
+  classes: { table: `${PREFIX}class`, fields: { name: 'text', short: 'text', color: 'optional', picture: 'optional', printSubjectPicture: 'boolean', customFields: 'json', academicClassId: 'optional' }, required: ['name', 'short'] },
   classrooms: { table: `${PREFIX}classroom`, fields: { name: 'text', short: 'text', color: 'optional', picture: 'optional', customFields: 'json' }, required: ['name', 'short'] },
-  teachers: { table: `${PREFIX}teacher`, fields: { firstName: 'text', lastName: 'text', khmerName: 'optional', short: 'text', sex: 'optional', email: 'optional', phone: 'optional', photo: 'optional', color: 'optional', classTeacherId: 'optional' }, required: ['firstName', 'lastName', 'short'] },
+  teachers: { table: `${PREFIX}teacher`, fields: { firstName: 'text', lastName: 'text', khmerName: 'optional', short: 'text', sex: 'optional', email: 'optional', phone: 'optional', photo: 'optional', color: 'optional', classTeacherId: 'optional', directoryUserId: 'optional' }, required: ['firstName', 'lastName', 'short'] },
   lessons: { table: `${PREFIX}lesson`, fields: { teacherId: 'text', subjectId: 'text', classId: 'text', perWeek: 'positive', lessonType: 'lessonType' }, required: ['teacherId', 'subjectId', 'classId', 'perWeek'] },
   entries: { table: `${PREFIX}entry`, fields: { lessonId: 'optional', classId: 'text', teacherId: 'text', subjectId: 'text', classroomId: 'optional', day: 'day', period: 'period' }, required: ['classId', 'teacherId', 'subjectId', 'day', 'period'] },
 };
@@ -44,7 +44,16 @@ async function belongs(db, table, rowId, timetableId, label) {
   if (!rows.length) throw new Error(`${label} does not belong to this timetable`);
 }
 
-async function validateReferences(db, resource, values, timetableId) {
+async function validateReferences(context, resource, values, timetableId) {
+  const db = context.database;
+  if (resource === 'classes' && values.academicClassId) {
+    const classes = await context.directory.lookupClasses([id(values.academicClassId, 'academicClassId')]);
+    if (classes.length !== 1 || classes[0].id !== values.academicClassId) throw new Error('academicClassId is not available through the Academic directory contract');
+  }
+  if (resource === 'teachers' && values.directoryUserId) {
+    const users = await context.directory.lookupUsers([id(values.directoryUserId, 'directoryUserId')]);
+    if (users.length !== 1 || users[0].id !== values.directoryUserId) throw new Error('directoryUserId is not available through the core identity directory');
+  }
   if (resource === 'teachers' && values.classTeacherId) await belongs(db, resources.classes.table, values.classTeacherId, timetableId, 'classTeacherId');
   if (resource === 'lessons' || resource === 'entries') {
     for (const [field, target] of [['teacherId', 'teachers'], ['subjectId', 'subjects'], ['classId', 'classes']]) {
@@ -82,7 +91,7 @@ function registerScheduling(context) {
       const values = {};
       for (const field of definition.required) values[field] = clean(body[field], definition.fields[field], field);
       for (const [field, kind] of Object.entries(definition.fields)) if (body[field] !== undefined && !(field in values)) values[field] = clean(body[field], kind, field);
-      await validateReferences(db, resource, values, timetableId);
+      await validateReferences(context, resource, values, timetableId);
       if (resource === 'entries') {
         const timetable = await db.query(`SELECT "numberOfDays","periodsPerDay","weekend" FROM ${DOCUMENT} WHERE "id"=$1`, [timetableId]);
         const weekdays = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
@@ -99,7 +108,7 @@ function registerScheduling(context) {
     }});
     context.routes.register({ method: 'PUT', path: `${resource}/:id`, permission: manage, handler: async (request) => {
       const rowId = id(request?.params?.id);
-      const existing = await db.query(`SELECT "timetableId" FROM ${table} WHERE "id"=$1`, [rowId]);
+      const existing = await db.query(`SELECT * FROM ${table} WHERE "id"=$1`, [rowId]);
       if (!existing.length) throw new Error(`${resource} record not found`);
       const timetableId = existing[0].timetableId;
       const document = await db.query(`SELECT "status" FROM ${DOCUMENT} WHERE "id"=$1`, [timetableId]);
@@ -108,7 +117,11 @@ function registerScheduling(context) {
       const values = {};
       for (const [field, kind] of Object.entries(definition.fields)) if (body[field] !== undefined) values[field] = clean(body[field], kind, field);
       if (!Object.keys(values).length) throw new Error('No editable fields supplied');
-      await validateReferences(db, resource, values, timetableId);
+      // A partial entry update must validate the resulting row, not only supplied fields.
+      // Otherwise changing lessonId (or one participant) can leave an entry pointing at
+      // a lesson whose teacher, subject, or class no longer matches it.
+      const references = resource === 'entries' ? { ...existing[0], ...values } : values;
+      await validateReferences(context, resource, references, timetableId);
       const fields = Object.keys(values);
       await db.execute(`UPDATE ${table} SET ${fields.map((field, index) => `"${field}"=$${index + 2}${field === 'customFields' ? '::jsonb' : ''}`).join(',')},"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=$1`, [rowId, ...Object.values(values)]);
       const rows = await db.query(`SELECT * FROM ${table} WHERE "id"=$1`, [rowId]);

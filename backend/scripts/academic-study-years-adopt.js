@@ -9,8 +9,8 @@ const { verifyRecoveryBackup } = require('./document-designer-adopt');
 const { atomicJson, loadJournal, runBackfill } = require('./plugin-adoption-toolkit');
 
 function parseConfirmation(env) {
-  if (env.ACADEMIC_STUDY_YEARS_NON_INTERACTIVE !== 'true') {
-    throw new Error('ACADEMIC_STUDY_YEARS_NON_INTERACTIVE=true is required');
+  if ((env.ATTENDANCE_STUDY_YEARS_NON_INTERACTIVE ?? env.ACADEMIC_STUDY_YEARS_NON_INTERACTIVE) !== 'true') {
+    throw new Error('ATTENDANCE_STUDY_YEARS_NON_INTERACTIVE=true is required');
   }
   const slug = env.ACADEMIC_SCHOOL_SLUG;
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug || '') || slug.length > 80) {
@@ -19,14 +19,15 @@ function parseConfirmation(env) {
   if (env.ACADEMIC_CONFIRM_SLUG !== slug) {
     throw new Error('ACADEMIC_CONFIRM_SLUG must exactly match the school slug');
   }
-  if (!/^[a-f0-9]{64}$/.test(env.ACADEMIC_STUDY_YEARS_SOURCE_SHA256 || '')) {
-    throw new Error('ACADEMIC_STUDY_YEARS_SOURCE_SHA256 must match the preflight fingerprint');
+  const sourceSha256 = env.ATTENDANCE_STUDY_YEARS_SOURCE_SHA256 ?? env.ACADEMIC_STUDY_YEARS_SOURCE_SHA256;
+  if (!/^[a-f0-9]{64}$/.test(sourceSha256 || '')) {
+    throw new Error('ATTENDANCE_STUDY_YEARS_SOURCE_SHA256 must match the preflight fingerprint');
   }
-  return { slug, sourceSha256: env.ACADEMIC_STUDY_YEARS_SOURCE_SHA256 };
+  return { slug, sourceSha256 };
 }
 
 function journalPath(directory, slug) {
-  return path.join(path.resolve(directory), `academic-${slug}-study-years.journal.json`);
+  return path.join(path.resolve(directory), `attendance-${slug}-study-years.journal.json`);
 }
 
 async function dryRun({ adapter, directory, backupName, confirmation }) {
@@ -37,7 +38,7 @@ async function dryRun({ adapter, directory, backupName, confirmation }) {
     blockers.push('source fingerprint changed after approval');
   }
   return {
-    format: 'wattanam-academic-study-years-adoption-dry-run-v1',
+    format: 'wattanam-attendance-study-years-adoption-dry-run-v1',
     dryRun: true,
     zeroWriteGuarantee: true,
     ready: blockers.length === 0,
@@ -67,7 +68,7 @@ async function adopt({ adapter, directory, backupName, confirmation, chunkSize =
 
   const journalFile = journalPath(directory, confirmation.slug);
   const maintenanceFile = path.join(path.resolve(directory), 'plugin-adoption.maintenance.lock');
-  const identity = `academic-study-years:${confirmation.slug}:${before.source.sha256}:${backup.sha256}`;
+  const identity = `attendance-study-years:${confirmation.slug}:${before.source.sha256}:${backup.sha256}`;
   const existingRows = await adapter.targetCount();
   if (!Number.isInteger(existingRows) || existingRows < 0) throw new Error('study-year target count is invalid');
   if (!resumed && existingRows !== 0) throw new Error('study-year target must be empty without a matching journal');
@@ -211,7 +212,7 @@ async function main() {
 
 if (require.main === module) {
   main().catch((error) => {
-    process.stderr.write(`Academic study-year adoption failed: ${error.message}\n`);
+    process.stderr.write(`Attendance study-year adoption failed: ${error.message}\n`);
     process.exitCode = 1;
   });
 }

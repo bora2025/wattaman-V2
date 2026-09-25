@@ -4,7 +4,7 @@ export const PLUGIN_UI_SCHEMA_VERSION = 2 as const;
 
 export type PluginUiComponentType =
   | 'heading' | 'text' | 'status' | 'card' | 'metric' | 'table' | 'form'
-  | 'detail' | 'chart' | 'file' | 'print' | 'scanner' | 'actions';
+  | 'detail' | 'chart' | 'file' | 'print' | 'document' | 'designer' | 'scanner' | 'filter' | 'actions';
 
 export interface PluginUiDataSource {
   id: string;
@@ -44,11 +44,12 @@ export interface PluginUiBundle {
 }
 
 const ID = /^[a-z0-9][a-zA-Z0-9._-]*$/;
-const ROUTE = /^[a-z0-9][a-z0-9/_-]*(?::[a-z][a-zA-Z0-9]*)?$/;
+const ROUTE_SEGMENT = '(?:[a-z0-9][a-z0-9_-]*|:[a-z][a-zA-Z0-9]*)';
+const ROUTE = new RegExp(`^${ROUTE_SEGMENT}(?:/${ROUTE_SEGMENT})*$`);
 const METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
 const COMPONENTS = new Set<PluginUiComponentType>([
   'heading', 'text', 'status', 'card', 'metric', 'table', 'form', 'detail',
-  'chart', 'file', 'print', 'scanner', 'actions',
+  'chart', 'file', 'print', 'document', 'designer', 'scanner', 'filter', 'actions',
 ]);
 const FORBIDDEN_KEYS = /^(?:html|dangerouslySetInnerHTML|script|srcDoc|javascript|on[A-Z].*)$/;
 const DATA_PATH = /^[a-zA-Z][a-zA-Z0-9_]*(?:\.[a-zA-Z][a-zA-Z0-9_]*)*$/;
@@ -178,6 +179,18 @@ export function parsePluginUiBundle(value: unknown, pluginId: string, declaredPe
         const options = (component.options || {}) as Record<string, unknown>;
         if (options.pageSize !== undefined && (!Number.isInteger(options.pageSize) || Number(options.pageSize) < 1 || Number(options.pageSize) > 100)) throw new BadRequestException('Plugin UI table pageSize must be between 1 and 100');
         if (options.selectable !== undefined && typeof options.selectable !== 'boolean') throw new BadRequestException('Plugin UI table selectable must be boolean');
+        if (options.rowRoute !== undefined) {
+          const rowRoute = safeRoute(options.rowRoute, 'Plugin UI table rowRoute', true);
+          const mapping = object(options.rowParameterMap, 'Plugin UI table rowParameterMap');
+          const routeNames = routeParameters(rowRoute);
+          if (routeNames.length === 0) throw new BadRequestException('Plugin UI table rowRoute requires a route parameter');
+          for (const [name, dataPath] of Object.entries(mapping)) {
+            if (!routeNames.includes(name) || typeof dataPath !== 'string' || !DATA_PATH.test(dataPath)) throw new BadRequestException('Plugin UI table rowParameterMap is invalid');
+          }
+          if (routeNames.some((name) => !parameterNames.has(name) && !Object.prototype.hasOwnProperty.call(mapping, name))) throw new BadRequestException('Plugin UI table rowRoute has an unresolved parameter');
+        } else if (options.rowParameterMap !== undefined) {
+          throw new BadRequestException('Plugin UI table rowParameterMap requires rowRoute');
+        }
       }
       if (type === 'form') {
         if (!source || sourceMethods.get(source) === 'GET' || sourceMethods.get(source) === 'DELETE') throw new BadRequestException('Plugin UI form requires a POST, PUT, or PATCH data source');
@@ -194,7 +207,11 @@ export function parsePluginUiBundle(value: unknown, pluginId: string, declaredPe
           for (const numericKey of ['min', 'max', 'minLength', 'maxLength'] as const) if (field[numericKey] !== undefined && typeof field[numericKey] !== 'number') throw new BadRequestException(`Plugin UI form ${numericKey} must be numeric`);
           if (fieldType === 'select') {
             if (!Array.isArray(field.options) || field.options.length < 1 || field.options.length > 100) throw new BadRequestException('Plugin UI select requires 1 to 100 options');
-            field.options.forEach((choice, choiceIndex) => { const option = object(choice, `select options[${choiceIndex}]`); string(option.label, 'select option label', 120); string(option.value, 'select option value', 160); });
+            field.options.forEach((choice, choiceIndex) => {
+              const option = object(choice, `select options[${choiceIndex}]`);
+              string(option.label, 'select option label', 120);
+              if (typeof option.value !== 'string' || option.value.length > 160) throw new BadRequestException('select option value is invalid');
+            });
           }
           if (field.visibleWhen !== undefined) {
             const condition = object(field.visibleWhen, 'form field visibleWhen');
@@ -272,14 +289,34 @@ export function parsePluginUiBundle(value: unknown, pluginId: string, declaredPe
         if (!Array.isArray(options.acceptedTypes) || options.acceptedTypes.length < 1 || options.acceptedTypes.length > safeTypes.size || options.acceptedTypes.some((mime) => typeof mime !== 'string' || !safeTypes.has(mime))) throw new BadRequestException('Plugin UI file acceptedTypes contains an unsafe type');
       }
       if (type === 'print') {
-        if (!source || sourceMethods.get(source) !== 'GET' || sourceParameters.get(source)?.size) throw new BadRequestException('Plugin UI print requires an autoload GET data source');
+        if (!source || sourceMethods.get(source) === 'DELETE' || sourceParameters.get(source)?.size) throw new BadRequestException('Plugin UI print requires a non-parameterized readable or form-result data source');
         if (!Array.isArray(component.fields) || component.fields.length < 1 || component.fields.length > 30) throw new BadRequestException('Plugin UI print requires 1 to 30 fields');
         component.fields.forEach((candidateField, fieldIndex) => { const field = object(candidateField, `print fields[${fieldIndex}]`); string(field.label, 'print field label', 120); if (typeof field.path !== 'string' || !DATA_PATH.test(field.path)) throw new BadRequestException('Plugin UI print field path is invalid'); });
         const options = object(component.options, 'Plugin UI print options');
+        if (options.itemsPath !== undefined && (typeof options.itemsPath !== 'string' || !DATA_PATH.test(options.itemsPath))) throw new BadRequestException('Plugin UI print itemsPath is invalid');
         if (!Array.isArray(options.formats) || options.formats.length < 1 || options.formats.some((format) => !['print', 'csv', 'pdf'].includes(String(format)))) throw new BadRequestException('Plugin UI print formats are invalid');
         if (new Set(options.formats as unknown[]).size !== options.formats.length) throw new BadRequestException('Plugin UI print formats are duplicated');
         if (options.filename !== undefined && !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}$/.test(String(options.filename))) throw new BadRequestException('Plugin UI print filename is invalid');
         if (options.maximumRows !== undefined && (!Number.isInteger(options.maximumRows) || Number(options.maximumRows) < 1 || Number(options.maximumRows) > 10000)) throw new BadRequestException('Plugin UI print maximumRows is invalid');
+      }
+      if (type === 'document') {
+        if (!source || sourceMethods.get(source) === 'GET' || sourceMethods.get(source) === 'DELETE' || sourceParameters.get(source)?.size) throw new BadRequestException('Plugin UI document requires a non-parameterized mutation-result data source');
+        const options = object(component.options, 'Plugin UI document options');
+        if (options.documentsPath !== undefined && (typeof options.documentsPath !== 'string' || !DATA_PATH.test(options.documentsPath))) throw new BadRequestException('Plugin UI document documentsPath is invalid');
+        if (options.maximumDocuments !== undefined && (!Number.isInteger(options.maximumDocuments) || Number(options.maximumDocuments) < 1 || Number(options.maximumDocuments) > 500)) throw new BadRequestException('Plugin UI document maximumDocuments is invalid');
+        if (!Array.isArray(options.formats) || options.formats.length < 1 || options.formats.some((format) => !['print', 'pdf'].includes(String(format)))) throw new BadRequestException('Plugin UI document formats are invalid');
+        if (new Set(options.formats as unknown[]).size !== options.formats.length) throw new BadRequestException('Plugin UI document formats are duplicated');
+      }
+      if (type === 'designer') {
+        if (!source || sourceMethods.get(source) !== 'GET') throw new BadRequestException('Plugin UI designer requires a GET template source');
+        const options = object(component.options, 'Plugin UI designer options');
+        const saveSource = string(options.saveSource, 'Plugin UI designer saveSource', 100);
+        if (!sourceIds.has(saveSource) || !['PUT', 'PATCH'].includes(String(sourceMethods.get(saveSource)))) throw new BadRequestException('Plugin UI designer saveSource must reference a PUT or PATCH data source');
+        if (options.maximumElements !== undefined && (!Number.isInteger(options.maximumElements) || Number(options.maximumElements) < 1 || Number(options.maximumElements) > 100)) throw new BadRequestException('Plugin UI designer maximumElements is invalid');
+        if (options.assetSource !== undefined) {
+          const assetSource = string(options.assetSource, 'Plugin UI designer assetSource', 100);
+          if (!sourceIds.has(assetSource) || sourceMethods.get(assetSource) !== 'GET') throw new BadRequestException('Plugin UI designer assetSource must reference a GET data source');
+        }
       }
       if (type === 'scanner') {
         if (!source || sourceMethods.get(source) === 'GET' || sourceMethods.get(source) === 'DELETE') throw new BadRequestException('Plugin UI scanner requires a write data source');
@@ -288,6 +325,41 @@ export function parsePluginUiBundle(value: unknown, pluginId: string, declaredPe
         if (!ID.test(string(options.field, 'scanner field', 100))) throw new BadRequestException('Plugin UI scanner field is invalid');
         for (const [key, minimum, maximum] of [['minLength', 1, 1000], ['maxLength', 1, 1000], ['debounceMs', 0, 10000]] as const) if (options[key] !== undefined && (!Number.isInteger(options[key]) || Number(options[key]) < minimum || Number(options[key]) > maximum)) throw new BadRequestException(`Plugin UI scanner ${key} is invalid`);
         if (options.minLength !== undefined && options.maxLength !== undefined && Number(options.minLength) > Number(options.maxLength)) throw new BadRequestException('Plugin UI scanner length range is invalid');
+        if (options.contextFields !== undefined) {
+          if (!Array.isArray(options.contextFields) || options.contextFields.length < 1 || options.contextFields.length > 8) throw new BadRequestException('Plugin UI scanner contextFields must contain 1 to 8 fields');
+          const ids = new Set<string>();
+          options.contextFields.forEach((candidate, index) => {
+            const field = object(candidate, `scanner contextFields[${index}]`); const id = string(field.id, 'scanner context field id', 100);
+            if (!ID.test(id) || id === String(options.field) || ids.has(id)) throw new BadRequestException('Plugin UI scanner context field id is invalid or duplicated');
+            ids.add(id); string(field.label, 'scanner context field label', 120);
+            const fieldType = string(field.type, 'scanner context field type', 20);
+            if (!['text', 'number', 'select'].includes(fieldType)) throw new BadRequestException('Plugin UI scanner context field type is invalid');
+            if (field.required !== undefined && typeof field.required !== 'boolean') throw new BadRequestException('Plugin UI scanner context field required must be boolean');
+            if (fieldType === 'select') {
+              if (!Array.isArray(field.options) || field.options.length < 1 || field.options.length > 100) throw new BadRequestException('Plugin UI scanner select field requires 1 to 100 options');
+              field.options.forEach((candidateOption) => { const option = object(candidateOption, 'scanner context option'); string(option.label, 'scanner context option label', 120); if (!['string', 'number'].includes(typeof option.value)) throw new BadRequestException('Plugin UI scanner context option value is invalid'); });
+            }
+          });
+        }
+      }
+      if (type === 'filter') {
+        if (source) throw new BadRequestException('Plugin UI filter uses options.sources instead of source');
+        const options = object(component.options, 'Plugin UI filter options');
+        if (!Array.isArray(options.sources) || options.sources.length < 1 || options.sources.some((sourceId) => typeof sourceId !== 'string' || sourceMethods.get(sourceId) !== 'GET')) throw new BadRequestException('Plugin UI filter sources must reference GET data sources');
+        if (new Set(options.sources as string[]).size !== options.sources.length) throw new BadRequestException('Plugin UI filter sources are duplicated');
+        if (!Array.isArray(component.fields) || component.fields.length < 1 || component.fields.length > 12) throw new BadRequestException('Plugin UI filter requires 1 to 12 fields');
+        const fieldIds = new Set<string>();
+        component.fields.forEach((candidateField, fieldIndex) => {
+          const field = object(candidateField, `filter fields[${fieldIndex}]`); const fieldId = string(field.id, 'filter field id', 100);
+          if (!ID.test(fieldId) || fieldIds.has(fieldId)) throw new BadRequestException('Plugin UI filter field id is invalid or duplicated');
+          fieldIds.add(fieldId); string(field.label, 'filter field label', 120);
+          const fieldType = string(field.type, 'filter field type', 20);
+          if (!['text', 'date', 'number', 'select'].includes(fieldType)) throw new BadRequestException('Plugin UI filter field type is invalid');
+          if (fieldType === 'select') {
+            if (!Array.isArray(field.options) || field.options.length < 1 || field.options.length > 100) throw new BadRequestException('Plugin UI filter select requires 1 to 100 options');
+            field.options.forEach((choice) => { const option = object(choice, 'filter select option'); string(option.label, 'filter option label', 120); if (!['string', 'number'].includes(typeof option.value)) throw new BadRequestException('filter option value is invalid'); });
+          }
+        });
       }
       return {
         id: componentId, type,

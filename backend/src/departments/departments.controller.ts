@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Request, UseGuards, HttpException, HttpStatus, ConflictException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Request, UseGuards, HttpException, HttpStatus } from '@nestjs/common';
 import { DepartmentsService } from './departments.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -27,8 +27,7 @@ export class DepartmentsController {
   @Post()
   async create(@Body() body: { name: string; nameKh?: string; description?: string }, @Request() req: any) {
     try {
-      this.assertLegacyMutationOwner();
-      return await this.departmentsService.create(body);
+      return this.pluginOwned() ? await this.dispatch('POST', 'departments', req, body) : await this.departmentsService.create(body);
     } catch (error: any) {
       if (error.code === 'P2002') {
         throw new HttpException('Department name already exists', HttpStatus.BAD_REQUEST);
@@ -42,8 +41,7 @@ export class DepartmentsController {
   @Put(':id')
   async update(@Param('id') id: string, @Body() body: { name?: string; nameKh?: string; description?: string }, @Request() req: any) {
     try {
-      this.assertLegacyMutationOwner();
-      return await this.departmentsService.update(id, body);
+      return this.pluginOwned() ? await this.dispatch('PUT', `departments/${id}`, req, body, { id }) : await this.departmentsService.update(id, body);
     } catch (error: any) {
       if (error.code === 'P2002') {
         throw new HttpException('Department name already exists', HttpStatus.BAD_REQUEST);
@@ -56,17 +54,14 @@ export class DepartmentsController {
   @Roles('ADMIN')
   @Delete(':id')
   async delete(@Param('id') id: string, @Request() req: any) {
-    this.assertLegacyMutationOwner();
-    return this.departmentsService.delete(id);
+    return this.pluginOwned()
+      ? this.dispatch('DELETE', `departments/${id}`, req, { idempotencyKey: `delete-department:${id}` }, { id })
+      : this.departmentsService.delete(id);
   }
 
   private pluginOwned() { return academicDepartmentsRouteOwner() === 'plugin'; }
 
-  private assertLegacyMutationOwner() {
-    if (this.pluginOwned()) throw new ConflictException('Academic Department writes require a certified consistency policy; keep the route owner at legacy');
-  }
-
-  private dispatch(method: 'GET', route: string, req: any, body: unknown, params: Record<string, string> = {}) {
+  private dispatch(method: 'GET' | 'POST' | 'PUT' | 'DELETE', route: string, req: any, body: unknown, params: Record<string, string> = {}) {
     return this.extensions.dispatch(PLUGIN_ID, {
       method, path: route, params, query: {}, body,
       principal: { userId: req.user?.userId, role: req.user?.role, email: req.user?.email },

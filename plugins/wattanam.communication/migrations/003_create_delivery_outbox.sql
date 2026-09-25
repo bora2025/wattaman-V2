@@ -1,0 +1,2 @@
+-- wattanam-plugin-migration: 003_create_delivery_outbox
+CREATE TABLE plugin_wattanam_communication_delivery_outbox ("id" TEXT PRIMARY KEY,"messageId" TEXT NOT NULL REFERENCES plugin_wattanam_communication_message("id") ON DELETE CASCADE,"receiverDirectoryUserId" TEXT NOT NULL,"eventType" TEXT NOT NULL DEFAULT 'communication.message',"attempts" INTEGER NOT NULL DEFAULT 0 CHECK ("attempts" >= 0),"nextAttemptAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,"deliveredAt" TIMESTAMPTZ,"lastError" TEXT,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP);

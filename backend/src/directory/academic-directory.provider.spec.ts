@@ -1,3 +1,4 @@
+import { readFileSync } from 'fs';
 import { PrismaAcademicDirectoryProvider } from './academic-directory.provider';
 
 describe('PrismaAcademicDirectoryProvider department membership read ownership', () => {
@@ -14,23 +15,9 @@ describe('PrismaAcademicDirectoryProvider department membership read ownership',
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
-  it('reads plugin membership only when it matches the locked legacy value', async () => {
-    process.env.ACADEMIC_DEPARTMENT_MEMBERSHIP_READ_OWNER = 'plugin';
-    const tx = { $queryRawUnsafe: jest.fn().mockResolvedValueOnce([{ departmentId: 'd1' }]).mockResolvedValueOnce([{ departmentId: 'd1' }]) };
-    const prisma = { user: { findUnique: jest.fn() }, $transaction: jest.fn((callback) => callback(tx)) } as any;
-    await expect(new PrismaAcademicDirectoryProvider(prisma).departmentForUser('u1')).resolves.toBe('d1');
-    expect(tx.$queryRawUnsafe.mock.calls[0][0]).toContain('FOR SHARE');
-    expect(prisma.user.findUnique).not.toHaveBeenCalled();
-  });
-
-  it('rejects divergence, missing plugin membership and invalid ownership', async () => {
-    process.env.ACADEMIC_DEPARTMENT_MEMBERSHIP_READ_OWNER = 'plugin';
-    const tx = { $queryRawUnsafe: jest.fn().mockResolvedValueOnce([{ departmentId: 'd1' }]).mockResolvedValueOnce([]) };
-    const prisma = { user: { findUnique: jest.fn() }, $transaction: jest.fn((callback) => callback(tx)) } as any;
-    const provider = new PrismaAcademicDirectoryProvider(prisma);
-    await expect(provider.departmentForUser('u1')).rejects.toThrow('mirror differs');
-    process.env.ACADEMIC_DEPARTMENT_MEMBERSHIP_READ_OWNER = 'unknown';
-    await expect(provider.departmentForUser('u1')).rejects.toThrow('must be legacy or plugin');
+  it('contains no cross-schema Academic department membership SQL', () => {
+    const source = readFileSync(require.resolve('./academic-directory.provider'), 'utf8');
+    expect(source).not.toContain('plugin_wattanam_academic_management_user_department');
   });
 });
 
@@ -76,55 +63,10 @@ describe('PrismaAcademicDirectoryProvider roster contract v1', () => {
     expect(prisma.student.findUnique).not.toHaveBeenCalled();
   });
 
-  it('reads a historical roster from plugin intervals without comparing current membership', async () => {
-    process.env.ACADEMIC_ROSTER_READ_OWNER = 'plugin';
-    const tx = {
-      $queryRawUnsafe: jest.fn().mockResolvedValue([{ studentId: 's1' }]),
-      class: { findUnique: jest.fn().mockResolvedValue({ name: 'Grade 1A' }) },
-      student: { findMany: jest.fn().mockResolvedValue([{ id: 's1', userId: 'u1', studentNumber: '001', parentId: null, classId: 'c2', user: { name: 'Dara' } }]) },
-    };
-    const prisma = {
-      installation: { findUnique: jest.fn().mockResolvedValue({ timezone: 'UTC' }) },
-      $transaction: jest.fn((work) => work(tx)),
-    } as any;
-    await expect(new PrismaAcademicDirectoryProvider(prisma).getClassRoster('c1', '2020-01-01')).resolves.toMatchObject({
-      classId: 'c1', source: 'plugin-enrollment-interval', students: [{ studentId: 's1' }],
-    });
-    expect(tx.student.findMany).toHaveBeenCalledTimes(1);
-  });
-
-  it('rejects current roster drift and overlapping interval membership', async () => {
-    process.env.ACADEMIC_ROSTER_READ_OWNER = 'plugin';
-    const overlapTx = {
-      $queryRawUnsafe: jest.fn().mockResolvedValue([{ studentId: 's1' }, { studentId: 's1' }]),
-      class: { findUnique: jest.fn() }, student: { findMany: jest.fn() },
-    };
-    const overlapPrisma = { installation: { findUnique: jest.fn().mockResolvedValue({ timezone: 'UTC' }) }, $transaction: jest.fn((work) => work(overlapTx)) } as any;
-    await expect(new PrismaAcademicDirectoryProvider(overlapPrisma).getClassRoster('c1', today)).rejects.toThrow('Overlapping');
-
-    const driftTx = {
-      $queryRawUnsafe: jest.fn().mockResolvedValue([{ studentId: 's1' }]),
-      class: { findUnique: jest.fn().mockResolvedValue({ name: 'Grade 1A' }) },
-      student: { findMany: jest.fn()
-        .mockResolvedValueOnce([{ id: 's1', userId: 'u1', studentNumber: null, parentId: null, classId: 'c1', user: { name: 'Dara' } }])
-        .mockResolvedValueOnce([{ id: 's2' }]) },
-    };
-    const driftPrisma = { installation: { findUnique: jest.fn().mockResolvedValue({ timezone: 'UTC' }) }, $transaction: jest.fn((work) => work(driftTx)) } as any;
-    await expect(new PrismaAcademicDirectoryProvider(driftPrisma).getClassRoster('c1', today)).rejects.toThrow('mirror differs');
-  });
-
-  it('resolves historical enrollment from intervals and validates the read-owner setting', async () => {
-    process.env.ACADEMIC_ROSTER_READ_OWNER = 'plugin';
-    const tx = {
-      $queryRawUnsafe: jest.fn().mockResolvedValue([{ classId: 'c1' }]),
-      student: { findUnique: jest.fn().mockResolvedValue({ id: 's1', classId: 'c2' }) },
-      class: { findUnique: jest.fn().mockResolvedValue({ name: 'Grade 1A' }) },
-    };
-    const prisma = { installation: { findUnique: jest.fn().mockResolvedValue({ timezone: 'UTC' }) }, $transaction: jest.fn((work) => work(tx)) } as any;
-    await expect(new PrismaAcademicDirectoryProvider(prisma).getEnrollmentAtDate('s1', '2020-01-01')).resolves.toMatchObject({
-      classId: 'c1', enrolled: true, source: 'plugin-enrollment-interval',
-    });
-    process.env.ACADEMIC_ROSTER_READ_OWNER = 'invalid';
-    await expect(new PrismaAcademicDirectoryProvider(prisma).getEnrollmentAtDate('s1', today)).rejects.toThrow('must be legacy or plugin');
+  it('contains no cross-schema SQL for Academic plugin-owned roster tables', () => {
+    const source = readFileSync(require.resolve('./academic-directory.provider'), 'utf8');
+    expect(source).not.toContain('plugin_wattanam_academic_management_class');
+    expect(source).not.toContain('plugin_wattanam_academic_management_student_profile');
+    expect(source).not.toContain('plugin_wattanam_academic_management_enrollment_interval');
   });
 });

@@ -27,22 +27,28 @@ describe('DepartmentsController compatibility ownership', () => {
     expect(extensions.dispatch).not.toHaveBeenCalled();
   });
 
-  it('permits plugin-backed reads but blocks every mutation until consistency is certified', async () => {
+  it('routes reads and certified mutations exclusively to the plugin owner after cutover', async () => {
     process.env.ACADEMIC_DEPARTMENTS_ROUTE_OWNER = 'plugin';
     const legacy = { findAll: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() } as any;
     const extensions = { dispatch: jest.fn().mockResolvedValue({ id: 'd1' }) } as any;
     const controller = new DepartmentsController(legacy, extensions);
 
     await controller.findAll(principal);
-    await expect(controller.create({ name: 'Science' }, principal)).rejects.toThrow('certified consistency policy');
-    await expect(controller.update('d1', { name: 'Languages' }, principal)).rejects.toThrow('certified consistency policy');
-    await expect(controller.delete('d1', principal)).rejects.toThrow('certified consistency policy');
+    await controller.create({ name: 'Science' }, principal);
+    await controller.update('d1', { name: 'Languages' }, principal);
+    await controller.delete('d1', principal);
 
     expect(extensions.dispatch.mock.calls.map((call: any[]) => [call[0], call[1].method, call[1].path]))
       .toEqual([
         ['wattanam.academic-management', 'GET', 'departments'],
+        ['wattanam.academic-management', 'POST', 'departments'],
+        ['wattanam.academic-management', 'PUT', 'departments/d1'],
+        ['wattanam.academic-management', 'DELETE', 'departments/d1'],
       ]);
     expect(extensions.dispatch.mock.calls[0][1]).toMatchObject({ principal: { userId: 'admin-1', role: 'ADMIN', email: 'admin@example.test' } });
     expect(Object.values(legacy).some((fn: any) => fn.mock.calls.length)).toBe(false);
+    expect(extensions.dispatch.mock.calls[3][1]).toMatchObject({
+      params: { id: 'd1' }, body: { idempotencyKey: 'delete-department:d1' },
+    });
   });
 });

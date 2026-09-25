@@ -72,7 +72,7 @@ export default function CoreAdminDashboard() {
           <section>
             <div className="flex items-center justify-between gap-4">
               <div><h2 className="text-lg font-semibold text-slate-800">Installed features</h2><p className="mt-1 text-sm text-slate-500">Visible cards come from active plugins and your granted permissions.</p></div>
-              <Link href="/marketplace" className="btn btn-primary">Add features</Link>
+              <Link href="/admin/plugins" className="btn btn-primary">Add features</Link>
             </div>
             {pluginCards.length > 0 ? (
               <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

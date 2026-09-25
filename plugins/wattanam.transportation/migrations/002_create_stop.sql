@@ -1,0 +1,2 @@
+-- wattanam-plugin-migration: 002_create_stop
+CREATE TABLE plugin_wattanam_transportation_stop ("id" TEXT PRIMARY KEY,"name" TEXT NOT NULL,"latitude" DOUBLE PRECISION NOT NULL CHECK ("latitude" BETWEEN -90 AND 90),"longitude" DOUBLE PRECISION NOT NULL CHECK ("longitude" BETWEEN -180 AND 180),"order" INTEGER NOT NULL DEFAULT 0 CHECK ("order" >= 0),"routeId" TEXT NOT NULL REFERENCES plugin_wattanam_transportation_route("id") ON DELETE CASCADE,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP);

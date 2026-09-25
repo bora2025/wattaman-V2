@@ -89,9 +89,23 @@ export function createTestContext(overrides: ContextOverrides = {}): TestHarness
       lookupUsers: async () => [],
       lookupClasses: async () => [],
       classesForUser: async () => [],
+      getClassRoster: async (classId: string, asOfIsoDate: string) => ({
+        contract: { id: 'wattanam.academic-management.roster' as const, version: '1.0.0' as const },
+        classId, className: null, asOfIsoDate, source: 'plugin-enrollment-interval' as const, students: [],
+      }),
+      getEnrollmentAtDate: async (studentId: string, asOfIsoDate: string) => ({
+        contract: { id: 'wattanam.academic-management.roster' as const, version: '1.0.0' as const },
+        studentId, classId: null, className: null, enrolled: false, asOfIsoDate,
+        source: 'plugin-enrollment-interval' as const,
+      }),
     },
     realtime: {
       notifyUser: (userId, event, payload) => { emitted.push({ userId, event, payload }); },
+    },
+    crypto: { hashBcrypt: async (plaintext) => `bcrypt:${plaintext}` },
+    accounts: {
+      createStudent: async (input) => ({ id: `student-${input.commandKey}`, name: input.name, role: 'STUDENT', email: input.email ?? null, phone: input.phone ?? null }),
+      updateStudent: async (input) => ({ id: input.userId, name: input.name, role: 'STUDENT', email: input.email ?? null, phone: input.phone ?? null }),
     },
     ...topLevelOverrides,
   };

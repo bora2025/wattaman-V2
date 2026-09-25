@@ -3,7 +3,7 @@
   "id": "wattanam.document-designer",
   "name": "Document Designer",
   "description": "Official Wattanam templates, cards, certificates, QR assets, generation, and print workflows.",
-  "version": "0.1.0",
+  "version": "0.1.4",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -11,10 +11,10 @@
   "frontendEntry": "frontend/page.json",
   "sdkVersion": "1.1.0",
   "runtimeVersion": "1.0.0",
-  "capabilities": ["api.routes", "database.read", "database.write", "events.durable", "navigation.register", "permissions.register", "ui.pages"],
+  "capabilities": ["api.routes", "database.read", "database.write", "directory.read", "events.durable", "navigation.register", "permissions.register", "readmodels.read", "storage.read", "storage.write", "ui.pages"],
   "permissions": ["wattanam.document-designer.view", "wattanam.document-designer.edit", "wattanam.document-designer.generate", "wattanam.document-designer.print"],
   "dependencies": {},
-  "optionalDependencies": {},
+  "optionalDependencies": { "wattanam.human-resources": ">=0.1.2 <1.0.0" },
   "migrations": [
     {
       "id": "001_create_template",

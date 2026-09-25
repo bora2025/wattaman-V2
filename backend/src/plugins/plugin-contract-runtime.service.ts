@@ -83,9 +83,16 @@ export class PluginContractRuntimeService implements OnModuleInit, OnApplication
     if (Buffer.byteLength(dataJson) > Number(process.env.PLUGIN_READ_MODEL_MAX_BYTES || 256 * 1024)) throw new Error('Plugin read model exceeds its quota');
     await this.prisma.$executeRawUnsafe('INSERT INTO "PluginReadModel" ("ownerPluginId","modelName","schemaVersion","recordKey","dataJson") VALUES ($1,$2,$3,$4,$5) ON CONFLICT ("ownerPluginId","modelName","recordKey") DO UPDATE SET "schemaVersion"=EXCLUDED."schemaVersion", "dataJson"=EXCLUDED."dataJson", "updatedAt"=NOW()', pluginId, model, version, recordKey, dataJson);
   }
-  async readModel(ownerPluginId: string, model: string, acceptedVersions: number[]) {
-    if (!this.safe(ownerPluginId) || !this.safe(model) || !acceptedVersions.length) throw new Error('Plugin read model request is invalid');
-    const rows = await this.prisma.$queryRawUnsafe<any[]>('SELECT "recordKey","schemaVersion","dataJson","updatedAt" FROM "PluginReadModel" WHERE "ownerPluginId"=$1 AND "modelName"=$2 AND "schemaVersion" = ANY($3::int[]) ORDER BY "recordKey" LIMIT 10000', ownerPluginId, model, acceptedVersions);
+  async readModel(ownerPluginId: string, model: string, acceptedVersions: number[], recordKey?: string | string[]) {
+    const keys = Array.isArray(recordKey) ? [...new Set(recordKey)] : null;
+    if (!this.safe(ownerPluginId) || !this.safe(model) || !acceptedVersions.length
+      || (typeof recordKey === 'string' && (!recordKey || recordKey.length > 200))
+      || (keys && (!keys.length || keys.length > 500 || keys.some((key) => typeof key !== 'string' || !key || key.length > 200)))) throw new Error('Plugin read model request is invalid');
+    const rows = recordKey === undefined
+      ? await this.prisma.$queryRawUnsafe<any[]>('SELECT "recordKey","schemaVersion","dataJson","updatedAt" FROM "PluginReadModel" WHERE "ownerPluginId"=$1 AND "modelName"=$2 AND "schemaVersion" = ANY($3::int[]) ORDER BY "recordKey" LIMIT 10000', ownerPluginId, model, acceptedVersions)
+      : keys
+        ? await this.prisma.$queryRawUnsafe<any[]>('SELECT "recordKey","schemaVersion","dataJson","updatedAt" FROM "PluginReadModel" WHERE "ownerPluginId"=$1 AND "modelName"=$2 AND "schemaVersion" = ANY($3::int[]) AND "recordKey" = ANY($4::text[]) ORDER BY "recordKey" LIMIT 500', ownerPluginId, model, acceptedVersions, keys)
+        : await this.prisma.$queryRawUnsafe<any[]>('SELECT "recordKey","schemaVersion","dataJson","updatedAt" FROM "PluginReadModel" WHERE "ownerPluginId"=$1 AND "modelName"=$2 AND "schemaVersion" = ANY($3::int[]) AND "recordKey"=$4 LIMIT 1', ownerPluginId, model, acceptedVersions, recordKey);
     return rows.map((row) => ({ key: row.recordKey, version: row.schemaVersion, data: JSON.parse(row.dataJson), updatedAt: row.updatedAt }));
   }
   async health(pluginId: string) {

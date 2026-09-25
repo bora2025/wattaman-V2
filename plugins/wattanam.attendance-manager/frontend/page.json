@@ -19,27 +19,92 @@
       "dataSources": [{ "id": "scan", "method": "POST", "path": "scan", "permission": "wattanam.attendance-manager.scan" }],
       "components": [
         { "id": "heading", "type": "heading", "title": "Camera / USB attendance scanner" },
-        { "id": "scanner", "type": "scanner", "title": "Scan ID", "source": "scan", "options": { "modes": ["camera", "keyboard"], "field": "code", "minLength": 4, "maxLength": 100, "debounceMs": 1000 } }
+        { "id": "scanner", "type": "scanner", "title": "Scan ID", "source": "scan", "options": { "modes": ["camera", "keyboard"], "field": "code", "minLength": 4, "maxLength": 100, "debounceMs": 1000, "contextFields": [
+          { "id": "classId", "type": "text", "label": "Class ID", "required": true },
+          { "id": "session", "type": "select", "label": "Session", "required": true, "options": [{ "label": "Session 1", "value": 1 }, { "label": "Session 2", "value": 2 }, { "label": "Session 3", "value": 3 }, { "label": "Session 4", "value": 4 }] }
+        ] } }
       ]
     },
     {
-      "id": "reports", "title": "Attendance Reports", "routePath": "reports", "permission": "wattanam.attendance-manager.view", "parameters": [],
-      "dataSources": [{ "id": "summary", "method": "GET", "path": "reports/summary", "permission": "wattanam.attendance-manager.view" }],
+      "id": "corrections", "title": "Attendance Corrections", "routePath": "corrections", "permission": "wattanam.attendance-manager.correct", "parameters": [],
+      "dataSources": [{ "id": "records", "method": "GET", "path": "records", "permission": "wattanam.attendance-manager.view" }],
       "components": [
-        { "id": "heading", "type": "heading", "title": "Student, teacher and staff reports" },
+        { "id": "heading", "type": "heading", "title": "Correct student attendance" },
+        { "id": "records", "type": "table", "title": "Recent student records", "source": "records", "fields": [
+          { "id": "date", "label": "Date", "format": "date" }, { "id": "personNameSnapshot", "label": "Student" },
+          { "id": "classNameSnapshot", "label": "Class" }, { "id": "session", "label": "Session" }, { "id": "status", "label": "Status" }
+        ], "options": { "pageSize": 25, "selectable": false, "rowRoute": "corrections/:id", "rowParameterMap": { "id": "id" } } }
+      ]
+    },
+    {
+      "id": "correction-edit", "title": "Correct Attendance", "routePath": "corrections/:id", "permission": "wattanam.attendance-manager.correct",
+      "parameters": [{ "name": "id", "type": "uuid" }],
+      "dataSources": [
+        { "id": "record", "method": "GET", "path": "records/:id", "permission": "wattanam.attendance-manager.view" },
+        { "id": "correct", "method": "PATCH", "path": "records/:id/correct", "permission": "wattanam.attendance-manager.correct" }
+      ],
+      "components": [
+        { "id": "heading", "type": "heading", "title": "Attendance correction" },
+        { "id": "record", "type": "detail", "title": "Recorded attendance", "source": "record", "fields": [
+          { "label": "Student", "path": "personNameSnapshot" }, { "label": "Student number", "path": "personNumberSnapshot" },
+          { "label": "Class", "path": "classNameSnapshot" }, { "label": "Date", "path": "date", "format": "date" },
+          { "label": "Session", "path": "session" }, { "label": "Current status", "path": "status" }
+        ] },
+        { "id": "correction", "type": "form", "title": "Save correction", "source": "correct", "fields": [
+          { "id": "status", "type": "select", "label": "Status", "required": true, "options": [{ "label": "Present", "value": "PRESENT" }, { "label": "Late", "value": "LATE" }, { "label": "Absent", "value": "ABSENT" }, { "label": "Permission", "value": "PERMISSION" }] },
+          { "id": "permissionType", "type": "text", "label": "Permission type", "visibleWhen": { "field": "status", "equals": "PERMISSION" } },
+          { "id": "reason", "type": "textarea", "label": "Correction reason", "required": true, "minLength": 3, "maxLength": 500 }
+        ], "options": { "initialSource": "record", "confirmation": "Save this attendance correction?", "submitLabel": "Save correction", "successMessage": "Attendance correction saved" } }
+      ]
+    },
+    {
+      "id": "alerts", "title": "Attendance Alerts", "routePath": "alerts", "permission": "wattanam.attendance-manager.view", "parameters": [],
+      "dataSources": [
+        { "id": "alerts", "method": "GET", "path": "alerts", "permission": "wattanam.attendance-manager.view" },
+        { "id": "acknowledge", "method": "POST", "path": "alerts/:id/acknowledge", "parameters": ["id"], "autoload": false, "permission": "wattanam.attendance-manager.configure" }
+      ],
+      "components": [
+        { "id": "heading", "type": "heading", "title": "Student absence alerts" },
+        { "id": "alerts", "type": "table", "title": "Alert history", "source": "alerts", "fields": [
+          { "id": "windowStart", "label": "From", "format": "date" }, { "id": "windowEnd", "label": "To", "format": "date" },
+          { "id": "personId", "label": "Student ID" }, { "id": "classId", "label": "Class ID" },
+          { "id": "status", "label": "Status" }, { "id": "attempts", "label": "Attempts" }, { "id": "lastError", "label": "Last error" }
+        ], "options": { "pageSize": 50, "selectable": true } },
+        { "id": "alert-actions", "type": "actions", "options": { "actions": [
+          { "id": "acknowledge", "label": "Acknowledge selected", "mode": "bulk", "source": "acknowledge", "selectionSource": "alerts", "idField": "id", "idParameter": "id", "confirmation": "Acknowledge the selected attendance alerts?" }
+        ] } }
+      ],
+      "realtime": [{ "event": "attendance:alert", "refreshSources": ["alerts"] }]
+    },
+    {
+      "id": "reports", "title": "Attendance Reports", "routePath": "reports", "permission": "wattanam.attendance-manager.report", "parameters": [],
+      "dataSources": [
+        { "id": "summary", "method": "GET", "path": "reports/summary", "permission": "wattanam.attendance-manager.report" },
+        { "id": "printSummary", "method": "GET", "path": "reports/print-data", "permission": "wattanam.attendance-manager.print" }
+      ],
+      "components": [
+        { "id": "heading", "type": "heading", "title": "Student attendance reports" },
+        { "id": "filters", "type": "filter", "fields": [
+          { "id": "classId", "type": "text", "label": "Class ID" }, { "id": "personId", "type": "text", "label": "Student ID" },
+          { "id": "startDate", "type": "date", "label": "Start date" }, { "id": "endDate", "type": "date", "label": "End date" },
+          { "id": "session", "type": "select", "label": "Session", "options": [{ "label": "Session 1", "value": 1 }, { "label": "Session 2", "value": 2 }, { "label": "Session 3", "value": 3 }, { "label": "Session 4", "value": 4 }] },
+          { "id": "status", "type": "select", "label": "Status", "options": [{ "label": "Present", "value": "PRESENT" }, { "label": "Late", "value": "LATE" }, { "label": "Absent", "value": "ABSENT" }, { "label": "Permission", "value": "PERMISSION" }] }
+        ], "options": { "sources": ["summary", "printSummary"], "applyLabel": "Apply report filters", "clearLabel": "Clear filters" } },
         { "id": "summary", "type": "table", "title": "Attendance summary", "source": "summary", "fields": [
           { "id": "personType", "label": "People" }, { "id": "status", "label": "Status" }, { "id": "count", "label": "Records" }
         ], "options": { "pageSize": 30, "selectable": false } },
-        { "id": "print-summary", "type": "print", "title": "Print or export attendance summary", "source": "summary", "fields": [
-          { "label": "People", "path": "personType" }, { "label": "Status", "path": "status" }, { "label": "Records", "path": "count" }
-        ], "options": { "formats": ["print", "csv", "pdf"], "filename": "attendance-summary", "maximumRows": 10000 } }
+        { "id": "print-summary", "type": "print", "title": "Print or export student attendance", "source": "printSummary", "fields": [
+          { "label": "Date", "path": "date" }, { "label": "Student number", "path": "personNumberSnapshot" },
+          { "label": "Student", "path": "personNameSnapshot" }, { "label": "Class", "path": "classNameSnapshot" },
+          { "label": "Session", "path": "session" }, { "label": "Status", "path": "status" }, { "label": "Source", "path": "scanMode" }
+        ], "options": { "formats": ["print", "csv", "pdf"], "filename": "student-attendance", "maximumRows": 10000 } }
       ]
     },
     {
-      "id": "study-years", "title": "Study Years", "routePath": "study-years", "permission": "wattanam.attendance-manager.manage", "parameters": [],
+      "id": "study-years", "title": "Study Years", "routePath": "study-years", "permission": "wattanam.attendance-manager.configure", "parameters": [],
       "dataSources": [
         { "id": "years", "method": "GET", "path": "study-years", "permission": "wattanam.attendance-manager.view" },
-        { "id": "createYear", "method": "POST", "path": "study-years", "permission": "wattanam.attendance-manager.manage" }
+        { "id": "createYear", "method": "POST", "path": "study-years", "permission": "wattanam.attendance-manager.configure" }
       ],
       "components": [
         { "id": "years", "type": "table", "title": "Academic years", "source": "years", "fields": [
@@ -51,14 +116,16 @@
       ]
     },
     {
-      "id": "settings", "title": "Attendance Settings", "routePath": "settings", "permission": "wattanam.attendance-manager.manage", "parameters": [],
+      "id": "settings", "title": "Attendance Settings", "routePath": "settings", "permission": "wattanam.attendance-manager.configure", "parameters": [],
       "dataSources": [
-        { "id": "identifiers", "method": "GET", "path": "identifiers", "permission": "wattanam.attendance-manager.manage" },
-        { "id": "createIdentifier", "method": "POST", "path": "identifiers", "permission": "wattanam.attendance-manager.manage" },
+        { "id": "identifiers", "method": "GET", "path": "identifiers", "permission": "wattanam.attendance-manager.devices.manage" },
+        { "id": "createIdentifier", "method": "POST", "path": "identifiers", "permission": "wattanam.attendance-manager.devices.manage" },
         { "id": "sessions", "method": "GET", "path": "sessions", "permission": "wattanam.attendance-manager.view" },
-        { "id": "saveSession", "method": "POST", "path": "sessions", "permission": "wattanam.attendance-manager.manage" },
+        { "id": "saveSession", "method": "POST", "path": "sessions", "permission": "wattanam.attendance-manager.configure" },
         { "id": "holidays", "method": "GET", "path": "holidays", "permission": "wattanam.attendance-manager.view" },
-        { "id": "createHoliday", "method": "POST", "path": "holidays", "permission": "wattanam.attendance-manager.manage" }
+        { "id": "createHoliday", "method": "POST", "path": "holidays", "permission": "wattanam.attendance-manager.configure" },
+        { "id": "alertRules", "method": "GET", "path": "alert-rules", "permission": "wattanam.attendance-manager.configure" },
+        { "id": "saveAlertRule", "method": "POST", "path": "alert-rules", "permission": "wattanam.attendance-manager.configure" }
       ],
       "components": [
         { "id": "identifiers", "type": "table", "title": "Camera / card / USB identifiers", "source": "identifiers", "fields": [
@@ -66,13 +133,13 @@
         ], "options": { "pageSize": 20, "selectable": false } },
         { "id": "identifier-form", "type": "form", "title": "Add identifier", "source": "createIdentifier", "fields": [
           { "id": "code", "type": "text", "label": "Card / QR / USB code", "required": true }, { "id": "personId", "type": "text", "label": "Person ID", "required": true },
-          { "id": "personType", "type": "select", "label": "Person type", "required": true, "options": [{ "label": "Student", "value": "STUDENT" }, { "label": "Teacher", "value": "TEACHER" }, { "label": "Staff", "value": "STAFF" }] }
+          { "id": "personType", "type": "select", "label": "Person type", "required": true, "options": [{ "label": "Student", "value": "STUDENT" }] }
         ], "options": { "submitLabel": "Add identifier", "successMessage": "Identifier added" } },
         { "id": "sessions", "type": "table", "title": "Attendance sessions", "source": "sessions", "fields": [
           { "id": "scope", "label": "People" }, { "id": "session", "label": "Session" }, { "id": "type", "label": "Type" }, { "id": "startTime", "label": "Start" }, { "id": "endTime", "label": "End" }
         ], "options": { "pageSize": 20, "selectable": false } },
         { "id": "session-form", "type": "form", "title": "Configure session", "source": "saveSession", "fields": [
-          { "id": "scope", "type": "select", "label": "People", "required": true, "options": [{ "label": "Student", "value": "STUDENT" }, { "label": "Teacher", "value": "TEACHER" }, { "label": "Staff", "value": "STAFF" }] },
+          { "id": "scope", "type": "select", "label": "People", "required": true, "options": [{ "label": "Student", "value": "STUDENT" }] },
           { "id": "session", "type": "number", "label": "Session", "required": true, "min": 1, "max": 4 },
           { "id": "type", "type": "select", "label": "Type", "required": true, "options": [{ "label": "Check in", "value": "CHECK_IN" }, { "label": "Check out", "value": "CHECK_OUT" }] },
           { "id": "startTime", "type": "text", "label": "Start time (HH:mm)", "required": true }, { "id": "endTime", "type": "text", "label": "End time (HH:mm)", "required": true }
@@ -82,7 +149,17 @@
         ], "options": { "pageSize": 20, "selectable": false } },
         { "id": "holiday-form", "type": "form", "title": "Add holiday", "source": "createHoliday", "fields": [
           { "id": "date", "type": "date", "label": "Date", "required": true }, { "id": "name", "type": "text", "label": "Name", "required": true }, { "id": "description", "type": "textarea", "label": "Description" }
-        ], "options": { "submitLabel": "Add holiday", "successMessage": "Holiday added" } }
+        ], "options": { "submitLabel": "Add holiday", "successMessage": "Holiday added" } },
+        { "id": "alert-rules", "type": "table", "title": "Absence alert rules", "source": "alertRules", "fields": [
+          { "id": "code", "label": "Code" }, { "id": "enabled", "label": "Enabled", "format": "boolean" },
+          { "id": "threshold", "label": "Absences" }, { "id": "windowDays", "label": "Window days" }, { "id": "channels", "label": "Channels" }
+        ], "options": { "pageSize": 20, "selectable": false } },
+        { "id": "alert-rule-form", "type": "form", "title": "Create or update absence alert rule", "source": "saveAlertRule", "fields": [
+          { "id": "code", "type": "text", "label": "Rule code", "required": true, "minLength": 3, "maxLength": 100 },
+          { "id": "threshold", "type": "number", "label": "Absence threshold", "required": true, "min": 1, "max": 100 },
+          { "id": "windowDays", "type": "number", "label": "Window days", "required": true, "min": 1, "max": 365 },
+          { "id": "enabled", "type": "checkbox", "label": "Enabled" }
+        ], "options": { "submitLabel": "Save alert rule", "successMessage": "Alert rule saved" } }
       ]
     }
   ]

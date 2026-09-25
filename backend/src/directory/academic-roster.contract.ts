@@ -34,3 +34,34 @@ export function currentAcademicDate(value: string): string {
   }
   return value;
 }
+
+export function parseAcademicClassRoster(value: unknown): AcademicClassRoster {
+  const roster = value as Partial<AcademicClassRoster> | null;
+  if (!roster || roster.contract?.id !== ACADEMIC_ROSTER_CONTRACT_ID || roster.contract.version !== ACADEMIC_ROSTER_CONTRACT_VERSION) {
+    throw new Error('Academic roster contract identity is invalid');
+  }
+  currentAcademicDate(String(roster.asOfIsoDate));
+  if (typeof roster.classId !== 'string' || !Array.isArray(roster.students) || !['legacy-current-membership', 'plugin-enrollment-interval'].includes(String(roster.source))) {
+    throw new Error('Academic roster contract payload is invalid');
+  }
+  for (const student of roster.students) {
+    if (!student || typeof student.studentId !== 'string' || typeof student.userId !== 'string' || typeof student.name !== 'string') {
+      throw new Error('Academic roster student payload is invalid');
+    }
+  }
+  return roster as AcademicClassRoster;
+}
+
+export function parseAcademicEnrollment(value: unknown): AcademicEnrollment {
+  const enrollment = value as Partial<AcademicEnrollment> | null;
+  if (!enrollment || enrollment.contract?.id !== ACADEMIC_ROSTER_CONTRACT_ID || enrollment.contract.version !== ACADEMIC_ROSTER_CONTRACT_VERSION) {
+    throw new Error('Academic enrollment contract identity is invalid');
+  }
+  currentAcademicDate(String(enrollment.asOfIsoDate));
+  if (typeof enrollment.studentId !== 'string' || typeof enrollment.enrolled !== 'boolean' || !['legacy-current-membership', 'plugin-enrollment-interval'].includes(String(enrollment.source))) {
+    throw new Error('Academic enrollment contract payload is invalid');
+  }
+  if (enrollment.classId !== null && typeof enrollment.classId !== 'string') throw new Error('Academic enrollment classId is invalid');
+  if (enrollment.enrolled !== Boolean(enrollment.classId)) throw new Error('Academic enrollment state is inconsistent');
+  return enrollment as AcademicEnrollment;
+}

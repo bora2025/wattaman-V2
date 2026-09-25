@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "id": "wattanam.attendance-manager",
   "name": "Attendance Manager",
-  "description": "Study years and student, teacher, and staff attendance with camera/QR, USB scanning, corrections, reports, printing, and exports.",
-  "version": "0.1.0",
+  "description": "Study years and student school-day attendance with camera/QR, USB scanning, corrections, reports, printing, and exports.",
+  "version": "0.1.6",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -11,19 +11,26 @@
   "frontendEntry": "frontend/page.json",
   "sdkVersion": "1.1.0",
   "runtimeVersion": "1.0.0",
-  "capabilities": ["api.routes", "database.read", "database.write", "events.publish", "navigation.register", "permissions.register", "ui.pages"],
-  "permissions": ["wattanam.attendance-manager.view", "wattanam.attendance-manager.scan", "wattanam.attendance-manager.manage", "wattanam.attendance-manager.export"],
+  "capabilities": ["api.routes", "database.read", "database.write", "directory.read", "events.durable", "events.publish", "jobs.schedule", "navigation.register", "notifications.send", "permissions.register", "readmodels.publish", "realtime.notify", "settings.read", "ui.pages"],
+  "permissions": ["wattanam.attendance-manager.view", "wattanam.attendance-manager.scan", "wattanam.attendance-manager.mark", "wattanam.attendance-manager.correct", "wattanam.attendance-manager.report", "wattanam.attendance-manager.print", "wattanam.attendance-manager.configure", "wattanam.attendance-manager.devices.manage", "wattanam.attendance-manager.manage", "wattanam.attendance-manager.export"],
   "dependencies": { "wattanam.academic-management": ">=0.1.0 <1.0.0" },
   "optionalDependencies": {},
   "migrations": [
-    { "id": "001_create_attendance_manager", "path": "migrations/001_create_attendance_manager.sql", "checksum": "d02277c13ddbf7b0237f7059fb389f3fef36184edbfb907ff536515ef0b69233", "destructive": false }
+    { "id": "001_create_attendance_manager", "path": "migrations/001_create_attendance_manager.sql", "checksum": "d02277c13ddbf7b0237f7059fb389f3fef36184edbfb907ff536515ef0b69233", "destructive": false },
+    { "id": "002_add_study_year_branding", "path": "migrations/002_add_study_year_branding.sql", "checksum": "60bd63b69994e9e3154dfb687d28c372a8f30214d7da2dd47e48e34f80cf4faf", "destructive": false },
+    { "id": "003_enforce_student_boundary", "path": "migrations/003_enforce_student_boundary.sql", "checksum": "ed92bab5dd405713b6dbbff4a40d40e0d608bb68a97d2733fd8bd084c20eb91c", "destructive": false },
+    { "id": "004_add_corrections_scans_alerts_snapshots", "path": "migrations/004_add_corrections_scans_alerts_snapshots.sql", "checksum": "3d1b4733339a53a66c67a511a1ea769abcf8656882d671978261542f2891b682", "destructive": false },
+    { "id": "005_add_alert_delivery_ledger", "path": "migrations/005_add_alert_delivery_ledger.sql", "checksum": "d7772013527176050539349faff053af05fe36f08845d12036fd2d977ac14c8d", "destructive": false },
+    { "id": "006_add_legacy_adoption_fields", "path": "migrations/006_add_legacy_adoption_fields.sql", "checksum": "fc36b516cf8f3079a5a075527e2219108456a4c7133e9561eb70f41844c821c9", "destructive": false }
   ],
   "navigation": [
     { "id": "attendance", "label": "Attendance", "href": "/plugins/wattanam.attendance-manager/attendance", "permission": "wattanam.attendance-manager.view" },
     { "id": "scanner", "label": "Attendance Scanner", "href": "/plugins/wattanam.attendance-manager/scanner", "permission": "wattanam.attendance-manager.scan" },
-    { "id": "reports", "label": "Attendance Reports", "href": "/plugins/wattanam.attendance-manager/reports", "permission": "wattanam.attendance-manager.view" },
-    { "id": "study-years", "label": "Study Years", "href": "/plugins/wattanam.attendance-manager/study-years", "permission": "wattanam.attendance-manager.manage" }
-    ,{ "id": "settings", "label": "Attendance Settings", "href": "/plugins/wattanam.attendance-manager/settings", "permission": "wattanam.attendance-manager.manage" }
+    { "id": "corrections", "label": "Attendance Corrections", "href": "/plugins/wattanam.attendance-manager/corrections", "permission": "wattanam.attendance-manager.correct" },
+    { "id": "alerts", "label": "Attendance Alerts", "href": "/plugins/wattanam.attendance-manager/alerts", "permission": "wattanam.attendance-manager.view" },
+    { "id": "reports", "label": "Attendance Reports", "href": "/plugins/wattanam.attendance-manager/reports", "permission": "wattanam.attendance-manager.report" },
+    { "id": "study-years", "label": "Study Years", "href": "/plugins/wattanam.attendance-manager/study-years", "permission": "wattanam.attendance-manager.configure" },
+    { "id": "settings", "label": "Attendance Settings", "href": "/plugins/wattanam.attendance-manager/settings", "permission": "wattanam.attendance-manager.configure" }
   ],
   "supportedLanguages": ["en", "km"]
 }

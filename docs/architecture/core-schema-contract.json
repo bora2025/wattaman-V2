@@ -21,6 +21,7 @@
       "MarketplaceProxyLink",
       "PluginPermissionGrant",
       "PluginNotificationUsage",
+      "PluginAccountCommand",
       "PluginMigration",
       "PluginSetting",
       "PluginJobDefinition",

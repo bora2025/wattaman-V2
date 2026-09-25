@@ -1,7 +1,7 @@
 # Module-to-Plugin Migration Progress Checklist
 
 Status: proposed execution tracker
-Last updated: 2026-09-16
+Last updated: 2026-09-25
 Source plan: [Wattanam Business Modules to Official Plugins Migration Plan](./module-to-plugin-migration-plan.md)
 
 ## 1. How to use
@@ -24,7 +24,76 @@ Source plan: [Wattanam Business Modules to Official Plugins Migration Plan](./mo
 
 Timetable MP-3 extraction has started as a non-cutover first slice; see [Timetable plugin extraction worksheet](./timetable-plugin-extraction.md). The MP-3 gate remains open until full workflow, adoption, and lifecycle evidence exists.
 
-- [~] Timetable plugin source: seven namespaced scheduling tables, permission-gated CRUD, generator preview/atomic save, declarative fallbacks, and the existing rich wizard/entity/schedule/print UI running through plugin APIs. Version 0.1.0 is Stable; 0.1.1 contains the shared rich UI work. Legacy timetable and teacher-attendance routes still serve existing schools; adoption and data cutover remain open.
+Examination extraction has started with a non-cutover data and permission foundation; see the
+[Examination plugin extraction worksheet](./examination-plugin-extraction.md). Its complete
+hosted adoption and lifecycle gates remain open. Learning 0.1.2 now has its complete namespaced
+foundation plus local course, lesson, assignment quiz, grading, engagement and course-attendance
+workflows; see the [Learning plugin extraction worksheet](./learning-plugin-extraction.md). Its
+adoption, rich UI, real-PostgreSQL and lifecycle gates remain open.
+
+- [~] Timetable plugin source: version 0.1.3 has eight namespaced scheduling/teacher-lesson-attendance tables, stable directory identifiers, permission-gated CRUD, generator preview/atomic save, declarative fallbacks, the existing rich wizard/entity/schedule/print UI, teacher attendance, scheduled-teacher and Wattaman scanner workspaces routed through plugin APIs, and a backup-bound eight-dataset adoption/rollback toolkit. Version 0.1.0 is Stable; newer source remains unpublished. Legacy routes still serve existing schools; real-PostgreSQL adoption, hosted role/browser/device parity and data cutover remain open.
+- [~] Examination plugin source: version 0.1.4 has its namespaced rich-question, attempt, grading,
+  gradebook/report and privacy-safe adoption slices passing focused local tests. Hosted PostgreSQL,
+  concurrency, lifecycle and cutover evidence remain open.
+- [~] Learning plugin source: version 0.1.2 has 13 namespaced domain tables, a guarded multi-attempt
+  migration, scoped rich lesson/quiz workflows, manual grading/reset, engagement and roster-bound
+  course attendance passing 27 focused local tests. Its privacy-safe, backup-bound 13-dataset
+  adoption/reconciliation/rollback toolkit passes 6 local tests. Rich UI, restored-backup/hosted
+  PostgreSQL execution and lifecycle evidence remain open.
+- [~] Transportation plugin source: version 0.1.2 has five namespaced route/stop/vehicle/location/rider
+  tables, granular permissions, directory-bound drivers and roster-validated riders, bounded history,
+  dependency-safe route/stop/vehicle lifecycle, post-commit realtime location publication and
+  host-rendered management/tracking/parent pages passing 11 focused local tests. The parent projection
+  is dated-roster scoped and a guarded five-dataset adoption/reconciliation/rollback toolkit passes
+  4 local tests. Restored-backup execution, hosted parent sessions, maps/devices, PostgreSQL and
+  lifecycle evidence remain open.
+- [~] Communication plugin source: version 0.1.2 has isolated Message/Post/outbox tables, granular
+  permissions, Directory identity validation, dated-roster parent/child safeguarding, bounded feeds,
+  atomic retryable realtime delivery and host-rendered composition/authoring passing 8 focused tests.
+  Announcements remains the independently
+  certified standalone plugin under ADR-0018. A privacy-safe two-dataset guarded adoption and
+  rollback toolkit passes 4 local tests. Friendly recipient/conversation UI, hosted realtime proof,
+  restored-backup execution, privacy review, PostgreSQL and lifecycle evidence remain open.
+- [~] Finance plugin source: version 0.1.0 has three isolated minor-unit fee/receipt/settings tables,
+  explicit currency, dated Academic enrollment validation, row-locked transactional payments,
+  immutable receipt identifiers and host-rendered fee/settings pages passing 6 focused tests. A
+  read-only exact-only three-dataset conversion/adoption preflight passes 7 focused tests and blocks
+  rounding, unsafe integers, unknown exponents and non-empty targets
+  ([evidence](../acceptance/mp8-finance-adoption-preflight-2026-09-25.md)). Its backup-bound,
+  resumable adoption/exact-reconciliation/metadata-only rollback suite passes 4 additional tests.
+  Restored-backup execution, compensating reversals, reporting/receipt parity, financial approval,
+  PostgreSQL and lifecycle evidence remain open.
+- [~] Human Resources plugin source: version 0.1.2 has six normalized employee/CV/payroll/staff-
+  attendance tables, Directory role validation, bounded transactional CV replacement, minor-unit
+  payroll with creator/approver/payer segregation and three host-rendered pages passing 7 focused
+  tests. A privacy-safe exact-only six-dataset read preflight passes 7 tests, verifies net salary,
+  blocks invalid paid provenance and documents the missing legacy approver identity
+  ([evidence](../acceptance/mp8-human-resources-adoption-preflight-2026-09-25.md)). Its backup-bound,
+  resumable adoption/exact-reconciliation/metadata-only rollback suite passes 4 additional tests.
+  Restored-backup execution, self-service/manager row scope, payslips, staff-report contracts,
+  specialist approval, PostgreSQL and lifecycle evidence remain open. Staff attendance mutations
+  publish a bounded, actor-free v1 projection for Reporting, and CV updates publish a title-only
+  document profile consumed by Document Designer without exposing contact, history or payroll data.
+- [~] Parent Portal plugin source: version 0.1.1 has namespaced link-request workflow storage,
+  roster-scoped child discovery, optional versioned read-model composition, declarative pages and
+  audited idempotent core parent/guardian commands passing 17 focused backend tests plus 8 SDK
+  manifest tests ([worksheet](./parent-portal-plugin-extraction.md),
+  [evidence](../acceptance/mp9-parent-portal-foundation-2026-09-25.md)). Core keyed read-model lookup
+  and privacy-minimized Attendance, Finance, Examination, Transportation and Communication
+  student-keyed version 1 projections are implemented and covered by focused integration tests.
+  Projection backfill/hosted proof and restored-backup execution of the locally passing guarded
+  ParentLinkRequest adoption/exact-reconciliation/metadata-only rollback toolkit,
+  privacy/accessibility, PostgreSQL, hosted and lifecycle proof remain open.
+- [~] Reporting plugin source: version 0.1.1 is a read-only composition package with no migrations
+  or database capability. It uses a dated Academic roster and bounded bulk keyed reads across five
+  optional privacy-minimized projections, then renders a host-owned filtered table and
+  print/CSV/PDF export. It also provides a dated staff-attendance view from Directory identities and
+  Human Resources' optional projection. Human Resources/Reporting source and behavior suites pass
+  14 focused tests
+  ([worksheet](./reporting-plugin-extraction.md),
+  [evidence](../acceptance/mp9-reporting-foundation-2026-09-25.md)). Real-PostgreSQL execution,
+  restored-backup parity, hosted authorization, marketplace lifecycle and legacy cleanup remain
+  open, so the MP-5 gate is not complete.
 
 Planning note: target dates below are execution targets and should be re-baselined after each gate.
 
@@ -93,30 +162,36 @@ Date risk trigger by wave target:
   - MP1 Document Designer interim JSON authoring page added with separate edit permission,
     actual-descriptor/schema validation and invalid-JSON rejection. This does not complete the
     canvas/preview/generate/print vertical feature.
+  - MP1 Document Designer 0.1.4 adds a bounded schema-v2 page/element render model and the safe
+    host-owned `document` preview/print component. Nested text/QR bindings resolve only against
+    caller-supplied rows. It also composes a bounded staff source from Directory identity and Human
+    Resources' title-only projection without exposing contacts, CV history or payroll. Academic
+    Management 0.1.3 adds a minimized, class-staff-scoped document
+    source; its cross-plugin pipeline test passes 1/1. HR/staff scope, hosted authorization, pixel
+    parity and drag/resize polish remain.
+  - MP2 Academic Management 0.1.3 applies assignment scope consistently to class list/detail and
+    roster reads/add/update/remove; unassigned staff fail before mutation and orphan cleanup is
+    administrator-only. The reference suite passes 9/9.
+  - MP2 Academic Management 0.1.4 establishes canonical teaching-subject ownership with a
+    namespaced schema, administrator mutation boundary, declarative UI, and an active-subject
+    contract for dependent plugins; Timetable retains only schedule-local mappings.
   - MP2 roster/enrollment contract v1 implemented behind Directory with deterministic current
     roster projection and school-timezone date validation. Historical lookup fails closed until
     enrollment intervals exist (22/22 focused tests; TypeScript check passes).
   - MP2 enrollment interval target and adoption added: additive namespaced migration, valid-range
     and single-open-membership constraints, verified-backup journaled copy, unchanged-source check
-    and exact reconciliation pass 6/6 local tests plus plugin CLI validation. Live adoption and
-    historical source completeness remain open.
+    and exact reconciliation plus a fail-closed, backup-bound, non-destructive rollback drill pass
+    6/6 local tests plus plugin CLI validation. Both legacy and plugin datasets are preserved and
+    rollback restores the legacy routing owner ([evidence](../acceptance/mp2-enrollment-rollback-drill-2026-09-25.md)).
+    Restored-backup/live adoption and historical source completeness remain open.
   - MP2 enrollment read routing added: default legacy and opt-in plugin interval modes are
     reversible; plugin reads use repeatable-read isolation, reject overlaps, and require current
     legacy parity (25/25 combined Directory tests). Production enablement awaits restored-backup
     adoption and live parity evidence.
-  - MP2 Study Year plugin read slice implemented: `/study-years` now supports explicit plugin-owned
-    reads with legacy default, plugin-mode writes fail closed, and the Academic Management plugin
-    package now includes read-only Study Year routes, declarative UI listing and additive namespaced
-    migration plus a deterministic read-only adoption preflight (12/12 focused tests, backend build
-    passed).
-  - MP2 Study Year adoption toolkit added: strict confirmation-gated dry-run and journaled adoption
-    now provide resumable copy/reconcile checks for namespaced StudyYear rows with unchanged-source
-    verification and fail-closed target/journal rules (6/6 focused script tests, backend build
-    passed).
-  - MP2 Study Year cutover safety added: Academic cutover-readiness now enforces Study Year
-    source/target parity and reconciled journal state, and a rollback drill script verifies
-    legacy-route restoration without dataset deletion (6/6 focused script tests, backend build
-    passed).
+  - Study Year's exploratory Academic-owned slice is superseded. Attendance Manager is now the
+    single active owner; Academic consumes its versioned read model and its duplicate table remains
+    rollback-only. The adoption/preflight/rollback tools now target Attendance-owned storage while
+    retaining their historical filenames as compatibility entry points.
   - MP2 Class extraction foundation added: `/classes` now supports plugin-owned list reads with
     legacy default and plugin-mode write fail-close protection; Academic Management now includes
     read-only Class route/UI, additive namespaced Class migration, and class preflight/adoption
@@ -124,9 +199,11 @@ Date risk trigger by wave target:
   - MP2 Class cutover safety implementation added: Academic cutover-readiness now includes Class
     parity and Class journal reconciliation checks, and a Class rollback drill script restores
     legacy route ownership without deleting datasets.
-  - MP2 Study Year certified write handlers added: plugin routes for POST/PUT/set-current/DELETE
-    study-years are implemented, and core `/study-years` mutations dispatch to them in plugin mode.
-    Controller specs and plugin reference test pass; backend build passes.
+  - MP3 Study Year write and event contract added: Attendance Manager owns
+    POST/PUT/set-current/DELETE, core `/study-years` dispatches there in plugin mode, read-model
+    changes are published, and each mutation emits both a versioned transient event and a
+    transactionally persisted durable outbox event with a deterministic idempotency key. The strict
+    Attendance runtime and controller suites pass 5/5.
   - MP2 Class certified write handlers added: plugin routes for POST/PUT/DELETE classes and
     POST/PATCH/DELETE class-student management are implemented, and core `/classes` mutations
     dispatch to them in plugin mode. Bulk CSV import remains fail-closed pending certification.
@@ -182,16 +259,23 @@ Date risk trigger by wave target:
     gained `crypto.hash` capability (bcrypt hashing via runtime) and `notifications.send` for
     email/in-app notifications. All touched scripts, Jest controller/spec/subscriber tests, and
     the backend build pass locally.
-  - MP2-005 lifecycle event contracts completed: plugin StudyYear/Class/student-management write
-    handlers publish versioned events (`academic.study-year.*.v1`, `academic.class.*.v1`,
-    `academic.student.*.v1`) with entity snapshots and principal, and also persist the same events
-    to the durable outbox via `tx.publish()` with deterministic idempotency keys. Plugin reference
-    test, backend build, controller specs, and the new core `AcademicLifecycleSubscriber` spec pass.
-  - MP2-006 Academic UI extension set completed locally: Study Years and Classes have full declarative
-    list/create/detail/edit pages; Registrations have list/detail/resolve pages; Class Students has a
-    roster list/add page; Teachers has a directory page. Navigation includes Departments, Study Years,
-    Classes, Teachers, and Registrations. Plugin reference test, backend build, and controller/subscriber
-    specs pass.
+  - MP2-005 lifecycle event contracts completed for Academic-owned Class/student-management writes
+    (`academic.class.*.v1`, `academic.student.*.v1`). Study Year event ownership moved to Attendance
+    Manager and is covered by its MP3 contract. Entity snapshots and principal are carried, and the
+    durable outbox uses deterministic idempotency keys.
+  - MP2-006 Academic UI extension set completed locally for Classes, Registrations, Class Students,
+    Teachers and Departments. Study Year pages/navigation were removed from Academic and are supplied
+    by Attendance Manager. Hosted rendering remains open.
+  - 2026-09-25 reconciliation: MP2-003 Admissions and MP2-006 Academic UI are locally complete.
+    Approved registration now uses an idempotent, audited core STUDENT-account capability and
+    materializes only plugin-owned Student Profile/Enrollment state; the legacy v1 subscriber is
+    no longer registered. Hosted lifecycle/recovery and restored-backup evidence remain open.
+  - Academic Management 0.1.10 closes the local CSV compatibility gap and publishes canonical subject lookup: core forwards the upload to
+    the plugin owner, account create/update uses journaled audited capabilities, and Academic alone
+    mutates Student Profile and Enrollment Interval state (15/15 reference tests).
+    Academic Management 0.1.7 adds Subject and Department list/create/edit pages and plugin-owned
+    Department CRUD after explicit cutover. This does not close MP-2: CSV roster identity creation,
+    restored-backup adoption, hosted lifecycle/recovery, schema retirement and pilot evidence remain.
   - MP2-008 dependent contract consumption advanced: `AttendanceService` now routes membership for
     `recordAttendance`, `recordBulkAttendance`, `getStudentAttendanceRecords`, `getUserDailyAttendance`
     and `wattamanScan` through the roster/enrollment contract (`DirectoryService`), and the focused
@@ -199,14 +283,14 @@ Date risk trigger by wave target:
     passing boundary spec (2/2). Full backend Jest suite is 515 pass / 3 pre-existing unrelated fail.
 - In progress:
   - MP2 Academic Management hosted lifecycle evidence and restored-backup cutover drills for
-    StudyYear/Class/Admissions remain open.
+    Class/Admissions remain open; Attendance owns the separate Study Year drill.
   - MP1 Document Designer full-feature extraction and hosted certification remain open.
 - Blockers:
   - No local coding blocker; full-program completion requires real restored-backup, hosted, device,
     security and release approvals for each migration wave.
 - Next week:
-  - Execute StudyYear restored-backup adoption and reconciliation drill, then run controlled
-    rollback verification before any plugin-mode write cutover.
+  - Execute Attendance-owned StudyYear restored-backup adoption and reconciliation drill, then run
+    controlled rollback verification before any plugin-mode write cutover.
   - Extend the same toolkit pattern to classes/admissions ownership migration slices.
   - Add Study Year hosted lifecycle proof tied to plugin activation/deactivation evidence.
 - Evidence added:
@@ -306,14 +390,17 @@ Date risk trigger by wave target:
     mismatch (19/19 focused auth tests; TypeScript check passes). Legacy Department details remain
     in the profile response; this is not complete schema extraction.
 - In progress:
-  - Document Designer complete-feature extraction: legacy adoption, rich canvas UI, generation/print, scoped assets and hosted lifecycle remain open.
+  - Document Designer complete-feature extraction: bounded visual canvas, generation/print, scoped
+    assets, staff-source composition and local rollback tooling now pass; restored-backup adoption,
+    hosted output parity, lifecycle certification and pilot remain open.
   - Document Designer adoption now has a read-only preflight, backup-bound zero-write dry-run and
     guarded journaled copy/reconciliation (8/8 focused data tests); real restore proof, rendered comparison,
     hosted adoption and live rollback certification remain open.
   - Document Designer compatibility routing implemented with legacy default, explicit plugin
     cutover and configuration rollback (3/3 controller tests); hosted cutover remains open.
   - Document Designer adoption now preserves an explicit four-permission grant matrix after
-    reconciliation; generation/printing actions and row-scope proof remain open.
+    reconciliation; generation/printing and Academic/HR row-scope contracts now pass locally, while
+    hosted authorization and lifecycle proof remain open.
   - MP2-001 identity split implementation (next: bind identity contracts through the installed
     Academic Management runtime and address the remaining mixed User schema fields).
   - MP2-002 schema extraction (next: extend the package to academic profiles/classes/enrollment;
@@ -353,6 +440,66 @@ Date risk trigger by wave target:
 
 ### Week of 2026-09-21 — MP-3 Attendance Manager kickoff
 
+- 2026-09-25: MP3-001 inventory is complete. The authoritative surface map covers every legacy
+  controller group, data model, web/mobile screen, scanner/offline path, report/print/export,
+  gateway, job/notification absence, file output and device boundary. It also exposes the current
+  package/manifest mismatch with ADR-0019 so staff attendance can move to Human Resources instead
+  of being silently absorbed by Attendance Manager
+  ([inventory](./mp3-attendance-surface-inventory.md)).
+- 2026-09-25: MP3-002 is locally complete. Attendance Manager 0.1.3 now rejects staff and teacher
+  records/settings/identifiers, filters reads and summaries to students, and applies additive
+  `NOT VALID` PostgreSQL constraints that preserve historical excluded rows while blocking future
+  boundary violations. Ownership metadata now agrees with ADR-0019
+  ([evidence](../acceptance/mp3-attendance-ownership-boundary-2026-09-25.md)).
+- 2026-09-25: MP3-003 advanced locally in Attendance Manager 0.1.6 with additive correction,
+  scan-ledger, alert and historical-snapshot storage. All checksums and focused source contracts
+  pass. A real PostgreSQL migration/install/update drill remains before the schema item can close
+  ([evidence](../acceptance/mp3-attendance-data-foundation-2026-09-25.md)).
+- 2026-09-25: MP3-004/005 are locally complete. The SDK/runtime now expose the versioned dated
+  Academic roster/enrollment contracts through `directory.read`; Attendance fails closed before a
+  write when the student is not in the class and stores immutable student/class/Study Year display
+  snapshots without cross-plugin SQL
+  ([evidence](../acceptance/mp3-attendance-academic-snapshot-contract-2026-09-25.md)).
+- 2026-09-25: MP3-006 advanced with a single plugin scan command for camera/QR/card/USB input. It
+  uses a transaction advisory lock, a unique idempotency ledger, hashed credentials and once-only
+  events; a retry returns the original record. Client cutover and real PostgreSQL concurrency proof
+  remain ([evidence](../acceptance/mp3-unified-scan-command-2026-09-25.md)).
+- 2026-09-25: MP3-007 is locally complete. Scanner authorization, IANA school timezone, active
+  session, holiday, bounded offline/future clock and duplicate policies are now server-enforced and
+  covered by focused tests. Physical device certification remains MP3-014
+  ([evidence](../acceptance/mp3-device-security-policy-2026-09-25.md)).
+- 2026-09-25: MP3-008 is locally complete. The required eight-permission contract now protects all
+  current routes/navigation/UI, including atomic correction history under `correct` and dedicated
+  print-data/CSV routes under `print`; deprecated IDs have no active route
+  ([evidence](../acceptance/mp3-granular-permissions-2026-09-25.md)).
+- 2026-09-25: MP3-009 is locally complete. One Academic-contract-backed row-scope helper now guards
+  record writes/reads, scans, corrections, reports, print data and exports for assigned teachers,
+  class administrators, students and parents
+  ([evidence](../acceptance/mp3-attendance-row-scope-2026-09-25.md)).
+- 2026-09-25: MP3-010 advanced locally. The declarative UI now exposes required class/session
+  scanner context with retry-safe command identity and a complete scoped correction list/detail/form
+  workflow. Focused schema/source tests and the production frontend build pass; hosted administrator
+  and teacher browser proof remains
+  ([evidence](../acceptance/mp3-attendance-declarative-ui-2026-09-25.md)).
+- 2026-09-25: MP3-011 advanced locally. Attendance Manager now owns validated, row-scoped status,
+  daily-grid, student-detail, monthly-trend, class-progress, print-data and UTF-8 CSV projections;
+  the declarative report applies class/student/date/session/status filters and exports snapshot data
+  to print, CSV and PDF. Hosted legacy-parity comparison remains
+  ([evidence](../acceptance/mp3-attendance-reports-2026-09-25.md)).
+- 2026-09-25: MP3-012 is complete locally. The absence evaluator runs through the core job lease,
+  suspension and disable/drain lifecycle; stable alert identity and a unique recipient/channel
+  ledger prevent successful notification deliveries from being repeated after a partial failure.
+  Alert history, acknowledgement, in-app delivery and namespaced realtime refresh are permission-
+  gated and covered with the core job lifecycle suite (47 combined tests)
+  ([evidence](../acceptance/mp3-attendance-alert-lifecycle-2026-09-25.md)).
+- 2026-09-25: MP3-013 started with a read-only six-dataset preflight and additive preservation of
+  legacy permission dates, identifier creator identity and student attendance-format policy. The
+  output is count/hash only and explicitly excludes staff, lesson and course attendance. The local
+  toolkit now also has backup/slug/fingerprint guards, one resumable journal across all six datasets,
+  crash-safe idempotent chunks, exact canonical reconciliation and a non-destructive rollback drill
+  (8/8 tests). Real-PostgreSQL execution remains
+  ([evidence](../acceptance/mp3-attendance-adoption-preflight-2026-09-25.md)).
+
 - Overall status: [x] On track [ ] At risk [ ] Blocked
 - Completed locally:
   - Created official package source `plugins/wattanam.attendance-manager` version `0.1.0`.
@@ -367,6 +514,15 @@ Date risk trigger by wave target:
   - Legacy preflight/adoption/reconciliation and compatibility route dispatch.
   - Full behavior parity for corrections, sessions, holidays, alerts, realtime, absence rules, and
     detailed student/staff reports.
+  - 2026-09-23: published migration immutability is restored with checksum-pinned compatibility,
+    and every current mutation now uses the production transaction/execute/readback contract
+    (2/2 strict source/runtime tests; package validation and backend build pass). Real PostgreSQL
+    and lifecycle certification remain open.
+  - 2026-09-23: Study Year single ownership is reconciled to Attendance Manager. Core plugin-mode
+    routing, versioned read-model publication/Academic consumption, full CRUD, tombstones, and the
+    guarded preflight/adopt/rollback toolkit pass locally (24/24 focused checks across runtime,
+    Academic consumer, adoption, and cutover-readiness suites). Restored-backup execution remains
+    open.
 - Publication blocker:
   - The package must not be published as Stable until restored-backup adoption, rollback, real
     camera/USB device, report-parity, entitlement, and hosted lifecycle gates pass.

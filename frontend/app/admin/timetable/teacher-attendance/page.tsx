@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Sidebar from '../../../../components/Sidebar'
 import AuthGuard from '../../../../components/AuthGuard'
 import { adminNav } from '../../../../lib/admin-nav'
 import { apiFetch } from '../../../../lib/api'
+import { pluginTimetableFetch } from '../../../../lib/timetable-plugin-api'
 
 interface TimetableListItem { id: string; name: string; academicYear: string; periodsPerDay: number }
 interface TTeacher {
@@ -20,6 +21,8 @@ function toDateStr(d: Date): string { return d.toISOString().split('T')[0] }
 
 export default function TeacherAttendancePage() {
   const router = useRouter()
+  const pluginMode = useSearchParams().get('source') === 'plugin'
+  const timetableFetch = pluginMode ? pluginTimetableFetch : apiFetch
   const [timetables, setTimetables] = useState<TimetableListItem[]>([])
   const [selectedTT, setSelectedTT] = useState('')
   const [teachers, setTeachers] = useState<TTeacher[]>([])
@@ -46,7 +49,7 @@ export default function TeacherAttendancePage() {
   const [scanning, setScanning] = useState(false)
 
   const fetchTimetables = useCallback(async () => {
-    const res = await apiFetch('/api/timetable')
+    const res = await timetableFetch('/api/timetable')
     if (res.ok) {
       const list = await res.json()
       setTimetables(list)
@@ -55,15 +58,15 @@ export default function TeacherAttendancePage() {
         setPeriods(list[0].periodsPerDay ?? 8)
       }
     }
-  }, [selectedTT])
+  }, [selectedTT, timetableFetch])
 
   const fetchReport = useCallback(async () => {
     if (!selectedTT) return
     setLoading(true)
-    const res = await apiFetch(`/api/timetable/${selectedTT}/teacher-attendance?startDate=${startDate}&endDate=${endDate}`)
+    const res = await timetableFetch(`/api/timetable/${selectedTT}/teacher-attendance?startDate=${startDate}&endDate=${endDate}`)
     if (res.ok) setTeachers(await res.json())
     setLoading(false)
-  }, [selectedTT, startDate, endDate])
+  }, [selectedTT, startDate, endDate, timetableFetch])
 
   useEffect(() => { fetchTimetables() }, [fetchTimetables])
   useEffect(() => { fetchReport() }, [fetchReport])
@@ -71,7 +74,7 @@ export default function TeacherAttendancePage() {
   async function handleMark() {
     if (!markTeacherId) return
     setSaving(true)
-    await apiFetch('/api/timetable/teacher-attendance/mark', {
+    await timetableFetch('/api/timetable/teacher-attendance/mark', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ teacherId: markTeacherId, date: markDate, period: markPeriod, status: markStatus }),
     })
@@ -81,7 +84,7 @@ export default function TeacherAttendancePage() {
   async function handleScanQr() {
     if (!qrInput.trim()) return
     setScanning(true); setScanResult(null)
-    const res = await apiFetch('/api/timetable/teacher-attendance/scan', {
+    const res = await timetableFetch('/api/timetable/teacher-attendance/scan', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ qrCode: qrInput.trim(), period: qrPeriod }),
     })
@@ -130,7 +133,7 @@ export default function TeacherAttendancePage() {
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
             <div>
-              <button onClick={() => router.push('/admin/timetable/teachers')} className="text-indigo-600 text-sm hover:underline mb-1">← Back to Teachers</button>
+              <button onClick={() => router.push(pluginMode ? '/plugins/wattanam.timetable/teachers' : '/admin/timetable/teachers')} className="text-indigo-600 text-sm hover:underline mb-1">← Back to Teachers</button>
               <h1 className="text-xl font-bold text-gray-800">Teacher Attendance</h1>
               <p className="text-sm text-gray-500">Based on timetable — QR scan or manual mark</p>
             </div>

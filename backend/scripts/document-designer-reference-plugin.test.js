@@ -23,6 +23,12 @@ function buildContext(overrides = {}) {
       query: async () => [],
       execute: async () => ({ count: 0 }),
     },
+    storage: {
+      list: async () => [], readText: async () => null, readBinary: async () => null,
+      writeText: async () => undefined, writeBinary: async () => undefined, delete: async () => undefined,
+    },
+    directory: { lookupUsers: async (ids) => ids.map((id) => ({ id, name: `Staff ${id}`, role: 'TEACHER' })) },
+    readModels: { read: async () => [] },
     ...overrides,
   };
   return { context, routes };
@@ -55,6 +61,13 @@ test('registers document designer permissions, navigation, and route set', async
     'PATCH:templates/:id',
     'PATCH:templates/:id/active',
     'DELETE:templates/:id',
+    'POST:sources/staff',
+    'POST:templates/:id/generate',
+    'POST:templates/:id/export-model',
+    'GET:assets',
+    'POST:assets',
+    'GET:assets/:id',
+    'DELETE:assets/:id',
   ]);
   assert.equal(permissionCalls.length, 1);
   assert.ok(permissionCalls[0].find((entry) => entry.id === 'wattanam.document-designer.view'));
@@ -97,6 +110,11 @@ test('template routes enforce validation and active-template behavior', async ()
   const updated = await byKey.get('PATCH:templates/:id').handler({ params: { id: 't1' }, body: { name: 'Template B', design: { blocks: [1] } } });
   assert.equal(updated.name, 'Template B');
 
+  await assert.rejects(
+    () => byKey.get('PATCH:templates/:id').handler({ params: { id: 't1' }, body: { name: 'Invalid', design: { page: { width: 200, height: 200 }, elements: [{ id: 'outside', type: 'text', x: 190, y: 10, width: 50, height: 30 }] } } }),
+    /exceeds the page/,
+  );
+
   const active = await byKey.get('PATCH:templates/:id/active').handler({ params: { id: 't1' } });
   assert.deepEqual(active, { id: 't1', documentType: 'student', isActive: true });
 
@@ -129,11 +147,116 @@ test('declarative UI page descriptor aligns with plugin navigation and permissio
   const dataSourcePermissions = (templatesPage.dataSources || []).map((item) => item.permission);
   assert.ok(dataSourcePermissions.includes('wattanam.document-designer.view'));
   assert.ok(dataSourcePermissions.includes('wattanam.document-designer.edit'));
+  assert.equal(templatesPage.components.find((component) => component.id === 'templates-table').options.rowRoute, 'templates/edit/:id');
+
+  const editor = page.pages.find((item) => item.id === 'template-editor');
+  assert.equal(editor.components[0].type, 'designer');
+  assert.equal(editor.components[0].options.saveSource, 'save-template');
 
   assert.ok(Array.isArray(manifest.permissions));
   assert.ok(manifest.permissions.includes('wattanam.document-designer.view'));
   assert.ok(manifest.permissions.includes('wattanam.document-designer.edit'));
   assert.equal(manifest.navigation[0].href, '/plugins/wattanam.document-designer/templates');
+});
+
+test('staff document source composes only bounded directory identity and HR title data', async () => {
+  const directory = {
+    lookupUsers: async () => [
+      { id: 'staff-1', name: 'Teacher One', role: 'TEACHER', email: 'private@example.test' },
+      { id: 'staff-2', name: 'Admin Two', role: 'ADMIN', phone: 'private' },
+    ],
+  };
+  const readModels = {
+    read: async () => [{ key: 'staff-1', version: 1, data: { directoryUserId: 'staff-1', title: 'Senior Teacher', summary: 'hidden' } }],
+  };
+  const { byKey } = await activate({ directory, readModels });
+  const route = byKey.get('POST:sources/staff');
+  const records = await route.handler({ body: { staffIds: ['staff-1', 'staff-2'] } });
+  assert.deepEqual(records, [
+    { id: 'staff-1', name: 'Teacher One', role: 'TEACHER', title: 'Senior Teacher' },
+    { id: 'staff-2', name: 'Admin Two', role: 'ADMIN', title: null },
+  ]);
+  assert.doesNotMatch(JSON.stringify(records), /private|email|phone|summary/);
+  await assert.rejects(() => route.handler({ body: { staffIds: ['staff-1', 'staff-1'] } }), /must be unique/);
+
+  const student = await activate({
+    directory: { lookupUsers: async () => [{ id: 'student-1', name: 'Student', role: 'STUDENT' }] },
+    readModels,
+  });
+  await assert.rejects(() => student.byKey.get('POST:sources/staff').handler({ body: { staffIds: ['student-1'] } }), /employee identities only/);
+});
+
+test('generation returns a bounded render model without querying another domain', async () => {
+  const queries = [];
+  const query = async (sql, params) => {
+    queries.push({ sql, params });
+    return [{ id: 't1', name: 'Student card', documentType: 'student', design: {
+      page: { width: 400, height: 240, background: '#ffffff' },
+      elements: [
+        { id: 'student-name', type: 'text', x: 20, y: 20, width: 300, height: 40, binding: 'profile.name', fontSize: 24, fontWeight: 'bold' },
+        { id: 'student-qr', type: 'qr', x: 280, y: 100, width: 90, height: 90, binding: 'id' },
+      ],
+    }, updatedAt: '2026-09-22T00:00:00.000Z' }];
+  };
+  const { byKey } = await activate({ database: { query, execute: async () => ({ count: 0 }) } });
+  const route = byKey.get('POST:templates/:id/generate');
+  assert.equal(route.permission, 'wattanam.document-designer.generate');
+
+  const generated = await route.handler({ params: { id: 't1' }, body: { records: [{ id: 's1', profile: { name: 'Student One' } }] } });
+  assert.equal(generated.schemaVersion, 2);
+  assert.equal(generated.template.id, 't1');
+  assert.equal(generated.documents[0].page.width, 400);
+  assert.equal(generated.documents[0].elements[0].value, 'Student One');
+  assert.equal(generated.documents[0].elements[1].value, 's1');
+  assert.equal(queries.length, 1);
+  assert.match(queries[0].sql, /plugin_wattanam_document_designer_template/);
+
+  const exportRoute = byKey.get('POST:templates/:id/export-model');
+  assert.equal(exportRoute.permission, 'wattanam.document-designer.print');
+  const exported = await exportRoute.handler({ params: { id: 't1' }, body: { payload: { records: [{ id: 's1', profile: { name: 'Student One' } }] } } });
+  assert.equal(exported.documents[0].elements[0].value, 'Student One');
+
+  await assert.rejects(() => route.handler({ params: { id: 't1' }, body: { records: [] } }), /between 1 and 500/);
+  await assert.rejects(() => route.handler({ params: { id: 't1' }, body: { records: new Array(501).fill({ id: 's1' }) } }), /between 1 and 500/);
+});
+
+test('asset routes use scoped storage and reject unsafe input', async () => {
+  const values = new Map();
+  const storage = {
+    list: async (prefix) => [...values.keys()].filter((name) => name.startsWith(prefix)).map(String),
+    readText: async (name) => values.get(name) ?? null,
+    readBinary: async (name) => values.get(name) ?? null,
+    writeText: async (name, value) => values.set(name, value),
+    writeBinary: async (name, value) => values.set(name, value),
+    delete: async (name) => { values.delete(name); },
+  };
+  const { byKey } = await activate({ storage });
+
+  await assert.rejects(
+    () => byKey.get('POST:assets').handler({ body: { fileName: '../logo.png', mimeType: 'image/png', data: 'aGVsbG8=' } }),
+    /fileName is invalid/,
+  );
+  await assert.rejects(
+    () => byKey.get('POST:assets').handler({ body: { fileName: 'logo.svg', mimeType: 'image/svg+xml', data: 'aGVsbG8=' } }),
+    /mimeType is not allowed/,
+  );
+
+  const created = await byKey.get('POST:assets').handler({ body: { fileName: 'logo.png', mimeType: 'image/png', data: 'aGVsbG8=' } });
+  assert.match(created.id, /^[0-9a-f-]{36}$/);
+  assert.equal(values.get(`assets/${created.id}.bin`), 'aGVsbG8=');
+
+  const listed = await byKey.get('GET:assets').handler();
+  assert.equal(listed.length, 1);
+  assert.equal(listed[0].name, 'logo.png');
+  const loaded = await byKey.get('GET:assets/:id').handler({ params: { id: created.id } });
+  assert.equal(loaded.dataBase64, 'aGVsbG8=');
+
+  const hostUpload = await byKey.get('POST:assets').handler({ body: { name: 'photo.webp', mimeType: 'image/webp', dataBase64: 'aGVsbG8=' } });
+  assert.equal(hostUpload.name, 'photo.webp');
+
+  await byKey.get('DELETE:assets/:id').handler({ params: { id: created.id } });
+  await byKey.get('DELETE:assets/:id').handler({ params: { id: hostUpload.id } });
+  assert.equal(values.size, 0);
 });
 
 test('namespaced migration is one statement with an active-by-type uniqueness constraint', () => {
@@ -167,19 +290,23 @@ test('re-activation preserves existing template data across simulated disable/re
   assert.equal(listed[0].name, 'Survives Reinstall');
 });
 
-test('print/export flow is not yet configured as routes or declarative page actions in this wave', async () => {
+test('generation result is connected to bounded host print/export UI', async () => {
   const manifest = readJson('plugins/wattanam.document-designer/plugin.json');
   const page = readJson('plugins/wattanam.document-designer/frontend/page.json');
   const { routes } = await activate();
 
-  // Permissions are declared ahead of later wave implementation, but no executable print/export
-  // route or declarative action exists yet in this package revision.
+  // Generation exposes a bounded render model consumed by the host print/CSV/PDF component.
   assert.ok(manifest.permissions.includes('wattanam.document-designer.generate'));
   assert.ok(manifest.permissions.includes('wattanam.document-designer.print'));
 
   const routeKeys = routes.map((route) => `${route.method}:${route.path}`);
-  assert.equal(routeKeys.some((key) => /print|export|generate/.test(key)), false);
+  assert.equal(routeKeys.includes('POST:templates/:id/generate'), true);
+  assert.equal(routeKeys.includes('POST:templates/:id/export-model'), true);
 
   const serializedPages = JSON.stringify(page.pages || []);
-  assert.equal(/print|export|generate/i.test(serializedPages), false);
+  assert.equal(/"type":"print"/.test(serializedPages), true);
+  assert.equal(/"itemsPath":"records"/.test(serializedPages), true);
+  assert.equal(/"type":"document"/.test(serializedPages), true);
+  assert.equal(/"documentsPath":"documents"/.test(serializedPages), true);
+  assert.equal(/"permission":"wattanam.document-designer.print"/.test(serializedPages), true);
 });

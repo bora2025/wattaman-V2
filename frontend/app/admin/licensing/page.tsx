@@ -150,7 +150,7 @@ export default function LicensingPage() {
         <div className="page-content">
           <div className="h-14 lg:hidden" />
           <div className="page-header">
-            <div className="flex flex-wrap items-start justify-between gap-3"><div><h1 className="text-2xl font-bold text-slate-800">Licensing</h1><p className="mt-1 text-sm text-slate-500">Your platform subscription, this installation’s marketplace identity, and plugin licence status.</p></div><a className="btn btn-primary" href="/marketplace">Browse marketplace</a></div>
+            <div className="flex flex-wrap items-start justify-between gap-3"><div><h1 className="text-2xl font-bold text-slate-800">Licensing</h1><p className="mt-1 text-sm text-slate-500">Your platform subscription, this installation’s marketplace identity, and plugin licence status.</p></div><a className="btn btn-primary" href="/admin/plugins">Browse marketplace</a></div>
           </div>
           <div className="page-body space-y-6">
             {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}

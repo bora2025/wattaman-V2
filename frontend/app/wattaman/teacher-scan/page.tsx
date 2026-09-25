@@ -1,12 +1,13 @@
 ﻿'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { BrowserQRCodeReader } from '@zxing/library'
 import AuthGuard from '../../../components/AuthGuard'
 import Sidebar from '../../../components/Sidebar'
 import { wattamanNav } from '../../../lib/wattaman-nav'
 import { apiFetch } from '../../../lib/api'
+import { pluginTimetableFetch } from '../../../lib/timetable-plugin-api'
 import { formatCambodiaTime } from '../../../lib/dateUtils'
 import Link from 'next/link'
 
@@ -134,6 +135,8 @@ function TeacherScanZone({ isLandscape }: { isLandscape: boolean }) {
 
 function TeacherScanContent() {
   const router = useRouter()
+  const pluginMode = useSearchParams().get('source') === 'plugin'
+  const timetableFetch = pluginMode ? pluginTimetableFetch : apiFetch
   const [scanning, setScanning] = useState(false)
   const [message, setMessage] = useState('')
   const [lastResult, setLastResult] = useState<TeacherScanResult | null>(null)
@@ -223,7 +226,7 @@ function TeacherScanContent() {
 
     const loc = locationRef.current
     try {
-      const res = await apiFetch('/api/timetable/teacher-attendance/wattaman-scan', {
+      const res = await timetableFetch('/api/timetable/teacher-attendance/wattaman-scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

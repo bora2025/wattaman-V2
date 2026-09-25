@@ -3,6 +3,16 @@
 const { randomUUID } = require('crypto');
 const PREFIX = 'plugin_wattanam_timetable_';
 
+function configuration(value, label, fallback) {
+  if (value == null || value === '') return fallback;
+  if (typeof value === 'object') return value;
+  try { return JSON.parse(value); } catch { throw new Error(`${label} configuration is invalid`); }
+}
+function minutes(value, label) {
+  if (typeof value !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) throw new Error(`${label} must use HH:mm`);
+  const [hour, minute] = value.split(':').map(Number); return hour * 60 + minute;
+}
+
 function planSchedule(document, lessons, classrooms = []) {
   if (!Array.isArray(lessons) || lessons.length === 0) throw new Error('Add lessons before generating a timetable');
   const days = Number(document.numberOfDays);
@@ -12,9 +22,32 @@ function planSchedule(document, lessons, classrooms = []) {
   const names = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
   const availableDays = names.map((name, index) => ({ name, day: index + 1 })).filter(({ name }) => !weekend.includes(name)).slice(0, days).map(({ day }) => day);
   if (availableDays.length !== days) throw new Error('Not enough teaching days after weekend exclusions');
+  const periodTimes = configuration(document.periodTimes, 'periodTimes', []);
+  if (!Array.isArray(periodTimes) || (periodTimes.length && periodTimes.length < periods)) throw new Error('periodTimes must contain every configured period');
+  const timeOffRules = configuration(document.timeOffRules, 'timeOffRules', []);
+  if (!Array.isArray(timeOffRules)) throw new Error('timeOffRules must be an array');
+  const blockedPeriods = new Set();
+  if (periodTimes.length) {
+    const starts = periodTimes.slice(0, periods).map((value, index) => minutes(value, `periodTimes[${index}]`));
+    for (const [index, start] of starts.entries()) {
+      const end = starts[index + 1] ?? start + 60;
+      for (const [ruleIndex, rule] of timeOffRules.entries()) {
+        const from = minutes(rule?.from, `timeOffRules[${ruleIndex}].from`); const to = minutes(rule?.to, `timeOffRules[${ruleIndex}].to`);
+        if (to <= from) throw new Error(`timeOffRules[${ruleIndex}] must end after it starts`);
+        if (start < to && end > from) blockedPeriods.add(index + 1);
+      }
+    }
+  } else if (timeOffRules.length) throw new Error('periodTimes are required when timeOffRules are configured');
+  const distribution = configuration(document.distribution, 'distribution', {});
+  const structuredDistribution = distribution && typeof distribution === 'object' && !Array.isArray(distribution) ? distribution : {};
+  const maxSameSubjectPerDay = structuredDistribution.maxSameSubjectPerDay == null ? null : Number(structuredDistribution.maxSameSubjectPerDay);
+  if (maxSameSubjectPerDay !== null && (!Number.isInteger(maxSameSubjectPerDay) || maxSameSubjectPerDay < 1 || maxSameSubjectPerDay > periods)) throw new Error('distribution.maxSameSubjectPerDay is invalid');
+  const maxOnDay = document.maxOnDay == null ? null : Number(document.maxOnDay);
+  if (maxOnDay !== null && (!Number.isInteger(maxOnDay) || maxOnDay < 1 || maxOnDay > periods)) throw new Error('maxOnDay is invalid');
   const ordered = [...lessons].sort((a, b) => Number(b.perWeek) - Number(a.perWeek) || String(a.id).localeCompare(String(b.id)));
   const entries = [];
   const occupied = { class: new Set(), teacher: new Set(), classroom: new Set() };
+  const perClassDay = new Map(); const perSubjectDay = new Map();
   const unplaced = [];
   for (const lesson of ordered) {
     const needed = Number(lesson.perWeek);
@@ -25,14 +58,20 @@ function planSchedule(document, lessons, classrooms = []) {
       for (const day of availableDays) {
         if (pass === 0 && assignedDays.has(day)) continue;
         for (let period = 1; period <= periods; period++) {
+          if (blockedPeriods.has(period)) continue;
           const slot = `${day}:${period}`;
           if (occupied.class.has(`${lesson.classId}:${slot}`) || occupied.teacher.has(`${lesson.teacherId}:${slot}`)) continue;
+          const classDay = `${lesson.classId}:${day}`; const subjectDay = `${lesson.classId}:${lesson.subjectId}:${day}`;
+          if (maxOnDay !== null && (perClassDay.get(classDay) || 0) >= maxOnDay) continue;
+          if (maxSameSubjectPerDay !== null && (perSubjectDay.get(subjectDay) || 0) >= maxSameSubjectPerDay) continue;
           const classroom = classrooms.find((room) => !occupied.classroom.has(`${room.id}:${slot}`));
           if (classrooms.length && !classroom) continue;
           entries.push({ lessonId: lesson.id, classId: lesson.classId, teacherId: lesson.teacherId, subjectId: lesson.subjectId, classroomId: classroom?.id || null, day, period });
           occupied.class.add(`${lesson.classId}:${slot}`);
           occupied.teacher.add(`${lesson.teacherId}:${slot}`);
           if (classroom) occupied.classroom.add(`${classroom.id}:${slot}`);
+          perClassDay.set(classDay, (perClassDay.get(classDay) || 0) + 1);
+          perSubjectDay.set(subjectDay, (perSubjectDay.get(subjectDay) || 0) + 1);
           assignedDays.add(day);
           assigned++;
           break;
@@ -42,7 +81,7 @@ function planSchedule(document, lessons, classrooms = []) {
     }
     if (assigned < needed) unplaced.push({ lessonId: lesson.id, required: needed, assigned });
   }
-  return { entries, unplaced, complete: unplaced.length === 0 };
+  return { entries, unplaced, complete: unplaced.length === 0, constraints: { blockedPeriods: [...blockedPeriods], maxOnDay, maxSameSubjectPerDay } };
 }
 
 function registerGenerator(context) {

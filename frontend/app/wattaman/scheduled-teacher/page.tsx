@@ -5,6 +5,8 @@ import AuthGuard from '../../../components/AuthGuard'
 import Sidebar from '../../../components/Sidebar'
 import { adminNav } from '../../../lib/admin-nav'
 import { apiFetch } from '../../../lib/api'
+import { pluginTimetableFetch } from '../../../lib/timetable-plugin-api'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   IconBarChart, IconIdCard, IconUsers, IconEdit, IconBook, IconCalendar,
@@ -141,11 +143,12 @@ interface EditForm {
 }
 
 function EditModal({
-  teacher, orgName, schoolLogoUrl, onClose, onSaved,
+  teacher, orgName, schoolLogoUrl, request, onClose, onSaved,
 }: {
   teacher: ScheduledTeacher
   orgName: string
   schoolLogoUrl: string
+  request: typeof apiFetch
   onClose: () => void
   onSaved: (updated: Partial<ScheduledTeacher>) => void
 }) {
@@ -174,7 +177,7 @@ function EditModal({
     setSaving(true)
     setError('')
     try {
-      const res = await apiFetch(`/api/timetable/teachers/${teacher.id}`, {
+      const res = await request(`/api/timetable/teachers/${teacher.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -367,6 +370,8 @@ function EditModal({
 
 // -- Main content -------------------------------------------------------------
 function ManageTeachersContent() {
+  const pluginMode = useSearchParams().get('source') === 'plugin'
+  const timetableFetch = pluginMode ? pluginTimetableFetch : apiFetch
   const [teachers, setTeachers] = useState<ScheduledTeacher[]>([])
   const [loading, setLoading] = useState(true)
   const [timetableFilter, setTimetableFilter] = useState('ALL')
@@ -392,7 +397,7 @@ function ManageTeachersContent() {
     const saved = localStorage.getItem('wattaman-org-name')
     if (saved) setOrgName(saved)
     // Fetch current study year for school name + logo
-    apiFetch('/api/study-years/current')
+    timetableFetch('/api/study-years/current')
       .then(r => r.ok ? r.json() : null)
       .then(sy => {
         if (sy?.schoolName && !localStorage.getItem('wattaman-org-name')) setOrgName(sy.schoolName)
@@ -405,7 +410,7 @@ function ManageTeachersContent() {
   const fetchTeachers = async () => {
     setLoading(true)
     try {
-      const res = await apiFetch('/api/timetable/scheduled-teachers/all')
+      const res = await timetableFetch('/api/timetable/scheduled-teachers/all')
       if (!res.ok) throw new Error()
       setTeachers(await res.json())
     } catch {
@@ -721,6 +726,7 @@ function ManageTeachersContent() {
             teacher={editTeacher}
             orgName={orgName}
             schoolLogoUrl={schoolLogoUrl}
+            request={timetableFetch}
             onClose={() => setEditTeacher(null)}
             onSaved={(patch) => applyEdit(editTeacher.id, patch)}
           />

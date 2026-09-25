@@ -278,6 +278,18 @@ model PluginNotificationUsage {
   @@unique([pluginId, windowStart])
 }
 
+model PluginAccountCommand {
+  id          String   @id @default(uuid())
+  pluginId    String
+  commandKey  String
+  requestHash String
+  userId      String
+  createdAt   DateTime @default(now())
+
+  @@unique([pluginId, commandKey])
+  @@index([userId])
+}
+
 model PluginMigration {
   id            String   @id @default(uuid())
   pluginId      String

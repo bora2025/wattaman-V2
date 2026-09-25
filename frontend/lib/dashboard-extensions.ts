@@ -13,7 +13,7 @@ export interface MarketplaceOnboardingStep {
   id: 'link' | 'browse' | 'activate';
   title: string;
   description: string;
-  href: '/admin/plugins' | '/marketplace';
+  href: '/admin/plugins';
   complete: boolean;
 }
 
@@ -48,7 +48,7 @@ export function marketplaceOnboarding(linked: boolean, activePluginCount: number
     {
       id: 'browse', title: 'Choose the features you need',
       description: 'Browse verified free and paid plugins without adding unused school modules.',
-      href: '/marketplace', complete: activePluginCount > 0,
+      href: '/admin/plugins', complete: activePluginCount > 0,
     },
     {
       id: 'activate', title: 'Install and activate plugins',

@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 2,
+  "kind": "declarative-ui",
+  "pages": [
+    {
+      "id": "student-summaries",
+      "title": "Student summary reports",
+      "routePath": "student-summaries",
+      "permission": "wattanam.reporting.student-summary.view",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "summaries",
+          "method": "GET",
+          "path": "student-summaries",
+          "permission": "wattanam.reporting.student-summary.view"
+        }
+      ],
+      "components": [
+        {
+          "id": "report-filters",
+          "type": "filter",
+          "title": "Report scope",
+          "fields": [
+            { "id": "classId", "type": "text", "label": "Academic class ID" },
+            { "id": "asOfIsoDate", "type": "date", "label": "Roster date" }
+          ],
+          "options": { "sources": ["summaries"] }
+        },
+        {
+          "id": "rows",
+          "type": "table",
+          "title": "Cross-module student summary",
+          "source": "summaries",
+          "fields": [
+            { "id": "studentNumber", "label": "Number" },
+            { "id": "studentName", "label": "Student" },
+            { "id": "attendancePresent", "label": "Present", "format": "number" },
+            { "id": "attendanceLate", "label": "Late", "format": "number" },
+            { "id": "attendanceAbsent", "label": "Absent", "format": "number" },
+            { "id": "feeBalance", "label": "Outstanding by currency" },
+            { "id": "gradeEntries", "label": "Grade entries", "format": "number" },
+            { "id": "transportVehicle", "label": "Vehicle" },
+            { "id": "unreadMessages", "label": "Unread messages", "format": "number" }
+          ],
+          "options": { "pageSize": 50, "selectable": false }
+        },
+        {
+          "id": "export",
+          "type": "print",
+          "title": "Export student summary",
+          "source": "summaries",
+          "fields": [
+            { "label": "Number", "path": "studentNumber" },
+            { "label": "Student", "path": "studentName" },
+            { "label": "Present", "path": "attendancePresent" },
+            { "label": "Late", "path": "attendanceLate" },
+            { "label": "Absent", "path": "attendanceAbsent" },
+            { "label": "Outstanding", "path": "feeBalance" },
+            { "label": "Grade entries", "path": "gradeEntries" },
+            { "label": "Vehicle", "path": "transportVehicle" },
+            { "label": "Unread messages", "path": "unreadMessages" }
+          ],
+          "options": {
+            "formats": ["print", "csv", "pdf"],
+            "filename": "student-summary",
+            "maximumRows": 500
+          }
+        }
+      ]
+    },
+    {
+      "id": "staff-summaries",
+      "title": "Staff attendance summary",
+      "routePath": "staff-summaries",
+      "permission": "wattanam.reporting.student-summary.view",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "staff-summaries",
+          "method": "GET",
+          "path": "staff-summaries",
+          "permission": "wattanam.reporting.student-summary.view"
+        }
+      ],
+      "components": [
+        {
+          "id": "staff-filter",
+          "type": "filter",
+          "title": "Attendance date",
+          "fields": [{ "id": "date", "type": "date", "label": "Date" }],
+          "options": { "sources": ["staff-summaries"] }
+        },
+        {
+          "id": "staff-rows",
+          "type": "table",
+          "title": "Staff attendance",
+          "source": "staff-summaries",
+          "fields": [
+            { "id": "staffName", "label": "Staff" },
+            { "id": "role", "label": "Role" },
+            { "id": "present", "label": "Present", "format": "number" },
+            { "id": "late", "label": "Late", "format": "number" },
+            { "id": "absent", "label": "Absent", "format": "number" },
+            { "id": "excused", "label": "Excused", "format": "number" },
+            { "id": "recordedSessions", "label": "Recorded sessions", "format": "number" }
+          ],
+          "options": { "pageSize": 50, "selectable": false }
+        },
+        {
+          "id": "staff-export",
+          "type": "print",
+          "title": "Export staff attendance",
+          "source": "staff-summaries",
+          "fields": [
+            { "label": "Staff", "path": "staffName" },
+            { "label": "Role", "path": "role" },
+            { "label": "Present", "path": "present" },
+            { "label": "Late", "path": "late" },
+            { "label": "Absent", "path": "absent" },
+            { "label": "Excused", "path": "excused" },
+            { "label": "Recorded sessions", "path": "recordedSessions" }
+          ],
+          "options": { "formats": ["print", "csv", "pdf"], "filename": "staff-attendance", "maximumRows": 500 }
+        }
+      ]
+    }
+  ]
+}

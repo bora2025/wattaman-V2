@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "pages": [
+    { "id": "children", "path": "children", "title": "My children", "permission": "wattanam.parent-portal.view", "components": [{ "type": "table", "title": "Linked children", "source": { "method": "GET", "path": "children" }, "columns": [{ "key": "name", "label": "Student" }, { "key": "studentNumber", "label": "Number" }, { "key": "className", "label": "Class" }] }] },
+    { "id": "link", "path": "link", "title": "Parent link", "permission": "wattanam.parent-portal.request", "components": [{ "type": "form", "title": "Request parent link", "submit": { "method": "POST", "path": "link/request" }, "fields": [{ "key": "parentEmail", "label": "Parent email", "input": "email", "required": true }, { "key": "parentName", "label": "Parent name", "input": "text" }, { "key": "parentPhone", "label": "Parent phone", "input": "text" }, { "key": "note", "label": "Note", "input": "textarea" }] }] },
+    { "id": "requests", "path": "requests", "title": "Parent-link requests", "permission": "wattanam.parent-portal.manage", "components": [{ "type": "table", "title": "Requests", "source": { "method": "GET", "path": "requests" }, "columns": [{ "key": "parentEmail", "label": "Parent" }, { "key": "studentDirectoryUserId", "label": "Student user" }, { "key": "status", "label": "Status" }, { "key": "createdAt", "label": "Requested" }] }] }
+  ]
+}
+

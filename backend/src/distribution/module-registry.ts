@@ -40,7 +40,7 @@ export const ROOT_MODULE_REGISTRY: readonly RootModuleRegistration[] = [
   { module: 'SessionConfigModule', importPath: './session-config/session-config.module', classification: 'business', owner: 'split:wattanam.attendance+wattanam.human-resources' },
   { module: 'HolidaysModule', importPath: './holidays/holidays.module', classification: 'business', owner: 'wattanam.attendance' },
   { module: 'DepartmentsModule', importPath: './departments/departments.module', classification: 'business', owner: 'wattanam.academic-management' },
-  { module: 'StudyYearsModule', importPath: './study-years/study-years.module', classification: 'business', owner: 'wattanam.academic-management' },
+  { module: 'StudyYearsModule', importPath: './study-years/study-years.module', classification: 'business', owner: 'wattanam.attendance-manager' },
   { module: 'CardTemplatesModule', importPath: './card-templates/card-templates.module', classification: 'business', owner: 'wattanam.document-designer' },
   { module: 'TimetableModule', importPath: './timetable/timetable.module', classification: 'business', owner: 'wattanam.timetable' },
   { module: 'ScoringModule', importPath: './scoring/scoring.module', classification: 'business', owner: 'wattanam.examination' },

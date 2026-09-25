@@ -17,7 +17,8 @@ source as either `legacy-current-membership` or `plugin-enrollment-interval`.
 Verification: 9/9 focused provider tests pass, the combined Directory suite passes 25/25, and
 backend TypeScript checking passes.
 
-Rollback is configuration-only: remove the variable or set it to `legacy`. Do not set `plugin` on
-a live school until migration 003 is installed, enrollment adoption is reconciled against a
-verified restored backup, and a live parity report passes. The interval table currently contains
-only adopted current memberships unless authoritative historical intervals are imported later.
+Rollback is metadata-only and is now guarded by the explicit, backup-bound enrollment rollback
+drill ([local evidence](./mp2-enrollment-rollback-drill-2026-09-25.md)). Do not set `plugin` on a
+live school until migration 003 is installed, enrollment adoption is reconciled against a verified
+restored backup, and a live parity report passes. The interval table currently contains only
+adopted current memberships unless authoritative historical intervals are imported later.

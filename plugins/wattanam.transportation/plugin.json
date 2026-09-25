@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "wattanam.transportation",
+  "name": "Transportation",
+  "description": "Routes, stops, vehicles, drivers and live school transport tracking.",
+  "version": "0.1.2",
+  "requiresCore": ">=0.1.0-0 <1.0.0",
+  "publisher": "wattanam",
+  "license": "commercial",
+  "backendEntry": "backend/index.js",
+  "frontendEntry": "frontend/page.json",
+  "sdkVersion": "1.1.0",
+  "runtimeVersion": "1.0.0",
+  "capabilities": ["api.routes", "database.read", "database.write", "directory.read", "navigation.register", "permissions.register", "readmodels.publish", "realtime.notify", "ui.pages"],
+  "permissions": ["wattanam.transportation.view", "wattanam.transportation.manage", "wattanam.transportation.location.write", "wattanam.transportation.parent.track"],
+  "dependencies": {},
+  "migrations": [
+    { "id": "001_create_route", "path": "migrations/001_create_route.sql", "checksum": "e7c93c001b7fc51f347ba520f56a7400f9d9b89389cd58ae6a5de659b578b054", "destructive": false },
+    { "id": "002_create_stop", "path": "migrations/002_create_stop.sql", "checksum": "c1a7542e93434b00f0e32666682ff379dcc9ede8637d257aee8e02968fea3543", "destructive": false },
+    { "id": "003_create_vehicle", "path": "migrations/003_create_vehicle.sql", "checksum": "b8c7f4ffe8d8061b76f9c6621b522e5ce6700e480c4870151042be130141876b", "destructive": false },
+    { "id": "004_create_location", "path": "migrations/004_create_location.sql", "checksum": "123101e722468de6f0e7f778aeef648c496ec4010c0784ab07ab6b7bf5858c82", "destructive": false },
+    { "id": "005_create_rider_assignment", "path": "migrations/005_create_rider_assignment.sql", "checksum": "5e8d0f214450ed6bdcc6f93e84b93f1c3a942400a548557b1d8f77b2630b64f4", "destructive": false }
+  ],
+  "navigation": [
+    { "id": "transportation", "label": "Transportation", "href": "/plugins/wattanam.transportation/vehicles", "permission": "wattanam.transportation.view" },
+    { "id": "transport-routes", "label": "Transport routes", "href": "/plugins/wattanam.transportation/routes", "permission": "wattanam.transportation.manage" },
+    { "id": "parent-transport", "label": "Child transportation", "href": "/plugins/wattanam.transportation/parent/vehicles", "permission": "wattanam.transportation.parent.track" }
+  ],
+  "supportedLanguages": ["en", "km"]
+}

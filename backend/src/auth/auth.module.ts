@@ -36,6 +36,6 @@ import { PrismaAcademicIdentityProvider } from './academic-identity.provider';
     { provide: ACADEMIC_IDENTITY_PROVIDER, useExisting: PrismaAcademicIdentityProvider },
   ],
   controllers: [AuthController],
-  exports: [JwtModule],
+  exports: [JwtModule, PrismaAcademicIdentityProvider],
 })
 export class AuthModule {}

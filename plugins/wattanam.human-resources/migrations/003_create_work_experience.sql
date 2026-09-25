@@ -1,0 +1,2 @@
+-- wattanam-plugin-migration: 003_create_work_experience
+CREATE TABLE plugin_wattanam_human_resources_work_experience ("id" TEXT PRIMARY KEY,"directoryUserId" TEXT NOT NULL,"title" TEXT NOT NULL,"employer" TEXT NOT NULL,"startDate" DATE,"endDate" DATE,"description" TEXT,"order" INTEGER NOT NULL DEFAULT 0 CHECK ("order">=0),"createdAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,CHECK ("endDate" IS NULL OR "startDate" IS NULL OR "endDate">="startDate"));

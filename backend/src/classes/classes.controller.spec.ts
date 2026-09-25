@@ -65,6 +65,10 @@ describe('ClassesController compatibility ownership', () => {
 
     await expect(controller.getClasses({ user: { userId: 'a1', role: 'CLASS_ADMIN', email: 'a@example.test' } }, undefined, 'y1')).resolves.toEqual({ ok: true });
     await expect(controller.getClasses({ user: { userId: 't1', role: 'TEACHER', email: 't@example.test' } }, 'me', 'y2')).resolves.toEqual({ ok: true });
+    await expect(controller.listParents(req)).resolves.toEqual({ ok: true });
+    await expect(controller.getStudentsInClass(req, 'c1')).resolves.toEqual({ ok: true });
+    await expect(controller.getStudentsByClasses(req, 'c1,c2')).resolves.toEqual({ ok: true });
+    await expect(controller.getAvailableStudents(req, 'c1')).resolves.toEqual({ ok: true });
 
     await expect(controller.createClass(req, { name: 'G1', teacherId: 't1' })).resolves.toEqual({ ok: true });
     await expect(controller.updateClass(req, 'c1', { name: 'G1A' })).resolves.toEqual({ ok: true });
@@ -73,12 +77,16 @@ describe('ClassesController compatibility ownership', () => {
     await expect(controller.addStudentToClass(req, 'c1', { studentId: 's1' })).resolves.toEqual({ ok: true });
     await expect(controller.removeStudentFromClass(req, 'c1', 's1')).resolves.toEqual({ ok: true });
     await expect(controller.cleanupOrphanedStudents(req)).resolves.toEqual({ ok: true });
-    await expect(controller.bulkAddStudentsFromCsv(req, 'c1', { buffer: Buffer.from('x') } as any)).rejects.toThrow('Bulk CSV import is not certified');
+    await expect(controller.bulkAddStudentsFromCsv(req, 'c1', { buffer: Buffer.from('Name\nStudent') } as any)).resolves.toEqual({ ok: true });
 
     expect(extensions.dispatch.mock.calls.map((call: any[]) => [call[0], call[1].method, call[1].path, call[1].params, call[1].query, call[1].body]))
       .toEqual([
         ['wattanam.academic-management', 'GET', 'classes', {}, { classAdminId: 'a1', studyYearId: 'y1' }, {}],
         ['wattanam.academic-management', 'GET', 'classes', {}, { teacherId: 't1', studyYearId: 'y2' }, {}],
+        ['wattanam.academic-management', 'GET', 'classes/parents', {}, {}, {}],
+        ['wattanam.academic-management', 'GET', 'classes/c1/students', { id: 'c1' }, {}, {}],
+        ['wattanam.academic-management', 'GET', 'classes/students/batch', {}, { ids: 'c1,c2' }, {}],
+        ['wattanam.academic-management', 'GET', 'classes/c1/available-students', { id: 'c1' }, {}, {}],
         ['wattanam.academic-management', 'POST', 'classes', {}, {}, { name: 'G1', teacherId: 't1' }],
         ['wattanam.academic-management', 'PUT', 'classes/c1', {}, { id: 'c1' }, { name: 'G1A' }],
         ['wattanam.academic-management', 'DELETE', 'classes/c1', {}, { id: 'c1' }, {}],
@@ -86,6 +94,7 @@ describe('ClassesController compatibility ownership', () => {
         ['wattanam.academic-management', 'POST', 'classes/c1/students', { id: 'c1' }, {}, { studentId: 's1' }],
         ['wattanam.academic-management', 'DELETE', 'classes/c1/students/s1', { id: 'c1', studentId: 's1' }, {}, {}],
         ['wattanam.academic-management', 'POST', 'classes/cleanup-orphaned-students', {}, {}, {}],
+        ['wattanam.academic-management', 'POST', 'classes/c1/students/bulk-csv', { id: 'c1' }, {}, { csv: 'Name\nStudent' }],
       ]);
     expect(service.createClass).not.toHaveBeenCalled();
     expect(service.updateClass).not.toHaveBeenCalled();

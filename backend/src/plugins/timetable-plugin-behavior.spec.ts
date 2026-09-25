@@ -16,6 +16,10 @@ describe('Timetable plugin route behavior', () => {
     const context = {
       permissions: { register: jest.fn() }, navigation: { register: jest.fn() },
       routes: { register: jest.fn((route: any) => routes.set(`${route.method} ${route.path}`, route.handler)) },
+      directory: {
+        lookupClasses: jest.fn(async (ids: string[]) => ids.map((id) => ({ id, name: `Class ${id}` }))),
+        lookupUsers: jest.fn(async (ids: string[]) => ids.map((id) => ({ id, name: `User ${id}`, role: 'TEACHER' }))),
+      },
       database,
     };
     return { routes, database, context };
@@ -37,6 +41,54 @@ describe('Timetable plugin route behavior', () => {
     expect(database.query).toHaveBeenCalledWith(expect.stringContaining('"timetableId"=$2'), ['t-1', 'tt-1']);
     expect(database.query).toHaveBeenCalledWith(expect.stringContaining('"timetableId"=$2'), ['s-1', 'tt-1']);
     expect(database.query).toHaveBeenCalledWith(expect.stringContaining('"timetableId"=$2'), ['c-1', 'tt-1']);
+  });
+
+  it('validates stable Academic class and core teacher references through the directory capability', async () => {
+    const { routes, context } = fixture();
+    await plugin.activate(context);
+    await routes.get('POST classes')({ body: { timetableId: 'tt-1', name: 'Grade 1', short: 'G1', academicClassId: 'academic-1' } });
+    await routes.get('POST teachers')({ body: { timetableId: 'tt-1', firstName: 'One', lastName: 'Teacher', short: 'T1', directoryUserId: 'user-1' } });
+    expect(context.directory.lookupClasses).toHaveBeenCalledWith(['academic-1']);
+    expect(context.directory.lookupUsers).toHaveBeenCalledWith(['user-1']);
+    context.directory.lookupClasses.mockResolvedValueOnce([]);
+    await expect(routes.get('POST classes')({ body: { timetableId: 'tt-1', name: 'Grade 2', short: 'G2', academicClassId: 'missing' } }))
+      .rejects.toThrow('Academic directory contract');
+  });
+
+  it('rejects a partial entry edit that conflicts with its existing lesson', async () => {
+    const { routes, database, context } = fixture();
+    await plugin.activate(context);
+    database.query.mockImplementation(async (sql: string) => {
+      if (sql.includes('FROM plugin_wattanam_timetable_entry') && sql.includes('"id"=$1')) {
+        return [{ id: 'e-1', timetableId: 'tt-1', lessonId: 'l-1', teacherId: 't-1', subjectId: 's-1', classId: 'c-1' }];
+      }
+      if (sql.includes('FROM plugin_wattanam_timetable_lesson')) {
+        return [{ teacherId: 't-1', subjectId: 's-1', classId: 'c-1' }];
+      }
+      if (sql.includes('FROM plugin_wattanam_timetable_document')) return [{ status: 'DRAFT' }];
+      return [{ id: 't-2' }];
+    });
+    await expect(routes.get('PUT entries/:id')({ params: { id: 'e-1' }, body: { teacherId: 't-2' } }))
+      .rejects.toThrow('Entry teacherId conflicts with its lesson');
+    expect(database.execute).not.toHaveBeenCalled();
+  });
+
+  it('rejects changing only lessonId when the new lesson has different participants', async () => {
+    const { routes, database, context } = fixture();
+    await plugin.activate(context);
+    database.query.mockImplementation(async (sql: string) => {
+      if (sql.includes('FROM plugin_wattanam_timetable_entry') && sql.includes('"id"=$1')) {
+        return [{ id: 'e-1', timetableId: 'tt-1', lessonId: 'l-1', teacherId: 't-1', subjectId: 's-1', classId: 'c-1' }];
+      }
+      if (sql.includes('FROM plugin_wattanam_timetable_lesson')) {
+        return [{ teacherId: 't-2', subjectId: 's-1', classId: 'c-1' }];
+      }
+      if (sql.includes('FROM plugin_wattanam_timetable_document')) return [{ status: 'DRAFT' }];
+      return [{ id: 'l-2' }];
+    });
+    await expect(routes.get('PUT entries/:id')({ params: { id: 'e-1' }, body: { lessonId: 'l-2' } }))
+      .rejects.toThrow('Entry teacherId conflicts with its lesson');
+    expect(database.execute).not.toHaveBeenCalled();
   });
 
   it('preserves wizard settings and hydrates the legacy editor response shape', async () => {

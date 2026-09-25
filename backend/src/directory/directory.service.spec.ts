@@ -68,7 +68,7 @@ describe('DirectoryService', () => {
     const service = new DirectoryService(prismaWith({ user: { findMany: userFindMany }, class: { findMany: classFindMany } }));
 
     await expect(service.lookupUsers(['u1', 'u1'])).resolves.toEqual([{ id: 'u1', name: 'Ada', role: 'TEACHER' }]);
-    expect(userFindMany).toHaveBeenCalledWith({ where: { id: { in: ['u1'] } }, select: { id: true, name: true, role: true } });
+    expect(userFindMany).toHaveBeenCalledWith({ where: { id: { in: ['u1'] } }, select: { id: true, name: true, role: true, email: true, phone: true } });
     await expect(service.lookupUsers([])).resolves.toEqual([]);
 
     await expect(service.lookupClasses(['c1'])).resolves.toEqual([{ id: 'c1', name: 'Grade 1' }]);
@@ -186,6 +186,26 @@ describe('DirectoryService', () => {
     expect(classFindMany).toHaveBeenCalledWith({ where: { id: { in: ['class-1'] } }, select: { id: true, name: true } });
   });
 
+  it('looks up canonical subjects through the bound Academic plugin contract and validates its envelope', async () => {
+    const service = new DirectoryService(prismaWith({}));
+    const dispatcher: any = {
+      getClassRoster: jest.fn(), getEnrollmentAtDate: jest.fn(), resolveClassAudience: jest.fn(),
+      resolveClassesForUser: jest.fn(), lookupClasses: jest.fn(), departmentForUser: jest.fn(),
+      lookupSubjects: jest.fn().mockResolvedValue({ schemaVersion: 1, subjects: [{ id: 'subject-1', name: 'Mathematics', code: 'MATH' }] }),
+    };
+    service.bindAcademicPluginContracts(dispatcher);
+    await expect(service.lookupSubjects(['subject-1', 'subject-1'])).resolves.toEqual([{ id: 'subject-1', name: 'Mathematics', code: 'MATH' }]);
+    expect(dispatcher.lookupSubjects).toHaveBeenCalledWith(['subject-1']);
+    dispatcher.lookupSubjects.mockResolvedValueOnce({ schemaVersion: 1, subjects: [{ id: 'subject-1', name: 'Mathematics', code: 42 }] });
+    await expect(service.lookupSubjects(['subject-1'])).rejects.toThrow('payload is invalid');
+  });
+
+  it('fails closed when no canonical Academic subject contract is available', async () => {
+    const service = new DirectoryService(prismaWith({}));
+    await expect(service.lookupSubjects(['subject-1'])).rejects.toThrow('contract is unavailable');
+    await expect(service.lookupSubjects([])).resolves.toEqual([]);
+  });
+
   it('delegates versioned roster and enrollment reads and fails closed without the contract', async () => {
     const getClassRoster = jest.fn().mockResolvedValue({ classId: 'c1', students: [] });
     const getEnrollmentAtDate = jest.fn().mockResolvedValue({ studentId: 's1', enrolled: true });
@@ -200,5 +220,90 @@ describe('DirectoryService', () => {
     const unavailable = new DirectoryService(prismaWith({}));
     await expect(unavailable.getClassRoster('c1', '2026-09-16')).rejects.toThrow('roster contract v1');
     await expect(unavailable.getEnrollmentAtDate('s1', '2026-09-16')).rejects.toThrow('enrollment contract v1');
+  });
+
+  it('uses the lifecycle-bound Academic plugin dispatcher in plugin-read mode and validates responses', async () => {
+    const previous = process.env.ACADEMIC_ROSTER_READ_OWNER;
+    process.env.ACADEMIC_ROSTER_READ_OWNER = 'plugin';
+    try {
+      const provider = {
+        resolveClassAudience: jest.fn(),
+        getClassRoster: jest.fn().mockRejectedValue(new Error('private table provider must not run')),
+        getEnrollmentAtDate: jest.fn().mockRejectedValue(new Error('private table provider must not run')),
+      } as any;
+      const service = new DirectoryService(prismaWith({}), provider);
+      const dispatcher = {
+        getClassRoster: jest.fn().mockResolvedValue({
+          contract: { id: 'wattanam.academic-management.roster', version: '1.0.0' },
+          classId: 'c1', className: 'Grade 1', asOfIsoDate: '2026-09-25',
+          source: 'plugin-enrollment-interval', students: [],
+        }),
+        getEnrollmentAtDate: jest.fn().mockResolvedValue({
+          contract: { id: 'wattanam.academic-management.roster', version: '1.0.0' },
+          studentId: 's1', classId: 'c1', className: 'Grade 1', enrolled: true,
+          asOfIsoDate: '2026-09-25', source: 'plugin-enrollment-interval',
+        }),
+        resolveClassAudience: jest.fn().mockResolvedValue({
+          schemaVersion: 1, classId: 'c1', users: [{ id: 'u1', email: null, phone: null, role: 'STUDENT' }],
+        }),
+        resolveClassesForUser: jest.fn().mockResolvedValue({
+          schemaVersion: 1, userId: 'u1', role: 'STUDENT', classIds: ['c1'],
+        }),
+        lookupClasses: jest.fn().mockResolvedValue({
+          schemaVersion: 1, classes: [{ id: 'c1', name: 'Grade 1' }],
+        }),
+        lookupSubjects: jest.fn().mockResolvedValue({
+          schemaVersion: 1, subjects: [{ id: 'subject-1', name: 'Mathematics', code: 'MATH' }],
+        }),
+        departmentForUser: jest.fn().mockResolvedValue({
+          schemaVersion: 1, userId: 'u1', department: { id: 'd1', name: 'Science', nameKh: null },
+        }),
+      };
+      const unbind = service.bindAcademicPluginContracts(dispatcher);
+      await expect(service.getClassRoster('c1', '2026-09-25')).resolves.toMatchObject({ classId: 'c1' });
+      await expect(service.getEnrollmentAtDate('s1', '2026-09-25')).resolves.toMatchObject({ studentId: 's1' });
+      await expect(service.classesForUser('u1', 'STUDENT')).resolves.toEqual(['c1']);
+      await expect(service.lookupClasses(['c1'])).resolves.toEqual([{ id: 'c1', name: 'Grade 1' }]);
+      const previousDepartmentOwner = process.env.ACADEMIC_DEPARTMENT_MEMBERSHIP_READ_OWNER;
+      process.env.ACADEMIC_DEPARTMENT_MEMBERSHIP_READ_OWNER = 'plugin';
+      await expect(service.departmentForUser('u1')).resolves.toBe('d1');
+      if (previousDepartmentOwner === undefined) delete process.env.ACADEMIC_DEPARTMENT_MEMBERSHIP_READ_OWNER;
+      else process.env.ACADEMIC_DEPARTMENT_MEMBERSHIP_READ_OWNER = previousDepartmentOwner;
+      await expect(service.resolveAudience({ audience: 'CLASS', classId: 'c1' })).resolves.toEqual([
+        { id: 'u1', email: null, phone: null, role: 'STUDENT', channels: { inApp: true, email: true, sms: true } },
+      ]);
+      expect(provider.getClassRoster).not.toHaveBeenCalled();
+      expect(provider.getEnrollmentAtDate).not.toHaveBeenCalled();
+      unbind();
+      await expect(service.getClassRoster('c1', '2026-09-25')).rejects.toThrow('plugin roster contract is unavailable');
+
+      const invalid = new DirectoryService(prismaWith({}), provider);
+      invalid.bindAcademicPluginContracts({
+        getClassRoster: jest.fn().mockResolvedValue({ classId: 'c1', students: [] }),
+        getEnrollmentAtDate: jest.fn(),
+        resolveClassAudience: jest.fn(), resolveClassesForUser: jest.fn(), lookupClasses: jest.fn(), lookupSubjects: jest.fn(), departmentForUser: jest.fn(),
+      });
+      await expect(invalid.getClassRoster('c1', '2026-09-25')).rejects.toThrow('contract identity is invalid');
+    } finally {
+      if (previous === undefined) delete process.env.ACADEMIC_ROSTER_READ_OWNER;
+      else process.env.ACADEMIC_ROSTER_READ_OWNER = previous;
+    }
+  });
+
+  it('fails closed for invalid Academic read-owner configuration', async () => {
+    const rosterOwner = process.env.ACADEMIC_ROSTER_READ_OWNER;
+    const departmentOwner = process.env.ACADEMIC_DEPARTMENT_MEMBERSHIP_READ_OWNER;
+    const service = new DirectoryService(prismaWith({}), { resolveClassAudience: jest.fn() } as any);
+    try {
+      process.env.ACADEMIC_ROSTER_READ_OWNER = 'unexpected';
+      await expect(service.lookupClasses(['c1'])).rejects.toThrow('ACADEMIC_ROSTER_READ_OWNER must be legacy or plugin');
+      process.env.ACADEMIC_DEPARTMENT_MEMBERSHIP_READ_OWNER = 'unexpected';
+      await expect(service.departmentForUser('u1')).rejects.toThrow('ACADEMIC_DEPARTMENT_MEMBERSHIP_READ_OWNER must be legacy or plugin');
+    } finally {
+      if (rosterOwner === undefined) delete process.env.ACADEMIC_ROSTER_READ_OWNER;
+      else process.env.ACADEMIC_ROSTER_READ_OWNER = rosterOwner;
+      if (departmentOwner === undefined) delete process.env.ACADEMIC_DEPARTMENT_MEMBERSHIP_READ_OWNER;
+      else process.env.ACADEMIC_DEPARTMENT_MEMBERSHIP_READ_OWNER = departmentOwner;
+    }
   });
 });

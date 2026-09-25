@@ -9,4 +9,8 @@ Legacy `CardTemplate` uses `cardType` and a `__active__` sentinel name. Adoption
 sentinel to `isActive`, preserve IDs and designs, reconcile rows and rendered output, and retain
 the source table for rollback. That adoption is not implemented by this initial migration.
 
-Assets will use scoped plugin storage. No person records or other plugin tables are joined here.
+Assets use host-provided scoped plugin storage under generated `assets/<uuid>` keys. Metadata is
+stored separately from canonical-base64 binary content; host per-file and total quotas apply.
+Accepted content is restricted to common raster images and WOFF/WOFF2 fonts. Legacy asset adoption
+and reconciliation remain part of the cutover gate. No person records or other plugin tables are
+joined here.

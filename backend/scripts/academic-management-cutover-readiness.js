@@ -12,6 +12,10 @@ const { inspect: inspectClasses, TARGET_TABLE: CLASS_TARGET_TABLE } = require('.
 const { journalPath: classJournalPath } = require('./academic-classes-adopt');
 const { inspect: inspectAdmissions, TARGET_TABLES: ADMISSIONS_TARGET_TABLES } = require('./academic-admissions-adoption-preflight');
 const { journalPath: admissionsJournalPath } = require('./academic-admissions-adopt');
+const { inspect: inspectStudentProfiles, TARGET_TABLE: STUDENT_PROFILE_TARGET_TABLE } = require('./academic-student-profiles-adoption-preflight');
+const { journalPath: studentProfileJournalPath } = require('./academic-student-profiles-adopt');
+const { inspect: inspectSubjects, TARGET_TABLE: SUBJECT_TARGET_TABLE } = require('./academic-subjects-adoption-preflight');
+const { journalPath: subjectJournalPath } = require('./academic-subjects-adopt');
 const { verifyRecoveryBackup } = require('./document-designer-adopt');
 const { loadJournal } = require('./plugin-adoption-toolkit');
 
@@ -21,6 +25,8 @@ async function check({ adapter, directory, backupName, slug }) {
   const studyYearJournal = studyYearJournalPath(directory, slug);
   const classJournal = classJournalPath(directory, slug);
   const admissionsJournal = admissionsJournalPath(directory, slug);
+  const studentProfileJournal = studentProfileJournalPath(directory, slug);
+  const subjectJournal = subjectJournalPath(directory, slug);
   const source = await inspect(adapter);
   const sourceStudyYears = await inspectStudyYears({
     readStudyYearChunk: adapter.readStudyYearChunk,
@@ -36,14 +42,26 @@ async function check({ adapter, directory, backupName, slug }) {
     readFieldChunk: adapter.readFieldChunk,
     targetState: adapter.admissionsTargetState,
   });
+  const sourceStudentProfiles = await inspectStudentProfiles({
+    readStudentChunk: adapter.readStudentChunk,
+    targetState: adapter.studentProfileTargetState,
+  });
+  const sourceSubjects = await inspectSubjects({
+    readClassSubjectChunk: adapter.readClassSubjectChunk,
+    targetState: adapter.subjectTargetState,
+  });
   const blockers = source.blockers.filter((item) => !item.endsWith('is not empty'));
   blockers.push(...sourceStudyYears.blockers.filter((item) => !item.endsWith('is not empty')));
   blockers.push(...sourceClasses.blockers.filter((item) => !item.endsWith('is not empty')));
   blockers.push(...sourceAdmissions.blockers.filter((item) => !item.endsWith('is not empty')));
+  blockers.push(...sourceStudentProfiles.blockers.filter((item) => !item.endsWith('is not empty')));
+  blockers.push(...sourceSubjects.blockers.filter((item) => !item.endsWith('is not empty')));
   const targetsExist = source.target.tables.every((table) => table.exists);
   const studyYearTargetExists = sourceStudyYears.target.exists;
   const classTargetExists = sourceClasses.target.exists;
   const admissionsTargetsExist = sourceAdmissions.target.every((table) => table.exists);
+  const studentProfileTargetExists = sourceStudentProfiles.target.exists;
+  const subjectTargetExists = sourceSubjects.target.exists;
   const target = targetsExist ? await inspect({
     readDepartmentChunk: adapter.readTargetDepartmentChunk,
     readMembershipChunk: adapter.readTargetMembershipChunk,
@@ -62,6 +80,14 @@ async function check({ adapter, directory, backupName, slug }) {
     readSettingsSingleton: adapter.readTargetSettingsSingleton,
     readFieldChunk: adapter.readTargetFieldChunk,
     targetState: async (table) => ({ table, exists: true, rowCount: 0 }),
+  }) : null;
+  const targetStudentProfiles = studentProfileTargetExists ? await inspectStudentProfiles({
+    readStudentChunk: adapter.readTargetStudentProfileChunk,
+    targetState: async () => ({ table: STUDENT_PROFILE_TARGET_TABLE, exists: true, rowCount: 0 }),
+  }) : null;
+  const targetSubjects = subjectTargetExists ? await inspectSubjects({
+    readClassSubjectChunk: adapter.readTargetSubjectChunk,
+    targetState: async () => ({ table: SUBJECT_TARGET_TABLE, exists: true, rowCount: 0 }),
   }) : null;
   if (target) {
     blockers.push(...target.blockers);
@@ -93,10 +119,26 @@ async function check({ adapter, directory, backupName, slug }) {
       blockers.push('academic admissions source and target fingerprints/counts differ');
     }
   }
+  if (targetStudentProfiles) {
+    blockers.push(...targetStudentProfiles.blockers);
+    if (sourceStudentProfiles.source.studentProfileCount !== targetStudentProfiles.source.studentProfileCount ||
+        sourceStudentProfiles.source.sha256 !== targetStudentProfiles.source.sha256) {
+      blockers.push('academic Student profile source and target fingerprints/counts differ');
+    }
+  }
+  if (targetSubjects) {
+    blockers.push(...targetSubjects.blockers);
+    if (sourceSubjects.source.subjectCount !== targetSubjects.source.subjectCount ||
+        sourceSubjects.source.sha256 !== targetSubjects.source.sha256) {
+      blockers.push('academic subject source and target fingerprints/counts differ');
+    }
+  }
   const identity = `academic:${slug}:${source.source.sha256}:${backup.sha256}`;
-  const studyYearIdentity = `academic-study-years:${slug}:${sourceStudyYears.source.sha256}:${backup.sha256}`;
+  const studyYearIdentity = `attendance-study-years:${slug}:${sourceStudyYears.source.sha256}:${backup.sha256}`;
   const classIdentity = `academic-classes:${slug}:${sourceClasses.source.sha256}:${backup.sha256}`;
   const admissionsIdentity = `academic-admissions:${slug}:${sourceAdmissions.source.sha256}:${backup.sha256}`;
+  const studentProfileIdentity = `academic-student-profiles:${slug}:${sourceStudentProfiles.source.sha256}:${backup.sha256}`;
+  const subjectIdentity = `academic-subjects:${slug}:${sourceSubjects.source.sha256}:${backup.sha256}`;
   const journalStages = {};
   for (const [phase, file] of [['departments', files.departments], ['memberships', files.memberships]]) {
     if (!fs.existsSync(file)) { blockers.push(`${phase} adoption journal is absent`); continue; }
@@ -147,16 +189,42 @@ async function check({ adapter, directory, backupName, slug }) {
       blockers.push('admissions adoption journal identity is invalid');
     }
   }
+  if (!fs.existsSync(studentProfileJournal)) {
+    blockers.push('student-profiles adoption journal is absent');
+  } else {
+    try {
+      const journal = loadJournal(studentProfileJournal, studentProfileIdentity);
+      journalStages.studentProfiles = journal.stage;
+      if (journal.backupSha256 !== backup.sha256 || journal.stage !== 'reconciled') {
+        blockers.push('student-profiles journal is not reconciled against the verified backup');
+      }
+    } catch {
+      blockers.push('student-profiles adoption journal identity is invalid');
+    }
+  }
+  if (!fs.existsSync(subjectJournal)) {
+    blockers.push('subjects adoption journal is absent');
+  } else {
+    try {
+      const journal = loadJournal(subjectJournal, subjectIdentity);
+      journalStages.subjects = journal.stage;
+      if (journal.backupSha256 !== backup.sha256 || journal.stage !== 'reconciled') blockers.push('subjects journal is not reconciled against the verified backup');
+    } catch { blockers.push('subjects adoption journal identity is invalid'); }
+  }
   const installation = await adapter.pluginState();
   if (installation?.status !== 'active') blockers.push('Academic Management plugin is not active');
+  const studyYearInstallation = await adapter.studyYearPluginState();
+  if (studyYearInstallation?.status !== 'active') blockers.push('Attendance Manager plugin is not active for Study Year ownership');
   if (fs.existsSync(files.maintenance)) blockers.push('plugin adoption maintenance lock is still present');
   return {
     format: 'wattanam-academic-management-cutover-readiness-v1', readOnly: true,
     ready: blockers.length === 0, blockers, schoolSlug: slug,
-    source: { departments: source.source, studyYears: sourceStudyYears.source, classes: sourceClasses.source, admissions: sourceAdmissions.source },
-    target: { departments: target?.source ?? null, studyYears: targetStudyYears?.source ?? null, classes: targetClasses?.source ?? null, admissions: targetAdmissions?.source ?? null },
+    source: { departments: source.source, studyYears: sourceStudyYears.source, classes: sourceClasses.source, admissions: sourceAdmissions.source, studentProfiles: sourceStudentProfiles.source, subjects: sourceSubjects.source },
+    target: { departments: target?.source ?? null, studyYears: targetStudyYears?.source ?? null, classes: targetClasses?.source ?? null, admissions: targetAdmissions?.source ?? null, studentProfiles: targetStudentProfiles?.source ?? null, subjects: targetSubjects?.source ?? null },
     backup: { file: path.basename(backup.archive), sha256: backup.sha256 },
-    journals: journalStages, plugin: { status: installation?.status ?? 'absent', version: installation?.version ?? null },
+    journals: journalStages,
+    plugin: { status: installation?.status ?? 'absent', version: installation?.version ?? null },
+    studyYearPlugin: { status: studyYearInstallation?.status ?? 'absent', version: studyYearInstallation?.version ?? null },
     warning: 'Passing parity does not certify full Academic Management extraction, dual-write consistency, or production cutover',
   };
 }
@@ -174,6 +242,8 @@ async function main() {
   const studyYearTable = STUDY_YEAR_TARGET_TABLE;
   const classTable = CLASS_TARGET_TABLE;
   const [registrationTable, settingsTable, fieldTable] = ADMISSIONS_TARGET_TABLES;
+  const studentProfileTable = STUDENT_PROFILE_TARGET_TABLE;
+  const subjectTable = SUBJECT_TARGET_TABLE;
   const studyYearSelect = {
     id: true,
     year: true,
@@ -239,6 +309,8 @@ async function main() {
     readRegistrationChunk: ({ after, limit }) => prisma.classRegistration.findMany({ ...(after ? { cursor: { id: after }, skip: 1 } : {}), orderBy: { id: 'asc' }, take: limit, select: registrationSelect }),
     readSettingsSingleton: () => prisma.classRegistrationSettings.findUnique({ where: { id: 'singleton' }, select: settingsSelect }),
     readFieldChunk: ({ after, limit }) => prisma.classRegistrationField.findMany({ ...(after ? { cursor: { id: after }, skip: 1 } : {}), orderBy: { id: 'asc' }, take: limit, select: fieldSelect }),
+    readStudentChunk: ({ after, limit }) => prisma.student.findMany({ ...(after ? { cursor: { id: after }, skip: 1 } : {}), orderBy: { id: 'asc' }, take: limit, select: { id: true, userId: true, studentNumber: true, parentId: true, qrCode: true, photo: true, sex: true, dateOfBirth: true, address: true, generation: true, nameKh: true, customFieldValues: true, createdAt: true, updatedAt: true } }),
+    readClassSubjectChunk: ({ after, limit }) => prisma.class.findMany({ ...(after ? { cursor: { id: after }, skip: 1 } : {}), orderBy: { id: 'asc' }, take: limit, select: { id: true, subject: true } }),
     readTargetDepartmentChunk: ({ after, limit }) => prisma.$queryRawUnsafe(`SELECT "id","name","nameKh","description" FROM "${departmentTable}" WHERE "id" > $1 ORDER BY "id" LIMIT $2`, after || '', limit),
     readTargetMembershipChunk: ({ after, limit }) => prisma.$queryRawUnsafe(`SELECT "userId","departmentId" FROM "${membershipTable}" WHERE "userId" > $1 ORDER BY "userId" LIMIT $2`, after || '', limit),
     readTargetStudyYearChunk: ({ after, limit }) => prisma.$queryRawUnsafe(`SELECT "id","year","label","startDate","endDate","isCurrent","schoolName","logoUrl" FROM "${studyYearTable}" WHERE "year" > $1 ORDER BY "year" ASC LIMIT $2`, after ?? Number.MIN_SAFE_INTEGER, limit),
@@ -246,6 +318,8 @@ async function main() {
     readTargetRegistrationChunk: ({ after, limit }) => prisma.$queryRawUnsafe(`SELECT "id","classId","nameKh","nameEn","email","phone","passwordHash","generatedPassword","photo","sex","dateOfBirth","address","generation","customFieldValues","status","rejectReason","studentId","createdAt","resolvedAt","resolvedBy" FROM "${registrationTable}" WHERE "id" > $1 ORDER BY "id" ASC LIMIT $2`, after || '', limit),
     readTargetSettingsSingleton: () => prisma.$queryRawUnsafe(`SELECT "id","khmerNameMode","phoneMode","emailMode","photoMode","passwordMode","sexMode","dateOfBirthMode","addressMode","generationMode","updatedAt" FROM "${settingsTable}" WHERE "id" = 'singleton' LIMIT 1`).then((rows) => rows[0] ?? null),
     readTargetFieldChunk: ({ after, limit }) => prisma.$queryRawUnsafe(`SELECT "id","key","label","fieldType","options","required","order","enabled","createdAt","updatedAt" FROM "${fieldTable}" WHERE "id" > $1 ORDER BY "id" ASC LIMIT $2`, after || '', limit),
+    readTargetStudentProfileChunk: ({ after, limit }) => prisma.$queryRawUnsafe(`SELECT "id","userId","studentNumber","guardianUserId" AS "parentId","qrCode","photo","sex","dateOfBirth","address","generation","nameKh","customFieldValues","createdAt","updatedAt" FROM "${studentProfileTable}" WHERE "id" > $1 ORDER BY "id" ASC LIMIT $2`, after || '', limit),
+    readTargetSubjectChunk: ({ after, limit }) => prisma.$queryRawUnsafe(`SELECT "id", "name" AS "subject" FROM "${subjectTable}" WHERE "id" > $1 ORDER BY "id" ASC LIMIT $2`, after || '', limit),
     targetState: async (tables) => Promise.all(tables.map(async (table) => { const found = await prisma.$queryRawUnsafe(`SELECT to_regclass('public.${table}') IS NOT NULL AS "exists"`); const exists = found[0]?.exists === true; const counts = exists ? await prisma.$queryRawUnsafe(`SELECT COUNT(*)::int AS "count" FROM "${table}"`) : []; return { table, exists, rowCount: exists ? Number(counts[0]?.count || 0) : 0 }; })),
     studyYearTargetState: async (table) => {
       const found = await prisma.$queryRawUnsafe(`SELECT to_regclass('public.${table}') IS NOT NULL AS "exists"`);
@@ -265,7 +339,20 @@ async function main() {
       const counts = exists ? await prisma.$queryRawUnsafe(`SELECT COUNT(*)::int AS "count" FROM "${table}"`) : [];
       return { table, exists, rowCount: exists ? Number(counts[0]?.count || 0) : 0 };
     },
+    studentProfileTargetState: async (table) => {
+      const found = await prisma.$queryRawUnsafe(`SELECT to_regclass('public.${table}') IS NOT NULL AS "exists"`);
+      const exists = found[0]?.exists === true;
+      const counts = exists ? await prisma.$queryRawUnsafe(`SELECT COUNT(*)::int AS "count" FROM "${table}"`) : [];
+      return { table, exists, rowCount: exists ? Number(counts[0]?.count || 0) : 0 };
+    },
+    subjectTargetState: async (table) => {
+      const found = await prisma.$queryRawUnsafe(`SELECT to_regclass('public.${table}') IS NOT NULL AS "exists"`);
+      const exists = found[0]?.exists === true;
+      const counts = exists ? await prisma.$queryRawUnsafe(`SELECT COUNT(*)::int AS "count" FROM "${table}"`) : [];
+      return { table, exists, rowCount: exists ? Number(counts[0]?.count || 0) : 0 };
+    },
     pluginState: () => prisma.pluginInstallation.findUnique({ where: { id: 'wattanam.academic-management' }, select: { status: true, version: true } }),
+    studyYearPluginState: () => prisma.pluginInstallation.findUnique({ where: { id: 'wattanam.attendance-manager' }, select: { status: true, version: true } }),
   };
   try {
     const report = await check({ adapter, directory, backupName: process.env.ACADEMIC_BACKUP_FILE, slug });

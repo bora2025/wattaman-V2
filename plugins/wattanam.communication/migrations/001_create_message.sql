@@ -1,0 +1,2 @@
+-- wattanam-plugin-migration: 001_create_message
+CREATE TABLE plugin_wattanam_communication_message ("id" TEXT PRIMARY KEY,"senderDirectoryUserId" TEXT NOT NULL,"receiverDirectoryUserId" TEXT NOT NULL,"content" TEXT NOT NULL CHECK (char_length("content") BETWEEN 1 AND 10000),"readAt" TIMESTAMPTZ,"createdAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,CHECK ("senderDirectoryUserId" <> "receiverDirectoryUserId"));

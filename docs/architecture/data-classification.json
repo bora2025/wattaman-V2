@@ -287,6 +287,15 @@
     "PluginJobRun": { "subjects": [], "fields": {}, "note": "Plugin platform metadata (A-002)." },
     "PluginMigration": { "subjects": [], "fields": {}, "note": "Plugin platform metadata (A-002)." },
     "PluginNotificationUsage": { "subjects": [], "fields": {}, "note": "Plugin platform metadata (A-002)." },
+    "PluginAccountCommand": {
+      "subjects": ["student"],
+      "fields": {
+        "userId": { "tier": 2, "categories": ["personal"] },
+        "commandKey": { "tier": 2, "categories": ["personal"], "note": "Opaque idempotency key; must not contain credentials." },
+        "requestHash": { "tier": 2, "categories": [], "note": "One-way hash of the normalized command payload." }
+      },
+      "note": "Core-owned idempotency journal for capability-gated plugin account creation. It stores no password or plaintext request payload."
+    },
     "PluginPermissionGrant": { "subjects": [], "fields": {}, "note": "Plugin platform metadata (A-002)." },
     "PluginSetting": { "subjects": [], "fields": {}, "note": "Plugin platform metadata (A-002); plugins keep their own data in namespaced tables." },
     "Post": { "subjects": [], "fields": {}, "note": "Public website content (A-002 tier 0)." },

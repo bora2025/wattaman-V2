@@ -32,14 +32,14 @@
     },
     "wattanam.attendance-manager": {
       "kind": "official-plugin",
-      "scope": "Study years plus student, teacher and staff attendance: manual entry, camera/QR/card/USB scanning, corrections, sessions, holidays, identifiers, alerts, reports, printing and exports.",
+      "scope": "Study years plus student school-day attendance: manual entry, camera/QR/card/USB scanning, corrections, class sessions, holidays, student identifiers, alerts, reports, printing and exports.",
       "dependsOn": [
         "wattanam.academic-management"
       ]
     },
     "wattanam.timetable": {
       "kind": "official-plugin",
-      "scope": "Subjects, classrooms, schedules, teacher schedules and timetable reports.",
+      "scope": "Schedule-local subject mappings, classrooms, schedules, teacher schedules and timetable reports; canonical teaching-subject identities are owned by Academic Management.",
       "dependsOn": [
         "wattanam.academic-management"
       ]
@@ -123,7 +123,7 @@
     "attendance-staff": {
       "area": "backend/src/attendance",
       "owners": [
-        "wattanam.attendance",
+        "wattanam.attendance-manager",
         "wattanam.human-resources"
       ],
       "summary": "The module records both students and staff. Student school-day attendance stays with Attendance; staff recording, staff corrections and employee self-scan move to Human Resources, which may reuse an Attendance engine contract."
@@ -148,7 +148,7 @@
     "reports-by-domain": {
       "area": "backend/src/reports",
       "owners": [
-        "wattanam.attendance",
+        "wattanam.attendance-manager",
         "wattanam.human-resources",
         "lean-core",
         "wattanam.reporting",
@@ -159,7 +159,7 @@
     "session-config-staff": {
       "area": "backend/src/session-config",
       "owners": [
-        "wattanam.attendance",
+        "wattanam.attendance-manager",
         "wattanam.human-resources"
       ],
       "summary": "Class session windows and attendance format rules stay with Attendance; staff session defaults and the staff weekly schedule move to Human Resources."
@@ -167,7 +167,7 @@
     "mobile-scanner": {
       "area": "apps/mobile/src/screens/ScannerScreen.tsx",
       "owners": [
-        "wattanam.attendance",
+        "wattanam.attendance-manager",
         "wattanam.human-resources"
       ],
       "summary": "Split the existing screen: student scanning belongs to Attendance; employee self-scan belongs to Human Resources."
@@ -219,6 +219,9 @@
       "owner": "lean-core"
     },
     "PluginNotificationUsage": {
+      "owner": "lean-core"
+    },
+    "PluginAccountCommand": {
       "owner": "lean-core"
     },
     "PluginMigration": {
@@ -279,10 +282,10 @@
       "owner": "wattanam.timetable"
     },
     "StaffAttendance": {
-      "owner": "wattanam.attendance-manager"
+      "owner": "wattanam.human-resources"
     },
     "StaffWeeklySchedule": {
-      "owner": "wattanam.attendance-manager"
+      "owner": "wattanam.human-resources"
     },
     "Salary": {
       "owner": "wattanam.human-resources"
@@ -629,6 +632,36 @@
       "note": "Operator database and storage tooling."
     },
     {
+      "match": "^backend/scripts/academic-(management|enrollment|study-years|classes|admissions|student-profiles|subjects)-(adopt|rollback-drill|cutover-readiness)\\.js$",
+      "owner": "wattanam.academic-management",
+      "note": "Academic restored-backup adoption, reconciliation, cutover-readiness and rollback tooling."
+    },
+    {
+      "match": "^backend/scripts/attendance-manager-(adopt|rollback-drill)\\.js$",
+      "owner": "wattanam.attendance-manager",
+      "note": "Attendance Manager backup-bound historical adoption, reconciliation and rollback tooling."
+    },
+    {
+      "match": "^backend/scripts/timetable-(adopt|rollback-drill)\\.js$",
+      "owner": "wattanam.timetable",
+      "note": "Timetable backup-bound historical adoption, reconciliation and rollback tooling."
+    },
+    {
+      "match": "^backend/scripts/examination-(adopt|rollback-drill)\\.js$",
+      "owner": "wattanam.examination",
+      "note": "Examination backup-bound historical adoption, reconciliation and rollback tooling."
+    },
+    {
+      "match": "^backend/scripts/learning-(adopt|rollback-drill)\\.js$",
+      "owner": "wattanam.learning",
+      "note": "Learning backup-bound historical adoption, reconciliation and rollback tooling."
+    },
+    {
+      "match": "^backend/scripts/document-designer-(adopt|rollback-drill)\\.js$",
+      "owner": "wattanam.document-designer",
+      "note": "Document Designer backup-bound adoption, reconciliation and rollback tooling."
+    },
+    {
       "match": "^frontend/(next\\.config|server|tailwind\\.config)\\.js$",
       "owner": "lean-core"
     },
@@ -739,6 +772,11 @@
       "note": "Playwright config for plugin-host UI v2 regression tests."
     },
     {
+      "match": "^frontend/scripts/run-plugin-ui-e2e\\.js$",
+      "owner": "lean-core",
+      "note": "Cross-platform lifecycle runner for plugin-host UI regression tests."
+    },
+    {
       "match": "^apps/mobile/((App\\.tsx|index\\.ts|src/(api|config|AuthContext|theme)\\.ts)$|assets/)",
       "owner": "lean-core",
       "note": "Mobile app shell: entry point, sign-in context, theme, API client and bundled assets."
@@ -763,11 +801,11 @@
     },
     {
       "match": "^apps/mobile/src/screens/(EditAttendance|Holidays|Reports|SessionSettings)Screen\\.tsx$",
-      "owner": "wattanam.attendance"
+      "owner": "wattanam.attendance-manager"
     },
     {
       "match": "^apps/mobile/src/screens/ScannerScreen\\.tsx$",
-      "owner": "wattanam.attendance",
+      "owner": "wattanam.attendance-manager",
       "splitPlan": "mobile-scanner"
     },
     {
@@ -793,6 +831,76 @@
       "match": "^plugins/wattanam\\.attendance-manager/",
       "owner": "wattanam.attendance-manager",
       "note": "Official Attendance Manager plugin package and runtime artifacts."
+    },
+    {
+      "match": "^plugins/wattanam\\.timetable(/|$)",
+      "owner": "wattanam.timetable",
+      "note": "Official Timetable plugin package and runtime artifacts."
+    },
+    {
+      "match": "^plugins/wattanam\\.examination(/|$)",
+      "owner": "wattanam.examination",
+      "note": "Official Examination plugin package and runtime artifacts."
+    },
+    {
+      "match": "^plugins/wattanam\\.learning(/|$)",
+      "owner": "wattanam.learning",
+      "note": "Official Learning plugin package and runtime artifacts."
+    },
+    {
+      "match": "^backend/scripts/transportation-(adopt|rollback-drill)\\.js$",
+      "owner": "wattanam.transportation",
+      "note": "Guarded Transportation legacy adoption and routing rollback operations."
+    },
+    {
+      "match": "^backend/scripts/communication-(adopt|rollback-drill)\\.js$",
+      "owner": "wattanam.communication",
+      "note": "Guarded Communication legacy adoption and routing rollback operations."
+    },
+    {
+      "match": "^backend/scripts/parent-portal-(adoption-preflight|adopt|rollback-drill)\\.js$",
+      "owner": "wattanam.parent-portal",
+      "note": "Backup-bound Parent Portal link-request adoption, exact reconciliation and routing rollback operations."
+    },
+    {
+      "match": "^backend/scripts/finance-(adopt|rollback-drill)\\.js$",
+      "owner": "wattanam.finance",
+      "note": "Backup-bound Finance legacy adoption, exact reconciliation and routing rollback operations."
+    },
+    {
+      "match": "^backend/scripts/human-resources-(adopt|rollback-drill)\\.js$",
+      "owner": "wattanam.human-resources",
+      "note": "Backup-bound Human Resources legacy adoption, exact reconciliation and routing rollback operations."
+    },
+    {
+      "match": "^plugins/wattanam\\.transportation(/|$)",
+      "owner": "wattanam.transportation",
+      "note": "Official Transportation plugin package and runtime artifacts."
+    },
+    {
+      "match": "^plugins/wattanam\\.communication(/|$)",
+      "owner": "wattanam.communication",
+      "note": "Official direct messaging and posts plugin; Announcements remains standalone under ADR-0018."
+    },
+    {
+      "match": "^plugins/wattanam\\.finance(/|$)",
+      "owner": "wattanam.finance",
+      "note": "Official operational school fees and receipt plugin; platform billing remains lean core."
+    },
+    {
+      "match": "^plugins/wattanam\\.human-resources(/|$)",
+      "owner": "wattanam.human-resources",
+      "note": "Official employee profile, payroll and staff-attendance plugin."
+    },
+    {
+      "match": "^plugins/wattanam\\.parent-portal(/|$)",
+      "owner": "wattanam.parent-portal",
+      "note": "Official parent-link workflow and optional parent-facing read-model composition plugin."
+    },
+    {
+      "match": "^plugins/wattanam\\.reporting(/|$)",
+      "owner": "wattanam.reporting",
+      "note": "Official read-only cross-module aggregation and export plugin."
     }
   ],
   "routes": [
@@ -862,6 +970,11 @@
       "note": "Host page that renders installed plugin UI."
     },
     {
+      "match": "^/plugins/wattanam\\.timetable(/|$)",
+      "owner": "wattanam.timetable",
+      "note": "Declarative Timetable plugin pages rendered by the core plugin UI host."
+    },
+    {
       "match": "^/settings/notifications$",
       "owner": "lean-core"
     },
@@ -911,16 +1024,16 @@
     },
     {
       "match": "^/admin/(attendance|camera|holidays|session-settings|reports)(/|$)",
-      "owner": "wattanam.attendance",
+      "owner": "wattanam.attendance-manager",
       "note": "/admin/reports is the student attendance report; each domain owns its report."
     },
     {
       "match": "^/teacher/(attendance|camera|reports|session-settings)$",
-      "owner": "wattanam.attendance"
+      "owner": "wattanam.attendance-manager"
     },
     {
       "match": "^/wattaman(/scan|/usb-scan)?$",
-      "owner": "wattanam.attendance"
+      "owner": "wattanam.attendance-manager"
     },
     {
       "match": "^/wattaman/(scheduled-teacher|teacher-scan|teacher-reports)(/|$)",

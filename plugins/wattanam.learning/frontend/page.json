@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 2,
+  "kind": "declarative-ui",
+  "pages": [
+    {
+      "id": "courses", "title": "Courses", "routePath": "courses", "permission": "wattanam.learning.courses.view", "parameters": [],
+      "dataSources": [
+        { "id": "list", "method": "GET", "path": "courses", "permission": "wattanam.learning.courses.view" },
+        { "id": "create", "method": "POST", "path": "courses", "permission": "wattanam.learning.courses.manage" }
+      ],
+      "components": [
+        { "id": "heading", "type": "heading", "title": "Course management" },
+        { "id": "list", "type": "table", "title": "Course catalog", "source": "list", "fields": [
+          { "id": "title", "label": "Title", "sortable": true }, { "id": "category", "label": "Category" }, { "id": "academicClassId", "label": "Academic class" }, { "id": "status", "label": "Status" }, { "id": "startDate", "label": "Starts", "format": "datetime" }
+        ], "options": { "pageSize": 25, "selectable": false, "rowRoute": "courses/:id", "rowParameterMap": { "id": "id" } } },
+        { "id": "create-form", "type": "form", "title": "Create course", "source": "create", "fields": [
+          { "id": "title", "type": "text", "label": "Title", "required": true, "maxLength": 300 },
+          { "id": "description", "type": "textarea", "label": "Description", "maxLength": 10000 },
+          { "id": "category", "type": "text", "label": "Category", "maxLength": 200 },
+          { "id": "academicClassId", "type": "text", "label": "Academic class ID", "required": true, "maxLength": 100 },
+          { "id": "startDate", "type": "datetime", "label": "Start date" }, { "id": "endDate", "type": "datetime", "label": "End date" }
+        ], "options": { "submitLabel": "Create course", "successMessage": "Course created" } }
+      ]
+    },
+    {
+      "id": "course-workspace", "title": "Course workspace", "routePath": "courses/:id", "permission": "wattanam.learning.courses.view",
+      "parameters": [{ "name": "id", "type": "string", "maximumLength": 100 }],
+      "dataSources": [
+        { "id": "course", "method": "GET", "path": "courses/:id", "permission": "wattanam.learning.courses.view" },
+        { "id": "lessons", "method": "GET", "path": "courses/:id/lessons", "permission": "wattanam.learning.courses.view" },
+        { "id": "enrollments", "method": "GET", "path": "courses/:id/enrollments", "permission": "wattanam.learning.courses.manage" },
+        { "id": "sessions", "method": "GET", "path": "courses/:id/sessions", "permission": "wattanam.learning.courses.view" },
+        { "id": "engagement", "method": "GET", "path": "courses/:id/engagement", "permission": "wattanam.learning.courses.view" },
+        { "id": "createLesson", "method": "POST", "path": "courses/:id/lessons", "permission": "wattanam.learning.courses.manage" },
+        { "id": "enroll", "method": "POST", "path": "courses/:id/enrollments", "permission": "wattanam.learning.courses.manage" },
+        { "id": "createSession", "method": "POST", "path": "courses/:id/sessions", "permission": "wattanam.learning.courses.manage" }
+      ],
+      "components": [
+        { "id": "course", "type": "detail", "title": "Course", "source": "course", "fields": [{ "label": "Title", "path": "title" }, { "label": "Status", "path": "status" }, { "label": "Class", "path": "academicClassId" }, { "label": "Category", "path": "category" }] },
+        { "id": "lessons", "type": "table", "title": "Lessons", "source": "lessons", "fields": [{ "id": "title", "label": "Title" }, { "id": "status", "label": "Status" }, { "id": "gradingMode", "label": "Grading" }, { "id": "totalPoints", "label": "Points" }], "options": { "pageSize": 50, "selectable": false, "rowRoute": "lessons/:id", "rowParameterMap": { "id": "id" } } },
+        { "id": "lesson-form", "type": "form", "title": "Add lesson", "source": "createLesson", "fields": [
+          { "id": "title", "type": "text", "label": "Title", "required": true, "maxLength": 300 }, { "id": "description", "type": "textarea", "label": "Description", "maxLength": 10000 },
+          { "id": "gradingMode", "type": "select", "label": "Grading mode", "required": true, "options": [{ "label": "Graded", "value": "GRADED" }, { "label": "Practice", "value": "PRACTICE" }, { "label": "Ungraded", "value": "UNGRADED" }] },
+          { "id": "totalPoints", "type": "number", "label": "Total points", "min": 0 }, { "id": "passingScore", "type": "number", "label": "Passing score", "min": 0 }, { "id": "maxAttempts", "type": "number", "label": "Maximum attempts", "min": 0 }
+        ], "options": { "submitLabel": "Add lesson", "successMessage": "Lesson added" } },
+        { "id": "enrollments", "type": "table", "title": "Enrollments", "source": "enrollments", "fields": [{ "id": "academicStudentId", "label": "Academic student" }, { "id": "status", "label": "Status" }, { "id": "progressPct", "label": "Progress percent", "format": "number" }], "options": { "pageSize": 50, "selectable": false } },
+        { "id": "enroll-form", "type": "form", "title": "Enroll roster student", "source": "enroll", "fields": [{ "id": "academicStudentId", "type": "text", "label": "Academic student ID", "required": true, "maxLength": 100 }], "options": { "submitLabel": "Enroll", "successMessage": "Student enrolled" } },
+        { "id": "sessions", "type": "table", "title": "Course sessions", "source": "sessions", "fields": [{ "id": "title", "label": "Title" }, { "id": "scheduledAt", "label": "Scheduled", "format": "datetime" }, { "id": "durationMinutes", "label": "Minutes" }, { "id": "location", "label": "Location" }], "options": { "pageSize": 50, "selectable": false } },
+        { "id": "session-form", "type": "form", "title": "Schedule session", "source": "createSession", "fields": [
+          { "id": "title", "type": "text", "label": "Title", "required": true, "maxLength": 300 }, { "id": "scheduledAt", "type": "datetime", "label": "Scheduled at", "required": true },
+          { "id": "durationMinutes", "type": "number", "label": "Duration minutes", "required": true, "min": 1 }, { "id": "location", "type": "text", "label": "Location", "maxLength": 500 }
+        ], "options": { "submitLabel": "Schedule", "successMessage": "Course session scheduled" } },
+        { "id": "engagement", "type": "table", "title": "Learner engagement", "source": "engagement", "fields": [{ "id": "academicStudentId", "label": "Academic student" }, { "id": "enrollmentStatus", "label": "Enrollment" }, { "id": "lessonsOpened", "label": "Lessons opened" }, { "id": "lessonsCompleted", "label": "Completed" }, { "id": "watchedSeconds", "label": "Watch seconds" }, { "id": "sessionsAttended", "label": "Sessions attended" }], "options": { "pageSize": 100, "selectable": false } }
+      ]
+    },
+    {
+      "id": "lesson-workspace", "title": "Lesson workspace", "routePath": "lessons/:id", "permission": "wattanam.learning.courses.view", "parameters": [{ "name": "id", "type": "string", "maximumLength": 100 }],
+      "dataSources": [
+        { "id": "pages", "method": "GET", "path": "lessons/:id/pages", "permission": "wattanam.learning.courses.view" },
+        { "id": "createPage", "method": "POST", "path": "lessons/:id/pages", "permission": "wattanam.learning.courses.manage" },
+        { "id": "pending", "method": "GET", "path": "lessons/:id/pending-grading", "permission": "wattanam.learning.grading.manage" }
+      ],
+      "components": [
+        { "id": "pages", "type": "table", "title": "Lesson pages", "source": "pages", "fields": [{ "id": "order", "label": "Order" }, { "id": "title", "label": "Title" }, { "id": "pageType", "label": "Type" }, { "id": "nextPageId", "label": "Next page" }], "options": { "pageSize": 100, "selectable": false } },
+        { "id": "page-form", "type": "form", "title": "Add lesson page", "source": "createPage", "fields": [
+          { "id": "title", "type": "text", "label": "Title", "required": true, "maxLength": 300 },
+          { "id": "pageType", "type": "select", "label": "Page type", "required": true, "options": [{ "label": "Content", "value": "CONTENT" }, { "label": "Question", "value": "QUESTION" }, { "label": "Branch", "value": "BRANCH" }] },
+          { "id": "content", "type": "json", "label": "Validated page content JSON", "required": true }, { "id": "order", "type": "number", "label": "Order", "min": 0 }, { "id": "nextPageId", "type": "text", "label": "Next page ID", "maxLength": 100 }
+        ], "options": { "submitLabel": "Add page", "successMessage": "Lesson page added" } },
+        { "id": "pending", "type": "table", "title": "Pending manual grading", "source": "pending", "fields": [{ "id": "academicStudentId", "label": "Academic student" }, { "id": "pageTitle", "label": "Question" }, { "id": "answeredAt", "label": "Answered", "format": "datetime" }, { "id": "pointsAwarded", "label": "Points" }], "options": { "pageSize": 100, "selectable": false } }
+      ]
+    },
+    {
+      "id": "assignments", "title": "Assignments", "routePath": "assignments", "permission": "wattanam.learning.assignments.view", "parameters": [],
+      "dataSources": [{ "id": "list", "method": "GET", "path": "assignments", "permission": "wattanam.learning.assignments.view" }, { "id": "create", "method": "POST", "path": "assignments", "permission": "wattanam.learning.assignments.manage" }],
+      "components": [
+        { "id": "list", "type": "table", "title": "Assignment catalog", "source": "list", "fields": [{ "id": "title", "label": "Title" }, { "id": "type", "label": "Type" }, { "id": "academicClassId", "label": "Academic class" }, { "id": "status", "label": "Status" }, { "id": "dueDate", "label": "Due", "format": "datetime" }, { "id": "totalMarks", "label": "Marks" }], "options": { "pageSize": 25, "selectable": false, "rowRoute": "assignments/:id", "rowParameterMap": { "id": "id" } } },
+        { "id": "create-form", "type": "form", "title": "Create assignment", "source": "create", "fields": [
+          { "id": "title", "type": "text", "label": "Title", "required": true, "maxLength": 300 }, { "id": "description", "type": "textarea", "label": "Description", "maxLength": 10000 },
+          { "id": "academicClassId", "type": "text", "label": "Academic class ID", "required": true, "maxLength": 100 },
+          { "id": "type", "type": "select", "label": "Type", "required": true, "options": [{ "label": "Homework", "value": "HOMEWORK" }, { "label": "Quiz", "value": "QUIZ" }, { "label": "Project", "value": "PROJECT" }, { "label": "Lab", "value": "LAB" }, { "label": "Essay", "value": "ESSAY" }] },
+          { "id": "dueDate", "type": "datetime", "label": "Due date" }, { "id": "totalMarks", "type": "number", "label": "Total marks", "required": true, "min": 0 },
+          { "id": "maxAttempts", "type": "number", "label": "Maximum attempts", "min": 0 }, { "id": "allowLate", "type": "checkbox", "label": "Allow late submission" }, { "id": "latePenaltyPct", "type": "number", "label": "Late penalty percent", "min": 0, "max": 100 },
+          { "id": "status", "type": "select", "label": "Status", "required": true, "options": [{ "label": "Draft", "value": "DRAFT" }, { "label": "Published", "value": "PUBLISHED" }] }
+        ], "options": { "submitLabel": "Create assignment", "successMessage": "Assignment created" } }
+      ]
+    },
+    {
+      "id": "assignment-workspace", "title": "Quiz questions", "routePath": "assignments/:id", "permission": "wattanam.learning.assignments.manage", "parameters": [{ "name": "id", "type": "string", "maximumLength": 100 }],
+      "dataSources": [{ "id": "questions", "method": "GET", "path": "assignments/:id/questions", "permission": "wattanam.learning.assignments.manage" }, { "id": "createQuestion", "method": "POST", "path": "assignments/:id/questions", "permission": "wattanam.learning.assignments.manage" }],
+      "components": [
+        { "id": "questions", "type": "table", "title": "Quiz questions", "source": "questions", "fields": [{ "id": "order", "label": "Order" }, { "id": "prompt", "label": "Prompt" }, { "id": "type", "label": "Type" }, { "id": "points", "label": "Points" }], "options": { "pageSize": 100, "selectable": false } },
+        { "id": "question-form", "type": "form", "title": "Add rich question", "source": "createQuestion", "fields": [
+          { "id": "questionType", "type": "select", "label": "Question type", "required": true, "options": [{ "label": "Single choice", "value": "MCQ_SINGLE" }, { "label": "Multiple choice", "value": "MCQ_MULTI" }, { "label": "True/false", "value": "TRUE_FALSE" }, { "label": "Short answer", "value": "SHORT_ANSWER" }, { "label": "Numeric", "value": "NUMERIC" }, { "label": "Essay", "value": "ESSAY" }, { "label": "Fill blanks", "value": "FILL_BLANKS" }, { "label": "Drag words", "value": "DRAG_WORDS" }, { "label": "Dictation", "value": "DICTATION" }] },
+          { "id": "prompt", "type": "textarea", "label": "Prompt", "required": true }, { "id": "points", "type": "number", "label": "Points", "required": true, "min": 0 },
+          { "id": "choices", "type": "json", "label": "Choices JSON" }, { "id": "correctChoiceId", "type": "text", "label": "Correct choice ID" }, { "id": "correctChoiceIds", "type": "json", "label": "Correct choice IDs JSON" },
+          { "id": "acceptedAnswers", "type": "json", "label": "Accepted answers JSON" }, { "id": "correctValue", "type": "number", "label": "Correct numeric value" }, { "id": "tolerance", "type": "number", "label": "Numeric tolerance", "min": 0 },
+          { "id": "data", "type": "json", "label": "Rich question data JSON" }, { "id": "order", "type": "number", "label": "Order", "min": 0 }
+        ], "options": { "submitLabel": "Add question", "successMessage": "Quiz question added" } }
+      ]
+    },
+    {
+      "id": "student-courses", "title": "My courses", "routePath": "student/courses", "permission": "wattanam.learning.student.participate", "parameters": [],
+      "dataSources": [{ "id": "list", "method": "GET", "path": "student/courses", "permission": "wattanam.learning.student.participate" }],
+      "components": [{ "id": "list", "type": "table", "title": "My courses", "source": "list", "fields": [{ "id": "title", "label": "Title" }, { "id": "category", "label": "Category" }, { "id": "status", "label": "Status" }, { "id": "enrollmentStatus", "label": "Enrollment" }, { "id": "progressPct", "label": "Progress percent", "format": "number" }], "options": { "pageSize": 25, "selectable": false } }]
+    },
+    {
+      "id": "student-assignments", "title": "My assignments", "routePath": "student/assignments", "permission": "wattanam.learning.student.participate", "parameters": [],
+      "dataSources": [{ "id": "list", "method": "GET", "path": "student/assignments", "permission": "wattanam.learning.student.participate" }],
+      "components": [{ "id": "list", "type": "table", "title": "My assignments", "source": "list", "fields": [{ "id": "title", "label": "Title" }, { "id": "type", "label": "Type" }, { "id": "availableFrom", "label": "Available", "format": "datetime" }, { "id": "dueDate", "label": "Due", "format": "datetime" }, { "id": "totalMarks", "label": "Marks" }], "options": { "pageSize": 25, "selectable": false } }]
+    }
+  ]
+}

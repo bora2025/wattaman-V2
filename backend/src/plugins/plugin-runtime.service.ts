@@ -22,6 +22,8 @@ import { PluginArtifactCacheService } from './plugin-artifact-cache.service';
 import { PluginResourceQuotaService } from './plugin-resource-quota.service';
 import { PluginContractRuntimeService } from './plugin-contract-runtime.service';
 import { PluginRolloutService } from './plugin-rollout.service';
+import { PrismaAcademicIdentityProvider } from '../auth/academic-identity.provider';
+import { PluginAccountService } from './plugin-account.service';
 
 @Injectable()
 export class PluginRuntimeService implements OnApplicationBootstrap, OnApplicationShutdown {
@@ -46,6 +48,8 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnApplicati
     @Optional() private readonly resourceQuota?: PluginResourceQuotaService,
     @Optional() private readonly contracts?: PluginContractRuntimeService,
     @Optional() private readonly rollout?: PluginRolloutService,
+    @Optional() private readonly academicIdentity?: PrismaAcademicIdentityProvider,
+    @Optional() private readonly pluginAccounts?: PluginAccountService,
   ) {}
 
   async onApplicationBootstrap() {
@@ -201,19 +205,71 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnApplicati
       },
       readModels: {
         publish: (model, version, key, data) => { requireCapability('readmodels.publish'); if (!this.contracts) throw new Error('Read-model runtime is unavailable'); return this.contracts.putReadModel(id, model, version, key, data); },
-        read: (owner, model, versions) => { requireCapability('readmodels.read'); if (!this.contracts) throw new Error('Read-model runtime is unavailable'); return this.contracts.readModel(owner, model, versions); },
+        read: (owner, model, versions, recordKey) => { requireCapability('readmodels.read'); if (!this.contracts) throw new Error('Read-model runtime is unavailable'); return this.contracts.readModel(owner, model, versions, recordKey); },
       },
       directory: {
         resolveAudience: (query) => { requireCapability('directory.read'); return this.directory.resolveAudience(query); },
         lookupUsers: (ids) => { requireCapability('directory.read'); return this.directory.lookupUsers(ids); },
         lookupClasses: (ids) => { requireCapability('directory.read'); return this.directory.lookupClasses(ids); },
+        lookupSubjects: (ids) => { requireCapability('directory.read'); return this.directory.lookupSubjects(ids); },
         classesForUser: (userId, role) => { requireCapability('directory.read'); return this.directory.classesForUser(userId, role); },
+        getClassRoster: (classId, asOfIsoDate) => { requireCapability('directory.read'); return this.directory.getClassRoster(classId, asOfIsoDate); },
+        getEnrollmentAtDate: (studentId, asOfIsoDate) => { requireCapability('directory.read'); return this.directory.getEnrollmentAtDate(studentId, asOfIsoDate); },
       },
       realtime: {
         notifyUser: (userId, event, payload) => { requireCapability('realtime.notify'); this.resourceQuota?.consume(id, 'realtime'); this.realtime.notifyUser(id, userId, event, payload); },
       },
       crypto: {
         hashBcrypt: (plaintext, rounds = 12) => { requireCapability('crypto.hash'); return bcrypt.hash(plaintext, rounds); },
+      },
+      accounts: {
+        createStudent: async (input) => {
+          requireCapability('accounts.student.create');
+          if (!this.pluginAccounts) throw new Error('Core student-account command adapter is unavailable');
+          try {
+            const account = await this.pluginAccounts.createStudent(id, input);
+            void this.audit.log({ action: 'PLUGIN_STUDENT_ACCOUNT_CREATE', resource: 'USER', resourceId: account.id, metadata: { pluginId: id, commandKey: input.commandKey }, success: true });
+            return account;
+          } catch (error) {
+            void this.audit.log({ action: 'PLUGIN_STUDENT_ACCOUNT_CREATE', resource: 'USER', metadata: { pluginId: id, commandKey: input.commandKey }, success: false, errorMessage: error instanceof Error ? error.message : String(error) });
+            throw error;
+          }
+        },
+        updateStudent: async (input) => {
+          requireCapability('accounts.student.update');
+          if (!this.pluginAccounts) throw new Error('Core student-account command adapter is unavailable');
+          try {
+            const account = await this.pluginAccounts.updateStudent(id, input);
+            void this.audit.log({ action: 'PLUGIN_STUDENT_ACCOUNT_UPDATE', resource: 'USER', resourceId: account.id, metadata: { pluginId: id, commandKey: input.commandKey }, success: true });
+            return account;
+          } catch (error) {
+            void this.audit.log({ action: 'PLUGIN_STUDENT_ACCOUNT_UPDATE', resource: 'USER', resourceId: input.userId, metadata: { pluginId: id, commandKey: input.commandKey }, success: false, errorMessage: error instanceof Error ? error.message : String(error) });
+            throw error;
+          }
+        },
+        resolveParent: async (input) => {
+          requireCapability('accounts.parent.resolve');
+          if (!this.pluginAccounts) throw new Error('Core parent-account command adapter is unavailable');
+          try {
+            const account = await this.pluginAccounts.resolveParent(id, input);
+            void this.audit.log({ action: 'PLUGIN_PARENT_ACCOUNT_RESOLVE', resource: 'USER', resourceId: account.id, metadata: { pluginId: id, commandKey: input.commandKey, created: account.created }, success: true });
+            return account;
+          } catch (error) {
+            void this.audit.log({ action: 'PLUGIN_PARENT_ACCOUNT_RESOLVE', resource: 'USER', metadata: { pluginId: id, commandKey: input.commandKey }, success: false, errorMessage: error instanceof Error ? error.message : String(error) });
+            throw error;
+          }
+        },
+        assignGuardian: async (input) => {
+          requireCapability('accounts.guardian.assign');
+          if (!this.academicIdentity) throw new Error('Academic guardian command adapter is unavailable');
+          try {
+            await this.academicIdentity.assignStudentParent(input);
+            void this.audit.log({ action: 'PLUGIN_GUARDIAN_ASSIGN', resource: 'USER', resourceId: input.studentUserId, metadata: { pluginId: id, parentId: input.parentId }, success: true });
+          } catch (error) {
+            void this.audit.log({ action: 'PLUGIN_GUARDIAN_ASSIGN', resource: 'USER', resourceId: input.studentUserId, metadata: { pluginId: id, parentId: input.parentId }, success: false, errorMessage: error instanceof Error ? error.message : String(error) });
+            throw error;
+          }
+        },
       },
     };
     try {
@@ -225,6 +281,61 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnApplicati
         const dispose = this.extensions.registerPage(id, descriptor, declaredPermissions); disposers.push(dispose);
       }
       const cleanup = await pluginModule.activate(context);
+      if (id === 'wattanam.academic-management') {
+        const principal = { userId: 'core:academic-contract', role: 'SUPER_ADMIN' };
+        const dispose = this.directory.bindAcademicPluginContracts({
+          getClassRoster: (classId, asOfIsoDate) => this.extensions.dispatch(id, {
+            method: 'GET', path: `contracts/classes/${encodeURIComponent(classId)}/roster`, params: {},
+            query: { asOfIsoDate }, body: null, principal,
+          }),
+          getEnrollmentAtDate: (studentId, asOfIsoDate) => this.extensions.dispatch(id, {
+            method: 'GET', path: `contracts/students/${encodeURIComponent(studentId)}/enrollment`, params: {},
+            query: { asOfIsoDate }, body: null, principal,
+          }),
+          resolveClassAudience: (classId) => this.extensions.dispatch(id, {
+            method: 'GET', path: `contracts/classes/${encodeURIComponent(classId)}/audience`, params: {},
+            query: {}, body: null, principal,
+          }),
+          resolveClassesForUser: (userId, role) => this.extensions.dispatch(id, {
+            method: 'GET', path: `contracts/users/${encodeURIComponent(userId)}/classes`, params: {},
+            query: { role }, body: null, principal,
+          }),
+          lookupClasses: (ids) => this.extensions.dispatch(id, {
+            method: 'GET', path: 'contracts/classes/lookup', params: {},
+            query: { ids }, body: null, principal,
+          }),
+          lookupSubjects: (ids) => this.extensions.dispatch(id, {
+            method: 'GET', path: 'contracts/subjects/lookup', params: {},
+            query: { ids }, body: null, principal,
+          }),
+          departmentForUser: (userId) => this.extensions.dispatch(id, {
+            method: 'GET', path: `contracts/users/${encodeURIComponent(userId)}/department`, params: {},
+            query: {}, body: null, principal,
+          }),
+        });
+        disposers.push(dispose);
+        if (this.academicIdentity) {
+          const disposeIdentity = this.academicIdentity.bindAcademicPluginCommands({
+            assignUserDepartment: (input) => this.extensions.dispatch(id, {
+              method: 'PUT', path: `commands/users/${encodeURIComponent(input.userId)}/department`, params: {},
+              query: {}, body: { departmentId: input.departmentId, idempotencyKey: input.idempotencyKey }, principal,
+            }),
+            assignStudentParent: (input) => this.extensions.dispatch(id, {
+              method: 'PUT', path: `commands/students/by-user/${encodeURIComponent(input.studentUserId)}/guardian`, params: {},
+              query: {}, body: { parentId: input.parentId, idempotencyKey: input.idempotencyKey }, principal,
+            }),
+            detachUserAcademicIdentity: (input) => this.extensions.dispatch(id, {
+              method: 'DELETE', path: `commands/users/${encodeURIComponent(input.userId)}/academic-identity`, params: {},
+              query: {}, body: { idempotencyKey: input.idempotencyKey }, principal,
+            }),
+            attachAcademicProfiles: (userIds) => this.extensions.dispatch(id, {
+              method: 'POST', path: 'contracts/users/academic-profiles', params: {}, query: {},
+              body: { userIds }, principal,
+            }),
+          });
+          disposers.push(disposeIdentity);
+        }
+      }
       if (pluginModule.health) {
         const health = await pluginModule.health();
         if (health === false || (health && typeof health === 'object' && (health as any).status === 'failed')) throw new Error('Plugin health check failed');

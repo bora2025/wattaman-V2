@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "wattanam.human-resources",
+  "name": "Human Resources",
+  "description": "Employee profiles, payroll and staff attendance.",
+  "version": "0.1.2",
+  "requiresCore": ">=0.1.0-0 <1.0.0",
+  "publisher": "wattanam",
+  "license": "commercial",
+  "backendEntry": "backend/index.js",
+  "frontendEntry": "frontend/page.json",
+  "sdkVersion": "1.1.0",
+  "runtimeVersion": "1.0.0",
+  "capabilities": ["api.routes", "database.read", "database.write", "directory.read", "navigation.register", "permissions.register", "readmodels.publish", "ui.pages"],
+  "permissions": ["wattanam.human-resources.view", "wattanam.human-resources.profiles.manage", "wattanam.human-resources.payroll.manage", "wattanam.human-resources.payroll.approve", "wattanam.human-resources.attendance.manage"],
+  "dependencies": {},
+  "migrations": [
+    { "id": "001_create_employee_profile", "path": "migrations/001_create_employee_profile.sql", "checksum": "3a2458ea4befd86a79db4cf1ab92aad5a0d6e519f375273831a414f64c4ec634", "destructive": false },
+    { "id": "002_create_education", "path": "migrations/002_create_education.sql", "checksum": "dd95b6a4d66b61f5df96e60f423ca4ce5046e849b293c533de452e117548c1e9", "destructive": false },
+    { "id": "003_create_work_experience", "path": "migrations/003_create_work_experience.sql", "checksum": "a84b451e8460884f5aae97543ed4ec1293149578791971c1bc10750aff229efc", "destructive": false },
+    { "id": "004_create_certification", "path": "migrations/004_create_certification.sql", "checksum": "0f4cc483d4c9d6395ab038d306534d3c150c2de6ca492048f6112b7fe15fe443", "destructive": false },
+    { "id": "005_create_salary", "path": "migrations/005_create_salary.sql", "checksum": "cd1ec8f206393dc00da0c5baf02dd8fe94d115a2ef2c0cd571f141b74c306c3b", "destructive": false },
+    { "id": "006_create_staff_attendance", "path": "migrations/006_create_staff_attendance.sql", "checksum": "51a6cbcf39bf04d2b43ee888d10ea0056d9a96a4128295be83f2e87849578aa4", "destructive": false }
+  ],
+  "navigation": [
+    { "id": "payroll", "label": "Payroll", "href": "/plugins/wattanam.human-resources/payroll", "permission": "wattanam.human-resources.payroll.manage" },
+    { "id": "staff-attendance", "label": "Staff attendance", "href": "/plugins/wattanam.human-resources/attendance", "permission": "wattanam.human-resources.attendance.manage" }
+  ],
+  "supportedLanguages": ["en", "km"]
+}

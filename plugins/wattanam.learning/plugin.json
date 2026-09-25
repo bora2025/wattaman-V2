@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "wattanam.learning",
+  "name": "Learning",
+  "description": "Courses, lessons, assignments, interactive learning, engagement and course attendance.",
+  "version": "0.1.2",
+  "requiresCore": ">=0.1.0-0 <1.0.0",
+  "publisher": "wattanam",
+  "license": "commercial",
+  "backendEntry": "backend/index.js",
+  "frontendEntry": "frontend/page.json",
+  "sdkVersion": "1.1.0",
+  "runtimeVersion": "1.0.0",
+  "capabilities": ["api.routes", "database.read", "database.write", "directory.read", "navigation.register", "notifications.send", "permissions.register", "ui.pages"],
+  "permissions": ["wattanam.learning.courses.view", "wattanam.learning.courses.manage", "wattanam.learning.assignments.view", "wattanam.learning.assignments.manage", "wattanam.learning.student.participate", "wattanam.learning.grading.manage"],
+  "dependencies": { "wattanam.academic-management": ">=0.1.0 <1.0.0" },
+  "migrations": [
+    { "id": "001_create_assignment", "path": "migrations/001_create_assignment.sql", "checksum": "3e881bfe3eea84790981c71dc3897fa31c6a60600389510cca33628ebdbe9e2e", "destructive": false },
+    { "id": "002_create_assignment_submission", "path": "migrations/002_create_assignment_submission.sql", "checksum": "871104f78b1903ea9565f1988fba991d113c64b475d4c4e9947717c1f48db624", "destructive": false },
+    { "id": "003_create_quiz_question", "path": "migrations/003_create_quiz_question.sql", "checksum": "85ca1c8ac4271f0d5531861212098ed60ad20848c80506fc901e0c1602d66805", "destructive": false },
+    { "id": "004_create_quiz_answer", "path": "migrations/004_create_quiz_answer.sql", "checksum": "33c202c187d3ed4bf34ce36d791173f03dee1a86b168c9b2ecd9a88ede1799c5", "destructive": false },
+    { "id": "005_create_course", "path": "migrations/005_create_course.sql", "checksum": "3852d1d8db1f7b25cc3624e8faa26da37df736a4e59d18800715aeb087b82a13", "destructive": false },
+    { "id": "006_create_lesson", "path": "migrations/006_create_lesson.sql", "checksum": "9a6bb393f1270e51c828654d4fff8c63f82725a72c7089b793e82e292013cf85", "destructive": false },
+    { "id": "007_create_lesson_page", "path": "migrations/007_create_lesson_page.sql", "checksum": "6001655f200be370bcaa13fe9b15ea1c25b5f4f912195a45df62a4d059308209", "destructive": false },
+    { "id": "008_create_course_enrollment", "path": "migrations/008_create_course_enrollment.sql", "checksum": "9cb84f6cefb5b62ebc616fe5f91cd75f2d416f4e683d0eff06cf44d8c5d8fbc7", "destructive": false },
+    { "id": "009_create_lesson_attempt", "path": "migrations/009_create_lesson_attempt.sql", "checksum": "b501e2dd63019b0a94127ef13c5e477b052b6a8b9d448961613b4a0e744e8057", "destructive": false },
+    { "id": "010_create_page_response", "path": "migrations/010_create_page_response.sql", "checksum": "aa8c1181e0857021db93b4b75183e7cec82ba02b6e6fd9d18a0417c11aee38f3", "destructive": false },
+    { "id": "011_create_course_session", "path": "migrations/011_create_course_session.sql", "checksum": "02b1e8076e6c6627349b8d614beea5818cb7cf099f9fe5e93f2b4bfa8d7e4ebe", "destructive": false },
+    { "id": "012_create_course_attendance", "path": "migrations/012_create_course_attendance.sql", "checksum": "7ba9ccac14cda6fde43401d3f4503068cfd11b92671640f0a64a091c55b7038a", "destructive": false },
+    { "id": "013_create_lesson_view", "path": "migrations/013_create_lesson_view.sql", "checksum": "ca32d5ba66b23da4020b2fb3ba4e00a7dd6ffb1c7d0181ec2c56011f1b832ab4", "destructive": false },
+    { "id": "014_allow_assignment_attempts", "path": "migrations/014_allow_assignment_attempts.sql", "checksum": "c2de1c777e44831826cda233897ce3af7650307ee64e89038a48c18b310dbdef", "destructive": true }
+  ],
+  "navigation": [
+    { "id": "courses", "label": "Courses", "href": "/plugins/wattanam.learning/courses", "permission": "wattanam.learning.courses.view" },
+    { "id": "assignments", "label": "Assignments", "href": "/plugins/wattanam.learning/assignments", "permission": "wattanam.learning.assignments.view" },
+    { "id": "student-courses", "label": "My courses", "href": "/plugins/wattanam.learning/student/courses", "permission": "wattanam.learning.student.participate" },
+    { "id": "student-assignments", "label": "My assignments", "href": "/plugins/wattanam.learning/student/assignments", "permission": "wattanam.learning.student.participate" }
+  ],
+  "supportedLanguages": ["en", "km"]
+}

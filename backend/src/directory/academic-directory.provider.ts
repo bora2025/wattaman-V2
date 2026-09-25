@@ -54,9 +54,7 @@ export class PrismaAcademicDirectoryProvider implements AcademicDirectoryProvide
   }
 
   async getClassRoster(classId: string, asOfIsoDate: string): Promise<AcademicClassRoster> {
-    const owner = this.rosterReadOwner();
     const date = currentAcademicDate(asOfIsoDate);
-    if (owner === 'plugin') return this.getPluginClassRoster(classId, date);
     await this.assertCurrentAcademicDate(date);
     const cls = await this.prisma.class.findUnique({
       where: { id: classId },
@@ -79,9 +77,7 @@ export class PrismaAcademicDirectoryProvider implements AcademicDirectoryProvide
   }
 
   async getEnrollmentAtDate(studentId: string, asOfIsoDate: string): Promise<AcademicEnrollment> {
-    const owner = this.rosterReadOwner();
     const date = currentAcademicDate(asOfIsoDate);
-    if (owner === 'plugin') return this.getPluginEnrollment(studentId, date);
     await this.assertCurrentAcademicDate(date);
     const student = await this.prisma.student.findUnique({
       where: { id: studentId }, select: { id: true, classId: true, class: { select: { name: true } } },
@@ -93,85 +89,7 @@ export class PrismaAcademicDirectoryProvider implements AcademicDirectoryProvide
     };
   }
 
-  private async getPluginClassRoster(classId: string, date: string): Promise<AcademicClassRoster> {
-    const today = await this.schoolToday();
-    return this.prisma.$transaction(async (tx) => {
-      const intervals = await tx.$queryRawUnsafe<Array<{ studentId: string }>>(
-        'SELECT "studentId" FROM "plugin_wattanam_academic_management_enrollment_interval" WHERE "classId" = $1 AND "validFrom" <= $2::date AND ("validTo" IS NULL OR "validTo" >= $2::date) ORDER BY "studentId"',
-        classId, date,
-      );
-      const ids = intervals.map((row) => row.studentId);
-      if (new Set(ids).size !== ids.length) throw new Error('Overlapping Academic Management enrollment intervals detected');
-      const [cls, profiles] = await Promise.all([
-        tx.class.findUnique({ where: { id: classId }, select: { name: true } }),
-        ids.length ? tx.student.findMany({ where: { id: { in: ids } }, select: {
-          id: true, userId: true, studentNumber: true, parentId: true, classId: true,
-          user: { select: { name: true } },
-        } }) : Promise.resolve([]),
-      ]);
-      if (profiles.length !== ids.length) throw new Error('Academic enrollment interval references a missing student profile');
-      if (date === today) {
-        const legacy = await tx.student.findMany({ where: { classId }, select: { id: true }, orderBy: { id: 'asc' } });
-        if (legacy.map((row) => row.id).join('\0') !== [...ids].sort().join('\0')) {
-          throw new Error('Academic enrollment interval mirror differs from legacy; roster lookup rejected');
-        }
-      }
-      const byId = new Map(profiles.map((student) => [student.id, student]));
-      return {
-        contract: { id: ACADEMIC_ROSTER_CONTRACT_ID, version: ACADEMIC_ROSTER_CONTRACT_VERSION },
-        classId, className: cls?.name ?? null, asOfIsoDate: date, source: 'plugin-enrollment-interval',
-        students: ids.map((id) => byId.get(id)!).map((student) => ({
-          studentId: student.id, userId: student.userId, studentNumber: student.studentNumber,
-          name: student.user.name, parentId: student.parentId,
-        })),
-      };
-    }, { isolationLevel: 'RepeatableRead' });
-  }
-
-  private async getPluginEnrollment(studentId: string, date: string): Promise<AcademicEnrollment> {
-    const today = await this.schoolToday();
-    return this.prisma.$transaction(async (tx) => {
-      const intervals = await tx.$queryRawUnsafe<Array<{ classId: string }>>(
-        'SELECT "classId" FROM "plugin_wattanam_academic_management_enrollment_interval" WHERE "studentId" = $1 AND "validFrom" <= $2::date AND ("validTo" IS NULL OR "validTo" >= $2::date) ORDER BY "validFrom" DESC',
-        studentId, date,
-      );
-      if (intervals.length > 1) throw new Error('Overlapping Academic Management enrollment intervals detected');
-      const student = await tx.student.findUnique({ where: { id: studentId }, select: { id: true, classId: true } });
-      const classId = intervals[0]?.classId ?? null;
-      if (date === today && (student?.classId ?? null) !== classId) {
-        throw new Error('Academic enrollment interval mirror differs from legacy; enrollment lookup rejected');
-      }
-      const cls = classId ? await tx.class.findUnique({ where: { id: classId }, select: { name: true } }) : null;
-      return {
-        contract: { id: ACADEMIC_ROSTER_CONTRACT_ID, version: ACADEMIC_ROSTER_CONTRACT_VERSION },
-        studentId, classId, className: cls?.name ?? null, enrolled: Boolean(classId),
-        asOfIsoDate: date, source: 'plugin-enrollment-interval',
-      };
-    }, { isolationLevel: 'RepeatableRead' });
-  }
-
   async departmentForUser(userId: string): Promise<string | null> {
-    const owner = process.env.ACADEMIC_DEPARTMENT_MEMBERSHIP_READ_OWNER ?? 'legacy';
-    if (owner !== 'legacy' && owner !== 'plugin') {
-      throw new Error('ACADEMIC_DEPARTMENT_MEMBERSHIP_READ_OWNER must be legacy or plugin');
-    }
-    if (owner === 'plugin') {
-      return this.prisma.$transaction(async (tx) => {
-        const source = await tx.$queryRawUnsafe<Array<{ departmentId: string | null }>>(
-          'SELECT "departmentId" FROM "User" WHERE "id" = $1 FOR SHARE', userId,
-        );
-        if (!source[0]) return null;
-        const target = await tx.$queryRawUnsafe<Array<{ departmentId: string }>>(
-          'SELECT "departmentId" FROM "plugin_wattanam_academic_management_user_department" WHERE "userId" = $1', userId,
-        );
-        const sourceId = source[0].departmentId ?? null;
-        const targetId = target[0]?.departmentId ?? null;
-        if (sourceId !== targetId) {
-          throw new Error('Academic department membership mirror differs from legacy; lookup rejected');
-        }
-        return targetId;
-      });
-    }
     const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { departmentId: true } });
     return user?.departmentId ?? null;
   }
@@ -183,12 +101,6 @@ export class PrismaAcademicDirectoryProvider implements AcademicDirectoryProvide
       throw new Error('Historical enrollment lookup is unavailable until Academic Management stores enrollment intervals');
     }
     return date;
-  }
-
-  private rosterReadOwner(): 'legacy' | 'plugin' {
-    const owner = process.env.ACADEMIC_ROSTER_READ_OWNER ?? 'legacy';
-    if (owner !== 'legacy' && owner !== 'plugin') throw new Error('ACADEMIC_ROSTER_READ_OWNER must be legacy or plugin');
-    return owner;
   }
 
   private async schoolToday(): Promise<string> {

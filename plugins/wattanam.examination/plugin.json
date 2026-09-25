@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "wattanam.examination",
+  "name": "Examination",
+  "description": "Examinations, attempts, grading, score sheets and gradebooks.",
+  "version": "0.1.4",
+  "requiresCore": ">=0.1.0-0 <1.0.0",
+  "publisher": "wattanam",
+  "license": "commercial",
+  "backendEntry": "backend/index.js",
+  "frontendEntry": "frontend/page.json",
+  "sdkVersion": "1.1.0",
+  "runtimeVersion": "1.0.0",
+  "capabilities": ["api.routes", "database.read", "database.write", "directory.read", "navigation.register", "notifications.send", "permissions.register", "readmodels.publish", "ui.pages"],
+  "permissions": ["wattanam.examination.exams.view", "wattanam.examination.exams.manage", "wattanam.examination.attempts.take", "wattanam.examination.attempts.grade", "wattanam.examination.gradebook.view", "wattanam.examination.gradebook.manage"],
+  "dependencies": { "wattanam.academic-management": ">=0.1.0 <1.0.0" },
+  "optionalDependencies": { "wattanam.timetable": ">=0.1.0 <1.0.0" },
+  "migrations": [
+    { "id": "001_create_exam", "path": "migrations/001_create_exam.sql", "checksum": "24160b7adab420aad4a6ae6148507e0c033ec6340d19c6b2988f9c5147d01fdd", "destructive": false },
+    { "id": "002_create_question", "path": "migrations/002_create_question.sql", "checksum": "faacaa7bf19e631517338d7c9beca57195f030370e97fe0271873c0d9a539b3e", "destructive": false },
+    { "id": "003_create_attempt", "path": "migrations/003_create_attempt.sql", "checksum": "07dc4d126ffdf19a4f2be3b29554c9d3932860a82547bf4585b505d733a617b7", "destructive": false },
+    { "id": "004_create_score_sheet", "path": "migrations/004_create_score_sheet.sql", "checksum": "bd0358ceda47e5426bafc41598a2862780f79d5976d6296922bf1c4b8da80308", "destructive": false },
+    { "id": "005_create_score_sheet_class", "path": "migrations/005_create_score_sheet_class.sql", "checksum": "d23c6d455ddd0613c5ffe453d0c4cb3c48278e795ae49ec2272babbed81d5093", "destructive": false },
+    { "id": "006_create_score_subject", "path": "migrations/006_create_score_subject.sql", "checksum": "4926a600eaf8bf7cac0835bb69df0b626c01da383cd1e9b280a914ef142eae04", "destructive": false },
+    { "id": "007_create_score_tab", "path": "migrations/007_create_score_tab.sql", "checksum": "3e8e5b131e829e7a6370507f193f5891ba63258ba54a0423774c1ed841e98aa4", "destructive": false },
+    { "id": "008_create_score_entry", "path": "migrations/008_create_score_entry.sql", "checksum": "58611407649d7e54cc9d0436893181dd386c46471333f636fdd877c8136a35ec", "destructive": false },
+    { "id": "009_add_attempt_directory_user", "path": "migrations/009_add_attempt_directory_user.sql", "checksum": "e5c749b3efb51ad2c86c634ec204a3d3ddd3c5814a1dcc4868d2a29cfd727515", "destructive": false },
+    { "id": "010_add_gradebook_owner", "path": "migrations/010_add_gradebook_owner.sql", "checksum": "ada59456262c5206b6d1057350b8cfbd212e7f735955d2786ea09082b8f82441", "destructive": false }
+  ],
+  "navigation": [
+    { "id": "exams", "label": "Examinations", "href": "/plugins/wattanam.examination/exams", "permission": "wattanam.examination.exams.view" },
+    { "id": "gradebooks", "label": "Gradebooks", "href": "/plugins/wattanam.examination/gradebooks", "permission": "wattanam.examination.gradebook.view" }
+  ],
+  "supportedLanguages": ["en", "km"]
+}

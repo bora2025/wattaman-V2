@@ -22,8 +22,9 @@ export default function PluginPageHost() {
   const [descriptor, setDescriptor] = useState<PluginUiPageDescriptor | null>(null);
   const [sourceErrors, setSourceErrors] = useState<Record<string, string>>({});
   const [routeParams, setRouteParams] = useState<Record<string, string>>({});
+  const [sourceQueries, setSourceQueries] = useState<Record<string, Record<string, string>>>({});
 
-  async function load() {
+  async function load(queries = sourceQueries) {
     setError(''); setSourceErrors({}); setValue(null);
     const extensionsResponse = await apiFetch('/api/plugin-api/my-extensions');
     if (!extensionsResponse.ok) throw new Error(`Plugin extensions failed (${extensionsResponse.status})`);
@@ -40,7 +41,8 @@ export default function PluginPageHost() {
       const data: Record<string, unknown> = {};
       const errors: Record<string, string> = {};
       await Promise.all(page.dataSources.filter((entry: any) => entry.method === 'GET' && entry.autoload !== false).map(async (source: any) => {
-        const endpoint = `/api/plugin-api/${encodeURIComponent(pluginId)}/${resolvePluginSourcePath(source.path, matched?.params || {})}`;
+        const query = new URLSearchParams(queries[source.id] || {}).toString();
+        const endpoint = `/api/plugin-api/${encodeURIComponent(pluginId)}/${resolvePluginSourcePath(source.path, matched?.params || {})}${query ? `?${query}` : ''}`;
         try {
           const response = await apiFetch(endpoint);
           const result = await response.json().catch(() => ({}));
@@ -57,7 +59,7 @@ export default function PluginPageHost() {
     setText(JSON.stringify(result, null, 2));
   }
 
-  useEffect(() => { load().catch((cause) => setError(cause instanceof Error ? cause.message : 'Plugin page failed')); }, [legacyEndpoint]);
+  useEffect(() => { setSourceQueries({}); load({}).catch((cause) => setError(cause instanceof Error ? cause.message : 'Plugin page failed')); }, [legacyEndpoint]);
 
   async function save() {
     setBusy(true); setError('');
@@ -79,7 +81,7 @@ export default function PluginPageHost() {
           <div className="h-14 lg:hidden" />
           <div className="page-header"><h1 className="text-2xl font-bold text-slate-800">{label}</h1><p className="mt-1 font-mono text-xs text-slate-500">{pluginId} · {routePath}</p></div>
           <div className="page-body">
-            {descriptor ? <PluginUiRenderer pluginId={pluginId} page={descriptor} params={routeParams} data={(value || {}) as Record<string, unknown>} loading={value === null} errors={sourceErrors} onRefresh={load} /> : <section className="card max-w-3xl p-6">
+            {descriptor ? <PluginUiRenderer pluginId={pluginId} page={descriptor} params={routeParams} data={(value || {}) as Record<string, unknown>} loading={value === null} errors={sourceErrors} onRefresh={load} onQueryFilters={async (sources, values) => { const next = { ...sourceQueries }; sources.forEach((source) => { next[source] = values; }); setSourceQueries(next); await load(next); }} /> : <section className="card max-w-3xl p-6">
               <h2 className="font-semibold text-slate-800">{descriptor ? 'Plugin page data' : 'Plugin settings'}</h2>
               <p className="mt-1 text-sm text-slate-500">This generic host sends JSON only to the plugin&apos;s namespaced, authenticated core route. Plugin browser scripts are not injected into Wattanam.</p>
               {error && <div role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}

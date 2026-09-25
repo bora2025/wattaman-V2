@@ -57,7 +57,8 @@ export class ClassesController {
 
   @Roles('ADMIN', 'CLASS_ADMIN')
   @Get('parents')
-  async listParents() {
+  async listParents(@Request() req: any) {
+    if (this.pluginOwned()) return this.dispatch('GET', 'classes/parents', req, {});
     return this.classesService.listParents();
   }
 
@@ -69,7 +70,8 @@ export class ClassesController {
   }
 
   @Get(':id/students')
-  async getStudentsInClass(@Param('id') classId: string) {
+  async getStudentsInClass(@Request() req: any, @Param('id') classId: string) {
+    if (this.pluginOwned()) return this.dispatch('GET', `classes/${classId}/students`, req, {}, {}, { id: classId });
     return this.classesService.getStudentsInClass(classId);
   }
 
@@ -79,8 +81,9 @@ export class ClassesController {
    * Returns: { [classId]: Student[] }
    */
   @Get('students/batch')
-  async getStudentsByClasses(@Query('ids') ids?: string) {
+  async getStudentsByClasses(@Request() req: any, @Query('ids') ids?: string) {
     const classIds = (ids || '').split(',').map(s => s.trim()).filter(Boolean);
+    if (this.pluginOwned()) return this.dispatch('GET', 'classes/students/batch', req, {}, { ids: classIds.join(',') });
     return this.classesService.getStudentsByClasses(classIds);
   }
 
@@ -109,7 +112,7 @@ export class ClassesController {
   async bulkAddStudentsFromCsv(@Request() req: any, @Param('id') classId: string, @UploadedFile() file: Express.Multer.File) {
     if (this.pluginOwned()) {
       if (!file) throw new BadRequestException('CSV file is required');
-      throw new ConflictException('Bulk CSV import is not certified for plugin ownership yet');
+      return this.dispatch('POST', `classes/${classId}/students/bulk-csv`, req, { csv: file.buffer.toString('utf8') }, {}, { id: classId });
     }
     if (!file) {
       throw new BadRequestException('CSV file is required');
@@ -139,7 +142,8 @@ export class ClassesController {
   }
 
   @Get(':id/available-students')
-  async getAvailableStudents(@Param('id') classId: string) {
+  async getAvailableStudents(@Request() req: any, @Param('id') classId: string) {
+    if (this.pluginOwned()) return this.dispatch('GET', `classes/${classId}/available-students`, req, {}, {}, { id: classId });
     return this.classesService.getAvailableStudents(classId);
   }
 

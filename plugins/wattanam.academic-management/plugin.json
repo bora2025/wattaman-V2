@@ -3,7 +3,7 @@
   "id": "wattanam.academic-management",
   "name": "Academic Management",
   "description": "Official Wattanam academic structures, profiles, admissions, enrollment, and roster contracts.",
-  "version": "0.1.0",
+  "version": "0.1.10",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -11,7 +11,7 @@
   "frontendEntry": "frontend/page.json",
   "sdkVersion": "1.1.0",
   "runtimeVersion": "1.0.0",
-  "capabilities": ["api.routes", "crypto.hash", "database.read", "database.write", "events.durable", "events.publish", "navigation.register", "notifications.send", "permissions.register", "ui.pages"],
+  "capabilities": ["accounts.student.create", "accounts.student.update", "api.routes", "crypto.hash", "database.read", "database.write", "directory.read", "events.durable", "events.publish", "navigation.register", "notifications.send", "permissions.register", "readmodels.read", "ui.pages"],
   "permissions": ["wattanam.academic-management.view", "wattanam.academic-management.manage"],
   "dependencies": {},
   "optionalDependencies": {},
@@ -63,11 +63,23 @@
       "path": "migrations/008_create_class_registration_field.sql",
       "checksum": "b550055dd6951c330f7f8fb0719fb2bfef722c0066486c8a3a2f64946caffa18",
       "destructive": false
+    },
+    {
+      "id": "009_create_student_profile",
+      "path": "migrations/009_create_student_profile.sql",
+      "checksum": "70bf743b16b95be7740399ceb7205639e72dcaa67e11406ab1b262e073959d92",
+      "destructive": false
+    },
+    {
+      "id": "010_create_subject",
+      "path": "migrations/010_create_subject.sql",
+      "checksum": "7c93085d4455fd9e0c30f8ceeec06689c8166108be1776415d576d4be47af10d",
+      "destructive": false
     }
   ],
   "navigation": [
     { "id": "departments", "label": "Departments", "href": "/plugins/wattanam.academic-management/departments", "permission": "wattanam.academic-management.view" },
-    { "id": "study-years", "label": "Study Years", "href": "/plugins/wattanam.academic-management/study-years", "permission": "wattanam.academic-management.view" },
+    { "id": "subjects", "label": "Subjects", "href": "/plugins/wattanam.academic-management/subjects", "permission": "wattanam.academic-management.view" },
     { "id": "classes", "label": "Classes", "href": "/plugins/wattanam.academic-management/classes", "permission": "wattanam.academic-management.view" },
     { "id": "registrations", "label": "Registrations", "href": "/plugins/wattanam.academic-management/registrations", "permission": "wattanam.academic-management.manage" }
   ],

@@ -5,13 +5,16 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { PluginExtensionsService } from '../plugins/plugin-extensions.service';
 
-const PLUGIN_ID = 'wattanam.academic-management';
+const PLUGIN_ID = 'wattanam.attendance-manager';
 
-export function academicStudyYearsRouteOwner(value = process.env.ACADEMIC_STUDY_YEARS_ROUTE_OWNER): 'legacy' | 'plugin' {
+export function attendanceStudyYearsRouteOwner(value = process.env.ATTENDANCE_STUDY_YEARS_ROUTE_OWNER ?? process.env.ACADEMIC_STUDY_YEARS_ROUTE_OWNER): 'legacy' | 'plugin' {
   const owner = String(value || 'legacy').trim().toLowerCase();
-  if (owner !== 'legacy' && owner !== 'plugin') throw new Error('ACADEMIC_STUDY_YEARS_ROUTE_OWNER must be legacy or plugin');
+  if (owner !== 'legacy' && owner !== 'plugin') throw new Error('ATTENDANCE_STUDY_YEARS_ROUTE_OWNER must be legacy or plugin');
   return owner;
 }
+
+/** @deprecated Compatibility alias for existing operator tooling. */
+export const academicStudyYearsRouteOwner = attendanceStudyYearsRouteOwner;
 
 @Controller('study-years')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -64,14 +67,14 @@ export class StudyYearsController {
   }
 
   private pluginOwned() {
-    return academicStudyYearsRouteOwner() === 'plugin';
+    return attendanceStudyYearsRouteOwner() === 'plugin';
   }
 
   private assertLegacyMutationOwner() {
     // StudyYear mutations now dispatch to the plugin in plugin mode; this helper
     // remains only for any future route that must stay legacy-only.
     if (this.pluginOwned()) {
-      throw new ConflictException('Academic StudyYear writes require a certified consistency policy; keep the route owner at legacy');
+      throw new ConflictException('Attendance Manager Study Year writes require a certified consistency policy; keep the route owner at legacy');
     }
   }
 

@@ -46,7 +46,7 @@ test('rollback drill flips route owner to legacy and journals rolled_back state'
   const sample = fixture();
   try {
     const preflight = await inspect(sample.adapter);
-    const identity = `academic-study-years:bora-school:${preflight.source.sha256}:${sample.checksum}`;
+    const identity = `attendance-study-years:bora-school:${preflight.source.sha256}:${sample.checksum}`;
     fs.writeFileSync(
       journalPath(sample.directory, 'bora-school'),
       JSON.stringify({ format: 'wattanam-plugin-adoption-v1', identity, stage: 'reconciled', backupSha256: sample.checksum }),
@@ -72,7 +72,7 @@ test('fails closed for non-reconciled or mismatched study-year journal', async (
   const sample = fixture();
   try {
     const preflight = await inspect(sample.adapter);
-    const identity = `academic-study-years:bora-school:${preflight.source.sha256}:${sample.checksum}`;
+    const identity = `attendance-study-years:bora-school:${preflight.source.sha256}:${sample.checksum}`;
 
     fs.writeFileSync(journalPath(sample.directory, 'bora-school'), JSON.stringify({
       format: 'wattanam-plugin-adoption-v1',

@@ -101,6 +101,12 @@ describe('Plugin UI v2 schema', () => {
     expect(() => parsePluginUiBundle(value, 'wattanam.test', permissions)).toThrow('POST, PUT, or PATCH');
   });
 
+  it('allows an explicit empty value for clearing an optional select field', () => {
+    const value: any = valid();
+    value.pages[0].components[1].fields = [{ id: 'sex', type: 'select', label: 'Sex', options: [{ label: 'Not specified', value: '' }, { label: 'Other', value: 'OTHER' }] }];
+    expect(parsePluginUiBundle(value, 'wattanam.test', permissions).pages[0].components[1].fields?.[0]).toMatchObject({ id: 'sex' });
+  });
+
   it('allows a declared JSON object editor field without allowing arbitrary component types', () => {
     const value: any = valid();
     value.pages[0].components[1].fields = [{ id: 'design', type: 'json', label: 'Design JSON', required: true, maxLength: 200000 }];
@@ -115,9 +121,11 @@ describe('Plugin UI v2 schema', () => {
     const descriptor = JSON.parse(readFileSync(path.join(pluginRoot, 'frontend/page.json'), 'utf8'));
     const manifest = JSON.parse(readFileSync(path.join(pluginRoot, 'plugin.json'), 'utf8'));
     const bundle = parsePluginUiBundle(descriptor, 'wattanam.document-designer', new Set(manifest.permissions));
+    const detail = bundle.pages.find((page) => page.id === 'template-detail');
+    expect(detail?.components.some((component) => component.type === 'document')).toBe(true);
     expect(bundle.pages.find((page) => page.id === 'template-editor')).toMatchObject({
       permission: 'wattanam.document-designer.edit',
-      components: [{ type: 'form', source: 'save-template' }],
+      components: [{ type: 'designer', source: 'template', options: { saveSource: 'save-template', assetSource: 'assets' } }],
     });
   });
 
@@ -177,10 +185,31 @@ describe('Plugin UI v2 schema', () => {
 
   it('validates camera and keyboard scanner declarations', () => {
     const value: any = valid();
-    value.pages[0].components = [{ id: 'scan', type: 'scanner', source: 'save', options: { modes: ['camera', 'keyboard'], field: 'code', minLength: 4, maxLength: 100, debounceMs: 1000 } }];
+    value.pages[0].components = [{ id: 'scan', type: 'scanner', source: 'save', options: { modes: ['camera', 'keyboard'], field: 'code', minLength: 4, maxLength: 100, debounceMs: 1000, contextFields: [{ id: 'classId', type: 'text', label: 'Class', required: true }, { id: 'session', type: 'select', label: 'Session', options: [{ label: 'One', value: 1 }] }] } }];
     expect(parsePluginUiBundle(value, 'wattanam.test', permissions).pages[0].components[0]).toMatchObject({ type: 'scanner' });
     value.pages[0].components[0].options.modes = ['script'];
     expect(() => parsePluginUiBundle(value, 'wattanam.test', permissions)).toThrow('modes');
+  });
+
+  it.each([
+    ['duplicate context field', [{ id: 'classId', type: 'text', label: 'Class' }, { id: 'classId', type: 'text', label: 'Again' }]],
+    ['unsafe context field type', [{ id: 'classId', type: 'script', label: 'Class' }]],
+    ['empty select choices', [{ id: 'session', type: 'select', label: 'Session', options: [] }]],
+  ])('rejects scanner %s', (_label, contextFields) => {
+    const value: any = valid();
+    value.pages[0].components = [{ id: 'scan', type: 'scanner', source: 'save', options: { modes: ['keyboard'], field: 'code', contextFields } }];
+    expect(() => parsePluginUiBundle(value, 'wattanam.test', permissions)).toThrow();
+  });
+
+  it('validates declarative query filters over explicit GET sources', () => {
+    const value: any = valid();
+    value.pages[0].components = [{ id: 'filters', type: 'filter', fields: [
+      { id: 'startDate', type: 'date', label: 'Start date' },
+      { id: 'status', type: 'select', label: 'Status', options: [{ label: 'Present', value: 'PRESENT' }] },
+    ], options: { sources: ['record'], applyLabel: 'Apply' } }];
+    expect(parsePluginUiBundle(value, 'wattanam.test', permissions).pages[0].components[0]).toMatchObject({ type: 'filter' });
+    value.pages[0].components[0].options.sources = ['save'];
+    expect(() => parsePluginUiBundle(value, 'wattanam.test', permissions)).toThrow('GET data sources');
   });
 
   it('validates the Attendance Manager camera/USB, report, and study-year UI bundle', () => {
@@ -189,9 +218,26 @@ describe('Plugin UI v2 schema', () => {
     const descriptor = JSON.parse(readFileSync(path.join(pluginRoot, 'frontend/page.json'), 'utf8'));
     const bundle = parsePluginUiBundle(descriptor, manifest.id, new Set(manifest.permissions));
 
-    expect(bundle.pages.map((page) => page.id)).toEqual(['attendance', 'scanner', 'reports', 'study-years', 'settings']);
+    expect(bundle.pages.map((page) => page.id)).toEqual(['attendance', 'scanner', 'corrections', 'correction-edit', 'alerts', 'reports', 'study-years', 'settings']);
     expect(bundle.pages.find((page) => page.id === 'scanner')?.components[1]).toMatchObject({ type: 'scanner' });
-    expect(bundle.pages.find((page) => page.id === 'reports')?.components[2]).toMatchObject({ type: 'print' });
+    expect(bundle.pages.find((page) => page.id === 'correction-edit')).toMatchObject({ permission: 'wattanam.attendance-manager.correct' });
+    expect(bundle.pages.find((page) => page.id === 'reports')?.components).toEqual(expect.arrayContaining([expect.objectContaining({ type: 'filter' }), expect.objectContaining({ type: 'print' })]));
+  });
+
+  it('validates the complete Academic Management UI bundle including roster actions', () => {
+    const manifest = JSON.parse(readFileSync(path.resolve(process.cwd(), '..', 'plugins', 'wattanam.academic-management', 'plugin.json'), 'utf8'));
+    const bundle = JSON.parse(readFileSync(path.resolve(process.cwd(), '..', 'plugins', 'wattanam.academic-management', 'frontend', 'page.json'), 'utf8'));
+    const parsed = parsePluginUiBundle(bundle, manifest.id, new Set(manifest.permissions));
+    const roster = parsed.pages.find((page) => page.id === 'class-students');
+    expect(roster).toBeDefined();
+    expect(roster?.dataSources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'removeStudent', method: 'DELETE', autoload: false, parameters: ['studentId'] }),
+      expect.objectContaining({ id: 'cleanupOrphanedStudents', method: 'POST' }),
+    ]));
+    expect(roster?.components).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'class-students-table', type: 'table', options: expect.objectContaining({ selectable: true }) }),
+      expect.objectContaining({ id: 'student-actions', type: 'actions' }),
+    ]));
   });
 
   it('validates bounded launch-language translations', () => {

@@ -12,6 +12,9 @@ Implemented on 2026-09-14:
 - local compatibility storage uses create-only hard links and verifies an existing object's digest;
 - the S3-compatible provider records SHA-256 metadata/checksum, sends `If-None-Match: *`, and never
   exposes bucket paths in repository metadata;
+- concurrent API instances now converge safely: if another instance wins between HEAD and the
+  conditional PUT, the loser accepts the precondition failure only after re-reading and validating
+  the winner's SHA-256 metadata and byte length;
 - downloads stream through the selected provider while retaining immutable HTTP caching and ETags;
 - Railway can select S3 with `ARTIFACT_STORAGE_PROVIDER=s3`, bucket, region, optional endpoint and
   paired credentials. Workload identity/default AWS credentials are supported when static keys are
@@ -23,9 +26,29 @@ Automated verification:
 - marketplace TypeScript build passed;
 - provider tests cover deterministic keys, byte-exact reads, idempotent identical writes, digest
   mismatch, corrupted-object refusal and traversal refusal.
+- the focused artifact-storage suite passes 5/5, including verified and mismatched concurrent S3
+  winner paths; the marketplace TypeScript build passes.
 
-Remaining before final acceptance: configure a production-shaped S3-compatible bucket and capture
-a live create/read/attempted-overwrite drill. Until that evidence exists, LC4-001 remains in progress.
+Production-shaped drill command (run from `apps/marketplace-api` with a dedicated real bucket or
+prefix-safe test bucket):
+
+```powershell
+$env:ARTIFACT_S3_BUCKET='wattanam-production-artifacts'
+$env:ARTIFACT_S3_REGION='ap-southeast-1'
+# Set ARTIFACT_S3_ENDPOINT and ARTIFACT_S3_FORCE_PATH_STYLE=true only for an S3-compatible service.
+# Set the paired access-key variables only when workload identity is unavailable.
+npm.cmd run drill:artifact-s3
+```
+
+The drill creates one random content-addressed audit object, races two independent provider
+instances, constructs a third provider to simulate restart, streams and re-hashes the object,
+attempts a conditional overwrite, verifies the original bytes remain, and emits a JSON evidence
+record. It intentionally retains the immutable object for audit. Do not paste credentials into the
+evidence file.
+
+Remaining before final acceptance: run the checked-in drill against the production-shaped
+S3-compatible bucket and capture its non-secret JSON result, deployment/service identity, provider
+version and timestamp. Until that evidence exists, LC4-001 remains in progress.
 
 ## LC4-002–015 — runtime and consistency contracts
 

@@ -3,6 +3,7 @@
 const { randomUUID } = require('crypto');
 const { registerScheduling, resources } = require('./scheduling');
 const { registerGenerator } = require('./generator');
+const { registerTeacherAttendance } = require('./teacher-attendance');
 const TABLE = 'plugin_wattanam_timetable_document';
 
 function text(value, name, max = 200) {
@@ -61,6 +62,8 @@ module.exports = {
     context.permissions.register([
       { id: 'wattanam.timetable.view', label: 'View timetables' },
       { id: 'wattanam.timetable.manage', label: 'Manage timetables and schedules' },
+      { id: 'wattanam.timetable.attendance.view', label: 'View teacher lesson attendance' },
+      { id: 'wattanam.timetable.attendance.manage', label: 'Record teacher lesson attendance' },
     ]);
     context.navigation.register([
       { id: 'timetables', label: 'Timetable', href: '/plugins/wattanam.timetable/timetables', permission: 'wattanam.timetable.view' },
@@ -70,6 +73,9 @@ module.exports = {
       { id: 'teachers', label: 'Timetable Teachers', href: '/plugins/wattanam.timetable/teachers', permission: 'wattanam.timetable.view' },
       { id: 'lessons', label: 'Lessons', href: '/plugins/wattanam.timetable/lessons', permission: 'wattanam.timetable.view' },
       { id: 'entries', label: 'Schedule', href: '/plugins/wattanam.timetable/schedule', permission: 'wattanam.timetable.view' },
+      { id: 'teacher-attendance', label: 'Teacher Lesson Attendance', href: '/plugins/wattanam.timetable/teacher-attendance', permission: 'wattanam.timetable.attendance.view' },
+      { id: 'scheduled-teachers', label: 'Scheduled Teachers', href: '/plugins/wattanam.timetable/scheduled-teachers', permission: 'wattanam.timetable.attendance.view' },
+      { id: 'teacher-scan', label: 'Teacher Scanner', href: '/plugins/wattanam.timetable/teacher-scan', permission: 'wattanam.timetable.attendance.manage' },
     ]);
     context.routes.register({ method: 'GET', path: 'timetables', permission: 'wattanam.timetable.view', handler: () =>
       context.database.query(`SELECT "id","name","short","academicYear","periodsPerDay","numberOfDays","status","createdAt","updatedAt" FROM ${TABLE} ORDER BY "createdAt" DESC LIMIT 500`),
@@ -122,5 +128,6 @@ module.exports = {
     }});
     registerScheduling(context);
     registerGenerator(context);
+    registerTeacherAttendance(context);
   },
 };

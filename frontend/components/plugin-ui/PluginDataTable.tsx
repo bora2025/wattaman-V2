@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 
 type Column = { id: string; label?: string; sortable?: boolean; filterable?: boolean; format?: string };
 
@@ -16,8 +17,12 @@ function display(value: unknown) {
   return String(value);
 }
 
+function valueAtPath(row: Record<string, unknown>, dataPath: string) {
+  return dataPath.split('.').reduce<unknown>((value, part) => value && typeof value === 'object' ? (value as Record<string, unknown>)[part] : undefined, row);
+}
+
 export default function PluginDataTable({
-  title, value, fields, options, loading, error, onSelectionChange, formatValue,
+  title, value, fields, options, loading, error, onSelectionChange, formatValue, pluginId, pageParams,
 }: {
   title?: string;
   value: unknown;
@@ -27,6 +32,8 @@ export default function PluginDataTable({
   error?: string;
   onSelectionChange?(ids: string[]): void;
   formatValue?(value: unknown, kind?: string): string;
+  pluginId?: string;
+  pageParams?: Record<string, string>;
 }) {
   const sourceRows = useMemo(() => rowsFrom(value), [value]);
   const columns = useMemo<Column[]>(() => {
@@ -35,6 +42,8 @@ export default function PluginDataTable({
   }, [fields, sourceRows]);
   const pageSize = typeof options?.pageSize === 'number' ? Math.min(Math.max(Math.trunc(options.pageSize), 1), 100) : 10;
   const selectable = options?.selectable === true;
+  const rowRoute = typeof options?.rowRoute === 'string' ? options.rowRoute : '';
+  const rowParameterMap = options?.rowParameterMap && typeof options.rowParameterMap === 'object' ? options.rowParameterMap as Record<string, string> : {};
   const [filter, setFilter] = useState('');
   const [sort, setSort] = useState<{ id: string; direction: 'asc' | 'desc' } | null>(null);
   const [page, setPage] = useState(1);
@@ -54,6 +63,15 @@ export default function PluginDataTable({
   const rowKey = (row: Record<string, unknown>, index: number) => String(row.id ?? `${currentPage}-${index}`);
   const visibleKeys = visible.map(rowKey);
   const allVisibleSelected = visibleKeys.length > 0 && visibleKeys.every((key) => selected.has(key));
+
+  function rowHref(row: Record<string, unknown>) {
+    if (!rowRoute || !pluginId) return '';
+    const resolved = rowRoute.replace(/:([a-z][a-zA-Z0-9]*)/g, (_match, name: string) => {
+      const value = pageParams?.[name] ?? (rowParameterMap[name] ? valueAtPath(row, rowParameterMap[name]) : undefined);
+      return value === undefined || value === null ? '' : encodeURIComponent(String(value));
+    });
+    return resolved.split('/').some((segment) => !segment) ? '' : `/plugins/${encodeURIComponent(pluginId)}/${resolved}`;
+  }
 
   function toggleAll() {
     setSelected((current) => {
@@ -77,9 +95,9 @@ export default function PluginDataTable({
           {selectable && <th className="w-12 px-4 py-3"><input aria-label="Select all visible rows" type="checkbox" checked={allVisibleSelected} onChange={toggleAll} /></th>}
           {columns.map((column) => <th key={column.id} scope="col" className="px-4 py-3 text-left font-semibold text-slate-700">{column.sortable ? <button className="inline-flex items-center gap-1" onClick={() => setSort((current) => ({ id: column.id, direction: current?.id === column.id && current.direction === 'asc' ? 'desc' : 'asc' }))}>{column.label}{sort?.id === column.id ? (sort.direction === 'asc' ? ' ↑' : ' ↓') : ''}</button> : column.label}</th>)}
         </tr></thead>
-        <tbody className="divide-y divide-slate-100 bg-white">{visible.map((row, index) => { const key = rowKey(row, index); return <tr key={key} className={selected.has(key) ? 'bg-indigo-50' : ''}>
+        <tbody className="divide-y divide-slate-100 bg-white">{visible.map((row, index) => { const key = rowKey(row, index); const href = rowHref(row); return <tr key={key} className={selected.has(key) ? 'bg-indigo-50' : ''}>
           {selectable && <td className="px-4 py-3"><input aria-label={`Select row ${index + 1}`} type="checkbox" checked={selected.has(key)} onChange={() => setSelected((current) => { const next = new Set(current); if (next.has(key)) next.delete(key); else next.add(key); return next; })} /></td>}
-          {columns.map((column) => <td key={column.id} className="max-w-sm px-4 py-3 text-slate-700">{formatValue ? formatValue(row[column.id], column.format) : display(row[column.id])}</td>)}
+          {columns.map((column, columnIndex) => { const content = formatValue ? formatValue(valueAtPath(row, column.id), column.format) : display(valueAtPath(row, column.id)); return <td key={column.id} className="max-w-sm px-4 py-3 text-slate-700">{href && columnIndex === 0 ? <Link className="font-medium text-indigo-700 hover:underline" href={href}>{content}</Link> : content}</td>; })}
         </tr>; })}</tbody>
       </table>
     </div>}

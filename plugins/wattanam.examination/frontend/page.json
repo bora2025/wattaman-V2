@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 2,
+  "kind": "declarative-ui",
+  "pages": [
+    {
+      "id": "exams", "title": "Examinations", "routePath": "exams", "permission": "wattanam.examination.exams.view", "parameters": [],
+      "dataSources": [{ "id": "list", "method": "GET", "path": "exams", "permission": "wattanam.examination.exams.view" }],
+      "components": [
+        { "id": "heading", "type": "heading", "title": "Examinations" },
+        { "id": "list", "type": "table", "title": "Exam catalog", "source": "list", "fields": [
+          { "id": "title", "label": "Title" }, { "id": "status", "label": "Status" }, { "id": "duration", "label": "Minutes" }, { "id": "totalMarks", "label": "Total marks" }
+        ], "options": { "pageSize": 25, "selectable": false } }
+      ]
+    },
+    {
+      "id": "gradebooks", "title": "Gradebooks", "routePath": "gradebooks", "permission": "wattanam.examination.gradebook.view", "parameters": [],
+      "dataSources": [{ "id": "list", "method": "GET", "path": "gradebooks", "permission": "wattanam.examination.gradebook.view" }],
+      "components": [
+        { "id": "heading", "type": "heading", "title": "Gradebooks" },
+        { "id": "list", "type": "table", "title": "Score sheets", "source": "list", "fields": [
+          { "id": "name", "label": "Name" }, { "id": "degree", "label": "Degree" }, { "id": "studyYearId", "label": "Study year" }
+        ], "options": { "pageSize": 25, "selectable": false, "rowRoute": "gradebooks/:id/report", "rowParameterMap": { "id": "id" } } }
+      ]
+    },
+    {
+      "id": "gradebook-report", "title": "Gradebook report", "routePath": "gradebooks/:id/report", "permission": "wattanam.examination.gradebook.view",
+      "parameters": [{ "name": "id", "type": "string", "maximumLength": 100 }],
+      "dataSources": [{ "id": "report", "method": "GET", "path": "gradebooks/:id/report", "permission": "wattanam.examination.gradebook.view" }],
+      "components": [
+        { "id": "heading", "type": "heading", "title": "Gradebook report" },
+        { "id": "summary", "type": "detail", "title": "Gradebook", "source": "report", "fields": [
+          { "label": "Name", "path": "gradebook.name" }, { "label": "Degree", "path": "gradebook.degree" }, { "label": "Study year", "path": "gradebook.studyYearId" }
+        ] },
+        { "id": "print-report", "type": "print", "title": "Student scores", "source": "report", "fields": [
+          { "label": "Student", "path": "studentName" }, { "label": "Class", "path": "className" }, { "label": "Period", "path": "period" },
+          { "label": "Subject", "path": "subject" }, { "label": "Score", "path": "score" }, { "label": "Maximum", "path": "maximumScore" }
+        ], "options": { "itemsPath": "reportRows", "formats": ["print", "csv", "pdf"], "filename": "gradebook-report", "maximumRows": 10000 } }
+      ]
+    }
+  ]
+}
