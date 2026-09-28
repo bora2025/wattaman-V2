@@ -277,7 +277,7 @@ jobs:
         working-directory: frontend
         run: npm ci
       - name: Verify artifact gate fixtures
-        run: node --test tools/verify-clean-core-artifact.test.js tools/marketplace-only-plugin-install-contract.test.js tools/starter-bundle-marketplace-contract.test.js tools/plugin-lifecycle-ux-contract.test.js tools/core-release-workflow-contract.test.js tools/core-deployment-blueprint-contract.test.js tools/core-deployment-smoke-contract.test.js tools/release-evidence.test.js tools/verify-core-image-signatures.test.js tools/provision-railway-school.test.js tools/publish-core-release.test.js && node --test frontend/scripts/build-core.test.js
+        run: node --test tools/verify-clean-core-artifact.test.js tools/marketplace-only-plugin-install-contract.test.js tools/starter-bundle-marketplace-contract.test.js tools/plugin-lifecycle-ux-contract.test.js tools/core-release-workflow-contract.test.js tools/core-deployment-blueprint-contract.test.js tools/core-deployment-smoke-contract.test.js tools/release-evidence.test.js tools/verify-core-image-signatures.test.js tools/provision-railway-school.test.js tools/publish-core-release.test.js tools/validate-core-release-input.test.js && node --test frontend/scripts/build-core.test.js
       - name: Build physical lean-core API and web artifacts
         run: npm run build:core
       - name: Reject compiled optional modules and pages

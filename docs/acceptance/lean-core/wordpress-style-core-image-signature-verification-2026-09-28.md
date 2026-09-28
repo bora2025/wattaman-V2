@@ -8,6 +8,8 @@ Scope: WordPress-style Phase 5 release and Railway provisioning boundary
 - Release evidence records the GitHub repository, workflow ref, run ID and run attempt.
 - The workflow lowercases `GITHUB_REPOSITORY` before constructing OCI/GHCR references, allowing
   mixed-case GitHub repository names without producing invalid image paths.
+- Manual release inputs are validated before dependency installation or image building: the version
+  must be stable SemVer (the workflow adds `-beta`) and release notes must be non-empty and bounded.
 - Blueprint rendering accepts only the approved `core-release.yml` workflow on `main`.
 - The release workflow verifies all three keyless signatures after signing and before publishing
   Marketplace metadata.

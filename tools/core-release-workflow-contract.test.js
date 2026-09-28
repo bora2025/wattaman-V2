@@ -9,6 +9,7 @@ const promotion = fs.readFileSync(path.join(root, '.github', 'workflows', 'promo
 const pullRequest = fs.readFileSync(path.join(root, '.github', 'workflows', 'pr-validation.yml'), 'utf8');
 
 test('core release builds, scans and publishes only physical core images', () => {
+  assert.ok(release.indexOf('validate-core-release-input.js') < release.indexOf('Build and push API with attestations'));
   assert.match(release, /npm run build:core/);
   assert.match(release, /npm run architecture:clean-core:gate/);
   assert.match(release, /context: backend\s+file: backend\/Dockerfile\.core\s+push: true/);
@@ -54,5 +55,6 @@ test('pull-request validation guards release provenance and provisioning verific
     'tools/verify-core-image-signatures.test.js',
     'tools/provision-railway-school.test.js',
     'tools/publish-core-release.test.js',
+    'tools/validate-core-release-input.test.js',
   ]) assert.match(pullRequest, new RegExp(contract.replaceAll('.', '\\.')));
 });

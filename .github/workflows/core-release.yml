@@ -27,6 +27,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
+      - name: Validate release inputs before building
+        env:
+          VERSION: ${{ inputs.version }}
+          NOTES: ${{ inputs.release_notes }}
+        run: node tools/validate-core-release-input.js --version "$VERSION" --release-notes "$NOTES"
       - name: Normalize immutable image repository
         shell: bash
         run: echo "IMAGE_PREFIX=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
