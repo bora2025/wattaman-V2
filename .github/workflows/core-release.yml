@@ -36,7 +36,15 @@ jobs:
         shell: bash
         run: echo "IMAGE_PREFIX=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
-        with: { node-version: '20', cache: npm, cache-dependency-path: backend/package-lock.json }
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            packages/plugin-cli/package-lock.json
+      - name: Install plugin CLI test dependencies
+        working-directory: packages/plugin-cli
+        run: npm ci
       - name: Verify backend
         working-directory: backend
         run: npm ci && npm test -- --runInBand && npm audit --omit=dev --audit-level=moderate
