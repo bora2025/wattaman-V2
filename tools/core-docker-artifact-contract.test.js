@@ -43,3 +43,17 @@ test('core web image packages the isolated core workspace output', () => {
   assert.match(dockerfile, /CORE_BUILD_NODE_MODULES_MODE=copy/);
   assert.doesNotMatch(dockerfile, /\/app\/\.next\/standalone/);
 });
+
+test('gateway image keeps the school web, API, marketplace, socket, and health routes', () => {
+  const dockerfile = read('infrastructure/gateway/Dockerfile');
+  const config = read('infrastructure/gateway/default.conf.template');
+  assert.match(dockerfile, /FROM nginx:stable-alpine/);
+  assert.match(dockerfile, /apk upgrade --no-cache/);
+  assert.match(dockerfile, /NGINX_ENVSUBST_FILTER="\^\(API_UPSTREAM\|WEB_UPSTREAM\)\$"/);
+  assert.match(config, /location = \/gateway-health/);
+  assert.match(config, /location \^~ \/socket\.io\//);
+  assert.match(config, /location \^~ \/api\/marketplace\//);
+  assert.match(config, /location \/api\//);
+  assert.match(config, /proxy_pass http:\/\/\$\{API_UPSTREAM\}\//);
+  assert.match(config, /proxy_pass http:\/\/\$\{WEB_UPSTREAM\}/);
+});

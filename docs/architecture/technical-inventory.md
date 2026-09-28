@@ -9,7 +9,7 @@ Status: reviewed baseline, 2026-08-28. This inventory is generated from the curr
 | School API | `backend` | Node 20, NestJS 10 | School PostgreSQL and `/data` | Platform Lead | School data and plugin host; no marketplace private keys |
 | School web | `frontend` | Node 20, Next.js 14 | none | Frontend Engineer | Same-origin browser UI; server proxy reaches private API |
 | School mobile | `apps/mobile` | Expo 55, React Native 0.83 | device secure storage/cache | Mobile owner | Versioned school API consumer; no direct database access |
-| Gateway | `infrastructure/gateway` | Caddy 2.10 | none | SRE | Only public Railway service; routes web/API/socket traffic |
+| Gateway | `infrastructure/gateway` | Nginx stable Alpine | none | SRE | Only public Railway service; routes web/API/socket traffic |
 | Marketplace API | `apps/marketplace-api` | Node 20, Express | Marketplace PostgreSQL and artifact volume | Marketplace Backend | Accounts, publishers, catalog, repository, commerce, entitlements |
 | Announcements plugin | `plugins/announcements` | Signed server package | Namespaced DB/settings/files/jobs | Plugin Platform | SDK reference; legacy data remains core-owned until cutover |
 
