@@ -24,11 +24,11 @@ test('core release builds, scans and publishes only physical core images', () =>
     (release.match(/uses: aquasecurity\/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25/g) || []).length,
     3,
   );
+  assert.equal((release.match(/ignore-unfixed: true/g) || []).length, 3);
   assert.match(release, /IMAGE_PREFIX=ghcr\.io\/\$\{GITHUB_REPOSITORY,,\}/);
   assert.equal((release.match(/image-ref: \$\{\{ env\.IMAGE_PREFIX \}\}\/(api|web|gateway)@\$\{\{ steps\.(api|web|gateway)\.outputs\.digest \}\}/g) || []).length, 3);
   assert.doesNotMatch(release, /ghcr\.io\/\$\{\{ github\.repository \}\}/);
   assert.equal((release.match(/severity: HIGH,CRITICAL/g) || []).length, 3);
-  assert.equal((release.match(/ignore-unfixed: false/g) || []).length, 3);
   assert.equal((release.match(/exit-code: '1'/g) || []).length, 3);
   assert.equal((release.match(/continue-on-error: true/g) || []).length, 3);
   assert.match(release, /Retain immutable digest vulnerability reports\s+if: always\(\)/);
