@@ -37,13 +37,13 @@
     {
       "id": "004_create_study_year",
       "path": "migrations/004_create_study_year.sql",
-      "checksum": "54a0a91809e5ad924484776f47c8b7638b6d1894bff379f1485c229f25fb0ac1",
+      "checksum": "19a750f6164c3f10c13dc9e2f871c54e58db450f983082f028e38d03175554ca",
       "destructive": false
     },
     {
       "id": "005_create_class",
       "path": "migrations/005_create_class.sql",
-      "checksum": "9d10a96010801a827f947e0f04a1fedb8a4eb59e3be3b742e51a7e1d53ea9b9c",
+      "checksum": "79a804f2e8d9d5005c58c30cede604ced6b473baa2cfff5fa3e8879602d1a11b",
       "destructive": false
     },
     {
