@@ -3,7 +3,7 @@
   "id": "wattanam.examination",
   "name": "Examination",
   "description": "Examinations, attempts, grading, score sheets and gradebooks.",
-  "version": "0.1.4",
+  "version": "0.1.7",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -31,5 +31,8 @@
     { "id": "exams", "label": "Examinations", "href": "/plugins/wattanam.examination/exams", "permission": "wattanam.examination.exams.view" },
     { "id": "gradebooks", "label": "Gradebooks", "href": "/plugins/wattanam.examination/gradebooks", "permission": "wattanam.examination.gradebook.view" }
   ],
-  "supportedLanguages": ["en", "km"]
+  "supportedLanguages": ["en", "km"],
+  "supportUrl": "https://wattanam.example/support/examination",
+  "privacyUrl": "https://wattanam.example/privacy/plugins/examination",
+  "operational": { "healthCheck": "runtime", "dataClassification": ["education-records", "personal-data"], "backup": { "database": "required", "files": "none", "restore": "required" }, "uninstall": { "dataRetention": "preserve" }, "pricing": "marketplace" }
 }

@@ -33,10 +33,11 @@ function harness() {
     $transaction: jest.fn((work: (tx: any) => unknown, _options?: unknown) => work(tx)),
   } as any;
   const verifier = { verify: jest.fn() } as any;
-  const runtime = { load: jest.fn().mockResolvedValue(undefined), unload: jest.fn().mockResolvedValue(undefined) } as any;
+  const runtime = { load: jest.fn().mockResolvedValue(undefined), unload: jest.fn().mockResolvedValue(undefined), status: jest.fn().mockReturnValue({ safeMode: false, loaded: [] }) } as any;
   const migrations = { apply: jest.fn().mockResolvedValue(undefined), createRecoveryPoint: jest.fn().mockResolvedValue(undefined) } as any;
-  const service = new PluginsService(prisma, verifier, runtime, migrations);
-  return { service, prisma, tx, verifier, runtime, migrations };
+  const entitlements = { assertCanActivate: jest.fn().mockResolvedValue({ mode: 'active' }) } as any;
+  const service = new PluginsService(prisma, verifier, runtime, migrations, undefined, undefined, undefined, entitlements);
+  return { service, prisma, tx, verifier, runtime, migrations, entitlements };
 }
 
 describe('PluginsService lifecycle locking, timeout, progress, and crash recovery', () => {
@@ -51,6 +52,22 @@ describe('PluginsService lifecycle locking, timeout, progress, and crash recover
   afterEach(async () => {
     process.env = originalEnv;
     await fs.rm(pluginDir, { recursive: true, force: true });
+  });
+
+  describe('diagnostics', () => {
+    it('reports missing artifacts, runtime drift, licence state and failed jobs in one health result', async () => {
+      const { service, prisma, runtime, entitlements } = harness();
+      prisma.pluginInstallation.findMany.mockResolvedValue([{
+        id: 'wattanam.test', name: 'Test', version: '1.0.0', status: 'active', installedPath: path.join(pluginDir, 'missing'), lastError: null,
+      }]);
+      prisma.pluginJobDefinition = { findMany: jest.fn().mockResolvedValue([{ pluginId: 'wattanam.test', jobId: 'digest', enabled: true, lastStatus: 'failed', lastError: 'boom' }]) };
+      runtime.status.mockReturnValue({ safeMode: false, loaded: [] });
+      entitlements.decision = jest.fn().mockResolvedValue({ mode: 'read_only', reason: 'Licence expired' });
+      await expect(service.diagnostics()).resolves.toMatchObject({
+        status: 'failed', safeMode: false,
+        plugins: [{ id: 'wattanam.test', status: 'failed', artifact: 'missing', runtimeLoaded: false, entitlement: { mode: 'read_only' }, jobs: [{ id: 'digest', lastStatus: 'failed' }] }],
+      });
+    });
   });
 
   describe('withPluginLock (used by every lifecycle mutation)', () => {
@@ -170,7 +187,7 @@ describe('PluginsService lifecycle locking, timeout, progress, and crash recover
 
   describe('activate', () => {
     it('locks, verifies entry files exist, activates, then loads the runtime', async () => {
-      const { service, tx, runtime } = harness();
+      const { service, tx, runtime, entitlements } = harness();
       const installedPath = path.join(pluginDir, 'wattanam.test', '1.0.0');
       await fs.mkdir(installedPath, { recursive: true });
       await fs.writeFile(path.join(installedPath, 'index.js'), 'module.exports = {};');
@@ -181,6 +198,15 @@ describe('PluginsService lifecycle locking, timeout, progress, and crash recover
       expect(result).toMatchObject({ status: 'active' });
       expect(runtime.load).toHaveBeenCalledWith('wattanam.test');
       expect(tx.$executeRaw).toHaveBeenCalled();
+      expect(entitlements.assertCanActivate).toHaveBeenCalledWith('wattanam.test');
+    });
+
+    it('does not touch the registry or runtime when entitlement policy denies activation', async () => {
+      const { service, tx, runtime, entitlements } = harness();
+      entitlements.assertCanActivate.mockRejectedValue(Object.assign(new Error('licence read-only'), { status: 402 }));
+      await expect(service.activate('wattanam.test')).rejects.toMatchObject({ status: 402 });
+      expect(tx.$executeRaw).not.toHaveBeenCalled();
+      expect(runtime.load).not.toHaveBeenCalled();
     });
 
     it('marks the plugin failed without ever committing an active status when its entry file is missing', async () => {

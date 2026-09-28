@@ -1,0 +1,21 @@
+{
+  "format": "wattanam-existing-school-reporting-rehearsal-v1",
+  "passed": true,
+  "sourceDatabase": "reporting_source",
+  "targetDatabase": "reporting_restored",
+  "schoolSlug": "restored-reporting-school",
+  "backupFile": "wattanam-20260928T075249Z.dump",
+  "legacyRoster": {
+    "count": 1,
+    "sha256": "4ecdb585cccd10fddf2e79c9f7904ff3035695e5f840889cfdbdea697c121652"
+  },
+  "pluginTables": 0,
+  "pluginResidue": 0,
+  "administratorOnly": true,
+  "keyedReadModels": true,
+  "approvedTotalsMatched": true,
+  "csvFormulaSafe": true,
+  "privacyMinimized": true,
+  "optionalProvidersDegrade": true,
+  "legacyPreserved": true
+}

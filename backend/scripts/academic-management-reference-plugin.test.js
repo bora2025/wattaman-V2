@@ -6,7 +6,6 @@ const path = require('node:path');
 const test = require('node:test');
 const plugin = require('../../plugins/wattanam.academic-management/backend/index.js');
 
-const STUDY_YEAR = 'plugin_wattanam_academic_management_study_year';
 const DEPARTMENT = 'plugin_wattanam_academic_management_department';
 const USER_DEPARTMENT = 'plugin_wattanam_academic_management_user_department';
 const CLASS = 'plugin_wattanam_academic_management_class';
@@ -67,13 +66,6 @@ test('registers the initial department routes, permissions, and navigation', asy
     'PUT:subjects/:id',
     'GET:contracts/subjects',
     'GET:teachers',
-    'GET:study-years',
-    'GET:study-years/current',
-    'GET:study-years/:id',
-    'POST:study-years',
-    'PUT:study-years/:id',
-    'POST:study-years/:id/set-current',
-    'DELETE:study-years/:id',
     'POST:classes',
     'PUT:classes/:id',
     'DELETE:classes/:id',
@@ -91,6 +83,7 @@ test('registers the initial department routes, permissions, and navigation', asy
     'GET:contracts/classes/:id/audience',
     'GET:contracts/users/:id/classes',
     'GET:contracts/classes/lookup',
+    'GET:contracts/subjects/lookup',
     'GET:contracts/users/:id/department',
     'PUT:commands/users/:id/department',
     'PUT:commands/students/by-user/:id/guardian',
@@ -128,7 +121,6 @@ test('exposes read-only routes without database writes', async () => {
   const calls = [];
   const result = await activate({
     query: async (sql, params) => {
-      if (sql.includes(`FROM ${STUDY_YEAR} WHERE "id" = $1 LIMIT 1`)) return [{ id: params[0], year: 2026 }];
       if (sql.includes(`FROM ${CLASS} c`)) return [{ id: params[0], name: 'Class A' }];
       if (sql.includes(`FROM ${REGISTRATION} r LEFT JOIN`)) return [{ id: params[0], nameEn: 'Student' }];
       return [];
@@ -141,9 +133,6 @@ test('exposes read-only routes without database writes', async () => {
   await route('GET', 'subjects').handler({ query: {} });
   await route('GET', 'contracts/subjects').handler();
   await route('GET', 'teachers').handler();
-  await route('GET', 'study-years').handler();
-  await route('GET', 'study-years/current').handler();
-  await route('GET', 'study-years/:id').handler({ params: { id: '00000000-0000-0000-0000-000000000000' } });
   await route('GET', 'classes/:id').handler({ params: { id: '00000000-0000-0000-0000-000000000000' }, principal: { userId: 'admin-1', role: 'ADMIN' } });
   await route('GET', 'classes').handler({ query: {}, principal: { userId: 'admin-1', role: 'ADMIN' } });
   await route('GET', 'classes/:id/students').handler({ params: { id: '00000000-0000-0000-0000-000000000000' }, principal: { userId: 'admin-1', role: 'ADMIN' } });
@@ -252,14 +241,12 @@ test('class compatibility reads use plugin-owned rosters with bounded authorizat
   assert.equal(calls.some((call) => /FROM\s+"(?:Student|Class|User)"/.test(call.sql)), false);
 });
 
-test('Study Year writes fail closed while class handlers publish lifecycle events', async () => {
+test('Academic Management registers no Study Year routes while class handlers publish lifecycle events', async () => {
   const events = [];
   const durableEvents = [];
   const timestamp = '2026-09-22T00:00:00.000Z';
   const db = {
     query: async (sql, params = []) => {
-      if (sql.includes(`FROM ${STUDY_YEAR} WHERE "id"`)) return [{ id: params[0], year: 2026 }];
-      if (sql.includes(`FROM ${STUDY_YEAR} WHERE "year"`)) return [];
       if (sql.includes(`FROM ${CLASS} WHERE "id"`)) return [{ id: params[0] }];
       if (sql.includes(`FROM ${CLASS} c`)) {
         return [{
@@ -276,22 +263,11 @@ test('Study Year writes fail closed while class handlers publish lifecycle event
     transaction: async (fn) => fn({ query: db.query, execute: db.execute, publish: (event) => durableEvents.push(event) }),
   };
   const result = await activate(db, { events });
-  const createStudyYear = result.routes.find((r) => r.method === 'POST' && r.path === 'study-years');
-  const updateStudyYear = result.routes.find((r) => r.method === 'PUT' && r.path === 'study-years/:id');
-  const setCurrent = result.routes.find((r) => r.method === 'POST' && r.path === 'study-years/:id/set-current');
-  const deleteStudyYear = result.routes.find((r) => r.method === 'DELETE' && r.path === 'study-years/:id');
   const createClass = result.routes.find((r) => r.method === 'POST' && r.path === 'classes');
   const updateClass = result.routes.find((r) => r.method === 'PUT' && r.path === 'classes/:id');
   const deleteClass = result.routes.find((r) => r.method === 'DELETE' && r.path === 'classes/:id');
 
-  for (const [route, request] of [
-    [createStudyYear, { body: { year: 2026 }, principal: { userId: 'a1' } }],
-    [updateStudyYear, { params: { id: 'y1' }, body: { label: '2026-2027' }, principal: { userId: 'a1' } }],
-    [setCurrent, { params: { id: 'y1' }, principal: { userId: 'a1' } }],
-    [deleteStudyYear, { params: { id: 'y1' }, principal: { userId: 'a1' } }],
-  ]) {
-    await assert.rejects(route.handler(request), /owned by Attendance Manager/);
-  }
+  assert.equal(result.routes.some((route) => route.path.startsWith('study-years')), false);
   assert.equal(events.some((event) => event.event.startsWith('academic.study-year.')), false);
 
   events.length = 0;

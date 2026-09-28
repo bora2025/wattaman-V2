@@ -43,6 +43,20 @@ function run(command, args, environment, capture = false) {
   return capture ? String(result.stdout || '').trim() : '';
 }
 
+function postgresClientExecutable(command, serverVersionNumber, exists = fs.existsSync) {
+  if (!['pg_dump', 'pg_restore'].includes(command)) throw new Error(`unsupported PostgreSQL client command: ${command}`);
+  const version = Number(String(serverVersionNumber).trim());
+  if (!Number.isInteger(version) || version < 100000) throw new Error(`invalid PostgreSQL server_version_num: ${serverVersionNumber}`);
+  const major = Math.floor(version / 10000);
+  const candidate = `/usr/lib/postgresql/${major}/bin/${command}`;
+  return exists(candidate) ? candidate : command;
+}
+
+function postgresClient(command, environment) {
+  const versionNumber = run('psql', ['--no-psqlrc', '--tuples-only', '--no-align', '--command', 'SHOW server_version_num'], environment, true);
+  return postgresClientExecutable(command, versionNumber);
+}
+
 function backupDirectory() {
   const directory = path.resolve(process.env.BACKUP_DIR || '/data/backups');
   if (directory === path.parse(directory).root) fail('BACKUP_DIR cannot be a filesystem root');
@@ -147,6 +161,6 @@ function tar(args) {
 }
 
 module.exports = {
-  backupDirectory, fail, installationSlug, schemaLineage, expectedSchemaLineage, postgresEnvironment, run, sha256, timestamp,
+  backupDirectory, fail, installationSlug, schemaLineage, expectedSchemaLineage, postgresEnvironment, postgresClient, postgresClientExecutable, run, sha256, timestamp,
   pluginDirectory, pluginDataDirectory, walkDirectoryChecksums, verifyDirectoryChecksums, tar, safeRelativePath,
 };

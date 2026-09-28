@@ -61,12 +61,77 @@ jobs:
       - name: Unit tests
         working-directory: backend
         run: npm test -- --runInBand
+      - name: Certify Academic Management against real PostgreSQL
+        working-directory: backend
+        env:
+          ACADEMIC_CERTIFY_ALLOW_DROP: academic-management-only
+        run: npm run certify:academic-management:postgres
+      - name: Certify Human Resources against real PostgreSQL
+        working-directory: backend
+        env:
+          HR_CERTIFY_ALLOW_DROP: human-resources-only
+        run: npm run certify:human-resources:postgres
+      - name: Certify Communication against real PostgreSQL
+        working-directory: backend
+        env:
+          COMMUNICATION_CERTIFY_ALLOW_DROP: communication-only
+        run: npm run certify:communication:postgres
+      - name: Certify Document Designer against real PostgreSQL
+        working-directory: backend
+        env:
+          DOCUMENT_DESIGNER_CERTIFY_ALLOW_DROP: document-designer-only
+        run: npm run certify:document-designer:postgres
+
+      - name: Certify Attendance Manager against real PostgreSQL
+        working-directory: backend
+        env:
+          ATTENDANCE_CERTIFY_ALLOW_DROP: attendance-manager-only
+        run: npm run certify:attendance:postgres
+
+      - name: Certify Timetable against real PostgreSQL
+        working-directory: backend
+        env:
+          TIMETABLE_CERTIFY_ALLOW_DROP: timetable-only
+        run: npm run certify:timetable:postgres
+
+      - name: Certify Examination against real PostgreSQL
+        working-directory: backend
+        env:
+          EXAMINATION_CERTIFY_ALLOW_DROP: examination-only
+        run: npm run certify:examination:postgres
+
+      - name: Certify Learning against real PostgreSQL
+        working-directory: backend
+        env:
+          LEARNING_CERTIFY_ALLOW_DROP: learning-only
+          LEARNING_CERTIFY_DESTRUCTIVE_APPROVAL: 014_allow_assignment_attempts
+        run: npm run certify:learning:postgres
+      - name: Certify Transportation against real PostgreSQL
+        working-directory: backend
+        env:
+          TRANSPORTATION_CERTIFY_ALLOW_DROP: transportation-only
+        run: npm run certify:transportation:postgres
+      - name: Certify Finance against real PostgreSQL
+        working-directory: backend
+        env:
+          FINANCE_CERTIFY_ALLOW_DROP: finance-only
+        run: npm run certify:finance:postgres
+      - name: Certify Parent Portal against real PostgreSQL
+        working-directory: backend
+        env:
+          PARENT_PORTAL_CERTIFY_ALLOW_DROP: parent-portal-only
+        run: npm run certify:parent-portal:postgres
+      - name: Certify Reporting against real PostgreSQL read models
+        working-directory: backend
+        env:
+          REPORTING_CERTIFY_ALLOW_WRITE: reporting-readmodels-only
+        run: npm run certify:reporting:postgres
       - name: Build
         working-directory: backend
         run: npm run build
-      - name: Production dependency audit (fails only on high/critical, matching the A-009 baseline)
+      - name: Production dependency audit (reject moderate, high, or critical findings)
         working-directory: backend
-        run: npm audit --omit=dev --audit-level=high
+        run: npm audit --omit=dev --audit-level=moderate
 
   marketplace-api:
     runs-on: ubuntu-latest
@@ -96,12 +161,89 @@ jobs:
       - name: Unit tests
         working-directory: apps/marketplace-api
         run: npm test
+      - name: Certify starter-bundle lifecycle against migrated PostgreSQL
+        working-directory: apps/marketplace-api
+        run: npm run certify:starter-bundles:postgres
       - name: Build (tsc -- this is also the typecheck gate for this app)
         working-directory: apps/marketplace-api
         run: npm run build
       - name: Production dependency audit
         working-directory: apps/marketplace-api
         run: npm audit --omit=dev --audit-level=high
+
+  platform-admin-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: apps/platform-admin/package-lock.json }
+      - name: Install Marketplace API dependencies
+        working-directory: apps/marketplace-api
+        run: npm ci
+      - name: Install Platform Admin dependencies
+        working-directory: apps/platform-admin
+        run: npm ci
+      - name: Install Chromium and operating-system dependencies
+        working-directory: apps/platform-admin
+        run: npx playwright install --with-deps chromium
+      - name: Run Platform Admin against disposable PostgreSQL and the real Marketplace API
+        working-directory: apps/platform-admin
+        run: npm run e2e
+      - name: Upload browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: platform-admin-e2e-evidence
+          path: |
+            apps/platform-admin/playwright-report
+            apps/platform-admin/test-results
+          if-no-files-found: ignore
+          retention-days: 14
+
+  artifact-s3-compatibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      ARTIFACT_S3_BUCKET: wattanam-ci-artifacts
+      ARTIFACT_S3_REGION: us-east-1
+      ARTIFACT_S3_ENDPOINT: http://127.0.0.1:9000
+      ARTIFACT_S3_FORCE_PATH_STYLE: 'true'
+      ARTIFACT_S3_ACCESS_KEY_ID: wattanam-ci-access
+      ARTIFACT_S3_SECRET_ACCESS_KEY: wattanam-ci-secret-password
+      ARTIFACT_S3_CREATE_BUCKET: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: apps/marketplace-api/package-lock.json }
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.24.x', cache: false }
+      - name: Install Marketplace artifact dependencies
+        working-directory: apps/marketplace-api
+        run: npm ci
+      - name: Build and start a pinned S3-compatible artifact origin
+        env:
+          MINIO_ROOT_USER: ${{ env.ARTIFACT_S3_ACCESS_KEY_ID }}
+          MINIO_ROOT_PASSWORD: ${{ env.ARTIFACT_S3_SECRET_ACCESS_KEY }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/minio-bin" "$RUNNER_TEMP/minio-data"
+          GOBIN="$RUNNER_TEMP/minio-bin" go install github.com/minio/minio@RELEASE.2025-04-22T22-12-26Z
+          MINIO_ROOT_USER="$MINIO_ROOT_USER" MINIO_ROOT_PASSWORD="$MINIO_ROOT_PASSWORD" \
+            nohup "$RUNNER_TEMP/minio-bin/minio" server "$RUNNER_TEMP/minio-data" --address :9000 >"$RUNNER_TEMP/minio.log" 2>&1 &
+      - name: Wait for the S3-compatible origin
+        run: |
+          for _ in $(seq 1 60); do
+            curl --fail --silent http://127.0.0.1:9000/minio/health/ready && exit 0
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/minio.log"
+          exit 1
+      - name: Certify immutable multi-instance artifact behavior
+        working-directory: apps/marketplace-api
+        run: npm run drill:artifact-s3
+      - name: Show object-store logs on failure
+        if: failure()
+        run: cat "$RUNNER_TEMP/minio.log" || true
 
   frontend:
     runs-on: ubuntu-latest
@@ -117,10 +259,904 @@ jobs:
         run: npm run build
       - name: Production dependency audit
         working-directory: frontend
-        run: npm audit --omit=dev --audit-level=high
+        run: npm audit --omit=dev --audit-level=moderate
       # `next lint` is broken under Next 16 (the command was removed) -- a known, documented
       # gap from A-009, not something this workflow silently papers over. Fixing it means an
       # ESLint flat-config migration, tracked as separate follow-up work.
+
+  clean-core-artifact:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Verify artifact gate fixtures
+        run: node --test tools/verify-clean-core-artifact.test.js tools/marketplace-only-plugin-install-contract.test.js tools/starter-bundle-marketplace-contract.test.js tools/plugin-lifecycle-ux-contract.test.js tools/core-release-workflow-contract.test.js tools/core-deployment-blueprint-contract.test.js tools/core-deployment-smoke-contract.test.js && node --test frontend/scripts/build-core.test.js
+      - name: Build physical lean-core API and web artifacts
+        run: npm run build:core
+      - name: Reject compiled optional modules and pages
+        run: npm run architecture:clean-core:gate
+
+  core-deployment-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Verify deployment smoke contract
+        run: node --test tools/core-deployment-smoke-contract.test.js backend/scripts/verify-fresh-core-database.test.js
+      - name: Build physical core deployment images
+        run: |
+          docker build -f backend/Dockerfile.core -t wattanam-api-core:smoke backend
+          docker build -f frontend/Dockerfile.core -t wattanam-web-core:smoke frontend
+          docker build -f infrastructure/gateway/Dockerfile -t wattanam-gateway:smoke infrastructure/gateway
+      - name: Reject development tooling or legacy Prisma state in the API runtime image
+        run: |
+          docker run --rm --entrypoint sh wattanam-api-core:smoke -c 'test -x node_modules/.bin/prisma'
+          docker run --rm --entrypoint sh wattanam-api-core:smoke -c 'test ! -e node_modules/typescript'
+          docker run --rm --entrypoint sh wattanam-api-core:smoke -c 'test ! -e node_modules/jest'
+          docker run --rm --entrypoint sh wattanam-api-core:smoke -c 'test ! -e node_modules/@nestjs/cli'
+          docker run --rm --entrypoint sh wattanam-api-core:smoke -c 'test ! -e prisma/schema.prisma'
+          docker run --rm --entrypoint node wattanam-api-core:smoke -p "require.resolve('./generated/core-client')"
+      - name: Configure isolated core deployment
+        run: |
+          openssl genpkey -algorithm ED25519 -out /tmp/core-smoke-private.pem
+          openssl pkey -in /tmp/core-smoke-private.pem -pubout -out /tmp/core-smoke-public.pem
+          PUBLIC_KEY_ESCAPED=$(awk '{printf "%s\\n", $0}' /tmp/core-smoke-public.pem)
+          {
+            echo 'POSTGRES_IMAGE=postgres:16-alpine'
+            echo 'API_IMAGE=wattanam-api-core:smoke'
+            echo 'WEB_IMAGE=wattanam-web-core:smoke'
+            echo 'GATEWAY_IMAGE=wattanam-gateway:smoke'
+            echo 'POSTGRES_PASSWORD=core-smoke-postgres-password'
+            echo 'APP_VERSION=0.1.0-core-smoke'
+            echo 'JWT_SECRET=core-smoke-jwt-secret-at-least-thirty-two-characters'
+            echo 'APP_URL=http://127.0.0.1:3000'
+            echo 'COOKIE_SECURE=false'
+            echo 'PLUGIN_TRUSTED_KEYS={}'
+            echo 'REQUIRE_PLUGIN_BACKUP_CONTRACTS=true'
+            echo 'MARKETPLACE_URL=https://marketplace.invalid'
+            echo 'UPDATE_REPOSITORY_KEY_ID=core-smoke'
+            printf 'UPDATE_REPOSITORY_PUBLIC_KEY="%s"\n' "$PUBLIC_KEY_ESCAPED"
+          } > .env.core-smoke
+          chmod 600 .env.core-smoke
+      - name: Boot and install a fresh core school
+        run: |
+          docker compose --env-file .env.core-smoke -f docker-compose.core.yml up -d
+          node tools/core-deployment-smoke.js
+      - name: Prove the database contains core tables and no legacy business tables
+        run: |
+          docker compose --env-file .env.core-smoke -f docker-compose.core.yml exec -T api \
+            node scripts/verify-fresh-core-database.js
+      - name: Create a recovery artifact from the persistent core volume
+        run: |
+          docker compose --env-file .env.core-smoke -f docker-compose.core.yml exec -T api \
+            sh -c "mkdir -p /data/plugins/wattanam.smoke/1.0.0/backend /data/plugin-data/wattanam.smoke && printf '%s\n' '{\"schemaVersion\":1,\"id\":\"wattanam.smoke\",\"name\":\"Recovery Smoke\",\"description\":\"Strict recovery contract fixture.\",\"version\":\"1.0.0\",\"requiresCore\":\">=0.1.0-0 <1.0.0\",\"publisher\":\"wattanam\",\"license\":\"commercial\",\"backendEntry\":\"backend/index.js\",\"capabilities\":[],\"permissions\":[],\"dependencies\":{},\"migrations\":[],\"navigation\":[],\"supportedLanguages\":[\"en\"],\"operational\":{\"healthCheck\":\"runtime\",\"dataClassification\":[\"personal-data\"],\"backup\":{\"database\":\"required\",\"files\":\"required\",\"restore\":\"required\"},\"uninstall\":{\"dataRetention\":\"preserve\"},\"pricing\":\"marketplace\"}}' > /data/plugins/wattanam.smoke/1.0.0/plugin.json && printf 'module.exports={id:\"wattanam.smoke\",health(){return {status:\"ready\"}}};\n' > /data/plugins/wattanam.smoke/1.0.0/backend/index.js && printf 'mutable-plugin-state\n' > /data/plugin-data/wattanam.smoke/state.txt"
+          docker compose --env-file .env.core-smoke -f docker-compose.core.yml --profile operations run --rm backup
+          docker compose --env-file .env.core-smoke -f docker-compose.core.yml exec -T api \
+            sh -c "test -n \"$$(find /data/backups -type f -name '*.recovery-set.json' -size +0c -print -quit)\""
+          docker compose --env-file .env.core-smoke -f docker-compose.core.yml exec -T api \
+            sh -c "grep -q '\"format\": \"wattanam-recovery-set-v2\"' /data/backups/*.recovery-set.json && grep -q '\"legacyExceptionCount\": 0' /data/backups/*.recovery-set.json"
+      - name: Restore and reconcile the full recovery set in an isolated database
+        run: |
+          docker compose --env-file .env.core-smoke -f docker-compose.core.yml --profile recovery-drill run --rm restore
+          docker compose --env-file .env.core-smoke -f docker-compose.core.yml --profile recovery-drill exec -T postgres_restore \
+            psql -U wattanam -d wattanam -v ON_ERROR_STOP=1 -c \
+            "DO \$\$ BEGIN IF (SELECT \"schoolSlug\" FROM \"Installation\" WHERE id='singleton') <> 'core-smoke-school' THEN RAISE EXCEPTION 'restored school identity mismatch'; END IF; IF (SELECT lineage FROM _wattanam_schema_lineage WHERE id='singleton') <> 'wattanam-core-v1' THEN RAISE EXCEPTION 'restored schema lineage mismatch'; END IF; END \$\$;"
+          docker compose --env-file .env.core-smoke -f docker-compose.core.yml --profile recovery-drill run --rm --no-deps restore \
+            sh -c "grep -q '\"id\":\"wattanam.smoke\"' /restore/plugins/wattanam.smoke/1.0.0/plugin.json && grep -qx 'mutable-plugin-state' /restore/plugin-data/wattanam.smoke/state.txt"
+      - name: Capture diagnostics on failure
+        if: failure()
+        run: docker compose --env-file .env.core-smoke -f docker-compose.core.yml logs --no-color
+      - name: Stop isolated core deployment
+        if: always()
+        run: docker compose --env-file .env.core-smoke -f docker-compose.core.yml down -v --remove-orphans
+
+  existing-school-upgrade-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wattanam
+          POSTGRES_PASSWORD: rehearsal-password
+          POSTGRES_DB: source_school
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U wattanam -d source_school"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      EXISTING_SCHOOL_REHEARSAL_ALLOW: document-designer-only
+      SOURCE_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/source_school
+      REHEARSAL_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/restored_school
+      BACKUP_DIR: /tmp/existing-school-rehearsal
+      REHEARSAL_SCHOOL_SLUG: restored-document-school
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: backend/package-lock.json }
+      - name: Install matching PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Verify rehearsal safety contract
+        working-directory: backend
+        run: npm run test:existing-school:document-designer
+      - name: Restore, adopt, reconcile and roll back Document Designer
+        working-directory: backend
+        run: node scripts/document-designer-restored-backup-certification.js --out "$RUNNER_TEMP/existing-school-document-designer-report.json"
+      - name: Retain non-secret rehearsal evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: existing-school-document-designer-rehearsal
+          path: ${{ runner.temp }}/existing-school-document-designer-report.json
+          if-no-files-found: error
+
+  existing-school-academic-foundation-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wattanam
+          POSTGRES_PASSWORD: rehearsal-password
+          POSTGRES_DB: source_academic
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U wattanam -d source_academic"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      EXISTING_SCHOOL_REHEARSAL_ALLOW: academic-management-foundation-only
+      SOURCE_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/source_academic
+      REHEARSAL_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/restored_academic
+      BACKUP_DIR: /tmp/existing-school-academic-rehearsal
+      REHEARSAL_SCHOOL_SLUG: restored-academic-school
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: backend/package-lock.json }
+      - name: Install matching PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Verify Academic rehearsal safety contract
+        working-directory: backend
+        run: npm run test:existing-school:academic-foundation
+      - name: Restore, adopt, reconcile and roll back Academic foundation
+        working-directory: backend
+        run: node scripts/academic-management-restored-backup-certification.js --out "$RUNNER_TEMP/existing-school-academic-foundation-report.json"
+      - name: Retain non-secret Academic rehearsal evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: existing-school-academic-foundation-rehearsal
+          path: ${{ runner.temp }}/existing-school-academic-foundation-report.json
+          if-no-files-found: error
+
+  existing-school-academic-student-profiles-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wattanam
+          POSTGRES_PASSWORD: rehearsal-password
+          POSTGRES_DB: source_profiles
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U wattanam -d source_profiles"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      EXISTING_SCHOOL_REHEARSAL_ALLOW: academic-student-profiles-only
+      SOURCE_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/source_profiles
+      REHEARSAL_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/restored_profiles
+      BACKUP_DIR: /tmp/existing-school-student-profile-rehearsal
+      REHEARSAL_SCHOOL_SLUG: restored-student-profile-school
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: backend/package-lock.json }
+      - name: Install matching PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Verify student-profile rehearsal safety contract
+        working-directory: backend
+        run: npm run test:existing-school:academic-student-profiles
+      - name: Restore, adopt, reconcile and roll back Academic student profiles
+        working-directory: backend
+        run: node scripts/academic-student-profiles-restored-backup-certification.js --out "$RUNNER_TEMP/existing-school-academic-student-profiles-report.json"
+      - name: Retain non-secret student-profile rehearsal evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: existing-school-academic-student-profiles-rehearsal
+          path: ${{ runner.temp }}/existing-school-academic-student-profiles-report.json
+          if-no-files-found: error
+
+  existing-school-academic-enrollment-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wattanam
+          POSTGRES_PASSWORD: rehearsal-password
+          POSTGRES_DB: source_enrollment
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U wattanam -d source_enrollment"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      EXISTING_SCHOOL_REHEARSAL_ALLOW: academic-enrollment-only
+      SOURCE_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/source_enrollment
+      REHEARSAL_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/restored_enrollment
+      BACKUP_DIR: /tmp/existing-school-enrollment-rehearsal
+      REHEARSAL_SCHOOL_SLUG: restored-enrollment-school
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: backend/package-lock.json }
+      - name: Install matching PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Verify enrollment rehearsal safety contract
+        working-directory: backend
+        run: npm run test:existing-school:academic-enrollment
+      - name: Restore, adopt, reconcile and roll back Academic enrollment
+        working-directory: backend
+        run: node scripts/academic-enrollment-restored-backup-certification.js --out "$RUNNER_TEMP/existing-school-academic-enrollment-report.json"
+      - name: Retain non-secret enrollment rehearsal evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: existing-school-academic-enrollment-rehearsal
+          path: ${{ runner.temp }}/existing-school-academic-enrollment-report.json
+          if-no-files-found: error
+
+  existing-school-academic-classes-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wattanam
+          POSTGRES_PASSWORD: rehearsal-password
+          POSTGRES_DB: source_classes
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U wattanam -d source_classes"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      EXISTING_SCHOOL_REHEARSAL_ALLOW: academic-classes-only
+      SOURCE_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/source_classes
+      REHEARSAL_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/restored_classes
+      BACKUP_DIR: /tmp/existing-school-classes-rehearsal
+      REHEARSAL_SCHOOL_SLUG: restored-classes-school
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: backend/package-lock.json }
+      - name: Install matching PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Verify classes rehearsal safety contract
+        working-directory: backend
+        run: npm run test:existing-school:academic-classes
+      - name: Restore, adopt, reconcile and roll back Academic classes
+        working-directory: backend
+        run: node scripts/academic-classes-restored-backup-certification.js --out "$RUNNER_TEMP/existing-school-academic-classes-report.json"
+      - name: Retain non-secret classes rehearsal evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: existing-school-academic-classes-rehearsal
+          path: ${{ runner.temp }}/existing-school-academic-classes-report.json
+          if-no-files-found: error
+
+  existing-school-academic-subjects-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wattanam
+          POSTGRES_PASSWORD: rehearsal-password
+          POSTGRES_DB: source_subjects
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U wattanam -d source_subjects"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      EXISTING_SCHOOL_REHEARSAL_ALLOW: academic-subjects-only
+      SOURCE_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/source_subjects
+      REHEARSAL_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/restored_subjects
+      BACKUP_DIR: /tmp/existing-school-subjects-rehearsal
+      REHEARSAL_SCHOOL_SLUG: restored-subjects-school
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: backend/package-lock.json }
+      - name: Install matching PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Verify subjects rehearsal safety contract
+        working-directory: backend
+        run: npm run test:existing-school:academic-subjects
+      - name: Restore, adopt, reconcile and roll back Academic subjects
+        working-directory: backend
+        run: node scripts/academic-subjects-restored-backup-certification.js --out "$RUNNER_TEMP/existing-school-academic-subjects-report.json"
+      - name: Retain non-secret subjects rehearsal evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: existing-school-academic-subjects-rehearsal
+          path: ${{ runner.temp }}/existing-school-academic-subjects-report.json
+          if-no-files-found: error
+
+  existing-school-academic-admissions-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wattanam
+          POSTGRES_PASSWORD: rehearsal-password
+          POSTGRES_DB: source_admissions
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U wattanam -d source_admissions"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      EXISTING_SCHOOL_REHEARSAL_ALLOW: academic-admissions-only
+      SOURCE_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/source_admissions
+      REHEARSAL_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/restored_admissions
+      BACKUP_DIR: /tmp/existing-school-admissions-rehearsal
+      REHEARSAL_SCHOOL_SLUG: restored-admissions-school
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: backend/package-lock.json }
+      - name: Install matching PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Verify admissions rehearsal safety contract
+        working-directory: backend
+        run: npm run test:existing-school:academic-admissions
+      - name: Restore, adopt, reconcile and roll back Academic admissions
+        working-directory: backend
+        run: node scripts/academic-admissions-restored-backup-certification.js --out "$RUNNER_TEMP/existing-school-academic-admissions-report.json"
+      - name: Retain non-secret admissions rehearsal evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: existing-school-academic-admissions-rehearsal
+          path: ${{ runner.temp }}/existing-school-academic-admissions-report.json
+          if-no-files-found: error
+
+  existing-school-attendance-study-years-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wattanam
+          POSTGRES_PASSWORD: rehearsal-password
+          POSTGRES_DB: source_study_years
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U wattanam -d source_study_years"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      EXISTING_SCHOOL_REHEARSAL_ALLOW: attendance-study-years-only
+      SOURCE_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/source_study_years
+      REHEARSAL_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/restored_study_years
+      BACKUP_DIR: /tmp/existing-school-study-years-rehearsal
+      REHEARSAL_SCHOOL_SLUG: restored-study-years-school
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: backend/package-lock.json }
+      - name: Install matching PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Verify Study Year rehearsal safety contract
+        working-directory: backend
+        run: npm run test:existing-school:attendance-study-years
+      - name: Restore, adopt, reconcile and roll back Attendance Study Years
+        working-directory: backend
+        run: node scripts/academic-study-years-restored-backup-certification.js --out "$RUNNER_TEMP/existing-school-attendance-study-years-report.json"
+      - name: Retain non-secret Study Year rehearsal evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: existing-school-attendance-study-years-rehearsal
+          path: ${{ runner.temp }}/existing-school-attendance-study-years-report.json
+          if-no-files-found: error
+
+  existing-school-academic-aggregate-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wattanam
+          POSTGRES_PASSWORD: rehearsal-password
+          POSTGRES_DB: source_academic_aggregate
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U wattanam -d source_academic_aggregate"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      EXISTING_SCHOOL_REHEARSAL_ALLOW: academic-aggregate-only
+      SOURCE_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/source_academic_aggregate
+      REHEARSAL_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/restored_academic_aggregate
+      BACKUP_DIR: /tmp/existing-school-academic-aggregate-rehearsal
+      REHEARSAL_SCHOOL_SLUG: restored-academic-aggregate-school
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: backend/package-lock.json }
+      - name: Install matching PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Verify aggregate Academic rehearsal safety contract
+        working-directory: backend
+        run: npm run test:academic-management:aggregate-rehearsal
+      - name: Restore and reconcile every Academic cutover boundary
+        working-directory: backend
+        run: npm run db:academic-management:aggregate-rehearsal -- --out "$RUNNER_TEMP/existing-school-academic-aggregate-report.json"
+      - name: Retain non-secret aggregate Academic evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: existing-school-academic-aggregate-rehearsal
+          path: ${{ runner.temp }}/existing-school-academic-aggregate-report.json
+          if-no-files-found: error
+
+  existing-school-attendance-manager-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wattanam
+          POSTGRES_PASSWORD: rehearsal-password
+          POSTGRES_DB: source_attendance_manager
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U wattanam -d source_attendance_manager"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      EXISTING_SCHOOL_REHEARSAL_ALLOW: attendance-manager-only
+      SOURCE_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/source_attendance_manager
+      REHEARSAL_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/restored_attendance_manager
+      BACKUP_DIR: /tmp/existing-school-attendance-manager-rehearsal
+      REHEARSAL_SCHOOL_SLUG: restored-attendance-school
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: backend/package-lock.json }
+      - name: Install matching PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Verify Attendance restored-school safety contract
+        working-directory: backend
+        run: npm run test:attendance:restored-rehearsal
+      - name: Restore, adopt, reconcile and roll back Attendance Manager
+        working-directory: backend
+        run: npm run db:attendance:restored-rehearsal -- --out "$RUNNER_TEMP/existing-school-attendance-manager-report.json"
+      - name: Retain non-secret Attendance rehearsal evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: existing-school-attendance-manager-rehearsal
+          path: ${{ runner.temp }}/existing-school-attendance-manager-report.json
+          if-no-files-found: error
+
+  existing-school-timetable-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wattanam
+          POSTGRES_PASSWORD: rehearsal-password
+          POSTGRES_DB: source_timetable
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U wattanam -d source_timetable"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      EXISTING_SCHOOL_REHEARSAL_ALLOW: timetable-only
+      SOURCE_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/source_timetable
+      REHEARSAL_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/restored_timetable
+      BACKUP_DIR: /tmp/existing-school-timetable-rehearsal
+      REHEARSAL_SCHOOL_SLUG: restored-timetable-school
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: backend/package-lock.json }
+      - name: Install matching PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Verify Timetable restored-school safety contract
+        working-directory: backend
+        run: npm run test:timetable:restored-rehearsal
+      - name: Restore, adopt, reconcile and roll back Timetable
+        working-directory: backend
+        run: npm run db:timetable:restored-rehearsal -- --out "$RUNNER_TEMP/existing-school-timetable-report.json"
+      - name: Retain non-secret Timetable rehearsal evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: existing-school-timetable-rehearsal
+          path: ${{ runner.temp }}/existing-school-timetable-report.json
+          if-no-files-found: error
+
+  existing-school-examination-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wattanam
+          POSTGRES_PASSWORD: rehearsal-password
+          POSTGRES_DB: source_examination
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U wattanam -d source_examination"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      EXISTING_SCHOOL_REHEARSAL_ALLOW: examination-only
+      SOURCE_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/source_examination
+      REHEARSAL_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/restored_examination
+      BACKUP_DIR: /tmp/existing-school-examination-rehearsal
+      REHEARSAL_SCHOOL_SLUG: restored-examination-school
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: backend/package-lock.json }
+      - name: Install matching PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Verify Examination restored-school safety contract
+        working-directory: backend
+        run: npm run test:examination:restored-rehearsal
+      - name: Restore, adopt, reconcile and roll back Examination
+        working-directory: backend
+        run: npm run db:examination:restored-rehearsal -- --out "$RUNNER_TEMP/existing-school-examination-report.json"
+      - name: Retain non-secret Examination rehearsal evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: existing-school-examination-rehearsal
+          path: ${{ runner.temp }}/existing-school-examination-report.json
+          if-no-files-found: error
+
+  existing-school-learning-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wattanam
+          POSTGRES_PASSWORD: rehearsal-password
+          POSTGRES_DB: source_learning
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U wattanam -d source_learning"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      EXISTING_SCHOOL_REHEARSAL_ALLOW: learning-only
+      SOURCE_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/source_learning
+      REHEARSAL_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/restored_learning
+      BACKUP_DIR: /tmp/existing-school-learning-rehearsal
+      REHEARSAL_SCHOOL_SLUG: restored-learning-school
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: backend/package-lock.json }
+      - name: Install matching PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Verify Learning restored-school safety contract
+        working-directory: backend
+        run: npm run test:learning:restored-rehearsal
+      - name: Restore, adopt, reconcile and roll back Learning
+        working-directory: backend
+        run: npm run db:learning:restored-rehearsal -- --out "$RUNNER_TEMP/existing-school-learning-report.json"
+      - name: Retain non-secret Learning rehearsal evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: existing-school-learning-rehearsal
+          path: ${{ runner.temp }}/existing-school-learning-report.json
+          if-no-files-found: error
+
+  existing-school-transportation-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wattanam
+          POSTGRES_PASSWORD: rehearsal-password
+          POSTGRES_DB: source_transportation
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U wattanam -d source_transportation"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      EXISTING_SCHOOL_REHEARSAL_ALLOW: transportation-only
+      SOURCE_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/source_transportation
+      REHEARSAL_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/restored_transportation
+      BACKUP_DIR: /tmp/existing-school-transportation-rehearsal
+      REHEARSAL_SCHOOL_SLUG: restored-transportation-school
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: backend/package-lock.json }
+      - name: Install matching PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Verify Transportation restored-school safety contract
+        working-directory: backend
+        run: npm run test:transportation:restored-rehearsal
+      - name: Restore, adopt, reconcile and roll back Transportation
+        working-directory: backend
+        run: npm run db:transportation:restored-rehearsal -- --out "$RUNNER_TEMP/existing-school-transportation-report.json"
+      - name: Retain non-secret Transportation rehearsal evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: existing-school-transportation-rehearsal
+          path: ${{ runner.temp }}/existing-school-transportation-report.json
+          if-no-files-found: error
+
+  existing-school-finance-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wattanam
+          POSTGRES_PASSWORD: rehearsal-password
+          POSTGRES_DB: source_finance
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U wattanam -d source_finance"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      EXISTING_SCHOOL_REHEARSAL_ALLOW: finance-only
+      SOURCE_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/source_finance
+      REHEARSAL_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/restored_finance
+      BACKUP_DIR: /tmp/existing-school-finance-rehearsal
+      REHEARSAL_SCHOOL_SLUG: restored-finance-school
+      FINANCE_CURRENCY: USD
+      FINANCE_MINOR_EXPONENT: 2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: backend/package-lock.json }
+      - name: Install matching PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Verify Finance restored-school safety contract
+        working-directory: backend
+        run: npm run test:finance:restored-rehearsal
+      - name: Restore, adopt, reconcile and roll back Finance
+        working-directory: backend
+        run: npm run db:finance:restored-rehearsal -- --out "$RUNNER_TEMP/existing-school-finance-report.json"
+      - name: Retain non-secret Finance rehearsal evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: existing-school-finance-rehearsal
+          path: ${{ runner.temp }}/existing-school-finance-report.json
+          if-no-files-found: error
+
+  existing-school-parent-portal-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wattanam
+          POSTGRES_PASSWORD: rehearsal-password
+          POSTGRES_DB: source_parent_portal
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U wattanam -d source_parent_portal"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      EXISTING_SCHOOL_REHEARSAL_ALLOW: parent-portal-only
+      SOURCE_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/source_parent_portal
+      REHEARSAL_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/restored_parent_portal
+      BACKUP_DIR: /tmp/existing-school-parent-portal-rehearsal
+      REHEARSAL_SCHOOL_SLUG: restored-parent-school
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: backend/package-lock.json }
+      - name: Install matching PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Verify Parent Portal restored-school safety contract
+        working-directory: backend
+        run: npm run test:parent-portal:restored-rehearsal
+      - name: Restore, adopt, reconcile and roll back Parent Portal
+        working-directory: backend
+        run: npm run db:parent-portal:restored-rehearsal -- --out "$RUNNER_TEMP/existing-school-parent-portal-report.json"
+      - name: Retain non-secret Parent Portal rehearsal evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: existing-school-parent-portal-rehearsal
+          path: ${{ runner.temp }}/existing-school-parent-portal-report.json
+          if-no-files-found: error
+
+  existing-school-communication-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wattanam
+          POSTGRES_PASSWORD: rehearsal-password
+          POSTGRES_DB: source_communication
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U wattanam -d source_communication"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      EXISTING_SCHOOL_REHEARSAL_ALLOW: communication-only
+      SOURCE_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/source_communication
+      REHEARSAL_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/restored_communication
+      BACKUP_DIR: /tmp/existing-school-communication-rehearsal
+      REHEARSAL_SCHOOL_SLUG: restored-communication-school
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: backend/package-lock.json }
+      - name: Install matching PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Verify Communication restored-school safety contract
+        working-directory: backend
+        run: npm run test:communication:restored-rehearsal
+      - name: Restore, adopt, reconcile and roll back Communication
+        working-directory: backend
+        run: npm run db:communication:restored-rehearsal -- --out "$RUNNER_TEMP/existing-school-communication-report.json"
+      - name: Retain non-secret Communication rehearsal evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: existing-school-communication-rehearsal
+          path: ${{ runner.temp }}/existing-school-communication-report.json
+          if-no-files-found: error
+
+  existing-school-reporting-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wattanam
+          POSTGRES_PASSWORD: rehearsal-password
+          POSTGRES_DB: source_reporting
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U wattanam -d source_reporting"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      EXISTING_SCHOOL_REHEARSAL_ALLOW: reporting-only
+      SOURCE_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/source_reporting
+      REHEARSAL_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/restored_reporting
+      BACKUP_DIR: /tmp/existing-school-reporting-rehearsal
+      REHEARSAL_SCHOOL_SLUG: restored-reporting-school
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: backend/package-lock.json }
+      - name: Install matching PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Verify Reporting restored-school safety contract
+        working-directory: backend
+        run: npm run test:reporting:restored-rehearsal
+      - name: Restore and certify Reporting parity
+        working-directory: backend
+        run: npm run db:reporting:restored-rehearsal -- --out "$RUNNER_TEMP/existing-school-reporting-report.json"
+      - name: Retain non-secret Reporting rehearsal evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: existing-school-reporting-rehearsal
+          path: ${{ runner.temp }}/existing-school-reporting-report.json
+          if-no-files-found: error
+
+  existing-school-human-resources-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: { POSTGRES_USER: wattanam, POSTGRES_PASSWORD: rehearsal-password, POSTGRES_DB: source_hr }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U wattanam -d source_hr"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      EXISTING_SCHOOL_REHEARSAL_ALLOW: human-resources-only
+      SOURCE_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/source_hr
+      REHEARSAL_DATABASE_URL: postgresql://wattanam:rehearsal-password@localhost:5432/restored_hr
+      BACKUP_DIR: /tmp/existing-school-human-resources-rehearsal
+      REHEARSAL_SCHOOL_SLUG: restored-hr-school
+      HR_CURRENCY: USD
+      HR_MINOR_EXPONENT: 2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: backend/package-lock.json }
+      - name: Install matching PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Verify Human Resources restored-school safety contract
+        working-directory: backend
+        run: npm run test:human-resources:restored-rehearsal
+      - name: Restore, adopt, reconcile and roll back Human Resources
+        working-directory: backend
+        run: npm run db:human-resources:restored-rehearsal -- --out "$RUNNER_TEMP/existing-school-human-resources-report.json"
+      - name: Retain non-secret Human Resources rehearsal evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: existing-school-human-resources-rehearsal
+          path: ${{ runner.temp }}/existing-school-human-resources-report.json
+          if-no-files-found: error
 
   secret-scan:
     runs-on: ubuntu-latest
@@ -140,6 +1176,8 @@ jobs:
           - Dockerfile
           - frontend/Dockerfile
           - backend/Dockerfile
+          - backend/Dockerfile.core
+          - frontend/Dockerfile.core
           - apps/marketplace-api/Dockerfile
           - infrastructure/railway/platform-admin.Dockerfile
           - infrastructure/gateway/Dockerfile

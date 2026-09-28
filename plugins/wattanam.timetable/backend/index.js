@@ -58,6 +58,7 @@ function hydrateTimetable(document, loaded) {
 
 module.exports = {
   id: 'wattanam.timetable',
+  health() { return { status: 'ready' }; },
   async activate(context) {
     context.permissions.register([
       { id: 'wattanam.timetable.view', label: 'View timetables' },
@@ -66,7 +67,7 @@ module.exports = {
       { id: 'wattanam.timetable.attendance.manage', label: 'Record teacher lesson attendance' },
     ]);
     context.navigation.register([
-      { id: 'timetables', label: 'Timetable', href: '/plugins/wattanam.timetable/timetables', permission: 'wattanam.timetable.view' },
+      { id: 'timetables', label: 'Timetable', href: '/plugins/wattanam.timetable/timetables', permission: 'wattanam.timetable.view', dashboard: { title: 'Timetable', description: 'Build schedules, manage rooms, and track teacher lesson attendance.', priority: 120 } },
       { id: 'subjects', label: 'Timetable Subjects', href: '/plugins/wattanam.timetable/subjects', permission: 'wattanam.timetable.view' },
       { id: 'classes', label: 'Timetable Classes', href: '/plugins/wattanam.timetable/classes', permission: 'wattanam.timetable.view' },
       { id: 'classrooms', label: 'Classrooms', href: '/plugins/wattanam.timetable/classrooms', permission: 'wattanam.timetable.view' },
@@ -84,8 +85,8 @@ module.exports = {
       const body = request?.body || {};
       const id = randomUUID();
       await context.database.execute(
-        `INSERT INTO ${TABLE} ("id","name","short","academicYear","periodsPerDay","numberOfDays","weekend","timeOffRules","distribution","homeworkPrep","maxOnDay","docNotes") VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb,$9::jsonb,$10::jsonb,$11,$12)`,
-        [id, text(body.name, 'name'), optional(body.short, 50), text(body.academicYear, 'academicYear', 100), integer(body.periodsPerDay, 'periodsPerDay', 1, 24, 8), integer(body.numberOfDays, 'numberOfDays', 1, 7, 5), json(body.weekend ?? ['SATURDAY', 'SUNDAY'], 'weekend'), json(body.timeOffRules, 'timeOffRules'), json(body.distribution, 'distribution'), json(body.homeworkPrep, 'homeworkPrep'), body.maxOnDay == null || body.maxOnDay === '' ? null : integer(body.maxOnDay, 'maxOnDay', 1, 24), optional(body.docNotes, 5000)],
+        `INSERT INTO ${TABLE} ("id","name","short","academicYear","periodsPerDay","numberOfDays","weekend","periodTimes","timeOffRules","distribution","homeworkPrep","maxOnDay","docNotes") VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb,$9::jsonb,$10::jsonb,$11::jsonb,$12,$13)`,
+        [id, text(body.name, 'name'), optional(body.short, 50), text(body.academicYear, 'academicYear', 100), integer(body.periodsPerDay, 'periodsPerDay', 1, 24, 8), integer(body.numberOfDays, 'numberOfDays', 1, 7, 5), json(body.weekend ?? ['SATURDAY', 'SUNDAY'], 'weekend'), json(body.periodTimes, 'periodTimes'), json(body.timeOffRules, 'timeOffRules'), json(body.distribution, 'distribution'), json(body.homeworkPrep, 'homeworkPrep'), body.maxOnDay == null || body.maxOnDay === '' ? null : integer(body.maxOnDay, 'maxOnDay', 1, 24), optional(body.docNotes, 5000)],
       );
       const rows = await context.database.query(`SELECT * FROM ${TABLE} WHERE "id"=$1`, [id]);
       return serializeDocument(rows[0]);

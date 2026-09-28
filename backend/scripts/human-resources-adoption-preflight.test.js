@@ -2,7 +2,13 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { DATASETS, inspect } = require('./human-resources-adoption-preflight');
+const { DATASETS, inspect, normalizeTarget } = require('./human-resources-adoption-preflight');
+
+test('target normalization canonicalizes PostgreSQL date values', () => {
+  const row = normalizeTarget('attendance', { id: 'a1', date: new Date('2026-01-01T00:00:00Z'), checkInTime: new Date('2026-01-01T08:00:00Z'), createdAt: new Date('2026-01-01T08:00:00Z'), updatedAt: new Date('2026-01-01T08:00:00Z') });
+  assert.equal(row.date, '2026-01-01');
+  assert.equal(row.checkInTime, '2026-01-01T08:00:00.000Z');
+});
 
 function fixture(overrides = {}) {
   const rows = {

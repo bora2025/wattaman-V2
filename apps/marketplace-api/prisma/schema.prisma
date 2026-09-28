@@ -440,6 +440,36 @@ model MarketplacePlugin {
   orderLines           MarketplaceOrderLine[]
   prices               ProductPrice[]
   schoolPluginRequests SchoolPluginRequest[]
+  starterBundleItems  StarterBundleItem[]
+}
+
+/// A curated recommendation only. It never owns an artifact or entitlement: selecting it expands
+/// into the same per-plugin checkout and signed-install operations used by the normal catalog.
+model StarterBundle {
+  id          String              @id @default(uuid())
+  slug        String              @unique
+  name        String
+  description String
+  status      ReviewStatus        @default(DRAFT)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  items       StarterBundleItem[]
+
+  @@index([status, name])
+}
+
+model StarterBundleItem {
+  id           String            @id @default(uuid())
+  bundleId     String
+  pluginId     String
+  versionRange String            @default("*")
+  position     Int               @default(0)
+  required     Boolean           @default(true)
+  bundle       StarterBundle     @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  plugin       MarketplacePlugin @relation(fields: [pluginId], references: [id], onDelete: Restrict)
+
+  @@unique([bundleId, pluginId])
+  @@index([pluginId])
 }
 
 model ProductPrice {
@@ -900,6 +930,7 @@ model InstallationRegistration {
   label            String?
   lastSeenAt       DateTime?
   createdAt        DateTime                              @default(now())
+  controlGeneration Int                                  @default(0)
   /// Nullable because every installation registered before the directory existed, and because a
   /// self-hosted school may never be claimed. Unique so one directory record cannot silently
   /// describe two deployments.
@@ -986,6 +1017,7 @@ model InstallationEntitlement {
   revokedAt      DateTime?
   revokedReason  String?
   tokenId        String                   @unique
+  generation     Int                      @default(1)
   signedToken    Json
   createdAt      DateTime                 @default(now())
   updatedAt      DateTime                 @updatedAt

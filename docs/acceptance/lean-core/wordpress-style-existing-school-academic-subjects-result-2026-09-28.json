@@ -1,0 +1,17 @@
+{
+  "format": "wattanam-existing-school-academic-subjects-rehearsal-v1",
+  "passed": true,
+  "sourceDatabase": "source_subjects",
+  "targetDatabase": "restored_subjects",
+  "schoolSlug": "restored-subjects-school",
+  "backupFile": "wattanam-20260928T063738Z.dump",
+  "legacyClasses": 3,
+  "canonicalSubjects": 2,
+  "sourceSha256": "f8f03383b96a5132a0c9cd25b30a3af197176417cb5ec06933b8c5f301a014f1",
+  "targetSha256": "f8f03383b96a5132a0c9cd25b30a3af197176417cb5ec06933b8c5f301a014f1",
+  "dryRunZeroWrite": true,
+  "adopted": true,
+  "rolledBack": true,
+  "legacyPreserved": true,
+  "pluginDataPreserved": true
+}

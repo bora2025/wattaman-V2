@@ -3,8 +3,8 @@
 Status: normalized employee/CV, payroll and staff-attendance foundation plus a guarded six-dataset
 exact-only adoption/reconciliation/rollback toolkit implemented locally. Version 0.1.2 publishes
 an actor-free staff attendance projection for Reporting and a title-only document profile for
-Document Designer; restored-backup execution,
-privacy/payroll approval and lifecycle certification remain open.
+Document Designer. Local restored-backup execution now passes; hosted execution, privacy/payroll
+approval and lifecycle certification remain open.
 
 ## Ownership boundary
 
@@ -26,8 +26,8 @@ payroll and attendance pages keep profile, payroll approval and attendance autho
 
 1. Approve payroll currency/exponent, blocked historical rows and the missing independent-approver
    provenance policy; the existing preflight never rounds implicitly.
-2. Execute the six-dataset backup-bound adoption and rollback toolkit against a restored
-   production-like PostgreSQL backup.
+2. [x] Execute the six-dataset backup-bound adoption and rollback toolkit against a representative
+   restored PostgreSQL 16 backup ([evidence](../acceptance/lean-core/wordpress-style-existing-school-human-resources-rehearsal-2026-09-28.md)); hosted production-like execution remains open.
 3. Add employee self-service row scope and manager/department authorization.
 4. Add payroll adjustment/void audit events, payslip rendering and retention/export controls.
 5. Complete privacy, payroll, security, PostgreSQL concurrency, hosted lifecycle and pilot approval.

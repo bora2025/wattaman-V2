@@ -15,7 +15,8 @@ test('LC2-002: every supported deployment path preserves legacy-full until expli
 
   assert.match(environment, /WATTANAM_DISTRIBUTION\?\.trim\(\)\.toLowerCase\(\) \|\| 'legacy-full'/);
   assert.equal((compose.match(/WATTANAM_DISTRIBUTION: \$\{WATTANAM_DISTRIBUTION:-legacy-full\}/g) || []).length, 2);
-  assert.match(provisioner, /WATTANAM_DISTRIBUTION: 'legacy-full'/);
+  assert.match(provisioner, /arg\('distribution'\) \|\| 'legacy-full'/);
+  assert.match(provisioner, /WATTANAM_DISTRIBUTION: distribution/);
   assert.match(rootExample, /^WATTANAM_DISTRIBUTION=legacy-full$/m);
   assert.match(backendExample, /^WATTANAM_DISTRIBUTION=legacy-full$/m);
   assert.doesNotMatch(provisioner, /WATTANAM_DISTRIBUTION: 'core'/);

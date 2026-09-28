@@ -16,7 +16,7 @@ function keyPair() {
 function envelope(privateKeyPem: string, keyId: string, overrides: Record<string, unknown> = {}) {
   const now = new Date('2026-08-28T00:00:00.000Z');
   const payload = {
-    schemaVersion: 1, tokenId: 'token-1', installationId, customerId: 'customer-1', productId,
+    schemaVersion: 1, generation: 1, status: 'ACTIVE', tokenId: 'token-1', installationId, customerId: 'customer-1', productId,
     licensedMajorRange: '^1.0.0', issuedAt: now.toISOString(), notBefore: now.toISOString(),
     expiresAt: new Date(now.getTime() + 86_400_000).toISOString(), updatesThrough: new Date(now.getTime() + 43_200_000).toISOString(),
     offlineRecheckAfter: new Date(now.getTime() + 3_600_000).toISOString(), features: [], issuer: 'https://marketplace.example',

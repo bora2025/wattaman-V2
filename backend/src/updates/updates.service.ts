@@ -10,10 +10,12 @@ import { BackupService } from '../backup/backup.service';
 import { maintenanceFlagPath, updateStateDirectory } from './maintenance-mode.middleware';
 import { readUpdateRepositoryConfig } from './update-config';
 import { verifyRepositoryEnvelope } from './repository-signature';
+import { pluginInstallConsentDigest, pluginInstallDisclosure } from '../marketplace/plugin-install-consent';
+import { PluginEntitlementPolicyService } from '../plugins/plugin-entitlement-policy.service';
 
 @Injectable()
 export class UpdatesService {
-  constructor(private readonly prisma: PrismaService, private readonly plugins: PluginsService, private readonly backup: BackupService) {}
+  constructor(private readonly prisma: PrismaService, private readonly plugins: PluginsService, private readonly backup: BackupService, private readonly entitlements: PluginEntitlementPolicyService) {}
 
   async check() {
     const config = readUpdateRepositoryConfig();
@@ -49,7 +51,8 @@ export class UpdatesService {
     };
   }
 
-  async installPlugin(pluginId: string, version: string) {
+  async installPlugin(pluginId: string, version: string, consentDigest: string) {
+    await this.entitlements.assertCanUpdate(pluginId);
     const config = readUpdateRepositoryConfig();
     if (!config) throw new ServiceUnavailableException('Update repository is not configured');
     if (!semver.valid(version)) throw new BadRequestException('version must be semantic versioning');
@@ -57,6 +60,9 @@ export class UpdatesService {
     const payload = await this.index(config, coreVersion);
     const release = payload.pluginReleases.find((candidate: any) => candidate.pluginId === pluginId && candidate.version === version);
     if (!release) throw new NotFoundException('Compatible repository release not found');
+    if (!/^[a-f0-9]{64}$/.test(consentDigest) || consentDigest !== pluginInstallConsentDigest(release.manifest)) {
+      throw new BadRequestException('Plugin update capabilities changed or were not approved; review the update disclosure again');
+    }
     const download = new URL(release.downloadUrl);
     if (download.origin !== config.url || !download.pathname.startsWith('/v1/artifacts/')) throw new BadGatewayException('Repository returned an untrusted artifact URL');
     if (!/^[a-f0-9]{64}$/.test(release.sha256)) throw new BadGatewayException('Repository returned an invalid artifact checksum');
@@ -194,10 +200,12 @@ export class UpdatesService {
   }
 
   private publicRelease(release: any) {
+    const disclosure = pluginInstallDisclosure(release.manifest);
     return {
       pluginId: release.pluginId, name: release.name, version: release.version, publisher: release.publisher,
       requiresCore: release.requiresCore, channel: release.channel, paid: release.paid,
       changelog: release.changelog, sha256: release.sha256, sizeBytes: release.sizeBytes,
+      ...disclosure, consentDigest: pluginInstallConsentDigest(release.manifest),
     };
   }
 }

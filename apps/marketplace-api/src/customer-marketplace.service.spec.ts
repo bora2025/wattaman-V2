@@ -12,13 +12,25 @@ describe('CustomerMarketplaceService', () => {
       publisher: { slug: 'wattanam', displayName: 'Wattanam Official' },
       prices: [{ id: ids.price, currency: 'USD', amountMinor: 2500, licensedMajor: 1, updatesDays: 365, licenseDays: 3650 }],
       versions: [
-        { version: '1.1.0', requiresCore: '^1.0.0', changelog: 'Current', publishedAt: new Date(), artifact: { sha256: 'a'.repeat(64), sizeBytes: 100 } },
+        { version: '1.1.0', requiresCore: '^1.0.0', changelog: 'Current', publishedAt: new Date(), artifact: { sha256: 'a'.repeat(64), sizeBytes: 100 }, manifestJson: {
+          capabilities: ['database.read', 'database.write'], permissions: ['official.attendance.view'],
+          dependencies: { 'official.academic': '^1.0.0' }, optionalDependencies: { 'official.messaging': '^1.0.0' },
+          migrations: [{ id: '001', destructive: false }], backendEntry: 'backend/index.js',
+        } },
         { version: '2.0.0', requiresCore: '^2.0.0', changelog: 'Future', publishedAt: new Date(), artifact: { sha256: 'b'.repeat(64), sizeBytes: 100 } },
       ], entitlements: [],
     }]) } };
     const result = await new CustomerMarketplaceService(prisma, {} as any).catalog('1.4.0');
     expect(result[0]).toMatchObject({ id: 'official.attendance', paid: true, compatible: true, ownership: undefined });
     expect(result[0].versions.map((item) => item.version)).toEqual(['1.1.0']);
+    expect(result[0].versions[0]).toMatchObject({
+      capabilities: ['database.read', 'database.write'], permissions: ['official.attendance.view'],
+      dependencies: { 'official.academic': '^1.0.0' }, optionalDependencies: { 'official.messaging': '^1.0.0' },
+      migrationSummary: { count: 1, destructive: false },
+      dataRetention: { onDeactivate: 'preserve', onRemove: 'preserve', onReinstall: 'adopt' },
+    });
+    expect(result[0].versions[0]).not.toHaveProperty('backendEntry');
+    expect(result[0].versions[0].consentDigest).toMatch(/^[a-f0-9]{64}$/);
   });
 
   it('derives checkout ownership from the authenticated account', async () => {

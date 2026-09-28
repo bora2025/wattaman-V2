@@ -118,7 +118,8 @@ async function fingerprintNormalized(readChunk, options) {
       const rows = await readChunk(dataset.name, { after: cursor, limit: batchSize });
       if (!Array.isArray(rows) || rows.length > batchSize) throw new Error(`${dataset.name} adapter returned invalid chunk`);
       if (!rows.length) break;
-      for (const row of rows) {
+      for (const source of rows) {
+        const row = normalizeTarget(dataset.name, source);
         if (previous !== null && String(row.id) <= previous) throw new Error(`${dataset.name} rows must have increasing IDs`);
         validate(dataset.name, row, blockers); previous = String(row.id); count += 1;
         hash.update(`${JSON.stringify(canonical(row))}\n`);
@@ -141,6 +142,15 @@ async function inspect(adapter, options) {
   return { format: 'wattanam-human-resources-adoption-preflight-v1', readOnly: true, ready: blockers.length === 0, blockers: [...new Set(blockers)], conversion: { policy: 'EXACT_ONLY', currency: source.currency, minorExponent: source.minorExponent }, source: { datasets: source.datasets, sha256: source.sha256 }, target, exclusions: ['employee names', 'profile summaries', 'work descriptions', 'salary notes', 'location labels'], provenanceWarnings: ['Legacy paid salary rows have no independent approver identity and require payroll approval before adoption.'], nextStep: 'Obtain payroll/privacy approval and create a verified school-bound backup' };
 }
 
+function normalizeTarget(name, row) {
+  const result = { ...row };
+  const dateOnly = name === 'experience' ? ['startDate', 'endDate'] : name === 'certifications' ? ['issueDate'] : name === 'attendance' ? ['date', 'permissionStartDate', 'permissionEndDate'] : [];
+  const timestamps = name === 'profiles' ? ['updatedAt'] : ['education', 'experience', 'certifications'].includes(name) ? ['createdAt', 'updatedAt'] : name === 'salaries' ? ['paidAt', 'createdAt', 'updatedAt'] : name === 'attendance' ? ['checkInTime', 'checkOutTime', 'createdAt', 'updatedAt'] : [];
+  for (const key of dateOnly) result[key] = date(result[key], true);
+  for (const key of timestamps) result[key] = date(result[key]);
+  return result;
+}
+
 function productionAdapter(prisma) {
   const models = { profiles: prisma.staffProfile, education: prisma.staffEducation, experience: prisma.staffWorkExperience, certifications: prisma.staffCertification, salaries: prisma.salary, attendance: prisma.staffAttendance };
   return { readSourceChunk: (name, { after, limit }) => models[name].findMany({ ...(after ? { cursor: { id: after }, skip: 1 } : {}), orderBy: { id: 'asc' }, take: limit }), targetState: async (table) => { const found = await prisma.$queryRawUnsafe(`SELECT to_regclass('public.${table}') IS NOT NULL AS "exists"`); const exists = found[0]?.exists === true; const rows = exists ? await prisma.$queryRawUnsafe(`SELECT COUNT(*)::int AS "count" FROM "${table}"`) : []; return { table, exists, rowCount: exists ? Number(rows[0]?.count || 0) : 0 }; } };
@@ -153,4 +163,4 @@ async function main() {
   finally { await prisma.$disconnect(); }
 }
 if (require.main === module) main().catch((error) => { process.stderr.write(`Human Resources adoption preflight failed: ${error.message}\n`); process.exitCode = 1; });
-module.exports = { DATASETS, canonical, fingerprint, fingerprintNormalized, inspect, normalize, productionAdapter };
+module.exports = { DATASETS, canonical, fingerprint, fingerprintNormalized, inspect, normalize, normalizeTarget, productionAdapter };

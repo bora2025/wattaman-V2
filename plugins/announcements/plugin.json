@@ -3,7 +3,7 @@
   "id": "wattanam.announcements",
   "name": "Wattanam Announcements",
   "description": "Official reference plugin proving routes, settings, storage, jobs, migrations, permissions, navigation, and events.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -43,4 +43,5 @@
   "supportedLanguages": ["en", "km"],
   "supportUrl": "https://wattanam.example/support/announcements",
   "privacyUrl": "https://wattanam.example/privacy/plugins/announcements"
+  ,"operational": { "healthCheck": "runtime", "dataClassification": ["personal-data", "communications"], "backup": { "database": "required", "files": "required", "restore": "required" }, "uninstall": { "dataRetention": "preserve" }, "pricing": "marketplace" }
 }

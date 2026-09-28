@@ -3,6 +3,10 @@
 const nextConfig = {
   // Standalone output for Docker deployment
   output: 'standalone',
+  // Keep standalone traces rooted in the selected source tree. For the physical core build this
+  // is the isolated `.core-build` workspace, preventing the runner layout from being nested under
+  // an inferred parent workspace because both source trees have lockfiles.
+  outputFileTracingRoot: __dirname,
 
   // Enable gzip/brotli compression
   compress: true,

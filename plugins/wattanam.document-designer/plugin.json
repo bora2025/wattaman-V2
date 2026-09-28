@@ -3,7 +3,7 @@
   "id": "wattanam.document-designer",
   "name": "Document Designer",
   "description": "Official Wattanam templates, cards, certificates, QR assets, generation, and print workflows.",
-  "version": "0.1.4",
+  "version": "0.1.7",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -26,5 +26,8 @@
   "navigation": [
     { "id": "templates", "label": "Document Designer", "href": "/plugins/wattanam.document-designer/templates", "permission": "wattanam.document-designer.view" }
   ],
-  "supportedLanguages": ["en", "km"]
+  "supportedLanguages": ["en", "km"],
+  "supportUrl": "https://wattanam.example/support/document-designer",
+  "privacyUrl": "https://wattanam.example/privacy/plugins/document-designer",
+  "operational": { "healthCheck": "runtime", "dataClassification": ["personal-data", "generated-documents"], "backup": { "database": "required", "files": "required", "restore": "required" }, "uninstall": { "dataRetention": "preserve" }, "pricing": "marketplace" }
 }

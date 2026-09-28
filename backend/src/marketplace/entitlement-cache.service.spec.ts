@@ -18,7 +18,7 @@ function keyPair() {
 
 function signedEntitlement(privateKeyPem: string, keyId: string, now: Date, overrides: Record<string, unknown> = {}) {
   const payload = {
-    schemaVersion: 1, tokenId: 'token-1', installationId: 'school-public-id', customerId: 'customer-1', productId: pluginId,
+    schemaVersion: 1, generation: 1, status: 'ACTIVE', tokenId: 'token-1', installationId: 'school-public-id', customerId: 'customer-1', productId: pluginId,
     licensedMajorRange: '^1.0.0', issuedAt: now.toISOString(), notBefore: now.toISOString(),
     expiresAt: new Date(now.getTime() + 86_400_000).toISOString(), updatesThrough: new Date(now.getTime() + 43_200_000).toISOString(),
     offlineRecheckAfter: new Date(now.getTime() + 3_600_000).toISOString(), features: [], issuer: 'https://marketplace.example',
@@ -65,6 +65,15 @@ describe('EntitlementCacheService', () => {
     const result = await service.refreshOne(pluginId, now);
     expect(result).toMatchObject({ pluginId, status: 'ACTIVE', consecutiveFailures: 0 });
     expect(prisma.pluginEntitlementCache.upsert.mock.calls[0][0].create.tokenId).toBe('token-1');
+    expect(prisma.pluginEntitlementCache.upsert.mock.calls[0][0].create.generation).toBe(1);
+  });
+
+  it('rejects an unsigned transport status that contradicts the signed status', async () => {
+    const token = signedEntitlement(entitlement.privateKey, 'entitlement-2026', now);
+    jest.spyOn(global, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'REVOKED', signedToken: token }), { status: 200 }));
+    await service.refreshOne(pluginId, now);
+    expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'entitlement_verification_failed', success: false }));
+    expect(prisma.pluginEntitlementCache.upsert).toHaveBeenCalledWith(expect.objectContaining({ update: expect.objectContaining({ lastError: 'Entitlement verification failed' }) }));
   });
 
   it('leaves the cache completely untouched when the marketplace is unreachable', async () => {
@@ -143,6 +152,22 @@ describe('EntitlementCacheService', () => {
     await expect(service.importOne(pluginId, token, now)).resolves.toMatchObject({ pluginId, status: 'ACTIVE', tokenId: 'token-1' });
     expect(fetchMock).not.toHaveBeenCalled();
     expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'entitlement_offline_imported', success: true }));
+  });
+
+  it('rejects an older signed generation during refresh without overwriting the last-known-good token', async () => {
+    prisma.pluginEntitlementCache.findUnique.mockResolvedValue({ pluginId, status: 'ACTIVE', generation: 2, tokenId: 'token-2', consecutiveFailures: 0, lastRefreshAttemptAt: null });
+    const token = signedEntitlement(entitlement.privateKey, 'entitlement-2026', now, { generation: 1 });
+    jest.spyOn(global, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'ACTIVE', signedToken: token }), { status: 200 }));
+    await service.refreshOne(pluginId, now);
+    expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'entitlement_verification_failed', success: false }));
+    expect(prisma.pluginEntitlementCache.upsert).toHaveBeenCalledWith(expect.objectContaining({ update: expect.objectContaining({ lastError: 'Entitlement verification failed' }) }));
+  });
+
+  it('rejects an older signed generation during offline import', async () => {
+    prisma.pluginEntitlementCache.findUnique.mockResolvedValue({ pluginId, status: 'ACTIVE', generation: 2, tokenId: 'token-2' });
+    const token = signedEntitlement(entitlement.privateKey, 'entitlement-2026', now, { generation: 1 });
+    await expect(service.importOne(pluginId, token, now)).rejects.toThrow('invalid');
+    expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'entitlement_offline_import_failed', success: false }));
   });
 
   it('rejects and audits a tampered offline token without overwriting the cache', async () => {

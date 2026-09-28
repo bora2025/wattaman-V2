@@ -62,4 +62,16 @@ describe('createTestContext', () => {
     await expect(harness.context.database.query('SELECT * FROM plugin_acme_widget_rows', [])).resolves.toEqual([{ id: 'row-1' }]);
     await expect(harness.context.directory.resolveAudience({ audience: 'SCHOOL' })).resolves.toHaveLength(1);
   });
+
+  it('provides deterministic SDK 1.1 account command fixtures', async () => {
+    const harness = createTestContext();
+    await expect(harness.context.accounts.resolveParent({
+      commandKey: 'request-1', name: 'Parent', email: 'parent@example.com', passwordHash: 'hash',
+    })).resolves.toEqual({
+      id: 'parent-request-1', name: 'Parent', role: 'PARENT', email: 'parent@example.com', phone: null, created: true,
+    });
+    await expect(harness.context.accounts.assignGuardian({
+      studentUserId: 'student-1', parentId: 'parent-request-1', idempotencyKey: 'link-1',
+    })).resolves.toBeUndefined();
+  });
 });

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.3
+
+- Declare the operational contract and expose the standard runtime health probe.
+
 ## 0.1.2
 
 - Publish student-keyed message activity counts for Parent Portal after send/read mutations.

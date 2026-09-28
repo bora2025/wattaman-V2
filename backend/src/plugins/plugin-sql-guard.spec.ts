@@ -16,4 +16,9 @@ describe('plugin-sql-guard', () => {
     expect(() => assertNoForbiddenSql('GRANT ALL ON plugin_wattanam_test_notes TO public', 'x')).toThrow('forbidden');
     expect(() => assertNoForbiddenSql('COPY plugin_wattanam_test_notes TO STDOUT', 'x')).toThrow('forbidden');
   });
+
+  it('ignores forbidden-operation words in comments but still scans following SQL', () => {
+    expect(() => assertNoForbiddenSql('-- preserve rows for rollback\nALTER TABLE plugin_wattanam_test_notes ADD COLUMN value TEXT', 'x')).not.toThrow();
+    expect(() => assertNoForbiddenSql('/* rollback documentation */\nGRANT ALL ON plugin_wattanam_test_notes TO public', 'x')).toThrow('forbidden');
+  });
 });

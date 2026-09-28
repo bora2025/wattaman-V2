@@ -32,7 +32,7 @@ async function mark(db, body, checkIn = new Date().toISOString()) {
     const teachers = await tx.query(`SELECT "id" FROM ${TEACHER} WHERE "id"=$1 FOR SHARE`, [teacherId]);
     if (!teachers.length) throw new Error('Timetable teacher not found');
     const id = randomUUID();
-    await tx.execute(`INSERT INTO ${ATTENDANCE} ("id","teacherId","date","period","status","checkIn") VALUES ($1,$2,$3::date,$4,$5,$6) ON CONFLICT ("teacherId","date","period") DO UPDATE SET "status"=EXCLUDED."status","checkIn"=EXCLUDED."checkIn","updatedAt"=CURRENT_TIMESTAMP`, [id, teacherId, date, lessonPeriod, state, checkIn]);
+    await tx.execute(`INSERT INTO ${ATTENDANCE} ("id","teacherId","date","period","status","checkIn") VALUES ($1,$2,$3::date,$4,$5,$6::timestamptz) ON CONFLICT ("teacherId","date","period") DO UPDATE SET "status"=EXCLUDED."status","checkIn"=EXCLUDED."checkIn","updatedAt"=CURRENT_TIMESTAMP`, [id, teacherId, date, lessonPeriod, state, checkIn]);
     const rows = await tx.query(`SELECT * FROM ${ATTENDANCE} WHERE "teacherId"=$1 AND "date"=$2::date AND "period"=$3`, [teacherId, date, lessonPeriod]);
     return rows[0];
   });

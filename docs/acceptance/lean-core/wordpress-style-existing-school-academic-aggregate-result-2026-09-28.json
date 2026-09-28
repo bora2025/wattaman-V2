@@ -1,0 +1,120 @@
+{
+  "format": "wattanam-existing-school-academic-aggregate-rehearsal-v1",
+  "passed": true,
+  "sourceDatabase": "source_school",
+  "targetDatabase": "restored_school",
+  "schoolSlug": "restored-academic-aggregate-school",
+  "backupFile": "wattanam-20260928T071344Z.dump",
+  "ready": true,
+  "blockers": [],
+  "source": {
+    "departments": {
+      "departmentCount": 2,
+      "membershipCount": 2,
+      "sha256": "e86a12c59ac8c15c66e226c2b865613aa65e6d65f55e1830dd46921ff0cb37ed"
+    },
+    "studyYears": {
+      "studyYearCount": 2,
+      "currentCount": 1,
+      "sha256": "d7930a0e9bdb4045061ab0f388fab90cb470914893b60dddf7fd8925985a6052"
+    },
+    "classes": {
+      "classCount": 7,
+      "sha256": "521951193dd1e25f111aed1f3477cfcdba9624d4b60c5ab3a888d774289f70cf"
+    },
+    "admissions": {
+      "registrationCount": 2,
+      "fieldCount": 1,
+      "settingsPresent": true,
+      "statusCounts": {
+        "pending": 1,
+        "approved": 0,
+        "rejected": 1,
+        "other": 0
+      },
+      "sha256": "7619fdb74315bd95b0eca97b7d9da2b2c23dcee2a609b498905f7ff3f1841357"
+    },
+    "studentProfiles": {
+      "studentProfileCount": 4,
+      "duplicateUserCount": 0,
+      "duplicateQrCount": 0,
+      "invalidSexCount": 0,
+      "invalidDateCount": 0,
+      "sha256": "d87034abfd9f7f279525baa3657b152ce9d203c0fd33fc63e5376ae2187fff01"
+    },
+    "enrollment": {
+      "intervalCount": 2,
+      "sha256": "b147780c24f98157abe25eb398597040bfb60e902317b42d44d3ed560e8a4fe7"
+    },
+    "subjects": {
+      "classCount": 7,
+      "subjectCount": 3,
+      "sha256": "4bab8d435053ee64566038b031cf07269d46fb161815c62004e20b98cc5f9c16"
+    }
+  },
+  "target": {
+    "departments": {
+      "departmentCount": 2,
+      "membershipCount": 2,
+      "sha256": "e86a12c59ac8c15c66e226c2b865613aa65e6d65f55e1830dd46921ff0cb37ed"
+    },
+    "studyYears": {
+      "studyYearCount": 2,
+      "currentCount": 1,
+      "sha256": "d7930a0e9bdb4045061ab0f388fab90cb470914893b60dddf7fd8925985a6052"
+    },
+    "classes": {
+      "classCount": 7,
+      "sha256": "521951193dd1e25f111aed1f3477cfcdba9624d4b60c5ab3a888d774289f70cf"
+    },
+    "admissions": {
+      "registrationCount": 2,
+      "fieldCount": 1,
+      "settingsPresent": true,
+      "statusCounts": {
+        "pending": 1,
+        "approved": 0,
+        "rejected": 1,
+        "other": 0
+      },
+      "sha256": "7619fdb74315bd95b0eca97b7d9da2b2c23dcee2a609b498905f7ff3f1841357"
+    },
+    "studentProfiles": {
+      "studentProfileCount": 4,
+      "duplicateUserCount": 0,
+      "duplicateQrCount": 0,
+      "invalidSexCount": 0,
+      "invalidDateCount": 0,
+      "sha256": "d87034abfd9f7f279525baa3657b152ce9d203c0fd33fc63e5376ae2187fff01"
+    },
+    "enrollment": {
+      "intervalCount": 2,
+      "sha256": "b147780c24f98157abe25eb398597040bfb60e902317b42d44d3ed560e8a4fe7"
+    },
+    "subjects": {
+      "classCount": 3,
+      "subjectCount": 3,
+      "sha256": "4bab8d435053ee64566038b031cf07269d46fb161815c62004e20b98cc5f9c16"
+    }
+  },
+  "journals": {
+    "departments": "reconciled",
+    "memberships": "reconciled",
+    "studyYears": "reconciled",
+    "classes": "reconciled",
+    "admissions": "reconciled",
+    "studentProfiles": "reconciled",
+    "enrollment": "reconciled",
+    "subjects": "reconciled"
+  },
+  "plugins": {
+    "academicManagement": {
+      "status": "active",
+      "version": "0.1.12"
+    },
+    "attendanceManager": {
+      "status": "active",
+      "version": "0.1.8"
+    }
+  }
+}

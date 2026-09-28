@@ -25,7 +25,6 @@ export class InstallationController {
       timezone: dto.timezone,
       currency: dto.currency,
       acceptedLicenseVersion: dto.acceptedLicenseVersion,
-      initialPlugins: dto.initialPlugins,
     });
   }
 
@@ -37,7 +36,6 @@ export class InstallationController {
       timezone: dto.timezone,
       currency: dto.currency,
       acceptedLicenseVersion: dto.acceptedLicenseVersion,
-      initialPlugins: dto.initialPlugins,
     });
     if (!report.ok) {
       const blockers = report.checks.filter((check) => !check.ok).map((check) => `${check.name}: ${check.detail}`);

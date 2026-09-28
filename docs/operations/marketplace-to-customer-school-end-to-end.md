@@ -454,11 +454,13 @@ Use it after CI has published the images and produced the blueprint:
 ```powershell
 node tools/provision-railway-school.js `
   --blueprint .\release\school-blueprint.json `
+  --distribution core `
   --school-slug bora-school `
   --school-name 'Bora School'
 
 node tools/provision-railway-school.js `
   --blueprint .\release\school-blueprint.json `
+  --distribution core `
   --school-slug bora-school `
   --school-name 'Bora School' `
   --workspace '<RAILWAY_WORKSPACE_ID>' `
@@ -466,7 +468,11 @@ node tools/provision-railway-school.js `
   --confirm-slug bora-school
 ```
 
-The first command is a dry run. Review it before using `--execute`. Direct `railway up` deployment
+The first command is a dry run. Review it before using `--execute`. For the WordPress-style lean
+core, `--distribution core` is required: the provisioner verifies that both API and web blueprint
+variables agree and rejects a mismatch before any Railway mutation. Do not execute until CI has
+provided registry-qualified digest references plus signed release evidence; mutable tags and local
+Docker image IDs are not production release inputs. Direct `railway up` deployment
 from sections 2 and 4 is suitable for a controlled source pilot, but it is not an immutable,
 reproducible production release.
 

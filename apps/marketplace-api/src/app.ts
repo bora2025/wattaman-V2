@@ -28,6 +28,7 @@ import { platformOpenApi } from './platform-openapi';
 import { SchoolPluginRequestService } from './school-plugin-request.service';
 import { SchoolProvisioningService } from './school-provisioning.service';
 import { SchoolBillingService } from './school-billing.service';
+import { StarterBundleService } from './starter-bundle.service';
 import { PlatformRequest, requirePlatformPermission, requirePlatformSession } from './platform-rbac';
 import { actionContext } from './platform-context';
 import { createMetricsRegistry } from './observability/metrics';
@@ -75,7 +76,7 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   const identity = new IdentityService(prisma, config, transactionalEmail);
   const installationRegistration = new InstallationRegistrationService(prisma, config);
   const installationLink = new InstallationLinkService(prisma, config);
-  const entitlementAccess = new InstallationEntitlementAccessService(prisma);
+  const entitlementAccess = new InstallationEntitlementAccessService(prisma, config);
   const publisherGovernance = new PublisherGovernanceService(prisma, repository);
   const customerMarketplace = new CustomerMarketplaceService(prisma, commerce);
   const platformAuth = new PlatformAuthService(prisma, config);
@@ -89,7 +90,8 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   const customerAccounts = new CustomerAccountService(prisma, config);
   const schoolPluginRequests = new SchoolPluginRequestService(prisma, config, commerce);
   const schoolProvisioning = new SchoolProvisioningService(prisma);
-  const schoolBilling = new SchoolBillingService(prisma, transactionalEmail);
+  const schoolBilling = new SchoolBillingService(prisma, transactionalEmail, config);
+  const starterBundles = new StarterBundleService(prisma);
   app.locals.schoolBilling = schoolBilling;
   const upload = multer({ storage: multer.memoryStorage(), limits: { files: 1, fileSize: config.maxArtifactBytes, fields: 10 } });
   const metrics = createMetricsRegistry(prisma);
@@ -136,6 +138,10 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
       const session = header.startsWith('Bearer ') ? await identity.resolveSession(header.slice(7)) : undefined;
       response.json(await customerMarketplace.catalog(String(request.query.coreVersion || '') || undefined, session?.accountId));
     } catch (error) { next(error); }
+  });
+  app.get('/v1/starter-bundles', async (request, response, next) => {
+    try { response.json(await starterBundles.catalog(String(request.query.coreVersion || '') || undefined, String(request.query.currency || '') || undefined)); }
+    catch (error) { next(error); }
   });
   app.get('/v1/artifacts/:sha256', async (request, response, next) => {
     try {
@@ -303,7 +309,7 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
       const authenticated = await entitlementAccess.authenticateControl({
         installationId: request.params.installationId, ts: String(request.query.ts || ''), signature: String(request.query.signature || ''),
       });
-      response.json(await schoolBilling.installationControl(authenticated.registrationId));
+      response.json(await schoolBilling.signedInstallationControl(authenticated.registrationId));
     } catch (error) { next(error); }
   });
   // The school's own admin panel reporting a payment, signed with its installation key. No
@@ -587,6 +593,21 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   app.get('/platform/v1/plugins/:pluginId', requirePlatformOperator, P('plugins.read'), async (request, response, next) => {
     try { response.json(await platformDirectory.plugin(String(request.params.pluginId))); } catch (error) { next(error); }
   });
+  app.get('/platform/v1/starter-bundles', requirePlatformOperator, P('starter_bundles.read'), async (_request, response, next) => {
+    try { response.json(await starterBundles.adminList()); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/starter-bundles', requirePlatformOperator, P('starter_bundles.manage'), async (request: PlatformRequest, response, next) => {
+    try {
+      const { internalReason, ...input } = request.body || {};
+      response.status(201).json(await starterBundles.create(input, { operatorId: request.operatorId!, reason: String(internalReason || ''), context: actionContext(request) }));
+    } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/starter-bundles/:bundleId/publish', requirePlatformOperator, P('starter_bundles.publish'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await starterBundles.publish(String(request.params.bundleId), { operatorId: request.operatorId!, reason: String(request.body?.internalReason || ''), context: actionContext(request) })); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/starter-bundles/:bundleId/withdraw', requirePlatformOperator, P('starter_bundles.publish'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await starterBundles.withdraw(String(request.params.bundleId), { operatorId: request.operatorId!, reason: String(request.body?.internalReason || ''), context: actionContext(request) })); } catch (error) { next(error); }
+  });
   app.get('/platform/v1/submissions', requirePlatformOperator, P('plugins.review'), async (request, response, next) => {
     try { response.json(await platformDirectory.submissions(request.query)); } catch (error) { next(error); }
   });
@@ -686,6 +707,15 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
       if (!request.file?.buffer || !request.file.originalname.endsWith('.wtp')) throw new HttpError(400, 'A .wtp package is required');
       response.status(201).json(await repository.publishPlugin(request.body, request.file.buffer));
     } catch (error) { next(error); }
+  });
+  app.post('/admin/v1/starter-bundles', requireAdmin, async (request, response, next) => {
+    try { response.status(201).json(await starterBundles.create(request.body)); } catch (error) { next(error); }
+  });
+  app.post('/admin/v1/starter-bundles/:bundleId/publish', requireAdmin, async (request, response, next) => {
+    try { response.json(await starterBundles.publish(String(request.params.bundleId))); } catch (error) { next(error); }
+  });
+  app.post('/admin/v1/starter-bundles/:bundleId/withdraw', requireAdmin, async (request, response, next) => {
+    try { response.json(await starterBundles.withdraw(String(request.params.bundleId))); } catch (error) { next(error); }
   });
   app.post('/admin/v1/core-releases', requireAdmin, async (request, response, next) => {
     try { response.status(201).json(await repository.publishCoreRelease(request.body)); } catch (error) { next(error); }

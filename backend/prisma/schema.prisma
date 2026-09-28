@@ -1430,6 +1430,7 @@ model MarketplaceRegistration {
 model MarketplaceSchoolControl {
   id              String   @id @default("singleton")
   access          String   @default("ACTIVE")
+  generation      Int      @default(0)
   reason          String?
   warningsJson    String   @default("[]")
   billingJson     String   @default("{}")
@@ -1563,14 +1564,14 @@ model PluginJobRun {
 }
 
 /// Locally cached, independently-verified copy of a plugin's marketplace entitlement.
-/// A marketplace outage must never disable installed plugin functionality, so this
-/// table is read-only reference state: it is never consulted to gate plugin
-/// install/activation, only to report license status and drive future update eligibility.
+/// A marketplace outage preserves the last-known-good decision. Runtime policy uses this
+/// independently verified state to gate paid-plugin activation, updates, writes and jobs.
 model PluginEntitlementCache {
   id                     String    @id @default(uuid())
   pluginId               String    @unique
   status                 String
   tokenId                String?
+  generation             Int       @default(0)
   signedTokenJson        String?
   expiresAt              DateTime?
   updatesThrough         DateTime?

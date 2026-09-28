@@ -98,3 +98,21 @@ test('moves and resizes a bounded design element through the host visual editor'
   expect(payload.design.elements[0]).toMatchObject({ id: 'name', x: 60, y: 50, width: 210, height: 60 });
   await expect(page.getByRole('status')).toContainText('Design saved');
 });
+
+test('adds and saves a host-rendered shape without plugin HTML or script', async ({ page }) => {
+  await page.goto('/plugins/wattanam.document-designer/templates/edit/template-1');
+  await page.getByRole('button', { name: 'Add shape' }).click();
+  const shape = page.getByRole('button', { name: /^shape shape-/ });
+  await expect(shape).toBeVisible();
+  await page.getByRole('combobox', { name: 'Shape' }).selectOption('circle');
+  await page.getByRole('spinbutton', { name: 'Border width' }).fill('4');
+  await page.getByRole('button', { name: 'Add photo' }).click();
+  await page.getByRole('textbox', { name: 'Record binding' }).fill('profile.photo');
+
+  const request = page.waitForRequest((candidate) => candidate.method() === 'PATCH' && candidate.url().endsWith('/templates/template-1'));
+  await page.getByRole('button', { name: 'Save design' }).click();
+  const payload = (await request).postDataJSON();
+  expect(payload.design.elements[1]).toMatchObject({ type: 'shape', shapeType: 'circle', borderWidth: 4 });
+  expect(payload.design.elements[2]).toMatchObject({ type: 'photo', binding: 'profile.photo' });
+  await expect(page.getByRole('status')).toContainText('Design saved');
+});

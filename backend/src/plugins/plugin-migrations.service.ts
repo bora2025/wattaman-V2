@@ -23,10 +23,28 @@ const LEGACY_HEADERLESS_MIGRATIONS = new Map<string, string>([
   ['wattanam.attendance-manager:001_create_attendance_manager', 'd02277c13ddbf7b0237f7059fb389f3fef36184edbfb907ff536515ef0b69233'],
 ]);
 
+// Attendance Manager 0.1.x also shipped these additive migrations as multiple simple DDL
+// statements. Keep their published bytes immutable and permit statement splitting only for the
+// exact plugin/migration/checksum triples below. New migrations must remain one statement.
+const LEGACY_MULTI_STATEMENT_MIGRATIONS = new Map<string, string>([
+  ['wattanam.attendance-manager:001_create_attendance_manager', 'd02277c13ddbf7b0237f7059fb389f3fef36184edbfb907ff536515ef0b69233'],
+  ['wattanam.attendance-manager:003_enforce_student_boundary', 'ed92bab5dd405713b6dbbff4a40d40e0d608bb68a97d2733fd8bd084c20eb91c'],
+  ['wattanam.attendance-manager:004_add_corrections_scans_alerts_snapshots', '3d1b4733339a53a66c67a511a1ea769abcf8656882d671978261542f2891b682'],
+  ['wattanam.attendance-manager:005_add_alert_delivery_ledger', 'd7772013527176050539349faff053af05fe36f08845d12036fd2d977ac14c8d'],
+  ['wattanam.attendance-manager:006_add_legacy_adoption_fields', 'fc36b516cf8f3079a5a075527e2219108456a4c7133e9561eb70f41844c821c9'],
+]);
+
 function isChecksumPinnedLegacyMigration(manifest: PluginManifest, migrationId: string, sql: string) {
   const declaredChecksum = manifest.migrations?.find((migration) => migration.id === migrationId)?.checksum;
   const actualChecksum = createHash('sha256').update(sql, 'utf8').digest('hex');
   const legacyChecksum = LEGACY_HEADERLESS_MIGRATIONS.get(`${manifest.id}:${migrationId}`);
+  return Boolean(legacyChecksum && declaredChecksum === legacyChecksum && actualChecksum === legacyChecksum);
+}
+
+function isChecksumPinnedMultiStatementMigration(manifest: PluginManifest, migrationId: string, sql: string) {
+  const declaredChecksum = manifest.migrations?.find((migration) => migration.id === migrationId)?.checksum;
+  const actualChecksum = createHash('sha256').update(sql, 'utf8').digest('hex');
+  const legacyChecksum = LEGACY_MULTI_STATEMENT_MIGRATIONS.get(`${manifest.id}:${migrationId}`);
   return Boolean(legacyChecksum && declaredChecksum === legacyChecksum && actualChecksum === legacyChecksum);
 }
 
@@ -51,8 +69,8 @@ export class PluginMigrationsService {
       }
       const sql = content.toString('utf8');
       this.validateSql(verified.manifest, migration.id, sql, migration.destructive);
-      if (isChecksumPinnedLegacyMigration(verified.manifest, migration.id, sql) && (sql.match(/;/g) || []).length > 1) {
-        // Only the exact published Attendance Manager migration reaches this path. Executing its
+      if (isChecksumPinnedMultiStatementMigration(verified.manifest, migration.id, sql) && (sql.match(/;/g) || []).length > 1) {
+        // Only exact published Attendance Manager migrations reach this path. Executing their
         // simple DDL statements individually avoids PostgreSQL prepared-statement restrictions,
         // while the surrounding plugin-install transaction remains atomic.
         for (const statement of sql.split(';').map((value) => value.trim()).filter(Boolean)) {
@@ -78,7 +96,7 @@ export class PluginMigrationsService {
     }
     assertNoForbiddenSql(sql, `Migration ${migrationId}`);
     if (!destructive && /\b(DROP\s+TABLE|TRUNCATE\b|ALTER\s+TABLE[\s\S]*?DROP\b)/i.test(sql)) throw new BadRequestException(`Migration ${migrationId} contains an undeclared destructive operation`);
-    if (!checksumPinnedLegacyFormat && (sql.match(/;/g) || []).length > 1) throw new BadRequestException(`Migration ${migrationId} must contain exactly one SQL statement`);
+    if (!checksumPinnedLegacyFormat && !isChecksumPinnedMultiStatementMigration(manifest, migrationId, sql) && (sql.match(/;/g) || []).length > 1) throw new BadRequestException(`Migration ${migrationId} must contain exactly one SQL statement`);
     assertPluginNamespace(manifest.id, sql, `Migration ${migrationId}`);
     if (Buffer.byteLength(sql) > 1024 * 1024) throw new BadRequestException(`Migration ${migrationId} exceeds 1 MiB`);
   }

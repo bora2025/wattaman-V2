@@ -40,15 +40,33 @@ $env:ARTIFACT_S3_REGION='ap-southeast-1'
 npm.cmd run drill:artifact-s3
 ```
 
+Required PR validation now also builds the pinned MinIO release from its signed upstream source
+tag, starts it with ephemeral storage, creates one explicitly named disposable bucket, and runs
+this exact drill. Building from the pinned source replaced the removed `minio/minio` Docker Hub
+dependency while retaining the exact `RELEASE.2025-04-22T22-12-26Z` server version. This makes multi-instance conditional creation,
+restart streaming, metadata verification and overwrite refusal executable on every relevant
+change rather than leaving the drill dormant. Local contract tests for that CI wiring pass 2/2 and
+the complete workflow passes `actionlint`; the first remote CI execution remains pending.
+
 The drill creates one random content-addressed audit object, races two independent provider
 instances, constructs a third provider to simulate restart, streams and re-hashes the object,
 attempts a conditional overwrite, verifies the original bytes remain, and emits a JSON evidence
 record. It intentionally retains the immutable object for audit. Do not paste credentials into the
 evidence file.
 
-Remaining before final acceptance: run the checked-in drill against the production-shaped
-S3-compatible bucket and capture its non-secret JSON result, deployment/service identity, provider
-version and timestamp. Until that evidence exists, LC4-001 remains in progress.
+Remaining before final acceptance: obtain a successful required MinIO CI run, then run the same
+checked-in drill against the hosted production-shaped S3-compatible bucket and capture its
+non-secret JSON result, deployment/service identity, provider version and timestamp. Until that
+hosted evidence exists, LC4-001 remains in progress.
+
+Local production-shaped execution on 2026-09-28 passed against MinIO image digest
+`sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e` (server image created
+2025-09-07). Two independent providers converged on
+`sha256/95/9596a0a51bf62ee7f894a6c287b825404bcf4cf7f11d48dc560d46dfe4a9fd84.wtp`; a restarted
+provider streamed and re-hashed all 145 bytes, metadata and length matched, and a conditional
+overwrite returned the required precondition failure without changing the object. The disposable
+container was removed after verification. This closes local execution, but does not substitute for
+the required remote CI and hosted-provider evidence.
 
 ## LC4-002–015 — runtime and consistency contracts
 

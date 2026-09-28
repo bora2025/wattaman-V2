@@ -37,4 +37,28 @@ describe('plugin manifest', () => {
   it('rejects traversal in entry points', () => {
     expect(() => parsePluginManifest({ ...valid, backendEntry: '../index.js' })).toThrow('safe relative');
   });
+
+  it('normalizes the operational backup, retention, classification and pricing contract', () => {
+    const operational = {
+      healthCheck: 'runtime',
+      dataClassification: ['personal-data', 'personal-data', 'communications'],
+      backup: { database: 'required', files: 'none', restore: 'required' },
+      uninstall: { dataRetention: 'preserve' },
+      pricing: 'marketplace',
+    };
+    expect(parsePluginManifest({ ...valid, operational }).operational).toEqual({
+      ...operational,
+      dataClassification: ['personal-data', 'communications'],
+    });
+  });
+
+  it('rejects unsafe operational contracts', () => {
+    const operational = {
+      healthCheck: 'runtime', dataClassification: ['secrets'],
+      backup: { database: 'required', files: 'none', restore: 'required' },
+      uninstall: { dataRetention: 'delete' }, pricing: 'free',
+    };
+    expect(() => parsePluginManifest({ ...valid, operational })).toThrow('dataClassification');
+    expect(() => parsePluginManifest({ ...valid, operational: { ...operational, dataClassification: ['personal-data'] } })).toThrow('dataRetention');
+  });
 });

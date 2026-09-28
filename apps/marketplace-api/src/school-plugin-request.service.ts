@@ -372,13 +372,14 @@ export class SchoolPluginRequestService {
       let entitlement = existing;
       if (!entitlement) {
         const token = issueEntitlement({
+          generation: 1, status: 'ACTIVE',
           installationId: request.installation.installationId, customerId: request.accountId, productId: request.pluginId,
           licensedMajorRange: '^1.0.0', notBefore: now.toISOString(), expiresAt: expiresAt.toISOString(),
           updatesThrough: expiresAt.toISOString(), offlineRecheckAfter: offlineUntil.toISOString(), features: [], issuer: this.config!.publicBaseUrl,
         }, this.config!.entitlementPrivateKey, this.config!.entitlementKeyId, now);
         entitlement = await tx.installationEntitlement.create({ data: {
           installationId: request.installationId, pluginId: request.pluginId, tokenId: token.payload.tokenId,
-          expiresAt, updatesThrough: expiresAt, offlineUntil, signedToken: token as unknown as Prisma.InputJsonValue,
+          generation: 1, expiresAt, updatesThrough: expiresAt, offlineUntil, signedToken: token as unknown as Prisma.InputJsonValue,
         } });
       } else if (entitlement.status !== 'ACTIVE') {
         throw new HttpError(409, 'An existing non-active entitlement requires a separately reviewed correction');

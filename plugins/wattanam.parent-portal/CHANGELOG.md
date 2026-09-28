@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.3
+
+- Declare the operational contract and expose the standard runtime health probe.
+
+## 0.1.2
+
+- Serialize link-request resolution with a PostgreSQL row lock before any guardian account mutation.
+- Add extension-driven dashboard metadata and guarded composition/concurrency certification.
+
 ## 0.1.1
 
 - Add compare-and-set guardian detach and explicit replacement safeguards.

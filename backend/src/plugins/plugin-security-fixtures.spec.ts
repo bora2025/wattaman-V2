@@ -130,9 +130,9 @@ describe('C-007 malicious-fixture suite: SSRF and secret access', () => {
     // The complete, exhaustive key list -- no `env`, `process`, `config`, `prisma`, `fetch`,
     // or `http` property exists on the object a plugin's activate() receives. This is the
     // proof behind both the SSRF and secret-access claims: there is no sanctioned surface
-    // for either, only the twelve capability-gated methods above.
+    // for either, only the explicitly capability-gated SDK methods below.
     expect((global as any).__wattanamContextKeys).toEqual([
-      'database', 'dependencies', 'directory', 'durableEvents', 'events', 'jobs', 'logger', 'navigation', 'notifications',
+      'accounts', 'crypto', 'database', 'dependencies', 'directory', 'durableEvents', 'events', 'jobs', 'logger', 'navigation', 'notifications',
       'permissions', 'pluginId', 'readModels', 'realtime', 'routes', 'sdkVersion', 'settings', 'storage',
     ]);
     delete (global as any).__wattanamContextKeys;

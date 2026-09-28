@@ -1,8 +1,9 @@
 # Finance plugin extraction worksheet
 
-Status: minor-unit fee/receipt foundation and guarded exact-only adoption/reconciliation/rollback
-toolkit implemented locally; restored-backup execution and financial/lifecycle certification remain
-open.
+Status: minor-unit fee/immutable-receipt foundation, compensating reversal ledger and guarded
+exact-only adoption/reconciliation/rollback toolkit implemented locally. PostgreSQL certification
+is enforced in CI; its first hosted run, restored-backup execution and financial/lifecycle approval
+remain open.
 
 ## Ownership boundary
 
@@ -17,7 +18,10 @@ Version 0.1.0 defines three namespaced tables without core or cross-plugin forei
 integer minor units and an explicit three-letter currency; floating-point values are rejected.
 Payment creation locks the fee row, prevents overpayment, creates a unique immutable receipt and
 updates the paid balance in one transaction. Receipt deletion is impossible and fee deletion is not
-exposed. Four permissions separate viewing, fee management, payment entry and settings. Two
+exposed. Version 0.1.1 adds a one-to-one immutable compensating reversal row: the receipt is never
+updated or deleted, the aggregate balance and reversal ledger commit together, and a distinct
+`payments.reverse` permission separates reversal from payment entry. Five permissions separate
+viewing, fee management, payment entry, reversal and settings. Two
 host-rendered pages cover fee creation/list/summary and invoice settings.
 
 After fee and payment mutations, Finance publishes `student-fee-balance` read-model version 1,
@@ -29,12 +33,15 @@ are enforced by the core runtime for Parent Portal consumption.
 
 1. Approve the installation currency/exponent and disposition of historical rows that the exact-only
    preflight blocks; no implicit rounding is permitted.
-2. Add void/reversal as compensating entries, never receipt mutation or deletion.
-3. Add budget/report parity, receipt rendering and parent read-only balance contract.
+2. [x] Add reversal as a compensating entry, never receipt mutation or deletion.
+3. Add budget/report parity and receipt rendering. The parent read-only balance contract is
+   available through the keyed `student-fee-balance` read model and Parent Portal composition;
+   hosted row-scope verification remains.
 4. Execute the backup-bound adoption, exact reconciliation and rollback toolkit against a restored
    production-like PostgreSQL backup.
 5. Complete finance/security/privacy audit, segregation-of-duties and retention approval.
-6. Certify PostgreSQL concurrency, hosted browser/print, lifecycle, backup/restore and pilot behavior.
+6. PostgreSQL concurrency and immutable reversal behavior are now certified in the required CI
+   job. Hosted browser/print, lifecycle, backup/restore and pilot behavior remain.
 
 ## Adoption preflight
 

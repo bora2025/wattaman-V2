@@ -3,7 +3,7 @@
   "id": "wattanam.learning",
   "name": "Learning",
   "description": "Courses, lessons, assignments, interactive learning, engagement and course attendance.",
-  "version": "0.1.2",
+  "version": "0.1.5",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -36,5 +36,8 @@
     { "id": "student-courses", "label": "My courses", "href": "/plugins/wattanam.learning/student/courses", "permission": "wattanam.learning.student.participate" },
     { "id": "student-assignments", "label": "My assignments", "href": "/plugins/wattanam.learning/student/assignments", "permission": "wattanam.learning.student.participate" }
   ],
-  "supportedLanguages": ["en", "km"]
+  "supportedLanguages": ["en", "km"],
+  "supportUrl": "https://wattanam.example/support/learning",
+  "privacyUrl": "https://wattanam.example/privacy/plugins/learning",
+  "operational": { "healthCheck": "runtime", "dataClassification": ["education-records", "personal-data"], "backup": { "database": "required", "files": "none", "restore": "required" }, "uninstall": { "dataRetention": "preserve" }, "pricing": "marketplace" }
 }

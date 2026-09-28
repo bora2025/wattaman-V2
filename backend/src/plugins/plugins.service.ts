@@ -13,6 +13,7 @@ import { PluginMigrationsService } from './plugin-migrations.service';
 import { PluginArtifactCacheService } from './plugin-artifact-cache.service';
 import { PluginRolloutService } from './plugin-rollout.service';
 import { PluginContractRuntimeService } from './plugin-contract-runtime.service';
+import { PluginEntitlementPolicyService } from './plugin-entitlement-policy.service';
 
 /**
  * Wall-clock ceiling for a single locked lifecycle transaction (install,
@@ -33,6 +34,7 @@ export class PluginsService {
     @Optional() private readonly artifactCache?: PluginArtifactCacheService,
     @Optional() private readonly rollout?: PluginRolloutService,
     @Optional() private readonly contracts?: PluginContractRuntimeService,
+    @Optional() private readonly entitlements?: PluginEntitlementPolicyService,
   ) {}
 
   /**
@@ -74,10 +76,47 @@ export class PluginsService {
   }
 
   async list() {
-    return (await this.prisma.pluginInstallation.findMany({ orderBy: { name: 'asc' } })).map((plugin) => this.publicPlugin(plugin));
+    const plugins = await this.prisma.pluginInstallation.findMany({ orderBy: { name: 'asc' } });
+    return Promise.all(plugins.map(async (plugin) => ({
+      ...this.publicPlugin(plugin),
+      rollbackAvailable: this.rollout ? !!await this.rollout.previous(plugin.id) : false,
+      entitlement: this.entitlements ? await this.entitlements.decision(plugin.id) : null,
+    })));
   }
 
   runtimeStatus() { return this.runtime.status(); }
+  async diagnostics() {
+    const [plugins, jobs] = await Promise.all([
+      this.prisma.pluginInstallation.findMany({ orderBy: { name: 'asc' } }),
+      this.prisma.pluginJobDefinition.findMany({ orderBy: [{ pluginId: 'asc' }, { jobId: 'asc' }] }),
+    ]);
+    const runtime = this.runtime.status();
+    const loaded = new Set(runtime.loaded);
+    const results = await Promise.all(plugins.map(async (plugin) => {
+      let artifact: 'present' | 'missing' = 'present';
+      try { await fs.access(plugin.installedPath); } catch { artifact = 'missing'; }
+      const entitlement = this.entitlements ? await this.entitlements.decision(plugin.id).catch((error) => ({ mode: 'unknown', reason: error instanceof Error ? error.message : String(error) })) : null;
+      const contract = this.contracts ? await this.contracts.health(plugin.id).catch((error) => ({ status: 'failed', reason: error instanceof Error ? error.message : String(error) })) : null;
+      const pluginJobs = jobs.filter((job) => job.pluginId === plugin.id).map((job) => ({ id: job.jobId, enabled: job.enabled, lastStatus: job.lastStatus, lastError: job.lastError }));
+      const problems: string[] = [];
+      if (plugin.status === 'failed') problems.push(plugin.lastError || 'Registry status is failed');
+      if (artifact === 'missing') problems.push('Installed artifact directory is missing');
+      if (plugin.status === 'active' && !loaded.has(plugin.id)) problems.push('Registry is active but runtime is not loaded');
+      if (entitlement && entitlement.mode === 'read_only') problems.push(entitlement.reason);
+      if (contract && contract.status !== 'healthy') problems.push(`Contract runtime is ${contract.status}`);
+      if (pluginJobs.some((job) => job.lastStatus === 'failed')) problems.push('One or more background jobs last failed');
+      const failed = artifact === 'missing' || plugin.status === 'failed' || (plugin.status === 'active' && !loaded.has(plugin.id));
+      return {
+        id: plugin.id, name: plugin.name, version: plugin.version, registryStatus: plugin.status,
+        status: failed ? 'failed' : problems.length ? 'degraded' : 'healthy', artifact,
+        runtimeLoaded: loaded.has(plugin.id), entitlement, contract, jobs: pluginJobs, problems,
+      };
+    }));
+    return {
+      status: results.some((plugin) => plugin.status === 'failed') ? 'failed' : results.some((plugin) => plugin.status === 'degraded') ? 'degraded' : 'healthy',
+      safeMode: runtime.safeMode, checkedAt: new Date().toISOString(), plugins: results,
+    };
+  }
   contractHealth(id: string) { if (!this.contracts) throw new ConflictException('Plugin contract runtime is unavailable'); return this.contracts.health(id); }
   replayDeadLetter(id: string, deadLetterId: string) { if (!this.contracts) throw new ConflictException('Plugin contract runtime is unavailable'); return this.contracts.replay(id, deadLetterId); }
 
@@ -99,7 +138,7 @@ export class PluginsService {
   /**
    * `trustedKeys` defaults to the static, locally-configured allow-list merged with any
    * publisher keys previously learned via a marketplace install (unchanged behavior for the
-   * manual-upload and official-repository-update paths, which never pass it). The marketplace
+   * trusted repository-update path, which does not pass it). The marketplace
    * purchase-install action passes an extended map that additionally trusts the one publisher key
    * named in that specific signed catalog release, so a newly-purchased publisher's package can
    * install without a manual PLUGIN_TRUSTED_KEYS edit -- the same bounded, signature-anchored
@@ -167,6 +206,7 @@ export class PluginsService {
   }
 
   async activate(id: string) {
+    await this.entitlements?.assertCanActivate(id);
     try {
       const activation = await this.withPluginLock(id, async (tx) => {
         const plugin = await this.getTx(tx, id);

@@ -220,6 +220,55 @@ test('generation returns a bounded render model without querying another domain'
   await assert.rejects(() => route.handler({ params: { id: 't1' }, body: { records: new Array(501).fill({ id: 's1' }) } }), /between 1 and 500/);
 });
 
+test('generation projects converted legacy CardDesign elements without silently dropping content', async () => {
+  const convertedAssetId = '12345678-1234-5678-9abc-123456789abc';
+  const database = { query: async () => [{
+    id: 'legacy', name: 'Legacy card', documentType: 'student', updatedAt: '2026-09-28T00:00:00.000Z',
+    design: {
+      cardType: 'student', width: 340, height: 215, backgroundColor: '#fefefe', frameColor: '#223344', frameWidth: 3,
+      texts: [
+        { id: 'name', content: '{{name}}', x: 10, y: 10, fontSize: 20, color: '#112233', fontWeight: 'bold', fontStyle: 'italic', fontFamily: 'Georgia, serif', textAlign: 'center', zIndex: 8 },
+        { id: 'school', content: 'Bora School', x: 10, y: 50, fontSize: 14 },
+      ],
+      logos: [{ id: 'logo', assetId: convertedAssetId, src: 'data:image/png;base64,aGVsbG8=', x: 250, y: 10, width: 60, height: 60, opacity: 0.75, borderRadius: 4, zIndex: 4 }],
+      qr: { x: 250, y: 100, size: 70, borderColor: '#445566', borderWidth: 2, borderRadius: 5, zIndex: 7 }, photo: { x: 140, y: 90, width: 80, height: 100, borderColor: '#556677', borderWidth: 1, borderRadius: 6, zIndex: 6 },
+      shapes: [{ id: 'frame', type: 'rectangle', x: 2, y: 2, width: 336, height: 211, rotation: 0, color: '#ffffff', borderColor: '#334455', borderWidth: 2, borderRadius: 8, opacity: 0.5, lineStyle: 'dashed', gradient: { enabled: true, type: 'linear', angle: 45, stops: [{ offset: 0, color: '#ffffff' }, { offset: 1, color: '#112233' }] } }],
+    },
+  }], execute: async () => ({ count: 0 }) };
+  const { byKey } = await activate({ database });
+  const generated = await byKey.get('POST:templates/:id/generate').handler({ params: { id: 'legacy' }, body: { records: [{ id: 's1', name: 'Student One', qrCode: 'STU-1', photo: '/api/media/student.png' }] } });
+
+  assert.deepEqual(generated.documents[0].page, { width: 340, height: 215, background: '#fefefe', frameColor: '#223344', frameWidth: 3, borderRadius: 12 });
+  assert.equal(generated.documents[0].elements.length, 6);
+  assert.equal(generated.documents[0].elements.find((item) => item.id === 'name').value, 'Student One');
+  assert.equal(generated.documents[0].elements.find((item) => item.id === 'name').zIndex, 8);
+  assert.equal(generated.documents[0].elements.find((item) => item.id === 'name').fontStyle, 'italic');
+  assert.equal(generated.documents[0].elements.find((item) => item.id === 'name').fontFamily, 'Georgia, serif');
+  assert.equal(generated.documents[0].elements.find((item) => item.id === 'school').value, 'Bora School');
+  assert.equal(generated.documents[0].elements.find((item) => item.id === 'logo').assetId, convertedAssetId);
+  assert.equal(generated.documents[0].elements.find((item) => item.id === 'logo').opacity, 0.75);
+  assert.equal(generated.documents[0].elements.find((item) => item.id === 'logo').borderRadius, 4);
+  assert.equal(generated.documents[0].elements.find((item) => item.id === 'legacy-qr').value, 'STU-1');
+  assert.equal(generated.documents[0].elements.find((item) => item.id === 'legacy-qr').borderWidth, 2);
+  assert.equal(generated.documents[0].elements.find((item) => item.id === 'legacy-photo').value, '/api/media/student.png');
+  assert.deepEqual(generated.documents[0].elements.find((item) => item.id === 'frame'), {
+    id: 'frame', type: 'shape', shapeType: 'rectangle', x: 2, y: 2, width: 336, height: 211,
+    rotation: 0, zIndex: 0, fill: '#ffffff', borderColor: '#334455', borderWidth: 2, borderRadius: 8, opacity: 0.5,
+    lineStyle: 'dashed', gradient: { enabled: true, type: 'linear', angle: 45, stops: [{ offset: 0, color: '#ffffff' }, { offset: 1, color: '#112233' }] },
+  });
+});
+
+test('legacy generation fails closed until unsupported visual elements and images are converted', async () => {
+  const generate = async (design) => {
+    const { byKey } = await activate({ database: { query: async () => [{ id: 'legacy', name: 'Legacy', documentType: 'student', design, updatedAt: 'now' }], execute: async () => ({ count: 0 }) } });
+    return byKey.get('POST:templates/:id/generate').handler({ params: { id: 'legacy' }, body: { records: [{ id: 's1' }] } });
+  };
+  await assert.rejects(() => generate({ width: 340, height: 215, texts: [], logos: [{ id: 'logo', src: 'data:image/png;base64,aGVsbG8=' }] }), /not converted to plugin-scoped storage/);
+  await assert.rejects(() => generate({ width: 340, height: 215, texts: [], logos: [], shapes: [{ id: 'shape', type: 'rectangle', gradient: { enabled: true, stops: [{ offset: 1, color: '#ffffff' }, { offset: 0, color: '#000000' }] } }] }), /stops must be ordered/);
+  const { byKey } = await activate({ database: { query: async () => [{ id: 'photo', name: 'Photo', documentType: 'student', design: { page: { width: 200, height: 200 }, elements: [{ id: 'photo', type: 'photo', x: 0, y: 0, width: 100, height: 100, binding: 'photo' }] }, updatedAt: 'now' }], execute: async () => ({ count: 0 }) } });
+  await assert.rejects(() => byKey.get('POST:templates/:id/generate').handler({ params: { id: 'photo' }, body: { records: [{ id: 's1', photo: 'https://tracking.example/student.png' }] } }), /same-origin path or canonical embedded raster image/);
+});
+
 test('asset routes use scoped storage and reject unsafe input', async () => {
   const values = new Map();
   const storage = {

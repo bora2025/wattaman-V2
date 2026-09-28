@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { backupDirectory, fail, installationSlug, schemaLineage, postgresEnvironment, run, sha256, timestamp } = require('./db-toolkit');
+const { backupDirectory, fail, installationSlug, schemaLineage, postgresEnvironment, postgresClient, run, sha256, timestamp } = require('./db-toolkit');
 
 if (process.argv.includes('--help')) {
   process.stdout.write('Usage: node scripts/backup-database.js\nRequires DATABASE_URL; optional BACKUP_DIR and BACKUP_RETENTION_DAYS.\n');
@@ -23,7 +23,8 @@ process.on('exit', () => {
 });
 
 try {
-  run('pg_dump', ['--format=custom', '--compress=6', '--no-owner', '--no-acl', '--file', temporary], environment);
+  const pgDump = postgresClient('pg_dump', environment);
+  run(pgDump, ['--format=custom', '--compress=6', '--no-owner', '--no-acl', '--file', temporary], environment);
   fs.renameSync(temporary, archive);
   const manifest = {
     format: 'pg_dump-custom-v1',
@@ -34,7 +35,7 @@ try {
     installationSlug: installationSlug(environment),
     schemaLineage: schemaLineage(environment),
     appVersion: process.env.APP_VERSION || null,
-    postgresVersion: run('pg_dump', ['--version'], environment, true),
+    postgresVersion: run(pgDump, ['--version'], environment, true),
   };
   fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, { mode: 0o600 });
 

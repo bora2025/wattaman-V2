@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
-const { expectedSchemaLineage, fail, installationSlug, schemaLineage, postgresEnvironment, run, sha256 } = require('./db-toolkit');
+const { expectedSchemaLineage, fail, installationSlug, schemaLineage, postgresEnvironment, postgresClient, run, sha256 } = require('./db-toolkit');
 
 function argument(name) {
   const index = process.argv.indexOf(name);
@@ -46,7 +46,8 @@ const environment = {
   PGOPTIONS: `${baseEnvironment.PGOPTIONS || ''} -c lock_timeout=30s -c statement_timeout=30min`.trim(),
 };
 process.stderr.write('Validating backup archive and target identity...\n');
-run('pg_restore', ['--list', archive], environment, true);
+const pgRestore = postgresClient('pg_restore', environment);
+run(pgRestore, ['--list', archive], environment, true);
 const targetSlug = installationSlug(environment) || 'EMPTY';
 if (confirmation !== targetSlug) fail(`target confirmation mismatch; expected ${targetSlug}`);
 
@@ -59,7 +60,7 @@ if (targetSlug !== 'EMPTY') {
 }
 
 process.stderr.write(`Restoring into confirmed target ${targetSlug}...\n`);
-run('pg_restore', ['--clean', '--if-exists', '--no-owner', '--no-acl', '--single-transaction', '--exit-on-error', '--dbname', environment.PGDATABASE, archive], environment);
+run(pgRestore, ['--clean', '--if-exists', '--no-owner', '--no-acl', '--single-transaction', '--exit-on-error', '--dbname', environment.PGDATABASE, archive], environment);
 process.stderr.write('Verifying restored installation identity...\n');
 const restoredSlug = installationSlug(environment);
 if (manifest.installationSlug && restoredSlug !== manifest.installationSlug) fail('restore completed but installation identity verification failed');

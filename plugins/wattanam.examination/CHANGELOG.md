@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.7
+
+- Execute attempt advisory locks through the mutation adapter so PostgreSQL `void` results are never deserialized.
+
+## 0.1.6
+
+- Declare the operational contract and expose the standard runtime health probe.
+
+## 0.1.5
+
+- Serialize first-attempt creation with a transaction-scoped advisory lock so concurrent start
+  requests return one stable attempt instead of racing the unique constraint.
+- Publish an extension-driven dashboard contribution.
+- Add real-PostgreSQL lifecycle and concurrency certification without changing migration bytes.
+
 ## 0.1.4
 
 - Publish a student-keyed, privacy-minimized grade summary after committed gradebook and exam

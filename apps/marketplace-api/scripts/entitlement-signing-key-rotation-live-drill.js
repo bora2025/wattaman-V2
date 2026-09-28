@@ -54,6 +54,7 @@ function issue(privateKey, keyId, now, overrides = {}) {
   const notBefore = now;
   const expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
   return issueEntitlement({
+    generation: 1, status: 'ACTIVE',
     installationId: 'installation-drill-1',
     customerId: 'customer-drill-1',
     productId: 'product-drill-1',

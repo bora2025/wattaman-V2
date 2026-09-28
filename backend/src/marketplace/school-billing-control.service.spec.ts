@@ -3,6 +3,8 @@ import { SchoolBillingControlService } from './school-billing-control.service';
 jest.mock('./marketplace-identity-config', () => ({
   readMarketplaceIdentityConfig: () => ({ marketplaceUrl: 'https://marketplace.example', requestTimeoutMs: 5000 }),
 }));
+jest.mock('./entitlement-config', () => ({ readEntitlementConfig: () => ({ publicKeys: new Map([['test', 'key']]) }) }));
+jest.mock('./school-control-verification', () => ({ verifySchoolControl: (value: any) => ({ generation: 1, ...value }) }));
 
 describe('SchoolBillingControlService', () => {
   afterEach(() => jest.restoreAllMocks());
@@ -38,6 +40,23 @@ describe('SchoolBillingControlService', () => {
     jest.spyOn(global, 'fetch').mockRejectedValue(new Error('network unavailable'));
     await expect(new SchoolBillingControlService(prisma, { sign: jest.fn().mockResolvedValue('signature') } as any).sync()).resolves.toEqual({ configured: true, unavailable: true });
     expect(prisma.marketplaceSchoolControl.upsert.mock.calls[0][0].update).not.toHaveProperty('access');
+  });
+
+  it('rejects a replayed control generation without overwriting last-known-good access', async () => {
+    const tx = {
+      marketplaceSchoolControl: { findUnique: jest.fn().mockResolvedValue({ access: 'SUSPENDED', generation: 2, warningsJson: '[]', billingJson: '{}' }), upsert: jest.fn() },
+    };
+    const failureUpsert = jest.fn().mockResolvedValue({});
+    const prisma = {
+      installation: { findUnique: jest.fn().mockResolvedValue({ installationId: 'installation-1' }) },
+      marketplaceSchoolControl: { upsert: failureUpsert },
+      $transaction: jest.fn((work: any) => work(tx)),
+    } as any;
+    jest.spyOn(global, 'fetch').mockResolvedValue({ ok: true, json: async () => ({ generation: 1, access: 'ACTIVE', warnings: [] }) } as any);
+    await expect(new SchoolBillingControlService(prisma, { sign: jest.fn().mockResolvedValue('signature') } as any).sync(new Date('2026-09-10T00:00:00.000Z')))
+      .resolves.toEqual({ configured: true, unavailable: true });
+    expect(tx.marketplaceSchoolControl.upsert).not.toHaveBeenCalled();
+    expect(failureUpsert.mock.calls[0][0].update).not.toHaveProperty('access');
   });
 });
 

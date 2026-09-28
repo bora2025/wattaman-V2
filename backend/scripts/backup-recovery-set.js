@@ -15,6 +15,7 @@ const {
   backupDirectory, fail, installationSlug, pluginDataDirectory, pluginDirectory,
   postgresEnvironment, sha256, tar, timestamp, walkDirectoryChecksums,
 } = require('./db-toolkit');
+const { discoverPluginRecoveryContracts, verifyPluginRecoveryContracts } = require('./plugin-recovery-contract');
 
 if (process.argv.includes('--help')) {
   process.stdout.write('Usage: node scripts/backup-recovery-set.js\nRequires DATABASE_URL; optional BACKUP_DIR, PLUGIN_DIR, PLUGIN_DATA_DIR.\n');
@@ -47,17 +48,27 @@ const environment = postgresEnvironment();
 const slug = installationSlug(environment) || 'legacy';
 const base = `wattanam-recovery-${timestamp()}`;
 
+const contracts = discoverPluginRecoveryContracts(pluginDirectory(), pluginDataDirectory(), {
+  // Existing schools retain old immutable package generations for rollback. Those historical
+  // manifests predate the operational contract and must remain recoverable. They are recorded as
+  // explicit journal exceptions; strict release/certification jobs reject them.
+  allowLegacy: process.env.REQUIRE_PLUGIN_BACKUP_CONTRACTS !== 'true',
+  ensureDataNamespaces: true,
+});
 const database = runBackupDatabase();
 const pluginFiles = archiveDirectory(pluginDirectory(), path.join(directory, `${base}-plugin-files.tar`));
 const pluginData = archiveDirectory(pluginDataDirectory(), path.join(directory, `${base}-plugin-data.tar`));
+const contractVerification = verifyPluginRecoveryContracts(contracts, pluginDirectory(), pluginDataDirectory(), database);
 
 const journal = {
-  format: 'wattanam-recovery-set-v1',
+  format: 'wattanam-recovery-set-v2',
   createdAt: new Date().toISOString(),
   installationSlug: slug,
   database: { file: database.file, sha256: database.sha256, sizeBytes: database.sizeBytes },
   pluginFiles: { archive: pluginFiles.archive, checksums: pluginFiles.manifest },
   pluginData: { archive: pluginData.archive, checksums: pluginData.manifest },
+  pluginContracts: contracts,
+  contractVerification,
 };
 
 const journalPath = path.join(directory, `${base}.recovery-set.json`);

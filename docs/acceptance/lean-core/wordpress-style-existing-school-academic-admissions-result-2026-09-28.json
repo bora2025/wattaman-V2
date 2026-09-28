@@ -1,0 +1,18 @@
+{
+  "format": "wattanam-existing-school-academic-admissions-rehearsal-v1",
+  "passed": true,
+  "sourceDatabase": "source_admissions",
+  "targetDatabase": "restored_admissions",
+  "schoolSlug": "restored-admissions-school",
+  "backupFile": "wattanam-20260928T063756Z.dump",
+  "registrations": 2,
+  "customFields": 1,
+  "settingsPresent": true,
+  "sourceSha256": "e32d8eb9365b81948e7790b79324227de7c37045952acb9c6cc6925aa78636dc",
+  "targetSha256": "e32d8eb9365b81948e7790b79324227de7c37045952acb9c6cc6925aa78636dc",
+  "dryRunZeroWrite": true,
+  "adopted": true,
+  "rolledBack": true,
+  "legacyPreserved": true,
+  "pluginDataPreserved": true
+}

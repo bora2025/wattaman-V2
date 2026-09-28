@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "exact": [
+    "/",
+    "/login",
+    "/reset-password",
+    "/setup",
+    "/suspended",
+    "/admin",
+    "/admin/search",
+    "/admin/users",
+    "/admin/plugins",
+    "/admin/settings",
+    "/admin/backup",
+    "/admin/system",
+    "/admin/platform-billing",
+    "/admin/audit",
+    "/admin/profile",
+    "/admin/notifications",
+    "/admin/licensing",
+    "/admin/appearance",
+    "/admin/appearance/about",
+    "/teacher",
+    "/student",
+    "/settings/notifications"
+  ],
+  "prefixes": [
+    "/api/",
+    "/marketplace",
+    "/plugins/",
+    "/_next/"
+  ],
+  "artifactDynamicRoutes": [
+    "/plugins/[pluginId]/[[...path]]"
+  ]
+}

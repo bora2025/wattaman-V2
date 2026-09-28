@@ -8,7 +8,11 @@ import { BadRequestException } from '@nestjs/common';
  * place.
  */
 export function assertNoForbiddenSql(sql: string, label: string) {
-  if (/\b(BEGIN|COMMIT|ROLLBACK|SAVEPOINT|CREATE\s+(?:ROLE|USER|EXTENSION)|ALTER\s+(?:ROLE|USER|SYSTEM)|COPY\b|PROGRAM\b|DO\s*\$|SET\s+ROLE|GRANT\b|REVOKE\b)\b/i.test(sql)) {
+  // Comments are documentation, not executable SQL. Ignoring them prevents words such as
+  // "rollback" in a migration rationale from becoming false positives while the executable
+  // statement immediately following the comment is still inspected.
+  const executableSql = sql.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/--[^\r\n]*/g, ' ');
+  if (/\b(BEGIN|COMMIT|ROLLBACK|SAVEPOINT|CREATE\s+(?:ROLE|USER|EXTENSION)|ALTER\s+(?:ROLE|USER|SYSTEM)|COPY\b|PROGRAM\b|DO\s*\$|SET\s+ROLE|GRANT\b|REVOKE\b)\b/i.test(executableSql)) {
     throw new BadRequestException(`${label} contains a forbidden database operation`);
   }
 }

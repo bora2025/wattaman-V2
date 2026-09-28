@@ -4,7 +4,9 @@ const crypto = require('crypto');
 const TABLE = 'plugin_wattanam_document_designer_template';
 const DOCUMENT_TYPES = new Set(['student', 'staff', 'teacher-part-time', 'certificate-student', 'certificate-staff', 'qr-sheet', 'general']);
 const ASSET_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'font/woff', 'font/woff2']);
-const ELEMENT_TYPES = new Set(['text', 'image', 'qr']);
+const ELEMENT_TYPES = new Set(['text', 'image', 'qr', 'shape', 'photo']);
+const SHAPE_TYPES = new Set(['rectangle', 'circle', 'line']);
+const FONT_FAMILIES = new Set(['Inter, sans-serif', 'Arial, sans-serif', 'Times New Roman, serif', 'Georgia, serif', 'Courier New, monospace', 'Verdana, sans-serif', '"Noto Sans Khmer", sans-serif', 'Battambang, sans-serif', 'Moul, serif', 'Siemreap, sans-serif', 'Hanuman, serif', 'Bokor, serif', 'Koulen, sans-serif', 'Chenla, sans-serif', 'Content, sans-serif', 'Khmer, sans-serif']);
 const DATA_PATH = /^[a-zA-Z][a-zA-Z0-9_]*(?:\.[a-zA-Z][a-zA-Z0-9_]*)*$/;
 
 function bodyOf(request) {
@@ -94,9 +96,34 @@ function finiteNumber(value, name, minimum, maximum) {
   return number;
 }
 
+function shapeGradient(value, name) {
+  const gradient = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  if (!gradient.enabled) return { enabled: false, type: 'linear', angle: 0, stops: [] };
+  const type = gradient.type === 'radial' ? 'radial' : 'linear';
+  const angle = finiteNumber(gradient.angle ?? 0, `${name}.angle`, -360, 360);
+  if (!Array.isArray(gradient.stops) || gradient.stops.length < 2 || gradient.stops.length > 8) throw new Error(`${name}.stops must contain 2..8 items`);
+  const stops = gradient.stops.map((stop, index) => {
+    if (!stop || typeof stop !== 'object' || Array.isArray(stop)) throw new Error(`${name}.stops[${index}] is invalid`);
+    const offset = finiteNumber(stop.offset, `${name}.stops[${index}].offset`, 0, 1);
+    if (typeof stop.color !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(stop.color)) throw new Error(`${name}.stops[${index}].color is invalid`);
+    return { offset, color: stop.color };
+  });
+  if (stops.some((stop, index) => index > 0 && stop.offset < stops[index - 1].offset)) throw new Error(`${name}.stops must be ordered`);
+  return { enabled: true, type, angle, stops };
+}
+
 function safeDataPath(path) {
   const segments = typeof path === 'string' ? path.split('.') : [];
   return DATA_PATH.test(path) && !segments.some((segment) => ['__proto__', 'prototype', 'constructor'].includes(segment));
+}
+
+function safePhotoValue(value) {
+  if (value === undefined || value === null || value === '') return '';
+  if (typeof value !== 'string' || value.length > 1024 * 1024) throw new Error('photo value is invalid');
+  if (/^\/(?!\/)[a-zA-Z0-9._~!$&'()*+,;=:@%/-]{1,2047}$/.test(value)) return value;
+  const match = /^data:image\/(?:png|jpeg|webp);base64,([A-Za-z0-9+/]*={0,2})$/.exec(value);
+  if (!match || match[1].length % 4 !== 0 || Buffer.from(match[1], 'base64').toString('base64') !== match[1]) throw new Error('photo value must be a same-origin path or canonical embedded raster image');
+  return value;
 }
 
 function dataAt(record, path) {
@@ -112,12 +139,111 @@ function designForWrite(value) {
   return design.page !== undefined || design.elements !== undefined ? documentDesign(design) : design;
 }
 
+function legacyBinding(content) {
+  if (typeof content !== 'string') return undefined;
+  const match = /^\{\{\s*([a-zA-Z][a-zA-Z0-9_.]*)\s*\}\}$/.exec(content);
+  return match && safeDataPath(match[1]) ? match[1] : undefined;
+}
+
+function legacyDocumentDesign(design) {
+  const width = finiteNumber(design.width ?? 856, 'legacy page width', 100, 4000);
+  const height = finiteNumber(design.height ?? 540, 'legacy page height', 100, 4000);
+  const background = typeof design.backgroundColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(design.backgroundColor) ? design.backgroundColor : '#ffffff';
+  const frameColor = typeof design.frameColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(design.frameColor) ? design.frameColor : '#111827';
+  const frameWidth = finiteNumber(design.frameWidth ?? 0, 'legacy page frameWidth', 0, 50);
+  const elements = [];
+  for (const [index, candidate] of (Array.isArray(design.texts) ? design.texts : []).entries()) {
+    const id = typeof candidate?.id === 'string' && /^[a-zA-Z0-9._-]{1,80}$/.test(candidate.id) ? candidate.id : `legacy-text-${index + 1}`;
+    const x = finiteNumber(candidate?.x ?? 0, `${id}.x`, 0, width);
+    const y = finiteNumber(candidate?.y ?? 0, `${id}.y`, 0, height);
+    const fontSize = finiteNumber(candidate?.fontSize ?? 18, `${id}.fontSize`, 6, 200);
+    const elementWidth = finiteNumber(candidate?.width ?? Math.min(width - x, Math.max(40, String(candidate?.content || '').length * fontSize * 0.65)), `${id}.width`, 1, width);
+    const elementHeight = finiteNumber(candidate?.height ?? Math.min(height - y, fontSize * 1.5), `${id}.height`, 1, height);
+    if (x + elementWidth > width || y + elementHeight > height) throw new Error(`legacy element ${id} exceeds the page`);
+    const binding = legacyBinding(candidate?.content);
+    elements.push({
+      id, type: 'text', x, y, width: elementWidth, height: elementHeight,
+      rotation: finiteNumber(candidate?.rotation ?? 0, `${id}.rotation`, -360, 360),
+      zIndex: finiteNumber(candidate?.zIndex ?? 0, `${id}.zIndex`, -1000, 1000),
+      text: binding ? '' : String(candidate?.content || '').slice(0, 2000), ...(binding ? { binding } : {}),
+      color: typeof candidate?.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(candidate.color) ? candidate.color : '#111827',
+      fontSize, fontWeight: candidate?.fontWeight === 'bold' ? 'bold' : 'normal',
+      fontStyle: candidate?.fontStyle === 'italic' ? 'italic' : 'normal',
+      fontFamily: FONT_FAMILIES.has(candidate?.fontFamily) ? candidate.fontFamily : 'Inter, sans-serif',
+      textAlign: ['left', 'center', 'right'].includes(candidate?.textAlign) ? candidate.textAlign : 'left',
+    });
+  }
+  for (const [index, candidate] of (Array.isArray(design.shapes) ? design.shapes : []).entries()) {
+    const id = typeof candidate?.id === 'string' && /^[a-zA-Z0-9._-]{1,80}$/.test(candidate.id) ? candidate.id : `legacy-shape-${index + 1}`;
+    if (!SHAPE_TYPES.has(candidate?.type)) throw new Error(`legacy shape ${id} has an unsupported type`);
+    const x = finiteNumber(candidate.x ?? 0, `${id}.x`, 0, width);
+    const y = finiteNumber(candidate.y ?? 0, `${id}.y`, 0, height);
+    const elementWidth = finiteNumber(candidate.width ?? 80, `${id}.width`, 1, width);
+    const elementHeight = finiteNumber(candidate.height ?? (candidate.type === 'line' ? 1 : 80), `${id}.height`, 1, height);
+    if (x + elementWidth > width || y + elementHeight > height) throw new Error(`legacy element ${id} exceeds the page`);
+    elements.push({
+      id, type: 'shape', shapeType: candidate.type, x, y, width: elementWidth, height: elementHeight,
+      rotation: finiteNumber(candidate.rotation ?? 0, `${id}.rotation`, -360, 360),
+      zIndex: finiteNumber(candidate.zIndex ?? 0, `${id}.zIndex`, -1000, 1000),
+      fill: typeof candidate.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(candidate.color) ? candidate.color : '#ffffff',
+      borderColor: typeof candidate.borderColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(candidate.borderColor) ? candidate.borderColor : '#111827',
+      borderWidth: finiteNumber(candidate.borderWidth ?? 0, `${id}.borderWidth`, 0, 50),
+      borderRadius: finiteNumber(candidate.type === 'circle' ? Math.min(elementWidth, elementHeight) / 2 : candidate.borderRadius ?? 0, `${id}.borderRadius`, 0, 2000),
+      opacity: finiteNumber(candidate.opacity ?? 1, `${id}.opacity`, 0, 1),
+      lineStyle: ['solid', 'dashed', 'dotted'].includes(candidate.lineStyle) ? candidate.lineStyle : 'solid',
+      gradient: shapeGradient(candidate.gradient, `${id}.gradient`),
+    });
+  }
+  if (design.photo) {
+    const candidate = design.photo;
+    const elementWidth = finiteNumber(candidate.width ?? 100, 'legacy-photo.width', 1, width);
+    const elementHeight = finiteNumber(candidate.height ?? 120, 'legacy-photo.height', 1, height);
+    const x = finiteNumber(candidate.x ?? 0, 'legacy-photo.x', 0, width);
+    const y = finiteNumber(candidate.y ?? 0, 'legacy-photo.y', 0, height);
+    if (x + elementWidth > width || y + elementHeight > height) throw new Error('legacy element legacy-photo exceeds the page');
+    elements.push({
+      id: 'legacy-photo', type: 'photo', x, y, width: elementWidth, height: elementHeight, rotation: 0,
+      zIndex: finiteNumber(candidate.zIndex ?? 0, 'legacy-photo.zIndex', -1000, 1000),
+      binding: 'photo', fit: 'cover', borderColor: typeof candidate.borderColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(candidate.borderColor) ? candidate.borderColor : '#111827',
+      borderWidth: finiteNumber(candidate.borderWidth ?? 0, 'legacy-photo.borderWidth', 0, 50),
+      borderRadius: finiteNumber(candidate.borderRadius ?? 0, 'legacy-photo.borderRadius', 0, 2000),
+    });
+  }
+  for (const [index, candidate] of (Array.isArray(design.logos) ? design.logos : []).entries()) {
+    const id = typeof candidate?.id === 'string' && /^[a-zA-Z0-9._-]{1,80}$/.test(candidate.id) ? candidate.id : `legacy-image-${index + 1}`;
+    if (!candidate?.assetId) throw new Error(`legacy image ${id} is not converted to plugin-scoped storage`);
+    const x = finiteNumber(candidate.x ?? 0, `${id}.x`, 0, width);
+    const y = finiteNumber(candidate.y ?? 0, `${id}.y`, 0, height);
+    const elementWidth = finiteNumber(candidate.width ?? 80, `${id}.width`, 1, width);
+    const elementHeight = finiteNumber(candidate.height ?? 80, `${id}.height`, 1, height);
+    if (x + elementWidth > width || y + elementHeight > height) throw new Error(`legacy element ${id} exceeds the page`);
+    elements.push({ id, type: 'image', x, y, width: elementWidth, height: elementHeight, rotation: finiteNumber(candidate.rotation ?? 0, `${id}.rotation`, -360, 360), zIndex: finiteNumber(candidate.zIndex ?? 0, `${id}.zIndex`, -1000, 1000), assetId: assetId(candidate.assetId), fit: 'contain', opacity: finiteNumber(candidate.opacity ?? 1, `${id}.opacity`, 0, 1), borderRadius: finiteNumber(candidate.borderRadius ?? 0, `${id}.borderRadius`, 0, 2000) });
+  }
+  if (design.qr) {
+    const candidate = design.qr;
+    const elementWidth = finiteNumber(candidate.width ?? candidate.size ?? 80, 'legacy-qr.width', 1, width);
+    const elementHeight = finiteNumber(candidate.height ?? candidate.size ?? 80, 'legacy-qr.height', 1, height);
+    const x = finiteNumber(candidate.x ?? 0, 'legacy-qr.x', 0, width);
+    const y = finiteNumber(candidate.y ?? 0, 'legacy-qr.y', 0, height);
+    if (x + elementWidth > width || y + elementHeight > height) throw new Error('legacy element legacy-qr exceeds the page');
+    elements.push({ id: 'legacy-qr', type: 'qr', x, y, width: elementWidth, height: elementHeight, rotation: 0, zIndex: finiteNumber(candidate.zIndex ?? 0, 'legacy-qr.zIndex', -1000, 1000), text: '', binding: 'qrCode', color: '#111827', fontSize: 18, fontWeight: 'normal', textAlign: 'left', borderColor: typeof candidate.borderColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(candidate.borderColor) ? candidate.borderColor : '#111827', borderWidth: finiteNumber(candidate.borderWidth ?? 0, 'legacy-qr.borderWidth', 0, 50), borderRadius: finiteNumber(candidate.borderRadius ?? 0, 'legacy-qr.borderRadius', 0, 2000) });
+  }
+  if (elements.length > 100) throw new Error('legacy design elements must contain at most 100 items');
+  return { page: { width, height, background, frameColor, frameWidth, borderRadius: 12 }, elements };
+}
+
 function documentDesign(value) {
   const design = designOf(value);
+  if (design.page === undefined && design.elements === undefined && (design.texts !== undefined || design.logos !== undefined || design.photo !== undefined || design.qr !== undefined)) {
+    return legacyDocumentDesign(design);
+  }
   const page = design.page && typeof design.page === 'object' && !Array.isArray(design.page) ? design.page : {};
   const width = finiteNumber(page.width ?? 856, 'page width', 100, 4000);
   const height = finiteNumber(page.height ?? 540, 'page height', 100, 4000);
   const background = typeof page.background === 'string' && /^#[0-9a-fA-F]{6}$/.test(page.background) ? page.background : '#ffffff';
+  const frameColor = typeof page.frameColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(page.frameColor) ? page.frameColor : '#111827';
+  const frameWidth = finiteNumber(page.frameWidth ?? 0, 'page frameWidth', 0, 50);
+  const borderRadius = finiteNumber(page.borderRadius ?? 0, 'page borderRadius', 0, 2000);
   const candidates = design.elements ?? design.blocks ?? [];
   if (!Array.isArray(candidates) || candidates.length > 100) throw new Error('design elements must contain at most 100 items');
   const ids = new Set();
@@ -135,9 +261,33 @@ function documentDesign(value) {
       width: finiteNumber(candidate.width ?? 160, `${id}.width`, 1, width),
       height: finiteNumber(candidate.height ?? 40, `${id}.height`, 1, height),
       rotation: finiteNumber(candidate.rotation ?? 0, `${id}.rotation`, -360, 360),
+      zIndex: finiteNumber(candidate.zIndex ?? 0, `${id}.zIndex`, -1000, 1000),
     };
     if (element.x + element.width > width || element.y + element.height > height) throw new Error(`design element ${id} exceeds the page`);
-    if (type === 'image') return { ...element, assetId: assetId(candidate.assetId), fit: ['contain', 'cover', 'fill'].includes(candidate.fit) ? candidate.fit : 'contain' };
+    if (type === 'image') return { ...element, assetId: assetId(candidate.assetId), fit: ['contain', 'cover', 'fill'].includes(candidate.fit) ? candidate.fit : 'contain', opacity: finiteNumber(candidate.opacity ?? 1, `${id}.opacity`, 0, 1), borderRadius: finiteNumber(candidate.borderRadius ?? 0, `${id}.borderRadius`, 0, 2000) };
+    if (type === 'photo') {
+      const binding = String(candidate.binding || 'photo');
+      if (!safeDataPath(binding)) throw new Error(`design element ${id} binding is invalid`);
+      return {
+        ...element, binding, fit: ['contain', 'cover', 'fill'].includes(candidate.fit) ? candidate.fit : 'cover',
+        borderColor: typeof candidate.borderColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(candidate.borderColor) ? candidate.borderColor : '#111827',
+        borderWidth: finiteNumber(candidate.borderWidth ?? 0, `${id}.borderWidth`, 0, 50),
+        borderRadius: finiteNumber(candidate.borderRadius ?? 0, `${id}.borderRadius`, 0, 2000),
+      };
+    }
+    if (type === 'shape') {
+      const shapeType = SHAPE_TYPES.has(candidate.shapeType) ? candidate.shapeType : 'rectangle';
+      return {
+        ...element, shapeType,
+        fill: typeof candidate.fill === 'string' && /^#[0-9a-fA-F]{6}$/.test(candidate.fill) ? candidate.fill : '#ffffff',
+        borderColor: typeof candidate.borderColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(candidate.borderColor) ? candidate.borderColor : '#111827',
+        borderWidth: finiteNumber(candidate.borderWidth ?? 0, `${id}.borderWidth`, 0, 50),
+        borderRadius: finiteNumber(shapeType === 'circle' ? Math.min(element.width, element.height) / 2 : candidate.borderRadius ?? 0, `${id}.borderRadius`, 0, 2000),
+        opacity: finiteNumber(candidate.opacity ?? 1, `${id}.opacity`, 0, 1),
+        lineStyle: ['solid', 'dashed', 'dotted'].includes(candidate.lineStyle) ? candidate.lineStyle : 'solid',
+        gradient: shapeGradient(candidate.gradient, `${id}.gradient`),
+      };
+    }
     const binding = candidate.binding === undefined ? undefined : String(candidate.binding);
     if (binding !== undefined && !safeDataPath(binding)) throw new Error(`design element ${id} binding is invalid`);
     const text = typeof candidate.text === 'string' ? candidate.text.slice(0, 2000) : '';
@@ -146,15 +296,18 @@ function documentDesign(value) {
       ...element, text, ...(binding ? { binding } : {}), color,
       fontSize: finiteNumber(candidate.fontSize ?? 18, `${id}.fontSize`, 6, 200),
       fontWeight: ['normal', 'bold'].includes(candidate.fontWeight) ? candidate.fontWeight : 'normal',
+      fontStyle: candidate.fontStyle === 'italic' ? 'italic' : 'normal',
+      fontFamily: FONT_FAMILIES.has(candidate.fontFamily) ? candidate.fontFamily : 'Inter, sans-serif',
       textAlign: ['left', 'center', 'right'].includes(candidate.textAlign) ? candidate.textAlign : 'left',
     };
   });
-  return { page: { width, height, background }, elements };
+  return { page: { width, height, background, frameColor, frameWidth, borderRadius }, elements };
 }
 
 function resolveElement(element, record) {
-  if (element.type === 'image') return element;
+  if (element.type === 'image' || element.type === 'shape') return element;
   const value = element.binding ? dataAt(record, element.binding) : element.text;
+  if (element.type === 'photo') return { ...element, value: safePhotoValue(value) };
   return { ...element, value: value == null ? '' : String(value).slice(0, 4000) };
 }
 
@@ -188,7 +341,7 @@ module.exports = {
       { id: 'wattanam.document-designer.print', label: 'Print or export generated documents' },
     ]);
     context.navigation.register([
-      { id: 'templates', label: 'Document Designer', href: '/plugins/wattanam.document-designer/templates', permission: 'wattanam.document-designer.view' },
+      { id: 'templates', label: 'Document Designer', href: '/plugins/wattanam.document-designer/templates', permission: 'wattanam.document-designer.view', dashboard: { title: 'Document Designer', description: 'Design cards, certificates, QR sheets, and print-ready documents.', priority: 110 } },
     ]);
 
     context.routes.register({

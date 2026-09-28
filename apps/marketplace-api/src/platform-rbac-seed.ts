@@ -26,6 +26,9 @@ export const PLATFORM_PERMISSIONS: Array<{ key: string; description: string }> =
   { key: 'plugins.review', description: 'Review plugin submissions' },
   { key: 'plugins.publish', description: 'Publish or promote a plugin release' },
   { key: 'plugins.withdraw', description: 'Withdraw a plugin release' },
+  { key: 'starter_bundles.read', description: 'View curated starter bundles' },
+  { key: 'starter_bundles.manage', description: 'Create curated starter-bundle drafts' },
+  { key: 'starter_bundles.publish', description: 'Publish or withdraw curated starter bundles' },
   { key: 'builds.read', description: 'View plugin build jobs and evidence' },
   { key: 'builds.run', description: 'Start a plugin build' },
   { key: 'builds.cancel', description: 'Cancel a running plugin build' },
@@ -60,7 +63,7 @@ export const PLATFORM_ROLES: Array<{ key: string; displayName: string; descripti
   {
     key: 'marketplace_operator', displayName: 'Marketplace Operator',
     description: 'Catalog, schools, plugin requests, and manual entitlements. No key custody or payout approval.',
-    permissions: ['platform.dashboard.read', 'customers.read', 'schools.read', 'schools.manage', 'schools.entitlements.manage', 'school_billing.read', 'plugin_requests.read', 'plugin_requests.review', 'plugins.read'],
+    permissions: ['platform.dashboard.read', 'customers.read', 'schools.read', 'schools.manage', 'schools.entitlements.manage', 'school_billing.read', 'plugin_requests.read', 'plugin_requests.review', 'plugins.read', 'starter_bundles.read', 'starter_bundles.manage', 'starter_bundles.publish'],
   },
   {
     key: 'plugin_reviewer', displayName: 'Plugin Reviewer',
@@ -95,6 +98,6 @@ export const PLATFORM_ROLES: Array<{ key: string; displayName: string; descripti
   {
     key: 'auditor', displayName: 'Auditor',
     description: 'Read-only access to all audit-safe records and exports. No mutations.',
-    permissions: ['platform.dashboard.read', 'customers.read', 'schools.read', 'school_billing.read', 'plugin_requests.read', 'publishers.read', 'plugins.read', 'orders.read', 'revenue.read', 'advisories.read', 'support.read', 'audit.read', 'audit.export', 'operations.read'],
+    permissions: ['platform.dashboard.read', 'customers.read', 'schools.read', 'school_billing.read', 'plugin_requests.read', 'publishers.read', 'plugins.read', 'starter_bundles.read', 'orders.read', 'revenue.read', 'advisories.read', 'support.read', 'audit.read', 'audit.export', 'operations.read'],
   },
 ];

@@ -106,6 +106,8 @@ export function createTestContext(overrides: ContextOverrides = {}): TestHarness
     accounts: {
       createStudent: async (input) => ({ id: `student-${input.commandKey}`, name: input.name, role: 'STUDENT', email: input.email ?? null, phone: input.phone ?? null }),
       updateStudent: async (input) => ({ id: input.userId, name: input.name, role: 'STUDENT', email: input.email ?? null, phone: input.phone ?? null }),
+      resolveParent: async (input) => ({ id: `parent-${input.commandKey}`, name: input.name, role: 'PARENT', email: input.email, phone: input.phone ?? null, created: true }),
+      assignGuardian: async () => undefined,
     },
     ...topLevelOverrides,
   };

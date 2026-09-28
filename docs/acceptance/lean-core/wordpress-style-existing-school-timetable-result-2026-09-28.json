@@ -1,0 +1,25 @@
+{
+  "format": "wattanam-existing-school-timetable-rehearsal-v1",
+  "passed": true,
+  "sourceDatabase": "timetable_source",
+  "targetDatabase": "timetable_restored",
+  "schoolSlug": "restored-timetable-school",
+  "backupFile": "wattanam-20260928T072336Z.dump",
+  "datasets": {
+    "documents": 1,
+    "subjects": 1,
+    "classes": 1,
+    "classrooms": 1,
+    "teachers": 1,
+    "lessons": 1,
+    "entries": 1,
+    "teacherAttendance": 1
+  },
+  "sourceSha256": "e828e67578c8920877021640c37b2e45c52901db28bfe0b244398d015411b1c9",
+  "targetSha256": "e828e67578c8920877021640c37b2e45c52901db28bfe0b244398d015411b1c9",
+  "dryRunZeroWrite": true,
+  "adopted": true,
+  "rolledBack": true,
+  "legacyPreserved": true,
+  "pluginDataPreserved": true
+}

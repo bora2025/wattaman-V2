@@ -1,0 +1,23 @@
+{
+  "format": "wattanam-existing-school-attendance-manager-rehearsal-v1",
+  "passed": true,
+  "sourceDatabase": "attendance_source",
+  "targetDatabase": "attendance_restored",
+  "schoolSlug": "restored-attendance-school",
+  "backupFile": "wattanam-20260928T071943Z.dump",
+  "datasets": {
+    "studyYears": 1,
+    "sessions": 1,
+    "holidays": 1,
+    "identifiers": 1,
+    "formatRules": 1,
+    "records": 1
+  },
+  "sourceSha256": "ccff58ea63f31243c0d8efc95febcacaeb05397de42a9f6186aebcb9a1562e78",
+  "targetSha256": "ccff58ea63f31243c0d8efc95febcacaeb05397de42a9f6186aebcb9a1562e78",
+  "dryRunZeroWrite": true,
+  "adopted": true,
+  "rolledBack": true,
+  "legacyPreserved": true,
+  "pluginDataPreserved": true
+}

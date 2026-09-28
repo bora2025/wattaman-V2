@@ -24,8 +24,8 @@ Moving a PLUGIN-ELIGIBLE module to `plugins/<id>/` now has a working precedent, 
 |---|---|---|
 | `auth` | CORE | Generic identity, authentication, sessions, roles and recovery per ADR-0010 |
 | `installation`, `backup`, `audit` | CORE | Platform installation, safety and compliance infrastructure |
-| `attendance`, `session-config`, `holidays`, `card-aliases` | OFFICIAL PLUGIN TARGET | `wattanam.attendance`; staff and lesson/course attendance split per ADR-0019 |
-| `classes`, `study-years`, `departments`, `class-registrations` | OFFICIAL PLUGIN TARGET | `wattanam.academic-management` per ADR-0010 |
+| `attendance`, `study-years`, `session-config`, `holidays`, `card-aliases` | OFFICIAL PLUGIN TARGET | `wattanam.attendance-manager`; Study Year is the shared attendance-period authority and Academic consumes its versioned read model |
+| `classes`, `departments`, `class-registrations` | OFFICIAL PLUGIN TARGET | `wattanam.academic-management` per ADR-0010 |
 | `plugins` | CORE | Plugin host and lifecycle infrastructure |
 | `database`, `config`, `common`, `health` | CORE | Infrastructure every module (core or plugin-supporting) depends on |
 | `site-settings` | CORE | Installation-wide configuration, same tier as `installation` |

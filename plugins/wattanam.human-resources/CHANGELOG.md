@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.3
+
+- Declare employment/financial data, backup/restore and retention behavior and runtime health.
+
 ## 0.1.2
 
 - Publish a privacy-minimized staff document profile containing only the stable directory user ID

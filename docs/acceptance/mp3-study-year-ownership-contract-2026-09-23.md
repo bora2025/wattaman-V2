@@ -23,8 +23,9 @@ state is now fail-closed and no longer used by the core compatibility route.
   deterministic idempotency key.
 - Academic class responses resolve their opaque `studyYearId` through that read model and validate
   new references against it; they no longer join the duplicate Academic Study Year table.
-- Academic Study Year mutation routes fail closed and its navigation entry is removed. The old
-  migration/table is retained as rollback data until the approved support window closes.
+- Academic Management no longer registers any Study Year read or mutation route, and its navigation
+  entry is removed. The published migration/table remains byte-for-byte immutable as dormant rollback
+  data until the approved support window closes.
 - Attendance deletion publishes a tombstone read model, and Academic consumers ignore tombstones.
 - The guarded legacy adoption toolkit now targets Attendance Manager's table, uses a distinct
   Attendance journal identity/path, requires the new Attendance confirmation variables, and keeps
@@ -36,7 +37,7 @@ state is now fail-closed and no longer used by the core compatibility route.
 
 - Study Year compatibility controller and strict Attendance runtime suites: 5/5 passed, including
   all four durable and transient Study Year lifecycle event paths.
-- Academic reference suite: 7/7 passed, including owner fail-close and read-model consumption.
+- Academic reference suite: 15/15 passed, including sole-owner route registration and read-model consumption.
 - Attendance Study Year preflight/adopt/rollback suites: 9/9 passed.
 - Unified cutover-readiness suite: 3/3 passed with dual-plugin activation checks.
 - Architecture inventory gate: 1,430 discovered items owned; 82 models classified.
@@ -44,6 +45,6 @@ state is now fail-closed and no longer used by the core compatibility route.
 
 ## Remaining gate
 
-Execution of the toolkit against a restored real PostgreSQL backup and hosted lifecycle proof
-remain open. Until those pass, production route ownership must remain `legacy` and the legacy and
-Academic rollback tables must not be deleted.
+The guarded restored-backup Study Year gate is now implemented in CI, but its first real PostgreSQL
+result and hosted lifecycle proof remain open. Until those pass, production route ownership must
+remain `legacy` and the legacy and dormant Academic rollback tables must not be deleted.

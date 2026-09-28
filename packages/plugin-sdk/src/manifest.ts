@@ -29,6 +29,18 @@ export const PLUGIN_CAPABILITIES_V1_1 = ['accounts.guardian.assign', 'accounts.p
 export const PLUGIN_SUPPORTED_CAPABILITIES = [...PLUGIN_CAPABILITIES, ...PLUGIN_CAPABILITIES_V1_1] as const;
 export const PLUGIN_SDK_VERSION = '1.1.0';
 export const PLUGIN_RUNTIME_VERSION = '1.0.0';
+export const PLUGIN_DATA_CLASSIFICATIONS = [
+  'education-records', 'personal-data', 'communications', 'financial-records',
+  'employment-records', 'location-data', 'generated-documents',
+] as const;
+
+export interface PluginOperationalContract {
+  healthCheck: 'runtime';
+  dataClassification: string[];
+  backup: { database: 'required' | 'none'; files: 'required' | 'none'; restore: 'required' };
+  uninstall: { dataRetention: 'preserve' };
+  pricing: 'marketplace';
+}
 
 export interface PluginManifest {
   schemaVersion: 1;
@@ -52,6 +64,7 @@ export interface PluginManifest {
   supportedLanguages: string[];
   supportUrl?: string;
   privacyUrl?: string;
+  operational?: PluginOperationalContract;
 }
 
 function text(value: unknown, field: string, maximum = 200): string {
@@ -166,6 +179,34 @@ export function parsePluginManifest(value: unknown): PluginManifest {
   if (parsedNavigation.length && !capabilities.includes('navigation.register')) throw new Error('navigation entries require navigation.register capability');
   if (input.frontendEntry !== undefined && !capabilities.includes('ui.pages')) throw new Error('frontendEntry requires ui.pages capability');
 
+  let operational: PluginOperationalContract | undefined;
+  if (input.operational !== undefined) {
+    if (!input.operational || typeof input.operational !== 'object' || Array.isArray(input.operational)) throw new Error('operational must be an object');
+    const value = input.operational as Record<string, unknown>;
+    if (value.healthCheck !== 'runtime') throw new Error('operational.healthCheck must be runtime');
+    if (!Array.isArray(value.dataClassification) || value.dataClassification.length === 0
+      || value.dataClassification.some((item) => typeof item !== 'string' || !(PLUGIN_DATA_CLASSIFICATIONS as readonly string[]).includes(item))) {
+      throw new Error('operational.dataClassification must contain supported classifications');
+    }
+    const backup = value.backup;
+    if (!backup || typeof backup !== 'object' || Array.isArray(backup)) throw new Error('operational.backup must be an object');
+    const backupValue = backup as Record<string, unknown>;
+    if (!['required', 'none'].includes(String(backupValue.database)) || !['required', 'none'].includes(String(backupValue.files)) || backupValue.restore !== 'required') {
+      throw new Error('operational.backup must declare database/files participation and required restore verification');
+    }
+    const uninstall = value.uninstall;
+    if (!uninstall || typeof uninstall !== 'object' || Array.isArray(uninstall)
+      || (uninstall as Record<string, unknown>).dataRetention !== 'preserve') throw new Error('operational.uninstall.dataRetention must be preserve');
+    if (value.pricing !== 'marketplace') throw new Error('operational.pricing must be marketplace');
+    operational = {
+      healthCheck: 'runtime',
+      dataClassification: [...new Set(value.dataClassification as string[])],
+      backup: { database: backupValue.database as 'required' | 'none', files: backupValue.files as 'required' | 'none', restore: 'required' },
+      uninstall: { dataRetention: 'preserve' },
+      pricing: 'marketplace',
+    };
+  }
+
   return {
     schemaVersion: 1,
     id,
@@ -188,5 +229,6 @@ export function parsePluginManifest(value: unknown): PluginManifest {
     supportedLanguages: [...new Set(supportedLanguages as string[])],
     supportUrl: optionalUrl(input.supportUrl, 'supportUrl'),
     privacyUrl: optionalUrl(input.privacyUrl, 'privacyUrl'),
+    operational,
   };
 }

@@ -3,7 +3,7 @@
   "id": "wattanam.academic-management",
   "name": "Academic Management",
   "description": "Official Wattanam academic structures, profiles, admissions, enrollment, and roster contracts.",
-  "version": "0.1.10",
+  "version": "0.1.12",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -83,5 +83,8 @@
     { "id": "classes", "label": "Classes", "href": "/plugins/wattanam.academic-management/classes", "permission": "wattanam.academic-management.view" },
     { "id": "registrations", "label": "Registrations", "href": "/plugins/wattanam.academic-management/registrations", "permission": "wattanam.academic-management.manage" }
   ],
-  "supportedLanguages": ["en", "km"]
+  "supportedLanguages": ["en", "km"],
+  "supportUrl": "https://wattanam.example/support/academic-management",
+  "privacyUrl": "https://wattanam.example/privacy/plugins/academic-management",
+  "operational": { "healthCheck": "runtime", "dataClassification": ["education-records", "personal-data"], "backup": { "database": "required", "files": "none", "restore": "required" }, "uninstall": { "dataRetention": "preserve" }, "pricing": "marketplace" }
 }

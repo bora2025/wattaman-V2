@@ -61,7 +61,13 @@ export interface PluginRuntimeContext {
     list(prefix?: string): Promise<string[]>;
   };
   permissions: { register(definitions: Array<{ id: string; label: string; description?: string }>): () => void };
-  navigation: { register(entries: Array<{ id: string; label: string; href: string; permission?: string }>): () => void };
+  navigation: { register(entries: Array<{
+    id: string;
+    label: string;
+    href: string;
+    permission?: string;
+    dashboard?: { title?: string; description: string; priority?: number } | false;
+  }>): () => void };
   notifications: {
     sendEmail(to: string, subject: string, text: string): Promise<{ sent: boolean } | { skipped: boolean; reason: string }>;
     sendSms(to: string, body: string): Promise<{ sent: boolean } | { skipped: boolean; reason: string }>;

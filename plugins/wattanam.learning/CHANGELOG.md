@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.5
+
+- Cast course-session timestamps explicitly for PostgreSQL runtime compatibility.
+
+## 0.1.4
+
+- Declare the operational contract and expose the standard runtime health probe.
+
+## 0.1.3
+
+- Publish an extension-driven dashboard contribution.
+- Add approval-bound real-PostgreSQL certification for the destructive multi-attempt migration,
+  course lifecycle, concurrent lesson attempts, redacted playback, completion and attendance.
+
 ## 0.1.2
 
 - Add an immutable, explicitly approval-gated multi-attempt assignment-submission identity migration.

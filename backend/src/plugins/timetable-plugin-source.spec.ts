@@ -9,8 +9,9 @@ describe('Timetable plugin source', () => {
   const manifest = JSON.parse(readFileSync(path.join(root, 'plugin.json'), 'utf8'));
 
   it('keeps timetable data namespaced and migration-compatible with the runtime', () => {
-    expect(manifest.version).toBe('0.1.3');
+    expect(manifest.version).toBe('0.1.6');
     expect(manifest.capabilities).toContain('directory.read');
+    expect(manifest.dependencies).toEqual({ 'wattanam.academic-management': '>=0.1.0 <1.0.0' });
     const migrations = new PluginMigrationsService();
     for (const migration of manifest.migrations) {
       const sql = readFileSync(path.join(root, migration.path), 'utf8');

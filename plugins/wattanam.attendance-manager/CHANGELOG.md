@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.8
+
+- Cast attendance check-in timestamps explicitly and execute advisory locks without deserializing PostgreSQL `void` values.
+
+## 0.1.7
+
+- Declare the operational contract and expose the standard runtime health probe.
+
 ## 0.1.6
 
 - Preserve legacy permission date ranges and student attendance-format policy in additive plugin

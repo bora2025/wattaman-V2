@@ -1,9 +1,24 @@
 import { SchoolBillingService } from './school-billing.service';
+import { generateKeyPairSync } from 'node:crypto';
 
 const context = { correlationId: 'billing-correlation', ip: '203.0.113.10', userAgent: 'jest' };
 const now = new Date('2026-09-07T00:00:00.000Z');
 
 describe('SchoolBillingService', () => {
+  it('signs each school-control response with a monotonically generated installation-bound payload', async () => {
+    const pair = generateKeyPairSync('ed25519');
+    const prisma = {
+      customerSchool: { findFirst: jest.fn().mockResolvedValue(null) },
+      installationRegistration: { update: jest.fn().mockResolvedValue({ installationId: 'installation-1', controlGeneration: 3 }) },
+    } as any;
+    const config = {
+      entitlementPrivateKey: pair.privateKey.export({ type: 'pkcs8', format: 'pem' }).toString(), entitlementKeyId: 'control-1',
+    } as any;
+    const result = await new SchoolBillingService(prisma, undefined, config).signedInstallationControl('registration-1', new Date('2026-09-26T00:00:00.000Z'));
+    expect(result.payload).toMatchObject({ generation: 3, installationId: 'installation-1', access: 'ACTIVE', audience: 'wattanam-school-control', keyId: 'control-1' });
+    expect(result.signature).toMatchObject({ algorithm: 'ed25519', keyId: 'control-1', value: expect.any(String) });
+    expect(prisma.installationRegistration.update).toHaveBeenCalledWith(expect.objectContaining({ data: { controlGeneration: { increment: 1 } } }));
+  });
   it('archives a plan without rewriting historical invoices', async () => {
     const existing = { id: '11111111-1111-4111-8111-111111111111', slug: 'standard', active: true };
     const tx = { schoolBillingPlan: { findUnique: jest.fn().mockResolvedValue(existing), update: jest.fn().mockResolvedValue({ ...existing, active: false }) }, platformAuditEvent: { create: jest.fn() } };

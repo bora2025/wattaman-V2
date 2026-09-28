@@ -6,6 +6,8 @@ import { Logger } from '@nestjs/common';
 import { OUTAGE_UNLOCK_AFTER_MS } from './school-access.service';
 import { SchoolBillingControlService } from './school-billing-control.service';
 
+jest.mock('./entitlement-config', () => ({ readEntitlementConfig: () => ({ publicKeys: new Map([['test', 'key']]) }) }));
+
 const keys = { sign: jest.fn().mockResolvedValue('signature') } as any;
 
 /** Unlocking within minutes: the sync that runs every five minutes, but only when there is reason to. */

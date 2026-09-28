@@ -2,6 +2,7 @@ import { generateKeyPairSync, sign } from 'crypto';
 import { createHash } from 'crypto';
 import { UpdatesService } from './updates.service';
 import { canonicalRepositoryJson } from './repository-signature';
+import { pluginInstallConsentDigest } from '../marketplace/plugin-install-consent';
 import { promises as fs } from 'fs';
 import os from 'os';
 import path from 'path';
@@ -15,6 +16,7 @@ describe('UpdatesService', () => {
   const prisma = { pluginInstallation: { findMany: jest.fn() } } as any;
   const plugins = { install: jest.fn() } as any;
   const backup = { create: jest.fn() } as any;
+  const entitlements = { assertCanUpdate: jest.fn().mockResolvedValue({ mode: 'active' }) } as any;
   let service: UpdatesService;
   let stateDirectory: string;
 
@@ -28,7 +30,7 @@ describe('UpdatesService', () => {
     };
     stateDirectory = mkdtempSync(path.join(os.tmpdir(), 'wattanam-update-suite-'));
     process.env.UPDATE_STATE_DIR = stateDirectory;
-    service = new UpdatesService(prisma, plugins, backup);
+    service = new UpdatesService(prisma, plugins, backup, entitlements);
   });
 
   afterEach(() => { rmSync(stateDirectory, { recursive: true, force: true }); });
@@ -43,13 +45,15 @@ describe('UpdatesService', () => {
     prisma.pluginInstallation.findMany.mockResolvedValue([{ id: 'wattanam.announcements', version: '1.0.0', status: 'active', manifestJson: JSON.stringify({ requiresCore: '<2.0.0' }) }]);
     const payload = {
       schemaVersion: 1,
-      pluginReleases: [{ pluginId: 'wattanam.announcements', name: 'Announcements', version: '1.1.0', publisher: 'wattanam', requiresCore: '>=1.0.0 <2.0.0', channel: 'stable', paid: false, changelog: 'Fix', sha256: 'a'.repeat(64), sizeBytes: 100 }],
+      pluginReleases: [{ pluginId: 'wattanam.announcements', name: 'Announcements', version: '1.1.0', publisher: 'wattanam', requiresCore: '>=1.0.0 <2.0.0', channel: 'stable', paid: false, changelog: 'Fix', sha256: 'a'.repeat(64), sizeBytes: 100, manifest: { capabilities: ['database.write'], permissions: ['wattanam.announcements.manage'], dependencies: {}, migrations: [{ destructive: false }] } }],
       coreReleases: [{ version: '2.0.0', releaseNotes: 'Major release' }],
       advisories: [{ id: 'WAT-2026-0001', pluginId: 'wattanam.announcements', affectedVersions: '<1.1.0', severity: 'high' }],
     };
     jest.spyOn(global, 'fetch').mockResolvedValue(new Response(JSON.stringify(signed(payload)), { status: 200, headers: { 'content-type': 'application/json' } }));
     const result: any = await service.check();
     expect(result.pluginUpdates[0].release.version).toBe('1.1.0');
+    expect(result.pluginUpdates[0].release).toMatchObject({ capabilities: ['database.write'], migrationSummary: { count: 1, destructive: false } });
+    expect(result.pluginUpdates[0].release.consentDigest).toMatch(/^[a-f0-9]{64}$/);
     expect(result.advisories[0].id).toBe('WAT-2026-0001');
     expect(result.core.updates[0].blockedByActivePlugins).toEqual(['wattanam.announcements']);
   });
@@ -57,27 +61,38 @@ describe('UpdatesService', () => {
   it('checks the downloaded bytes against signed metadata before local installation', async () => {
     const artifact = Buffer.from('signed-wtp-fixture');
     const sha256 = createHash('sha256').update(artifact).digest('hex');
+    const manifest = { capabilities: ['api.routes'], permissions: ['wattanam.announcements.read'], dependencies: {}, migrations: [] };
     const payload = {
       schemaVersion: 1, coreReleases: [], advisories: [],
-      pluginReleases: [{ pluginId: 'wattanam.announcements', version: '1.1.0', sha256, downloadUrl: `https://marketplace.example.com/v1/artifacts/${sha256}` }],
+      pluginReleases: [{ pluginId: 'wattanam.announcements', version: '1.1.0', sha256, downloadUrl: `https://marketplace.example.com/v1/artifacts/${sha256}`, manifest }],
     };
     jest.spyOn(global, 'fetch')
       .mockResolvedValueOnce(new Response(JSON.stringify(signed(payload)), { status: 200 }))
       .mockResolvedValueOnce(new Response(artifact, { status: 200, headers: { 'content-length': String(artifact.length) } }));
     plugins.install.mockResolvedValue({ id: 'wattanam.announcements', version: '1.1.0' });
-    await expect(service.installPlugin('wattanam.announcements', '1.1.0')).resolves.toMatchObject({ version: '1.1.0' });
+    await expect(service.installPlugin('wattanam.announcements', '1.1.0', pluginInstallConsentDigest(manifest))).resolves.toMatchObject({ version: '1.1.0' });
+    expect(entitlements.assertCanUpdate).toHaveBeenCalledWith('wattanam.announcements');
     expect(plugins.install).toHaveBeenCalledWith(artifact);
   });
 
+  it('does not contact the repository when entitlement policy denies an update', async () => {
+    entitlements.assertCanUpdate.mockRejectedValueOnce(Object.assign(new Error('updates expired'), { status: 402 }));
+    const fetchMock = jest.spyOn(global, 'fetch');
+    await expect(service.installPlugin('wattanam.paid', '1.1.0', 'a'.repeat(64))).rejects.toMatchObject({ status: 402 });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(plugins.install).not.toHaveBeenCalled();
+  });
+
   it('rejects an artifact whose bytes do not match signed metadata', async () => {
+    const manifest = { capabilities: [], permissions: [], dependencies: {}, migrations: [] };
     const payload = {
       schemaVersion: 1, coreReleases: [], advisories: [],
-      pluginReleases: [{ pluginId: 'wattanam.announcements', version: '1.1.0', sha256: 'a'.repeat(64), downloadUrl: `https://marketplace.example.com/v1/artifacts/${'a'.repeat(64)}` }],
+      pluginReleases: [{ pluginId: 'wattanam.announcements', version: '1.1.0', sha256: 'a'.repeat(64), downloadUrl: `https://marketplace.example.com/v1/artifacts/${'a'.repeat(64)}`, manifest }],
     };
     jest.spyOn(global, 'fetch')
       .mockResolvedValueOnce(new Response(JSON.stringify(signed(payload)), { status: 200 }))
       .mockResolvedValueOnce(new Response('tampered', { status: 200 }));
-    await expect(service.installPlugin('wattanam.announcements', '1.1.0')).rejects.toThrow('checksum does not match');
+    await expect(service.installPlugin('wattanam.announcements', '1.1.0', pluginInstallConsentDigest(manifest))).rejects.toThrow('checksum does not match');
     expect(plugins.install).not.toHaveBeenCalled();
   });
 
@@ -110,7 +125,7 @@ describe('UpdatesService', () => {
     const older = signed({ schemaVersion: 1, generatedAt: '2026-08-28T01:00:00.000Z', pluginReleases: [], coreReleases: [], advisories: [] });
     jest.spyOn(global, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify(newer), { status: 200 })).mockResolvedValueOnce(new Response(JSON.stringify(older), { status: 200 }));
     await expect(service.check()).resolves.toMatchObject({ enabled: true });
-    service = new UpdatesService(prisma, plugins, backup);
+    service = new UpdatesService(prisma, plugins, backup, entitlements);
     await expect(service.check()).rejects.toThrow('replay or downgrade');
   });
 

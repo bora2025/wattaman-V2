@@ -73,7 +73,7 @@ test('backup-bound dry run lists the plan and guarantees zero writes or journal 
     assert.equal(result.ready, true);
     assert.equal(result.dryRun, true);
     assert.equal(result.zeroWriteGuarantee, true);
-    assert.equal(result.plannedSteps.length, 7);
+    assert.equal(result.plannedSteps.length, 8);
     assert.equal(sample.writes, 0);
     assert.equal(sample.target.size, 0);
     assert.equal(fs.readdirSync(sample.directory).some((name) => name.endsWith('.journal.json') || name.endsWith('.lock')), false);

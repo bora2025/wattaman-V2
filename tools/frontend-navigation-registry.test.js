@@ -108,11 +108,17 @@ test('LC2-010: trailing slashes cannot evade the route boundary', async () => {
 test('LC2-011: dashboard cards accept only namespaced active plugin contributions', async () => {
   const { pluginDashboardCards } = await dashboardExtensions();
   const cards = pluginDashboardCards([
-    { pluginId: 'wattanam.attendance', id: 'home', label: 'Attendance', href: '/plugins/wattanam.attendance/home' },
+    { pluginId: 'wattanam.attendance', id: 'later', label: 'Later', href: '/plugins/wattanam.attendance/later' },
+    { pluginId: 'wattanam.attendance', id: 'home', label: 'Attendance', href: '/plugins/wattanam.attendance/home', dashboard: { title: 'Attendance today', description: 'Scan and review attendance.', priority: 10 } },
+    { pluginId: 'wattanam.attendance', id: 'hidden', label: 'Hidden', href: '/plugins/wattanam.attendance/hidden', dashboard: false },
     { pluginId: 'wattanam.finance', id: 'escape', label: 'Bad', href: '/plugins/wattanam.finance/../admin' },
     { id: 'anonymous', label: 'Bad', href: '/plugins/anonymous/home' },
   ]);
-  assert.deepEqual(cards.map((card) => card.href), ['/plugins/wattanam.attendance/home']);
+  assert.deepEqual(cards.map((card) => card.href), ['/plugins/wattanam.attendance/home', '/plugins/wattanam.attendance/later']);
+  assert.deepEqual(cards[0], {
+    pluginId: 'wattanam.attendance', id: 'home', label: 'Attendance today',
+    href: '/plugins/wattanam.attendance/home', description: 'Scan and review attendance.', priority: 10,
+  });
 });
 
 test('LC2-011: core dashboard does not mount the legacy business dashboard', () => {

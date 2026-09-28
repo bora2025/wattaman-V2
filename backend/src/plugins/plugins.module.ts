@@ -24,11 +24,12 @@ import { PluginResourceQuotaService } from './plugin-resource-quota.service';
 import { PluginContractRuntimeService } from './plugin-contract-runtime.service';
 import { PluginRolloutService } from './plugin-rollout.service';
 import { PluginAccountService } from './plugin-account.service';
+import { PluginEntitlementPolicyService } from './plugin-entitlement-policy.service';
 
 @Module({
   imports: [DatabaseModule, NotificationModule, AuthModule, DirectoryModule, StorageModule],
   controllers: [PluginsController, PluginApiController],
-  providers: [PluginPackageVerifier, PluginArtifactCacheService, PluginResourceQuotaService, PluginContractRuntimeService, PluginRolloutService, PluginAccountService, PluginEventBus, PluginPermissionsService, PluginExtensionsService, PluginJobsService, PluginSettingsService, PluginStorageService, PluginMigrationsService, PluginRealtimeGateway, PluginRealtimeService, PluginNotificationQuotaService, PluginRuntimeService, PluginsService],
-  exports: [PluginsService, PluginEventBus, PluginExtensionsService, PluginPermissionsService],
+  providers: [PluginPackageVerifier, PluginArtifactCacheService, PluginResourceQuotaService, PluginContractRuntimeService, PluginRolloutService, PluginAccountService, PluginEntitlementPolicyService, PluginEventBus, PluginPermissionsService, PluginExtensionsService, PluginJobsService, PluginSettingsService, PluginStorageService, PluginMigrationsService, PluginRealtimeGateway, PluginRealtimeService, PluginNotificationQuotaService, PluginRuntimeService, PluginsService],
+  exports: [PluginsService, PluginEventBus, PluginExtensionsService, PluginPermissionsService, PluginEntitlementPolicyService],
 })
 export class PluginsModule {}

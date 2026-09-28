@@ -52,4 +52,12 @@ describe('wattanam-plugin check', () => {
     expect(logs.join('')).toContain('CHECK(S) FAILED');
     expect(logs.join('')).toContain('migration checksum matches plugin.json');
   });
+
+  it('fails when the runtime omits its declared operational health check', async () => {
+    const backendPath = path.join(dir, 'backend', 'index.js');
+    const backend = fs.readFileSync(backendPath, 'utf8');
+    fs.writeFileSync(backendPath, backend.replace(/\n\s*health\(\) \{[\s\S]*?\n\s*\},\n\};\s*$/, '\n};\n'));
+    await expect(check([dir])).rejects.toThrow('check(s) failed');
+    expect(logs.join('')).toContain('backend entry exports the declared health check');
+  });
 });

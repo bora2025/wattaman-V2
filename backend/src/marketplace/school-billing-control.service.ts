@@ -3,6 +3,8 @@ import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../database/prisma.service';
 import { InstallationKeyService } from './installation-key.service';
 import { readMarketplaceIdentityConfig } from './marketplace-identity-config';
+import { readEntitlementConfig } from './entitlement-config';
+import { verifySchoolControl } from './school-control-verification';
 import { evaluateSchoolAccess } from './school-access.service';
 import { schoolPaymentSignedPayload } from './school-payment-signing';
 
@@ -24,7 +26,8 @@ export class SchoolBillingControlService {
   @Cron('0 * * * *')
   async sync(now = new Date()) {
     const config = readMarketplaceIdentityConfig();
-    if (!config) return { configured: false };
+    const signing = readEntitlementConfig();
+    if (!config || !signing) return { configured: false };
     const installation = await this.prisma.installation.findUnique({ where: { id: 'singleton' }, select: { installationId: true } });
     if (!installation) return { configured: true, installed: false };
     const ts = String(Math.floor(now.getTime() / 1000));
@@ -34,14 +37,16 @@ export class SchoolBillingControlService {
     try {
       const response = await fetch(url, { redirect: 'error', signal: AbortSignal.timeout(config.requestTimeoutMs), headers: { accept: 'application/json' } });
       if (!response.ok) throw new Error(`Marketplace responded with ${response.status}`);
-      const body = await response.json() as { access?: string; reason?: string | null; warnings?: Warning[]; billing?: BillingSummary };
-      if (!['ACTIVE', 'SUSPENDED'].includes(String(body.access)) || !Array.isArray(body.warnings)) throw new Error('Marketplace returned invalid school control state');
+      const body = verifySchoolControl(await response.json(), signing.publicKeys, { installationId: installation.installationId, now }) as {
+        generation: number; access: 'ACTIVE' | 'SUSPENDED'; reason?: string | null; warnings: Warning[]; billing?: BillingSummary;
+      };
       await this.prisma.$transaction(async (tx) => {
         const previous = await tx.marketplaceSchoolControl.findUnique({ where: { id: 'singleton' } });
+        if (previous && body.generation <= previous.generation) throw new Error(`School control generation ${body.generation} is not newer than cached generation ${previous.generation}`);
         await tx.marketplaceSchoolControl.upsert({
           where: { id: 'singleton' },
-          create: { id: 'singleton', access: body.access!, reason: body.reason || null, warningsJson: JSON.stringify(body.warnings), billingJson: JSON.stringify(body.billing || {}), lastVerifiedAt: now, lastAttemptAt: now },
-          update: { access: body.access!, reason: body.reason || null, warningsJson: JSON.stringify(body.warnings), billingJson: JSON.stringify(body.billing || {}), lastVerifiedAt: now, lastAttemptAt: now, lastError: null },
+          create: { id: 'singleton', generation: body.generation, access: body.access, reason: body.reason || null, warningsJson: JSON.stringify(body.warnings), billingJson: JSON.stringify(body.billing || {}), lastVerifiedAt: now, lastAttemptAt: now },
+          update: { generation: body.generation, access: body.access, reason: body.reason || null, warningsJson: JSON.stringify(body.warnings), billingJson: JSON.stringify(body.billing || {}), lastVerifiedAt: now, lastAttemptAt: now, lastError: null },
         });
         const admins = await tx.user.findMany({ where: { role: { in: ['SUPER_ADMIN', 'ADMIN'] } }, select: { id: true } });
         const previousWarnings = new Set<string>(previous ? safeWarnings(previous.warningsJson).map(item => item.invoiceId) : []);

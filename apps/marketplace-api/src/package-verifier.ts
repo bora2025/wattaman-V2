@@ -24,6 +24,22 @@ const manifestSchema = z.object({
   migrations: z.array(z.object({ id: z.string(), path: z.string(), checksum: z.string().regex(/^[a-f0-9]{64}$/), destructive: z.boolean().default(false) })).default([]),
   navigation: z.array(z.unknown()).default([]),
   supportedLanguages: z.array(z.string()).default([]),
+  supportUrl: z.string().url().startsWith('https://').optional(),
+  privacyUrl: z.string().url().startsWith('https://').optional(),
+  operational: z.object({
+    healthCheck: z.literal('runtime'),
+    dataClassification: z.array(z.enum([
+      'education-records', 'personal-data', 'communications', 'financial-records',
+      'employment-records', 'location-data', 'generated-documents',
+    ])).min(1),
+    backup: z.object({
+      database: z.enum(['required', 'none']),
+      files: z.enum(['required', 'none']),
+      restore: z.literal('required'),
+    }).strict(),
+    uninstall: z.object({ dataRetention: z.literal('preserve') }).strict(),
+    pricing: z.literal('marketplace'),
+  }).strict().optional(),
 }).passthrough();
 
 type Manifest = z.infer<typeof manifestSchema>;

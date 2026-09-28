@@ -430,12 +430,12 @@
   },
   "files": [
     {
-      "match": "^frontend/(proxy\\.ts|lib/(navigation-registry|route-policy|dashboard-extensions)\\.ts|components/(CoreAdminDashboard|CorePluginSearch)\\.tsx)$",
+      "match": "^frontend/(proxy\\.ts|lib/(navigation-registry|route-policy|dashboard-extensions)(\\.test)?\\.ts|components/(CoreAdminDashboard|CorePluginSearch)\\.tsx)$",
       "owner": "lean-core",
       "note": "Distribution-aware frontend composition and direct-route enforcement."
     },
     {
-      "match": "^backend/src/(app\\.controller|app\\.service|app\\.module|main|worker)\\.ts$",
+      "match": "^backend/src/(app(-core)?\\.module|app\\.controller|app\\.service|bootstrap-api|main(-core)?|worker)\\.ts$",
       "owner": "lean-core",
       "note": "Root composition and process entry points."
     },
@@ -632,38 +632,58 @@
       "note": "Operator database and storage tooling."
     },
     {
-      "match": "^backend/scripts/academic-(management|enrollment|study-years|classes|admissions|student-profiles|subjects)-(adopt|rollback-drill|cutover-readiness)\\.js$",
+      "match": "^backend/scripts/academic-study-years-(adopt|rollback-drill|restored-backup-certification)\\.js$",
+      "owner": "wattanam.attendance-manager",
+      "note": "Legacy filename retained for operator compatibility; Study Year runtime and migration destination are Attendance Manager."
+    },
+    {
+      "match": "^backend/scripts/academic-(management|enrollment|classes|admissions|student-profiles|subjects)-(adopt|rollback-drill|cutover-readiness|restored-backup-certification)\\.js$",
       "owner": "wattanam.academic-management",
       "note": "Academic restored-backup adoption, reconciliation, cutover-readiness and rollback tooling."
     },
     {
-      "match": "^backend/scripts/attendance-manager-(adopt|rollback-drill)\\.js$",
+      "match": "^backend/scripts/academic-aggregate-restored-backup-certification\\.js$",
+      "owner": "wattanam.academic-management",
+      "note": "Aggregate restored-school certification across the Academic Management ownership boundary."
+    },
+    {
+      "match": "^backend/scripts/attendance-manager-(adopt|rollback-drill|restored-backup-certification)\\.js$",
       "owner": "wattanam.attendance-manager",
       "note": "Attendance Manager backup-bound historical adoption, reconciliation and rollback tooling."
     },
     {
-      "match": "^backend/scripts/timetable-(adopt|rollback-drill)\\.js$",
+      "match": "^backend/scripts/timetable-(adopt|rollback-drill|restored-backup-certification)\\.js$",
       "owner": "wattanam.timetable",
       "note": "Timetable backup-bound historical adoption, reconciliation and rollback tooling."
     },
     {
-      "match": "^backend/scripts/examination-(adopt|rollback-drill)\\.js$",
+      "match": "^backend/scripts/examination-(adopt|rollback-drill|restored-backup-certification)\\.js$",
       "owner": "wattanam.examination",
       "note": "Examination backup-bound historical adoption, reconciliation and rollback tooling."
     },
     {
-      "match": "^backend/scripts/learning-(adopt|rollback-drill)\\.js$",
+      "match": "^backend/scripts/learning-(adopt|rollback-drill|restored-backup-certification)\\.js$",
       "owner": "wattanam.learning",
       "note": "Learning backup-bound historical adoption, reconciliation and rollback tooling."
     },
     {
-      "match": "^backend/scripts/document-designer-(adopt|rollback-drill)\\.js$",
+      "match": "^backend/scripts/document-designer-(adopt|convert-assets|rollback-drill|restored-backup-certification)\\.js$",
       "owner": "wattanam.document-designer",
-      "note": "Document Designer backup-bound adoption, reconciliation and rollback tooling."
+      "note": "Document Designer backup-bound adoption, scoped asset conversion, reconciliation, restored-backup certification and rollback tooling."
     },
     {
       "match": "^frontend/(next\\.config|server|tailwind\\.config)\\.js$",
       "owner": "lean-core"
+    },
+    {
+      "match": "^frontend/core-routes\\.json$",
+      "owner": "lean-core",
+      "note": "Single route allow-list shared by runtime route enforcement and the physical core build."
+    },
+    {
+      "match": "^frontend/scripts/build-core(\\.test)?\\.js$",
+      "owner": "lean-core",
+      "note": "Physical lean-core web artifact builder and its contract tests."
     },
     {
       "match": "^frontend/public/sw\\.js$",
@@ -772,9 +792,9 @@
       "note": "Playwright config for plugin-host UI v2 regression tests."
     },
     {
-      "match": "^frontend/scripts/run-plugin-ui-e2e\\.js$",
+      "match": "^frontend/scripts/(run-plugin-ui-e2e(?:\\.test)?|plugin-ui-result-reporter)\\.js$",
       "owner": "lean-core",
-      "note": "Cross-platform lifecycle runner for plugin-host UI regression tests."
+      "note": "Cross-platform lifecycle runner, result reporter and contract tests for plugin-host UI regression tests."
     },
     {
       "match": "^apps/mobile/((App\\.tsx|index\\.ts|src/(api|config|AuthContext|theme)\\.ts)$|assets/)",
@@ -848,29 +868,34 @@
       "note": "Official Learning plugin package and runtime artifacts."
     },
     {
-      "match": "^backend/scripts/transportation-(adopt|rollback-drill)\\.js$",
+      "match": "^backend/scripts/transportation-(adopt|rollback-drill|restored-backup-certification)\\.js$",
       "owner": "wattanam.transportation",
       "note": "Guarded Transportation legacy adoption and routing rollback operations."
     },
     {
-      "match": "^backend/scripts/communication-(adopt|rollback-drill)\\.js$",
+      "match": "^backend/scripts/communication-(adopt|rollback-drill|restored-backup-certification)\\.js$",
       "owner": "wattanam.communication",
       "note": "Guarded Communication legacy adoption and routing rollback operations."
     },
     {
-      "match": "^backend/scripts/parent-portal-(adoption-preflight|adopt|rollback-drill)\\.js$",
+      "match": "^backend/scripts/parent-portal-(adoption-preflight|adopt|rollback-drill|restored-backup-certification)\\.js$",
       "owner": "wattanam.parent-portal",
       "note": "Backup-bound Parent Portal link-request adoption, exact reconciliation and routing rollback operations."
     },
     {
-      "match": "^backend/scripts/finance-(adopt|rollback-drill)\\.js$",
+      "match": "^backend/scripts/finance-(adopt|rollback-drill|restored-backup-certification)\\.js$",
       "owner": "wattanam.finance",
       "note": "Backup-bound Finance legacy adoption, exact reconciliation and routing rollback operations."
     },
     {
-      "match": "^backend/scripts/human-resources-(adopt|rollback-drill)\\.js$",
+      "match": "^backend/scripts/human-resources-(adopt|rollback-drill|restored-backup-certification)\\.js$",
       "owner": "wattanam.human-resources",
       "note": "Backup-bound Human Resources legacy adoption, exact reconciliation and routing rollback operations."
+    },
+    {
+      "match": "^backend/scripts/reporting-restored-backup-certification\\.js$",
+      "owner": "wattanam.reporting",
+      "note": "Stateless Reporting restored-school parity certification."
     },
     {
       "match": "^plugins/wattanam\\.transportation(/|$)",

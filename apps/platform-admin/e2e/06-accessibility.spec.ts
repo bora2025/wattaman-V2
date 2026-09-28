@@ -53,7 +53,7 @@ test('the mandatory-enrollment screen is accessible', async ({ page }) => {
 });
 
 const SCREENS = [
-  '/dashboard', '/customers', '/installations', '/publishers', '/plugins',
+  '/dashboard', '/customers', '/installations', '/publishers', '/plugins', '/starter-bundles',
   '/plugin-requests', '/orders', '/entitlements', '/advisories', '/operations', '/exports', '/audit',
   '/account',
 ];

@@ -25,7 +25,7 @@ test('LC2-016: installation persists only accepted core-owned records', () => {
 
 test('LC2-016: standalone installer cannot bootstrap the optional plugin runtime', () => {
   assert.doesNotMatch(moduleSource, /from ['"]\.\.\/plugins\/plugins\.module['"]/);
-  assert.match(moduleSource, /PluginPackageVerifier/);
+  assert.doesNotMatch(moduleSource, /PluginPackageVerifier|PluginsModule/);
 });
 
 test('LC2-016: interactive setup creates only school identity and its first owner', () => {

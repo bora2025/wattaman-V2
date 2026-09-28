@@ -3,7 +3,7 @@ const path = require('node:path');
 
 const repositoryRoot = path.resolve(__dirname, '..');
 const snapshotPath = path.join(repositoryRoot, 'docs/architecture/generated/current-architecture-inventory.json');
-const ignoredDirectories = new Set(['.git', '.next', 'coverage', 'dist', 'node_modules']);
+const ignoredDirectories = new Set(['.git', '.next', '.core-build', 'coverage', 'dist', 'dist-core', 'node_modules']);
 
 function relative(root, absolute) {
   return path.relative(root, absolute).split(path.sep).join('/');

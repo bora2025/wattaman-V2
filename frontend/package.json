@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build --webpack",
+    "build:core": "node scripts/build-core.js",
+    "test:build-core": "node --test scripts/build-core.test.js",
     "test:plugin-ui:e2e": "npm run build && node scripts/run-plugin-ui-e2e.js",
     "start": "node server.js",
     "lint": "next lint"

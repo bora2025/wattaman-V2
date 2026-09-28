@@ -36,6 +36,22 @@ describe('PluginExtensionsService', () => {
     expect(deps_.audit.log).toHaveBeenCalledWith(expect.objectContaining({ success: false, errorMessage: 'handler exploded' }));
   });
 
+  it('keeps read routes available but blocks and audits writes when the plugin licence is read-only', async () => {
+    const entitlements = {
+      assertRouteAllowed: jest.fn(async (_pluginId: string, method: string) => {
+        if (method === 'POST') throw Object.assign(new Error('licence read-only'), { status: 402 });
+      }),
+    } as any;
+    const guarded = new PluginExtensionsService(deps_.grants, deps_.audit, undefined, entitlements);
+    guarded.registerRoute('wattanam.test', permissions, { method: 'GET', path: 'records', permission: 'wattanam.test.read', handler: () => ['visible'] });
+    guarded.registerRoute('wattanam.test', permissions, { method: 'POST', path: 'records', permission: 'wattanam.test.manage', handler: jest.fn() });
+    const request = (method: 'GET' | 'POST') => ({ method, path: 'records', params: {}, query: {}, body: null, principal: { userId: 'owner', role: 'SUPER_ADMIN' } });
+    await expect(guarded.dispatch('wattanam.test', request('GET'))).resolves.toEqual(['visible']);
+    await expect(guarded.dispatch('wattanam.test', request('POST'))).rejects.toMatchObject({ status: 402 });
+    expect(entitlements.assertRouteAllowed).toHaveBeenCalledTimes(2);
+    expect(deps_.audit.log).toHaveBeenCalledWith(expect.objectContaining({ success: false, errorMessage: 'licence read-only' }));
+  });
+
   it('rejects traversal, undeclared permissions, and duplicate routes', () => {
     const handler = () => ({});
     expect(() => service.registerRoute('wattanam.test', permissions, { method: 'GET', path: '../core', permission: 'wattanam.test.read', handler })).toThrow('invalid');
@@ -105,6 +121,19 @@ describe('PluginExtensionsService', () => {
     ]);
     const filtered = await deniedService.listForPrincipal('STUDENT');
     expect(filtered.navigation.map((entry) => entry.id)).toEqual(['open']);
+  });
+
+  it('publishes bounded dashboard metadata with permission-filtered navigation', async () => {
+    service.registerNavigation('wattanam.test', permissions, [{
+      pluginId: 'wattanam.test', id: 'records', label: 'Records', href: '/plugins/wattanam.test/records',
+      permission: 'wattanam.test.read', dashboard: { title: 'Recent records', description: 'Review records supplied by this plugin.', priority: 20 },
+    }]);
+    await expect(service.listForPrincipal('TEACHER')).resolves.toMatchObject({ navigation: [{
+      id: 'records', dashboard: { title: 'Recent records', description: 'Review records supplied by this plugin.', priority: 20 },
+    }] });
+    expect(() => service.registerNavigation('wattanam.test', permissions, [{
+      pluginId: 'wattanam.test', id: 'bad', label: 'Bad', href: '/plugins/wattanam.test/bad', dashboard: { description: '', priority: 1001 },
+    }])).toThrow('dashboard contribution');
   });
 
   it('cleans permissions and navigation when a plugin unloads', () => {

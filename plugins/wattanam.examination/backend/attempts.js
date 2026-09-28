@@ -71,6 +71,7 @@ function registerAttempts(context) {
     if (!examRows.length) throw new Error('Exam not found'); const exam = examRows[0]; examAvailable(exam);
     const student = await resolveStudent(context, request?.principal || {}, exam.academicClassId);
     const result = await db.transaction(async (tx) => {
+      await tx.execute(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0)) FROM (SELECT COUNT(*) FROM ${ATTEMPT}) AS namespace_guard`, [`wattanam.examination:attempt:${examId}:${student.studentId}`]);
       const existingRows = await tx.query(`SELECT * FROM ${ATTEMPT} WHERE "examId"=$1 AND "academicStudentId"=$2 FOR UPDATE`, [examId, student.studentId]);
       const existing = existingRows[0];
       if (existing?.status === 'IN_PROGRESS') return existing;

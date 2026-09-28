@@ -8,7 +8,7 @@ describe('Reporting plugin source', () => {
   const manifest = JSON.parse(readFileSync(path.join(root, 'plugin.json'), 'utf8'));
 
   it('is a read-only aggregation plugin with explicit contracts', () => {
-    expect(manifest.version).toBe('0.1.1');
+    expect(manifest.version).toBe('0.1.3');
     expect(manifest.migrations).toEqual([]);
     expect(manifest.capabilities).toEqual(expect.arrayContaining(['directory.read', 'readmodels.read', 'ui.pages']));
     expect(manifest.capabilities).not.toEqual(expect.arrayContaining(['database.read', 'database.write']));

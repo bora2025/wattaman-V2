@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1
+
+- Declare the operational health, data classification, backup, restore, retention, Marketplace
+  pricing, support and privacy contract.
+
 ## 0.1.0
 
 - Initial signed reference package.

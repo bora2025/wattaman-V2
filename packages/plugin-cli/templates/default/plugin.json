@@ -26,5 +26,14 @@
   "navigation": [
     { "id": "records", "label": "{{displayName}}", "href": "/plugins/{{publisher}}.{{name}}/records", "permission": "{{publisher}}.{{name}}.view" }
   ],
-  "supportedLanguages": ["en", "km"]
+  "supportedLanguages": ["en", "km"],
+  "supportUrl": "https://{{publisher}}.example/support/{{name}}",
+  "privacyUrl": "https://{{publisher}}.example/privacy/plugins/{{name}}",
+  "operational": {
+    "healthCheck": "runtime",
+    "dataClassification": ["personal-data"],
+    "backup": { "database": "required", "files": "none", "restore": "required" },
+    "uninstall": { "dataRetention": "preserve" },
+    "pricing": "marketplace"
+  }
 }

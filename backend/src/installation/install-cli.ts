@@ -11,7 +11,6 @@ import { InstallDto } from './dto/install.dto';
 import { getDistribution } from '../config/environment';
 
 type FileReader = (file: string) => string;
-type BinaryFileReader = (file: string) => Buffer;
 
 function required(env: NodeJS.ProcessEnv, name: string): string {
   const value = env[name]?.trim();
@@ -22,7 +21,6 @@ function required(env: NodeJS.ProcessEnv, name: string): string {
 export function readUnattendedInstallInput(
   env: NodeJS.ProcessEnv = process.env,
   readFile: FileReader = (file) => readFileSync(file, 'utf8'),
-  readBinaryFile: BinaryFileReader = (file) => readFileSync(file),
 ): InstallDto {
   if (env.INSTALL_NON_INTERACTIVE !== 'true') {
     throw new Error('INSTALL_NON_INTERACTIVE=true is required');
@@ -43,10 +41,9 @@ export function readUnattendedInstallInput(
     ? readFile(path.resolve(passwordFile)).replace(/\r?\n$/, '')
     : required(env, 'INSTALL_OWNER_PASSWORD');
 
-  const pluginFiles = env.INSTALL_INITIAL_PLUGIN_FILES?.trim();
-  const initialPlugins = pluginFiles
-    ? pluginFiles.split(',').map((file) => readBinaryFile(path.resolve(file.trim())).toString('base64'))
-    : undefined;
+  if (env.INSTALL_INITIAL_PLUGIN_FILES?.trim()) {
+    throw new Error('INSTALL_INITIAL_PLUGIN_FILES was removed; complete core setup, link the marketplace, then install plugins through Plugin Manager');
+  }
 
   return plainToInstance(InstallDto, {
     schoolName: required(env, 'INSTALL_SCHOOL_NAME'),
@@ -57,7 +54,6 @@ export function readUnattendedInstallInput(
     ownerName: required(env, 'INSTALL_OWNER_NAME'),
     ownerEmail: required(env, 'INSTALL_OWNER_EMAIL'),
     ownerPassword,
-    initialPlugins,
   });
 }
 
@@ -105,7 +101,7 @@ async function main() {
   try {
     const report = await app.get(InstallationPreflightService).run({
       locale: dto.locale, timezone: dto.timezone, currency: dto.currency,
-      acceptedLicenseVersion: dto.acceptedLicenseVersion, initialPlugins: dto.initialPlugins,
+      acceptedLicenseVersion: dto.acceptedLicenseVersion,
     });
     if (process.argv.includes('--dry-run')) {
       process.stdout.write(`${JSON.stringify(report)}\n`);

@@ -1,4 +1,4 @@
-import { GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { CreateBucketCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { createHash, randomBytes } from 'node:crypto';
 import { S3ArtifactStorage } from '../src/artifact-storage';
 
@@ -24,6 +24,15 @@ async function main() {
   const settings = { bucket, region, endpoint, forcePathStyle: process.env.ARTIFACT_S3_FORCE_PATH_STYLE === 'true', accessKeyId, secretAccessKey };
   const credentials = accessKeyId ? { accessKeyId, secretAccessKey: secretAccessKey! } : undefined;
   const client = new S3Client({ region, endpoint, forcePathStyle: settings.forcePathStyle, credentials });
+  if (process.env.ARTIFACT_S3_CREATE_BUCKET === 'true') {
+    try {
+      await client.send(new CreateBucketCommand({ Bucket: bucket }));
+      console.log(`PASS created disposable certification bucket: ${bucket}`);
+    } catch (error: any) {
+      if (!['BucketAlreadyExists', 'BucketAlreadyOwnedByYou'].includes(error?.name)) throw error;
+      console.log(`PASS certification bucket already exists: ${bucket}`);
+    }
+  }
   const firstInstance = new S3ArtifactStorage(settings);
   const secondInstance = new S3ArtifactStorage(settings);
   const bytes = Buffer.concat([Buffer.from('wattanam-lc4-001:'), randomBytes(128)]);

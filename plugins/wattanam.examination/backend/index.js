@@ -68,6 +68,7 @@ async function ownedExam(db, examId, principal) {
 
 module.exports = {
   id: 'wattanam.examination',
+  health() { return { status: 'ready' }; },
   async activate(context) {
     const db = context.database; const view = 'wattanam.examination.exams.view'; const manage = 'wattanam.examination.exams.manage';
     context.permissions.register([
@@ -76,7 +77,7 @@ module.exports = {
       { id: 'wattanam.examination.gradebook.view', label: 'View gradebooks' }, { id: 'wattanam.examination.gradebook.manage', label: 'Manage gradebooks' },
     ]);
     context.navigation.register([
-      { id: 'exams', label: 'Examinations', href: '/plugins/wattanam.examination/exams', permission: view },
+      { id: 'exams', label: 'Examinations', href: '/plugins/wattanam.examination/exams', permission: view, dashboard: { title: 'Examination', description: 'Author exams, grade attempts, and manage gradebooks.', priority: 130 } },
       { id: 'gradebooks', label: 'Gradebooks', href: '/plugins/wattanam.examination/gradebooks', permission: 'wattanam.examination.gradebook.view' },
     ]);
     context.routes.register({ method: 'GET', path: 'exams', permission: view, handler: async (request) => {

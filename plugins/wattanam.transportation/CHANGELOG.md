@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.4
+
+- Declare personal/location data, backup/restore and retention behavior and runtime health.
+
+## 0.1.3
+
+- Add host dashboard metadata for extension-driven clean-core discovery.
+- Add guarded real-PostgreSQL certification for route, vehicle, rider, location, projection and recipient-scoped realtime behavior.
+
 ## 0.1.2
 
 - Publish a student-keyed current transportation summary after rider and location mutations.

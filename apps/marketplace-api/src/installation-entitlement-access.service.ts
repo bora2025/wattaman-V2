@@ -1,8 +1,10 @@
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { createHash, verify } from 'node:crypto';
 import { z } from 'zod';
 import { HttpError } from './http-error';
 import { canonicalJson } from './signing';
+import { MarketplaceConfig } from './config';
+import { issueEntitlement } from './entitlement';
 
 const FRESHNESS_WINDOW_MS = 5 * 60 * 1000;
 
@@ -13,21 +15,23 @@ const requestInput = z.object({
 });
 
 export class InstallationEntitlementAccessService {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: PrismaClient, private readonly config?: MarketplaceConfig) {}
 
   async getOne(params: { installationId: string; pluginId: string; ts: string; signature: string }, now = new Date()) {
     const { registrationId } = await this.authenticate(params, { installationId: params.installationId, pluginId: params.pluginId, ts: params.ts }, now);
-    const entitlement = await this.prisma.installationEntitlement.findUnique({
+    let entitlement = await this.prisma.installationEntitlement.findUnique({
       where: { installationId_pluginId: { installationId: registrationId, pluginId: params.pluginId } },
     });
     if (!entitlement) throw new HttpError(404, 'No entitlement exists for this plugin');
-    return { pluginId: params.pluginId, status: entitlement.status, signedToken: entitlement.signedToken };
+    const current = await this.upgradeLegacyToken(entitlement, now);
+    return { pluginId: params.pluginId, status: current.status, signedToken: current.signedToken };
   }
 
   async getAll(params: { installationId: string; ts: string; signature: string }, now = new Date()) {
     const { registrationId } = await this.authenticate(params, { installationId: params.installationId, ts: params.ts }, now);
     const entitlements = await this.prisma.installationEntitlement.findMany({ where: { installationId: registrationId } });
-    return { entitlements: entitlements.map((entitlement) => ({ pluginId: entitlement.pluginId, status: entitlement.status, signedToken: entitlement.signedToken })) };
+    const current = await Promise.all(entitlements.map((entitlement) => this.upgradeLegacyToken(entitlement, now)));
+    return { entitlements: current.map((entitlement) => ({ pluginId: entitlement.pluginId, status: entitlement.status, signedToken: entitlement.signedToken })) };
   }
 
   async authenticateControl(params: { installationId: string; ts: string; signature: string }, now = new Date()) {
@@ -72,6 +76,30 @@ export class InstallationEntitlementAccessService {
     }
     if (!valid) throw new HttpError(401, 'Signature is invalid');
     return { registrationId: registration.id };
+  }
+
+  /** Re-signs pre-generation schema-v1 rows on their first authenticated fetch. */
+  private async upgradeLegacyToken(entitlement: { id: string; status: any; generation?: number; signedToken: any; expiresAt?: Date | null; updatesThrough?: Date | null; offlineUntil?: Date | null; [key: string]: any }, now: Date): Promise<any> {
+    const payload = entitlement.signedToken?.payload;
+    if (!this.config || Number.isSafeInteger(payload?.generation) && payload.generation > 0) return entitlement;
+    if (!payload || typeof payload !== 'object') throw new HttpError(500, 'Stored entitlement token cannot be upgraded');
+    const status = entitlement.status === 'ACTIVE' && entitlement.expiresAt && entitlement.expiresAt <= now ? 'EXPIRED' : entitlement.status;
+    const terminal = status !== 'ACTIVE';
+    const expiresAt = terminal ? new Date(now.getTime() + 10 * 365 * 86_400_000) : entitlement.expiresAt;
+    const updatesThrough = terminal ? now : entitlement.updatesThrough;
+    const offlineRecheckAfter = terminal ? new Date(now.getTime() + 30 * 86_400_000) : entitlement.offlineUntil;
+    if (!expiresAt || !updatesThrough || !offlineRecheckAfter) throw new HttpError(500, 'Stored entitlement validity window cannot be upgraded');
+    const token = issueEntitlement({
+      generation: Math.max(1, entitlement.generation ?? 1), status: status as 'ACTIVE' | 'EXPIRED' | 'REVOKED' | 'REFUNDED',
+      installationId: String(payload.installationId), customerId: String(payload.customerId), productId: String(payload.productId),
+      licensedMajorRange: String(payload.licensedMajorRange), notBefore: terminal ? now.toISOString() : String(payload.notBefore), expiresAt: expiresAt.toISOString(),
+      updatesThrough: updatesThrough.toISOString(), offlineRecheckAfter: offlineRecheckAfter.toISOString(),
+      features: Array.isArray(payload.features) ? payload.features : [], issuer: String(payload.issuer),
+    }, this.config.entitlementPrivateKey, this.config.entitlementKeyId, now);
+    return this.prisma.installationEntitlement.update({ where: { id: entitlement.id }, data: {
+      status, generation: token.payload.generation, tokenId: token.payload.tokenId,
+      signedToken: token as unknown as Prisma.InputJsonValue,
+    } });
   }
 }
 

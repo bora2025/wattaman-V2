@@ -3,10 +3,12 @@ export interface PluginDashboardContribution {
   id: string;
   label: string;
   href: string;
+  dashboard?: { title?: string; description: string; priority?: number } | false;
 }
 
 export interface DashboardExtensionCard extends PluginDashboardContribution {
   description: string;
+  priority: number;
 }
 
 export interface MarketplaceOnboardingStep {
@@ -28,14 +30,17 @@ export function pluginDashboardCards(value: unknown): DashboardExtensionCard[] {
     const item = entry as Partial<PluginDashboardContribution>;
     if (!item.pluginId || !item.id || !item.label || !item.href) return [];
     if (!item.href.startsWith(`/plugins/${item.pluginId}/`) || item.href.includes('..')) return [];
+    if (item.dashboard === false) return [];
+    const dashboard = item.dashboard && typeof item.dashboard === 'object' ? item.dashboard : undefined;
     return [{
       pluginId: item.pluginId,
       id: item.id,
-      label: item.label,
+      label: dashboard?.title?.trim() || item.label,
       href: item.href,
-      description: `Open ${item.label} from the active ${item.pluginId} plugin.`,
+      description: dashboard?.description?.trim() || `Open ${item.label} from the active ${item.pluginId} plugin.`,
+      priority: Number.isInteger(dashboard?.priority) ? dashboard!.priority! : 500,
     }];
-  });
+  }).sort((left, right) => left.priority - right.priority || left.label.localeCompare(right.label));
 }
 
 export function marketplaceOnboarding(linked: boolean, activePluginCount: number): MarketplaceOnboardingStep[] {

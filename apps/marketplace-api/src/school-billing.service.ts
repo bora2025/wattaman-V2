@@ -1,11 +1,14 @@
 import { Prisma, PrismaClient } from '@prisma/client';
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, randomBytes, sign } from 'node:crypto';
 import { z } from 'zod';
 import { HttpError } from './http-error';
 import { PlatformActionContext } from './platform-context';
 import { DisabledTransactionalEmailService, TransactionalEmailService } from './transactional-email.service';
 import { recordSaleEntries } from './publisher-governance.service';
 import { MAX_QR_IMAGE_BYTES, MAX_RECEIPT_IMAGE_BYTES, validateImageDataUrl } from './payment-image';
+import { MarketplaceConfig } from './config';
+import { issueTerminalEntitlement } from './entitlement';
+import { canonicalJson } from './signing';
 
 const reason = z.string().trim().min(3).max(5000);
 
@@ -122,7 +125,11 @@ const INVOICE_SELECT = {
 } as const;
 
 export class SchoolBillingService {
-  constructor(private readonly prisma: PrismaClient, private readonly email: TransactionalEmailService = new DisabledTransactionalEmailService()) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly email: TransactionalEmailService = new DisabledTransactionalEmailService(),
+    private readonly config?: MarketplaceConfig,
+  ) {}
 
   plans() {
     return this.prisma.schoolBillingPlan.findMany({ orderBy: [{ active: 'desc' }, { amountMinor: 'asc' }] });
@@ -398,6 +405,27 @@ export class SchoolBillingService {
     };
   }
 
+  async signedInstallationControl(registrationId: string, now = new Date()) {
+    if (!this.config) throw new HttpError(503, 'School control signing is not configured');
+    const [control, registration] = await Promise.all([
+      this.installationControl(registrationId, now),
+      this.prisma.installationRegistration.update({
+        where: { id: registrationId }, data: { controlGeneration: { increment: 1 } },
+        select: { installationId: true, controlGeneration: true },
+      }),
+    ]);
+    const payload = {
+      schemaVersion: 1, generation: registration.controlGeneration,
+      installationId: registration.installationId, issuedAt: now.toISOString(),
+      audience: 'wattanam-school-control', keyId: this.config.entitlementKeyId,
+      ...control,
+    };
+    return { payload, signature: {
+      algorithm: 'ed25519' as const, keyId: this.config.entitlementKeyId,
+      value: sign(null, Buffer.from(canonicalJson(payload)), this.config.entitlementPrivateKey).toString('base64'),
+    } };
+  }
+
   async issuePlanInvoice(schoolId: string, operatorId: string | null, value: unknown, context: PlatformActionContext, origin: 'OPERATOR' | 'SCHEDULED' = 'OPERATOR') {
     const input = planInvoiceInput.parse(value);
     const school = await this.prisma.customerSchool.findUnique({ where: { id: schoolId }, include: { billingPlan: true } });
@@ -669,11 +697,20 @@ export class SchoolBillingService {
       const revokedEntitlements: string[] = [];
       for (const line of invoice.lines) {
         if (!line.sourceOrderLineId) continue;
-        const entitlement = await tx.installationEntitlement.findFirst({ where: { orderLineId: line.sourceOrderLineId, status: 'ACTIVE' }, select: { id: true } });
+        const entitlement = await tx.installationEntitlement.findFirst({ where: { orderLineId: line.sourceOrderLineId, status: 'ACTIVE' }, select: { id: true, signedToken: true } });
         if (!entitlement) continue;
+        const terminal = this.config
+          ? issueTerminalEntitlement(entitlement.signedToken, 'REVOKED', this.config.entitlementPrivateKey, this.config.entitlementKeyId, now)
+          : null;
         await tx.installationEntitlement.update({
           where: { id: entitlement.id },
-          data: { status: 'REVOKED', revokedAt: now, revokedReason: `Invoice ${invoice.invoiceNumber} was voided` },
+          data: {
+            status: 'REVOKED', revokedAt: now, revokedReason: `Invoice ${invoice.invoiceNumber} was voided`,
+            ...(terminal ? {
+              generation: terminal.payload.generation, tokenId: terminal.payload.tokenId,
+              signedToken: terminal as unknown as Prisma.InputJsonValue,
+            } : {}),
+          },
         });
         revokedEntitlements.push(entitlement.id);
       }

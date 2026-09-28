@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.1.7
+
+- Declare database and file backup participation plus the complete operational contract.
+
+## 0.1.6
+
+- Preserve bounded legacy page frames and element layer order in the schema-v2 projection.
+- Preserve allowlisted font family/style, image opacity/radius, and QR/photo border styling.
+- Render those compatibility properties in both the host editor and print preview without loading
+  plugin JavaScript in the school origin.
+
+## 0.1.5
+
+- Add backup/journal-bound, content-deduplicated migration of embedded legacy images into
+  plugin-scoped storage while retaining legacy sources for rollback and output comparison.
+- Project converted legacy text, image, and QR elements into the bounded schema-v2 render model.
+- Add host-rendered rectangle/circle/line shapes and project bounded solid legacy shapes into the
+  same safe model, including validated linear/radial gradients and solid/dashed/dotted borders;
+  fail closed on malformed style tokens or images that have not entered scoped storage instead of
+  silently omitting them.
+- Add a host-rendered person-photo placeholder backed only by an authorized record binding;
+  accept bounded canonical embedded raster data or same-origin paths and reject remote URLs and
+  unsafe schemes server-side.
+
 ## 0.1.4
 
 - Add a bounded staff document-source adapter using Directory identities and Human Resources'

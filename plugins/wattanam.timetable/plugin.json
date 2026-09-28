@@ -3,7 +3,7 @@
   "id": "wattanam.timetable",
   "name": "Timetable",
   "description": "School timetable documents and scheduling configuration.",
-  "version": "0.1.3",
+  "version": "0.1.6",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -13,7 +13,7 @@
   "runtimeVersion": "1.0.0",
   "capabilities": ["api.routes", "database.read", "database.write", "directory.read", "events.durable", "navigation.register", "permissions.register", "settings.read", "ui.pages"],
   "permissions": ["wattanam.timetable.view", "wattanam.timetable.manage", "wattanam.timetable.attendance.view", "wattanam.timetable.attendance.manage"],
-  "dependencies": {},
+  "dependencies": { "wattanam.academic-management": ">=0.1.0 <1.0.0" },
   "optionalDependencies": {},
   "migrations": [
     { "id": "001_create_timetable", "path": "migrations/001_create_timetable.sql", "checksum": "f483ddb8822412720ffb4e18671632c15a73d75ded69fd92da2d59de9603197a", "destructive": false },
@@ -39,5 +39,8 @@
     { "id": "scheduled-teachers", "label": "Scheduled Teachers", "href": "/plugins/wattanam.timetable/scheduled-teachers", "permission": "wattanam.timetable.attendance.view" },
     { "id": "teacher-scan", "label": "Teacher Scanner", "href": "/plugins/wattanam.timetable/teacher-scan", "permission": "wattanam.timetable.attendance.manage" }
   ],
-  "supportedLanguages": ["en", "km"]
+  "supportedLanguages": ["en", "km"],
+  "supportUrl": "https://wattanam.example/support/timetable",
+  "privacyUrl": "https://wattanam.example/privacy/plugins/timetable",
+  "operational": { "healthCheck": "runtime", "dataClassification": ["education-records", "personal-data"], "backup": { "database": "required", "files": "none", "restore": "required" }, "uninstall": { "dataRetention": "preserve" }, "pricing": "marketplace" }
 }

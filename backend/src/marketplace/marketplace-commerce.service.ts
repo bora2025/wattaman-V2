@@ -10,6 +10,9 @@ import { readUpdateRepositoryConfig } from '../updates/update-config';
 import { UpdatesService } from '../updates/updates.service';
 import { MarketplaceLinkService } from './marketplace-link.service';
 import { MarketplaceIdentityConfig, readMarketplaceIdentityConfig } from './marketplace-identity-config';
+import { pluginInstallConsentDigest } from './plugin-install-consent';
+import { EntitlementCacheService } from './entitlement-cache.service';
+import { PluginEntitlementPolicyService } from '../plugins/plugin-entitlement-policy.service';
 
 @Injectable()
 export class MarketplaceCommerceService {
@@ -18,6 +21,8 @@ export class MarketplaceCommerceService {
     private readonly link: MarketplaceLinkService,
     private readonly updates: UpdatesService,
     private readonly plugins: PluginsService,
+    private readonly entitlementCache: EntitlementCacheService,
+    private readonly entitlementPolicy: PluginEntitlementPolicyService,
   ) {}
 
   async catalog() {
@@ -29,14 +34,30 @@ export class MarketplaceCommerceService {
     return this.getJson(config, url, token);
   }
 
+  async starterBundles() {
+    const config = this.requireConfig();
+    const token = await this.link.getValidAccessToken();
+    const installation = await this.prisma.installation.findUnique({
+      where: { id: 'singleton' }, select: { currency: true },
+    });
+    if (!installation) throw new BadRequestException('This school has not completed first-run installation yet');
+    const url = new URL('/v1/starter-bundles', config.marketplaceUrl);
+    url.searchParams.set('coreVersion', readRuntimeConfig().appVersion);
+    url.searchParams.set('currency', installation.currency);
+    return this.getJson(config, url, token);
+  }
+
   async listOrders() {
     const config = this.requireConfig();
     const token = await this.link.getValidAccessToken();
     return this.getJson(config, new URL('/v1/customer/orders', config.marketplaceUrl), token);
   }
 
-  async createOrder(priceId: string, currency: string) {
-    if (!priceId) throw new BadRequestException('priceId is required');
+  async createOrder(priceIds: string[], currency: string) {
+    if (!Array.isArray(priceIds) || priceIds.length < 1 || priceIds.length > 50 || priceIds.some((id) => !id)) {
+      throw new BadRequestException('priceIds must contain between 1 and 50 price ids');
+    }
+    if (new Set(priceIds).size !== priceIds.length) throw new BadRequestException('Duplicate price ids are not allowed');
     if (!/^[A-Z]{3}$/.test(currency || '')) throw new BadRequestException('currency must be a 3-letter ISO code');
     const config = this.requireConfig();
     const token = await this.link.getValidAccessToken();
@@ -44,7 +65,55 @@ export class MarketplaceCommerceService {
     // Generated here, not accepted from the SUPER_ADMIN's browser: a client-supplied key could be
     // replayed to probe or collide with a prior order's idempotency slot.
     const idempotencyKey = randomUUID();
-    return this.postJson(config, '/v1/customer/orders', { installationId, currency, priceIds: [priceId], idempotencyKey }, token);
+    return this.postJson(config, '/v1/customer/orders', { installationId, currency, priceIds, idempotencyKey }, token);
+  }
+
+  async installBundle(
+    bundleId: string,
+    plugins: Array<{ pluginId?: string; version?: string; consentDigest?: string }> | undefined,
+    activate: boolean,
+  ) {
+    if (!bundleId) throw new BadRequestException('bundleId is required');
+    if (!Array.isArray(plugins) || plugins.length < 1 || plugins.length > 50) {
+      throw new BadRequestException('plugins must contain between 1 and 50 marketplace releases');
+    }
+    const ids = plugins.map((plugin) => String(plugin.pluginId || ''));
+    if (ids.some((id) => !id) || new Set(ids).size !== ids.length) throw new BadRequestException('Bundle plugin ids must be present and unique');
+
+    // Re-read the central bundle immediately before installation. The browser is not trusted to
+    // turn an arbitrary plugin list into a "bundle" or bypass a withdrawn recommendation.
+    const bundles = await this.starterBundles() as Array<{ id: string; plugins: Array<{ pluginId: string; version?: string; compatible: boolean }> }>;
+    const bundle = bundles.find((candidate) => candidate.id === bundleId);
+    if (!bundle) throw new NotFoundException('Published starter bundle not found');
+    const requested = new Map(plugins.map((plugin) => [String(plugin.pluginId), plugin]));
+    const requiredIds = bundle.plugins.filter((plugin) => plugin.compatible).map((plugin) => plugin.pluginId);
+    if (requested.size !== requiredIds.length || requiredIds.some((id) => !requested.has(id))) {
+      throw new BadRequestException('Bundle install request does not match the current published bundle plan');
+    }
+
+    const installed: Array<{ pluginId: string; version: string; result: unknown }> = [];
+    for (const planned of bundle.plugins.filter((plugin) => plugin.compatible)) {
+      const request = requested.get(planned.pluginId)!;
+      const version = String(request.version || '');
+      if (version !== planned.version) throw new BadRequestException(`Bundle version changed for ${planned.pluginId}; refresh and review consent again`);
+      try {
+        const existing = await this.prisma.pluginInstallation.findUnique({
+          where: { id: planned.pluginId }, select: { id: true, version: true, status: true },
+        });
+        if (existing?.version === version) {
+          const result = activate && existing.status !== 'active' ? await this.plugins.activate(existing.id) : existing;
+          installed.push({ pluginId: planned.pluginId, version, result });
+          continue;
+        }
+        const result = await this.install(planned.pluginId, version, activate, String(request.consentDigest || ''));
+        installed.push({ pluginId: planned.pluginId, version, result });
+      } catch (error) {
+        const completed = installed.map((item) => item.pluginId).join(', ') || 'none';
+        const reason = error instanceof Error ? error.message : String(error);
+        throw new BadGatewayException(`Starter bundle stopped at ${planned.pluginId}; completed: ${completed}. Fix the error and retry safely. ${reason}`);
+      }
+    }
+    return { bundleId, installed };
   }
 
   /**
@@ -57,7 +126,7 @@ export class MarketplaceCommerceService {
    * school's static PLUGIN_TRUSTED_KEYS, so the one key named for this exact release in the
    * already-signed index is merged in for this call only.
    */
-  async install(pluginId: string, version: string, activate: boolean) {
+  async install(pluginId: string, version: string, activate: boolean, consentDigest: string) {
     if (!pluginId) throw new BadRequestException('pluginId is required');
     if (!semver.valid(version)) throw new BadRequestException('version must be semantic versioning');
     const updateConfig = readUpdateRepositoryConfig();
@@ -67,6 +136,13 @@ export class MarketplaceCommerceService {
     const payload = await this.updates.index(updateConfig, coreVersion);
     const release = payload.pluginReleases.find((candidate: any) => candidate.pluginId === pluginId && candidate.version === version);
     if (!release) throw new NotFoundException('Compatible repository release not found');
+    if (!/^[a-f0-9]{64}$/.test(consentDigest) || consentDigest !== pluginInstallConsentDigest(release.manifest)) {
+      throw new BadRequestException('Plugin capabilities changed or were not approved; review the installation disclosure again');
+    }
+    if (release.paid === true) {
+      await this.entitlementCache.refreshOne(pluginId);
+      await this.entitlementPolicy.assertCanActivate(pluginId);
+    }
     const download = new URL(release.downloadUrl);
     if (download.origin !== updateConfig.url || !download.pathname.startsWith('/v1/artifacts/')) throw new BadGatewayException('Repository returned an untrusted artifact URL');
     if (!/^[a-f0-9]{64}$/.test(release.sha256)) throw new BadGatewayException('Repository returned an invalid artifact checksum');
@@ -85,8 +161,8 @@ export class MarketplaceCommerceService {
 
   /** Extends the static+persisted trust allow-list with the ONE publisher key the signed index
    * itself named for this exact release -- nothing else about install()'s verification changes,
-   * so a manually-uploaded package's trust is completely unaffected. Needed for this first call
-   * only: recordMarketplaceTrustedKey() below persists it before this method returns, so every
+   * and no additional publisher key becomes a general trust root. Needed for this first call only:
+   * recordMarketplaceTrustedKey() below persists it before this method returns, so every
    * later call (including this same plugin's own activate() a few lines down) picks it up from
    * trustedPluginKeys() itself. */
   private async mergeTrustedKeys(release: { publisher: string; publisherKeyId?: string; publisherPublicKeyPem?: string }): Promise<TrustedPluginKeys> {

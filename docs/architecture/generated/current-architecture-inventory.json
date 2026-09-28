@@ -1,19 +1,19 @@
 {
   "schemaVersion": 12,
   "counts": {
-    "nestFeatureModules": 39,
+    "nestFeatureModules": 40,
     "prismaModels": 83,
     "prismaRelationFields": 110,
     "prismaIndexes": 107,
     "controllers": 39,
-    "httpRouteDecorators": 388,
-    "apiConsumerCalls": 655,
-    "matchedApiConsumerCalls": 569,
+    "httpRouteDecorators": 391,
+    "apiConsumerCalls": 660,
+    "matchedApiConsumerCalls": 574,
     "dynamicOrExternalApiConsumerCalls": 51,
     "unmatchedStaticSchoolApiConsumerCalls": 1,
     "frontendPages": 151,
     "frontendApiProxies": 3,
-    "frontendImports": 1268,
+    "frontendImports": 1282,
     "sharedComponents": 53,
     "frontendDeepLinks": 224,
     "navigationEntries": 83,
@@ -24,8 +24,8 @@
     "uploadHandlers": 2,
     "frontendFileInputs": 25,
     "downloadAndDocumentSites": 109,
-    "filesystemOperations": 164,
-    "storageConfigurationReferences": 76,
+    "filesystemOperations": 180,
+    "storageConfigurationReferences": 116,
     "pluginStorageCalls": 9,
     "notificationDeliveries": 23,
     "notificationDatabaseWrites": 18,
@@ -34,7 +34,7 @@
     "notificationQuotaReferences": 18,
     "notificationApiConsumerCalls": 31,
     "notificationDigestJobs": 2,
-    "reportFiles": 55,
+    "reportFiles": 56,
     "reportPages": 16,
     "reportRoutes": 38,
     "reportApiConsumerCalls": 51,
@@ -52,13 +52,17 @@
     "mobileConfiguredPermissions": 6,
     "mobilePackageDependencies": 18,
     "officialPlugins": 13,
-    "sourceImports": 1414,
-    "prismaDataAccesses": 916,
+    "sourceImports": 1480,
+    "prismaDataAccesses": 922,
     "outboundCalls": 20
   },
   "nestModules": [
     {
       "file": "backend/src/announcements/announcements.module.ts",
+      "rootComposition": false
+    },
+    {
+      "file": "backend/src/app-core.module.ts",
       "rootComposition": false
     },
     {
@@ -8530,9 +8534,17 @@
           "attributes": "@default(\"ACTIVE\")"
         },
         {
+          "name": "generation",
+          "type": "Int",
+          "line": 1433,
+          "relation": null,
+          "mappedColumn": null,
+          "attributes": "@default(0)"
+        },
+        {
           "name": "reason",
           "type": "String?",
-          "line": 1433,
+          "line": 1434,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -8540,7 +8552,7 @@
         {
           "name": "warningsJson",
           "type": "String",
-          "line": 1434,
+          "line": 1435,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@default(\"[]\")"
@@ -8548,7 +8560,7 @@
         {
           "name": "billingJson",
           "type": "String",
-          "line": 1435,
+          "line": 1436,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@default(\"{}\")"
@@ -8556,7 +8568,7 @@
         {
           "name": "lastVerifiedAt",
           "type": "DateTime?",
-          "line": 1436,
+          "line": 1437,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -8564,7 +8576,7 @@
         {
           "name": "lastAttemptAt",
           "type": "DateTime?",
-          "line": 1437,
+          "line": 1438,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -8572,7 +8584,7 @@
         {
           "name": "lastError",
           "type": "String?",
-          "line": 1438,
+          "line": 1439,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -8580,7 +8592,7 @@
         {
           "name": "updatedAt",
           "type": "DateTime",
-          "line": 1439,
+          "line": 1440,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@updatedAt"
@@ -8590,13 +8602,13 @@
     },
     {
       "name": "MarketplacePendingLink",
-      "line": 1451,
+      "line": 1452,
       "mappedTable": null,
       "fields": [
         {
           "name": "id",
           "type": "String",
-          "line": 1452,
+          "line": 1453,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@id @default(\"singleton\")"
@@ -8604,7 +8616,7 @@
         {
           "name": "requestId",
           "type": "String",
-          "line": 1453,
+          "line": 1454,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -8612,7 +8624,7 @@
         {
           "name": "scope",
           "type": "String?",
-          "line": 1454,
+          "line": 1455,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -8620,7 +8632,7 @@
         {
           "name": "startedAt",
           "type": "DateTime",
-          "line": 1455,
+          "line": 1456,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@default(now())"
@@ -8628,7 +8640,7 @@
         {
           "name": "expiresAt",
           "type": "DateTime",
-          "line": 1458,
+          "line": 1459,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -8636,7 +8648,7 @@
         {
           "name": "updatedAt",
           "type": "DateTime",
-          "line": 1459,
+          "line": 1460,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@updatedAt"
@@ -8646,13 +8658,13 @@
     },
     {
       "name": "MarketplaceProxyLink",
-      "line": 1462,
+      "line": 1463,
       "mappedTable": null,
       "fields": [
         {
           "name": "id",
           "type": "String",
-          "line": 1463,
+          "line": 1464,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@id @default(\"singleton\")"
@@ -8660,7 +8672,7 @@
         {
           "name": "grantId",
           "type": "String",
-          "line": 1464,
+          "line": 1465,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -8668,7 +8680,7 @@
         {
           "name": "accountId",
           "type": "String",
-          "line": 1465,
+          "line": 1466,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -8676,7 +8688,7 @@
         {
           "name": "accountEmailMasked",
           "type": "String?",
-          "line": 1466,
+          "line": 1467,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -8684,7 +8696,7 @@
         {
           "name": "scope",
           "type": "String",
-          "line": 1467,
+          "line": 1468,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -8692,7 +8704,7 @@
         {
           "name": "linkedAt",
           "type": "DateTime",
-          "line": 1468,
+          "line": 1469,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -8700,7 +8712,7 @@
         {
           "name": "expiresAt",
           "type": "DateTime",
-          "line": 1469,
+          "line": 1470,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -8708,7 +8720,7 @@
         {
           "name": "sessionExpiresAt",
           "type": "DateTime",
-          "line": 1470,
+          "line": 1471,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -8716,7 +8728,7 @@
         {
           "name": "revokedAt",
           "type": "DateTime?",
-          "line": 1471,
+          "line": 1472,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -8724,7 +8736,7 @@
         {
           "name": "lastUsedAt",
           "type": "DateTime?",
-          "line": 1472,
+          "line": 1473,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -8732,7 +8744,7 @@
         {
           "name": "updatedAt",
           "type": "DateTime",
-          "line": 1473,
+          "line": 1474,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@updatedAt"
@@ -8742,13 +8754,13 @@
     },
     {
       "name": "PluginPermissionGrant",
-      "line": 1476,
+      "line": 1477,
       "mappedTable": null,
       "fields": [
         {
           "name": "id",
           "type": "String",
-          "line": 1477,
+          "line": 1478,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@id @default(uuid())"
@@ -8756,7 +8768,7 @@
         {
           "name": "pluginId",
           "type": "String",
-          "line": 1478,
+          "line": 1479,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -8764,7 +8776,7 @@
         {
           "name": "permissionId",
           "type": "String",
-          "line": 1479,
+          "line": 1480,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -8772,7 +8784,7 @@
         {
           "name": "role",
           "type": "String",
-          "line": 1480,
+          "line": 1481,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -8780,7 +8792,7 @@
         {
           "name": "createdAt",
           "type": "DateTime",
-          "line": 1481,
+          "line": 1482,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@default(now())"
@@ -8789,23 +8801,23 @@
       "indexes": [
         {
           "definition": "@@unique([pluginId, permissionId, role])",
-          "line": 1483
+          "line": 1484
         },
         {
           "definition": "@@index([pluginId, permissionId])",
-          "line": 1484
+          "line": 1485
         }
       ]
     },
     {
       "name": "PluginNotificationUsage",
-      "line": 1488,
+      "line": 1489,
       "mappedTable": null,
       "fields": [
         {
           "name": "id",
           "type": "String",
-          "line": 1489,
+          "line": 1490,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@id @default(uuid())"
@@ -8813,7 +8825,7 @@
         {
           "name": "pluginId",
           "type": "String",
-          "line": 1490,
+          "line": 1491,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -8821,7 +8833,7 @@
         {
           "name": "windowStart",
           "type": "DateTime",
-          "line": 1491,
+          "line": 1492,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -8829,7 +8841,7 @@
         {
           "name": "count",
           "type": "Int",
-          "line": 1492,
+          "line": 1493,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@default(0)"
@@ -8837,7 +8849,7 @@
         {
           "name": "updatedAt",
           "type": "DateTime",
-          "line": 1493,
+          "line": 1494,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@updatedAt"
@@ -8846,19 +8858,19 @@
       "indexes": [
         {
           "definition": "@@unique([pluginId, windowStart])",
-          "line": 1495
+          "line": 1496
         }
       ]
     },
     {
       "name": "PluginAccountCommand",
-      "line": 1501,
+      "line": 1502,
       "mappedTable": null,
       "fields": [
         {
           "name": "id",
           "type": "String",
-          "line": 1502,
+          "line": 1503,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@id @default(uuid())"
@@ -8866,7 +8878,7 @@
         {
           "name": "pluginId",
           "type": "String",
-          "line": 1503,
+          "line": 1504,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -8874,7 +8886,7 @@
         {
           "name": "commandKey",
           "type": "String",
-          "line": 1504,
+          "line": 1505,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -8882,7 +8894,7 @@
         {
           "name": "requestHash",
           "type": "String",
-          "line": 1505,
+          "line": 1506,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -8890,7 +8902,7 @@
         {
           "name": "userId",
           "type": "String",
-          "line": 1506,
+          "line": 1507,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -8898,7 +8910,7 @@
         {
           "name": "createdAt",
           "type": "DateTime",
-          "line": 1507,
+          "line": 1508,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@default(now())"
@@ -8907,23 +8919,23 @@
       "indexes": [
         {
           "definition": "@@unique([pluginId, commandKey])",
-          "line": 1509
+          "line": 1510
         },
         {
           "definition": "@@index([userId])",
-          "line": 1510
+          "line": 1511
         }
       ]
     },
     {
       "name": "PluginMigration",
-      "line": 1513,
+      "line": 1514,
       "mappedTable": null,
       "fields": [
         {
           "name": "id",
           "type": "String",
-          "line": 1514,
+          "line": 1515,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@id @default(uuid())"
@@ -8931,7 +8943,7 @@
         {
           "name": "pluginId",
           "type": "String",
-          "line": 1515,
+          "line": 1516,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -8939,7 +8951,7 @@
         {
           "name": "migrationId",
           "type": "String",
-          "line": 1516,
+          "line": 1517,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -8947,7 +8959,7 @@
         {
           "name": "pluginVersion",
           "type": "String",
-          "line": 1517,
+          "line": 1518,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -8955,7 +8967,7 @@
         {
           "name": "checksum",
           "type": "String",
-          "line": 1518,
+          "line": 1519,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -8963,7 +8975,7 @@
         {
           "name": "destructive",
           "type": "Boolean",
-          "line": 1519,
+          "line": 1520,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@default(false)"
@@ -8971,7 +8983,7 @@
         {
           "name": "appliedAt",
           "type": "DateTime",
-          "line": 1520,
+          "line": 1521,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@default(now())"
@@ -8980,23 +8992,23 @@
       "indexes": [
         {
           "definition": "@@unique([pluginId, migrationId])",
-          "line": 1522
+          "line": 1523
         },
         {
           "definition": "@@index([pluginId, appliedAt])",
-          "line": 1523
+          "line": 1524
         }
       ]
     },
     {
       "name": "PluginSetting",
-      "line": 1526,
+      "line": 1527,
       "mappedTable": null,
       "fields": [
         {
           "name": "id",
           "type": "String",
-          "line": 1527,
+          "line": 1528,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@id @default(uuid())"
@@ -9004,7 +9016,7 @@
         {
           "name": "pluginId",
           "type": "String",
-          "line": 1528,
+          "line": 1529,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -9012,7 +9024,7 @@
         {
           "name": "key",
           "type": "String",
-          "line": 1529,
+          "line": 1530,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -9020,7 +9032,7 @@
         {
           "name": "valueJson",
           "type": "String",
-          "line": 1530,
+          "line": 1531,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -9028,7 +9040,7 @@
         {
           "name": "createdAt",
           "type": "DateTime",
-          "line": 1531,
+          "line": 1532,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@default(now())"
@@ -9036,7 +9048,7 @@
         {
           "name": "updatedAt",
           "type": "DateTime",
-          "line": 1532,
+          "line": 1533,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@updatedAt"
@@ -9045,19 +9057,19 @@
       "indexes": [
         {
           "definition": "@@unique([pluginId, key])",
-          "line": 1534
+          "line": 1535
         }
       ]
     },
     {
       "name": "PluginJobDefinition",
-      "line": 1537,
+      "line": 1538,
       "mappedTable": null,
       "fields": [
         {
           "name": "id",
           "type": "String",
-          "line": 1538,
+          "line": 1539,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@id @default(uuid())"
@@ -9065,7 +9077,7 @@
         {
           "name": "pluginId",
           "type": "String",
-          "line": 1539,
+          "line": 1540,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -9073,7 +9085,7 @@
         {
           "name": "jobId",
           "type": "String",
-          "line": 1540,
+          "line": 1541,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -9081,7 +9093,7 @@
         {
           "name": "intervalSeconds",
           "type": "Int",
-          "line": 1541,
+          "line": 1542,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -9089,7 +9101,7 @@
         {
           "name": "enabled",
           "type": "Boolean",
-          "line": 1542,
+          "line": 1543,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@default(true)"
@@ -9097,7 +9109,7 @@
         {
           "name": "lastStartedAt",
           "type": "DateTime?",
-          "line": 1543,
+          "line": 1544,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -9105,7 +9117,7 @@
         {
           "name": "lastCompletedAt",
           "type": "DateTime?",
-          "line": 1544,
+          "line": 1545,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -9113,7 +9125,7 @@
         {
           "name": "lastStatus",
           "type": "String?",
-          "line": 1545,
+          "line": 1546,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -9121,7 +9133,7 @@
         {
           "name": "lastError",
           "type": "String?",
-          "line": 1546,
+          "line": 1547,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -9129,7 +9141,7 @@
         {
           "name": "updatedAt",
           "type": "DateTime",
-          "line": 1547,
+          "line": 1548,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@updatedAt"
@@ -9138,23 +9150,23 @@
       "indexes": [
         {
           "definition": "@@unique([pluginId, jobId])",
-          "line": 1549
+          "line": 1550
         },
         {
           "definition": "@@index([enabled, lastStartedAt])",
-          "line": 1550
+          "line": 1551
         }
       ]
     },
     {
       "name": "PluginJobRun",
-      "line": 1553,
+      "line": 1554,
       "mappedTable": null,
       "fields": [
         {
           "name": "id",
           "type": "String",
-          "line": 1554,
+          "line": 1555,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@id @default(uuid())"
@@ -9162,7 +9174,7 @@
         {
           "name": "pluginId",
           "type": "String",
-          "line": 1555,
+          "line": 1556,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -9170,7 +9182,7 @@
         {
           "name": "jobId",
           "type": "String",
-          "line": 1556,
+          "line": 1557,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -9178,7 +9190,7 @@
         {
           "name": "status",
           "type": "String",
-          "line": 1557,
+          "line": 1558,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -9186,7 +9198,7 @@
         {
           "name": "startedAt",
           "type": "DateTime",
-          "line": 1558,
+          "line": 1559,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@default(now())"
@@ -9194,7 +9206,7 @@
         {
           "name": "finishedAt",
           "type": "DateTime?",
-          "line": 1559,
+          "line": 1560,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -9202,7 +9214,7 @@
         {
           "name": "error",
           "type": "String?",
-          "line": 1560,
+          "line": 1561,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -9211,7 +9223,7 @@
       "indexes": [
         {
           "definition": "@@index([pluginId, jobId, startedAt])",
-          "line": 1562
+          "line": 1563
         }
       ]
     },
@@ -9253,9 +9265,17 @@
           "attributes": ""
         },
         {
+          "name": "generation",
+          "type": "Int",
+          "line": 1574,
+          "relation": null,
+          "mappedColumn": null,
+          "attributes": "@default(0)"
+        },
+        {
           "name": "signedTokenJson",
           "type": "String?",
-          "line": 1574,
+          "line": 1575,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -9263,7 +9283,7 @@
         {
           "name": "expiresAt",
           "type": "DateTime?",
-          "line": 1575,
+          "line": 1576,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -9271,7 +9291,7 @@
         {
           "name": "updatesThrough",
           "type": "DateTime?",
-          "line": 1576,
+          "line": 1577,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -9279,7 +9299,7 @@
         {
           "name": "offlineRecheckAfter",
           "type": "DateTime?",
-          "line": 1577,
+          "line": 1578,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -9287,7 +9307,7 @@
         {
           "name": "lastVerifiedAt",
           "type": "DateTime?",
-          "line": 1578,
+          "line": 1579,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -9295,7 +9315,7 @@
         {
           "name": "lastRefreshAttemptAt",
           "type": "DateTime?",
-          "line": 1579,
+          "line": 1580,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -9303,7 +9323,7 @@
         {
           "name": "lastRefreshSucceededAt",
           "type": "DateTime?",
-          "line": 1580,
+          "line": 1581,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -9311,7 +9331,7 @@
         {
           "name": "consecutiveFailures",
           "type": "Int",
-          "line": 1581,
+          "line": 1582,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@default(0)"
@@ -9319,7 +9339,7 @@
         {
           "name": "lastError",
           "type": "String?",
-          "line": 1582,
+          "line": 1583,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -9327,7 +9347,7 @@
         {
           "name": "createdAt",
           "type": "DateTime",
-          "line": 1583,
+          "line": 1584,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@default(now())"
@@ -9335,7 +9355,7 @@
         {
           "name": "updatedAt",
           "type": "DateTime",
-          "line": 1584,
+          "line": 1585,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@updatedAt"
@@ -9345,13 +9365,13 @@
     },
     {
       "name": "Post",
-      "line": 1587,
+      "line": 1588,
       "mappedTable": null,
       "fields": [
         {
           "name": "id",
           "type": "String",
-          "line": 1588,
+          "line": 1589,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@id @default(cuid())"
@@ -9359,7 +9379,7 @@
         {
           "name": "title",
           "type": "String",
-          "line": 1589,
+          "line": 1590,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -9367,7 +9387,7 @@
         {
           "name": "excerpt",
           "type": "String",
-          "line": 1590,
+          "line": 1591,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@default(\"\")"
@@ -9375,7 +9395,7 @@
         {
           "name": "body",
           "type": "String",
-          "line": 1591,
+          "line": 1592,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@default(\"\")"
@@ -9383,7 +9403,7 @@
         {
           "name": "type",
           "type": "String",
-          "line": 1593,
+          "line": 1594,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@default(\"text\")"
@@ -9391,7 +9411,7 @@
         {
           "name": "imageUrl",
           "type": "String",
-          "line": 1594,
+          "line": 1595,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@default(\"\")"
@@ -9399,7 +9419,7 @@
         {
           "name": "videoUrl",
           "type": "String",
-          "line": 1595,
+          "line": 1596,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@default(\"\")"
@@ -9407,7 +9427,7 @@
         {
           "name": "published",
           "type": "Boolean",
-          "line": 1596,
+          "line": 1597,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@default(false)"
@@ -9415,7 +9435,7 @@
         {
           "name": "pinned",
           "type": "Boolean",
-          "line": 1597,
+          "line": 1598,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@default(false)"
@@ -9423,7 +9443,7 @@
         {
           "name": "tags",
           "type": "String",
-          "line": 1598,
+          "line": 1599,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@default(\"[]\") // JSON array of strings"
@@ -9431,7 +9451,7 @@
         {
           "name": "authorId",
           "type": "String?",
-          "line": 1599,
+          "line": 1600,
           "relation": null,
           "mappedColumn": null,
           "attributes": ""
@@ -9439,7 +9459,7 @@
         {
           "name": "createdAt",
           "type": "DateTime",
-          "line": 1600,
+          "line": 1601,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@default(now())"
@@ -9447,7 +9467,7 @@
         {
           "name": "updatedAt",
           "type": "DateTime",
-          "line": 1601,
+          "line": 1602,
           "relation": null,
           "mappedColumn": null,
           "attributes": "@updatedAt"
@@ -12861,73 +12881,79 @@
     },
     {
       "file": "backend/src/marketplace/entitlement-cache.service.ts",
-      "line": 27,
+      "line": 26,
       "model": "PluginInstallation",
       "operation": "findMany"
     },
     {
       "file": "backend/src/marketplace/entitlement-cache.service.ts",
-      "line": 38,
+      "line": 37,
       "model": "PluginEntitlementCache",
       "operation": "findUnique"
     },
     {
       "file": "backend/src/marketplace/entitlement-cache.service.ts",
-      "line": 41,
+      "line": 40,
       "model": "Installation",
       "operation": "findUnique"
     },
     {
       "file": "backend/src/marketplace/entitlement-cache.service.ts",
-      "line": 79,
+      "line": 80,
       "model": "PluginEntitlementCache",
       "operation": "upsert"
     },
     {
       "file": "backend/src/marketplace/entitlement-cache.service.ts",
-      "line": 83,
+      "line": 84,
       "model": "PluginEntitlementCache",
       "operation": "findUnique"
     },
     {
       "file": "backend/src/marketplace/entitlement-cache.service.ts",
-      "line": 87,
+      "line": 88,
       "model": "PluginEntitlementCache",
       "operation": "findMany"
     },
     {
       "file": "backend/src/marketplace/entitlement-cache.service.ts",
-      "line": 91,
+      "line": 92,
       "model": "PluginEntitlementCache",
       "operation": "findUnique"
     },
     {
       "file": "backend/src/marketplace/entitlement-cache.service.ts",
-      "line": 99,
+      "line": 100,
       "model": "Installation",
       "operation": "findUnique"
     },
     {
       "file": "backend/src/marketplace/entitlement-cache.service.ts",
-      "line": 113,
-      "model": "PluginEntitlementCache",
-      "operation": "upsert"
-    },
-    {
-      "file": "backend/src/marketplace/entitlement-cache.service.ts",
-      "line": 126,
-      "model": "PluginEntitlementCache",
-      "operation": "upsert"
-    },
-    {
-      "file": "backend/src/marketplace/entitlement-cache.service.ts",
-      "line": 130,
+      "line": 105,
       "model": "PluginEntitlementCache",
       "operation": "findUnique"
     },
     {
       "file": "backend/src/marketplace/entitlement-cache.service.ts",
-      "line": 132,
+      "line": 116,
+      "model": "PluginEntitlementCache",
+      "operation": "upsert"
+    },
+    {
+      "file": "backend/src/marketplace/entitlement-cache.service.ts",
+      "line": 129,
+      "model": "PluginEntitlementCache",
+      "operation": "upsert"
+    },
+    {
+      "file": "backend/src/marketplace/entitlement-cache.service.ts",
+      "line": 133,
+      "model": "PluginEntitlementCache",
+      "operation": "findUnique"
+    },
+    {
+      "file": "backend/src/marketplace/entitlement-cache.service.ts",
+      "line": 135,
       "model": "PluginEntitlementCache",
       "operation": "upsert"
     },
@@ -12975,7 +13001,19 @@
     },
     {
       "file": "backend/src/marketplace/marketplace-commerce.service.ts",
-      "line": 127,
+      "line": 40,
+      "model": "Installation",
+      "operation": "findUnique"
+    },
+    {
+      "file": "backend/src/marketplace/marketplace-commerce.service.ts",
+      "line": 100,
+      "model": "PluginInstallation",
+      "operation": "findUnique"
+    },
+    {
+      "file": "backend/src/marketplace/marketplace-commerce.service.ts",
+      "line": 203,
       "model": "Installation",
       "operation": "findUnique"
     },
@@ -13065,115 +13103,115 @@
     },
     {
       "file": "backend/src/marketplace/school-billing-control.service.ts",
-      "line": 28,
+      "line": 31,
       "model": "Installation",
       "operation": "findUnique"
     },
     {
       "file": "backend/src/marketplace/school-billing-control.service.ts",
-      "line": 40,
+      "line": 44,
       "model": "MarketplaceSchoolControl",
       "operation": "findUnique"
     },
     {
       "file": "backend/src/marketplace/school-billing-control.service.ts",
-      "line": 41,
+      "line": 46,
       "model": "MarketplaceSchoolControl",
       "operation": "upsert"
     },
     {
       "file": "backend/src/marketplace/school-billing-control.service.ts",
-      "line": 46,
+      "line": 51,
       "model": "User",
       "operation": "findMany"
     },
     {
       "file": "backend/src/marketplace/school-billing-control.service.ts",
-      "line": 50,
+      "line": 55,
       "model": "Notification",
       "operation": "createMany"
     },
     {
       "file": "backend/src/marketplace/school-billing-control.service.ts",
-      "line": 75,
+      "line": 80,
       "model": "Notification",
       "operation": "createMany"
     },
     {
       "file": "backend/src/marketplace/school-billing-control.service.ts",
-      "line": 84,
+      "line": 89,
       "model": "Notification",
       "operation": "createMany"
     },
     {
       "file": "backend/src/marketplace/school-billing-control.service.ts",
-      "line": 87,
+      "line": 92,
       "model": "Notification",
       "operation": "createMany"
     },
     {
       "file": "backend/src/marketplace/school-billing-control.service.ts",
-      "line": 93,
+      "line": 98,
       "model": "MarketplaceSchoolControl",
       "operation": "upsert"
     },
     {
       "file": "backend/src/marketplace/school-billing-control.service.ts",
-      "line": 108,
+      "line": 113,
       "model": "MarketplaceSchoolControl",
       "operation": "findUnique"
     },
     {
       "file": "backend/src/marketplace/school-billing-control.service.ts",
-      "line": 119,
+      "line": 124,
       "model": "MarketplaceSchoolControl",
       "operation": "findUnique"
     },
     {
       "file": "backend/src/marketplace/school-billing-control.service.ts",
-      "line": 122,
+      "line": 127,
       "model": "Notification",
       "operation": "findFirst"
     },
     {
       "file": "backend/src/marketplace/school-billing-control.service.ts",
-      "line": 124,
+      "line": 129,
       "model": "User",
       "operation": "findMany"
     },
     {
       "file": "backend/src/marketplace/school-billing-control.service.ts",
-      "line": 126,
+      "line": 131,
       "model": "Notification",
       "operation": "createMany"
     },
     {
       "file": "backend/src/marketplace/school-billing-control.service.ts",
-      "line": 138,
+      "line": 143,
       "model": "Notification",
       "operation": "count"
     },
     {
       "file": "backend/src/marketplace/school-billing-control.service.ts",
-      "line": 144,
+      "line": 149,
       "model": "Notification",
       "operation": "updateMany"
     },
     {
       "file": "backend/src/marketplace/school-billing-control.service.ts",
-      "line": 158,
+      "line": 163,
       "model": "Installation",
       "operation": "findUnique"
     },
     {
       "file": "backend/src/marketplace/school-billing-control.service.ts",
-      "line": 161,
+      "line": 166,
       "model": "User",
       "operation": "findUnique"
     },
     {
       "file": "backend/src/marketplace/school-billing-control.service.ts",
-      "line": 190,
+      "line": 195,
       "model": "MarketplaceSchoolControl",
       "operation": "findUnique"
     },
@@ -13592,62 +13630,68 @@
       "operation": "findUnique"
     },
     {
+      "file": "backend/src/plugins/plugin-entitlement-policy.service.ts",
+      "line": 26,
+      "model": "PluginEntitlementCache",
+      "operation": "findUnique"
+    },
+    {
       "file": "backend/src/plugins/plugin-jobs.service.ts",
-      "line": 27,
+      "line": 28,
       "model": "PluginJobDefinition",
       "operation": "upsert"
     },
     {
       "file": "backend/src/plugins/plugin-jobs.service.ts",
-      "line": 52,
+      "line": 53,
       "model": "PluginJobDefinition",
       "operation": "updateMany"
     },
     {
       "file": "backend/src/plugins/plugin-jobs.service.ts",
-      "line": 87,
+      "line": 89,
       "model": "PluginJobRun",
       "operation": "create"
     },
     {
       "file": "backend/src/plugins/plugin-jobs.service.ts",
-      "line": 88,
+      "line": 90,
       "model": "PluginJobDefinition",
       "operation": "update"
     },
     {
       "file": "backend/src/plugins/plugin-jobs.service.ts",
-      "line": 92,
+      "line": 94,
       "model": "PluginJobRun",
       "operation": "update"
     },
     {
       "file": "backend/src/plugins/plugin-jobs.service.ts",
-      "line": 93,
+      "line": 95,
       "model": "PluginJobDefinition",
       "operation": "update"
     },
     {
       "file": "backend/src/plugins/plugin-jobs.service.ts",
-      "line": 98,
+      "line": 100,
       "model": "PluginJobRun",
       "operation": "update"
     },
     {
       "file": "backend/src/plugins/plugin-jobs.service.ts",
-      "line": 99,
+      "line": 101,
       "model": "PluginJobDefinition",
       "operation": "update"
     },
     {
       "file": "backend/src/plugins/plugin-migrations.service.ts",
-      "line": 47,
+      "line": 65,
       "model": "PluginMigration",
       "operation": "findUnique"
     },
     {
       "file": "backend/src/plugins/plugin-migrations.service.ts",
-      "line": 64,
+      "line": 82,
       "model": "PluginMigration",
       "operation": "create"
     },
@@ -13737,85 +13781,97 @@
     },
     {
       "file": "backend/src/plugins/plugins.service.ts",
-      "line": 70,
+      "line": 72,
       "model": "PluginInstallation",
       "operation": "findUnique"
     },
     {
       "file": "backend/src/plugins/plugins.service.ts",
-      "line": 77,
+      "line": 79,
       "model": "PluginInstallation",
       "operation": "findMany"
     },
     {
       "file": "backend/src/plugins/plugins.service.ts",
-      "line": 114,
+      "line": 90,
+      "model": "PluginInstallation",
+      "operation": "findMany"
+    },
+    {
+      "file": "backend/src/plugins/plugins.service.ts",
+      "line": 91,
+      "model": "PluginJobDefinition",
+      "operation": "findMany"
+    },
+    {
+      "file": "backend/src/plugins/plugins.service.ts",
+      "line": 153,
       "model": "PluginInstallation",
       "operation": "findUnique"
     },
     {
       "file": "backend/src/plugins/plugins.service.ts",
-      "line": 125,
+      "line": 164,
       "model": "PluginInstallation",
       "operation": "update"
     },
     {
       "file": "backend/src/plugins/plugins.service.ts",
-      "line": 150,
+      "line": 189,
       "model": "PluginInstallation",
       "operation": "upsert"
     },
     {
       "file": "backend/src/plugins/plugins.service.ts",
-      "line": 160,
+      "line": 199,
       "model": "PluginInstallation",
       "operation": "updateMany"
     },
     {
       "file": "backend/src/plugins/plugins.service.ts",
-      "line": 179,
+      "line": 219,
       "model": "PluginInstallation",
       "operation": "update"
     },
     {
       "file": "backend/src/plugins/plugins.service.ts",
-      "line": 191,
+      "line": 231,
       "model": "PluginInstallation",
       "operation": "updateMany"
     },
     {
       "file": "backend/src/plugins/plugins.service.ts",
-      "line": 206,
+      "line": 246,
       "model": "PluginInstallation",
       "operation": "findMany"
     },
     {
       "file": "backend/src/plugins/plugins.service.ts",
-      "line": 212,
+      "line": 252,
       "model": "PluginInstallation",
       "operation": "update"
     },
     {
       "file": "backend/src/plugins/plugins.service.ts",
-      "line": 223,
+      "line": 263,
       "model": "PluginInstallation",
       "operation": "delete"
     },
     {
       "file": "backend/src/plugins/plugins.service.ts",
-      "line": 235,
+      "line": 275,
       "model": "PluginInstallation",
       "operation": "findUnique"
     },
     {
       "file": "backend/src/plugins/plugins.service.ts",
-      "line": 241,
+      "line": 281,
       "model": "PluginInstallation",
       "operation": "findUnique"
     },
     {
       "file": "backend/src/plugins/plugins.service.ts",
-      "line": 248,
+      "line": 288,
       "model": "PluginInstallation",
       "operation": "findUnique"
     },
@@ -14937,19 +14993,19 @@
     },
     {
       "file": "backend/src/updates/updates.service.ts",
-      "line": 24,
+      "line": 26,
       "model": "PluginInstallation",
       "operation": "findMany"
     },
     {
       "file": "backend/src/updates/updates.service.ts",
-      "line": 91,
+      "line": 97,
       "model": "PluginInstallation",
       "operation": "findMany"
     },
     {
       "file": "backend/src/updates/updates.service.ts",
-      "line": 131,
+      "line": 137,
       "model": "PluginInstallation",
       "operation": "findMany"
     }
@@ -14962,17 +15018,17 @@
     },
     {
       "file": "backend/src/installation/installation-preflight.service.ts",
-      "line": 121,
+      "line": 109,
       "kind": "http"
     },
     {
       "file": "backend/src/installation/installation-preflight.service.ts",
-      "line": 135,
+      "line": 123,
       "kind": "http"
     },
     {
       "file": "backend/src/marketplace/entitlement-cache.service.ts",
-      "line": 52,
+      "line": 51,
       "kind": "http"
     },
     {
@@ -14982,17 +15038,17 @@
     },
     {
       "file": "backend/src/marketplace/marketplace-commerce.service.ts",
-      "line": 104,
+      "line": 180,
       "kind": "http"
     },
     {
       "file": "backend/src/marketplace/marketplace-commerce.service.ts",
-      "line": 141,
+      "line": 217,
       "kind": "http"
     },
     {
       "file": "backend/src/marketplace/marketplace-commerce.service.ts",
-      "line": 154,
+      "line": 230,
       "kind": "http"
     },
     {
@@ -15007,12 +15063,12 @@
     },
     {
       "file": "backend/src/marketplace/school-billing-control.service.ts",
-      "line": 35,
+      "line": 38,
       "kind": "http"
     },
     {
       "file": "backend/src/marketplace/school-billing-control.service.ts",
-      "line": 173,
+      "line": 178,
       "kind": "http"
     },
     {
@@ -15042,7 +15098,7 @@
     },
     {
       "file": "backend/src/updates/updates.service.ts",
-      "line": 192,
+      "line": 198,
       "kind": "http"
     },
     {
@@ -21396,7 +21452,7 @@
     },
     {
       "file": "backend/src/installation/installation.controller.ts",
-      "line": 33,
+      "line": 32,
       "controller": "InstallationController",
       "handler": "install",
       "method": "POST",
@@ -21438,6 +21494,25 @@
       "file": "backend/src/marketplace/marketplace-commerce.controller.ts",
       "line": 16,
       "controller": "MarketplaceCommerceController",
+      "handler": "starterBundles",
+      "method": "GET",
+      "path": "starter-bundles",
+      "fullPath": "/admin/marketplace/starter-bundles",
+      "classGuards": [
+        "JwtAuthGuard",
+        "RolesGuard"
+      ],
+      "methodGuards": [],
+      "effectiveRoles": [
+        "SUPER_ADMIN"
+      ],
+      "parameters": [],
+      "referencedTypes": []
+    },
+    {
+      "file": "backend/src/marketplace/marketplace-commerce.controller.ts",
+      "line": 19,
+      "controller": "MarketplaceCommerceController",
       "handler": "listOrders",
       "method": "GET",
       "path": "orders",
@@ -21455,7 +21530,7 @@
     },
     {
       "file": "backend/src/marketplace/marketplace-commerce.controller.ts",
-      "line": 19,
+      "line": 22,
       "controller": "MarketplaceCommerceController",
       "handler": "createOrder",
       "method": "POST",
@@ -21479,7 +21554,7 @@
     },
     {
       "file": "backend/src/marketplace/marketplace-commerce.controller.ts",
-      "line": 24,
+      "line": 28,
       "controller": "MarketplaceCommerceController",
       "handler": "install",
       "method": "POST",
@@ -21508,6 +21583,36 @@
         }
       ],
       "referencedTypes": []
+    },
+    {
+      "file": "backend/src/marketplace/marketplace-commerce.controller.ts",
+      "line": 33,
+      "controller": "MarketplaceCommerceController",
+      "handler": "installBundle",
+      "method": "POST",
+      "path": "starter-bundles/:bundleId/install",
+      "fullPath": "/admin/marketplace/starter-bundles/:bundleId/install",
+      "classGuards": [
+        "JwtAuthGuard",
+        "RolesGuard"
+      ],
+      "methodGuards": [],
+      "effectiveRoles": [
+        "SUPER_ADMIN"
+      ],
+      "parameters": [
+        {
+          "decorator": "Param",
+          "key": "bundleId"
+        },
+        {
+          "decorator": "Body",
+          "key": null
+        }
+      ],
+      "referencedTypes": [
+        "Array"
+      ]
     },
     {
       "file": "backend/src/marketplace/marketplace-identity.controller.ts",
@@ -22560,6 +22665,25 @@
       "file": "backend/src/plugins/plugins.controller.ts",
       "line": 25,
       "controller": "PluginsController",
+      "handler": "diagnostics",
+      "method": "GET",
+      "path": "diagnostics",
+      "fullPath": "/plugins/diagnostics",
+      "classGuards": [
+        "JwtAuthGuard",
+        "RolesGuard"
+      ],
+      "methodGuards": [],
+      "effectiveRoles": [
+        "SUPER_ADMIN"
+      ],
+      "parameters": [],
+      "referencedTypes": []
+    },
+    {
+      "file": "backend/src/plugins/plugins.controller.ts",
+      "line": 28,
+      "controller": "PluginsController",
       "handler": "contractHealth",
       "method": "GET",
       "path": ":id/contract-health",
@@ -22582,7 +22706,7 @@
     },
     {
       "file": "backend/src/plugins/plugins.controller.ts",
-      "line": 28,
+      "line": 31,
       "controller": "PluginsController",
       "handler": "replayDeadLetter",
       "method": "POST",
@@ -22610,7 +22734,7 @@
     },
     {
       "file": "backend/src/plugins/plugins.controller.ts",
-      "line": 31,
+      "line": 34,
       "controller": "PluginsController",
       "handler": "activate",
       "method": "POST",
@@ -22634,7 +22758,7 @@
     },
     {
       "file": "backend/src/plugins/plugins.controller.ts",
-      "line": 36,
+      "line": 39,
       "controller": "PluginsController",
       "handler": "rollback",
       "method": "POST",
@@ -22658,7 +22782,7 @@
     },
     {
       "file": "backend/src/plugins/plugins.controller.ts",
-      "line": 39,
+      "line": 42,
       "controller": "PluginsController",
       "handler": "deactivate",
       "method": "POST",
@@ -22682,7 +22806,7 @@
     },
     {
       "file": "backend/src/plugins/plugins.controller.ts",
-      "line": 44,
+      "line": 47,
       "controller": "PluginsController",
       "handler": "remove",
       "method": "DELETE",
@@ -22706,7 +22830,7 @@
     },
     {
       "file": "backend/src/plugins/plugins.controller.ts",
-      "line": 47,
+      "line": 50,
       "controller": "PluginsController",
       "handler": "listPermissionGrants",
       "method": "GET",
@@ -22730,7 +22854,7 @@
     },
     {
       "file": "backend/src/plugins/plugins.controller.ts",
-      "line": 50,
+      "line": 53,
       "controller": "PluginsController",
       "handler": "grantPermission",
       "method": "POST",
@@ -22762,7 +22886,7 @@
     },
     {
       "file": "backend/src/plugins/plugins.controller.ts",
-      "line": 56,
+      "line": 59,
       "controller": "PluginsController",
       "handler": "revokePermission",
       "method": "DELETE",
@@ -25495,6 +25619,10 @@
         {
           "decorator": "Param",
           "key": "version"
+        },
+        {
+          "decorator": "Body",
+          "key": null
         }
       ],
       "referencedTypes": []
@@ -25615,7 +25743,7 @@
     },
     {
       "file": "apps/marketplace-api/scripts/identity-registration-entitlement-live-drill.js",
-      "line": 86,
+      "line": 119,
       "surface": "workspace-app",
       "client": "fetch",
       "method": "GET",
@@ -26141,7 +26269,7 @@
     },
     {
       "file": "apps/platform-admin/app/api/platform/[...path]/route.ts",
-      "line": 117,
+      "line": 120,
       "surface": "workspace-app",
       "client": "fetch",
       "method": "GET",
@@ -28474,7 +28602,7 @@
     },
     {
       "file": "frontend/app/admin/plugins/page.tsx",
-      "line": 70,
+      "line": 104,
       "surface": "school-web",
       "client": "apiFetch",
       "method": "GET",
@@ -28487,7 +28615,7 @@
     },
     {
       "file": "frontend/app/admin/plugins/page.tsx",
-      "line": 70,
+      "line": 104,
       "surface": "school-web",
       "client": "apiFetch",
       "method": "GET",
@@ -28500,7 +28628,7 @@
     },
     {
       "file": "frontend/app/admin/plugins/page.tsx",
-      "line": 70,
+      "line": 104,
       "surface": "school-web",
       "client": "apiFetch",
       "method": "GET",
@@ -28513,7 +28641,7 @@
     },
     {
       "file": "frontend/app/admin/plugins/page.tsx",
-      "line": 70,
+      "line": 104,
       "surface": "school-web",
       "client": "apiFetch",
       "method": "GET",
@@ -28526,7 +28654,20 @@
     },
     {
       "file": "frontend/app/admin/plugins/page.tsx",
-      "line": 77,
+      "line": 104,
+      "surface": "school-web",
+      "client": "apiFetch",
+      "method": "GET",
+      "target": "school-api",
+      "expression": "'/api/plugins/diagnostics'",
+      "normalizedPath": "/plugins/diagnostics",
+      "matchedRoutes": [
+        "GET /plugins/diagnostics"
+      ]
+    },
+    {
+      "file": "frontend/app/admin/plugins/page.tsx",
+      "line": 112,
       "surface": "school-web",
       "client": "apiFetch",
       "method": "GET",
@@ -28539,7 +28680,7 @@
     },
     {
       "file": "frontend/app/admin/plugins/page.tsx",
-      "line": 83,
+      "line": 118,
       "surface": "school-web",
       "client": "apiFetch",
       "method": "GET",
@@ -28552,7 +28693,7 @@
     },
     {
       "file": "frontend/app/admin/plugins/page.tsx",
-      "line": 93,
+      "line": 129,
       "surface": "school-web",
       "client": "apiFetch",
       "method": "GET",
@@ -28565,20 +28706,20 @@
     },
     {
       "file": "frontend/app/admin/plugins/page.tsx",
-      "line": 101,
+      "line": 130,
       "surface": "school-web",
       "client": "apiFetch",
       "method": "GET",
       "target": "school-api",
-      "expression": "'/api/admin/marketplace/orders'",
-      "normalizedPath": "/admin/marketplace/orders",
+      "expression": "'/api/admin/marketplace/starter-bundles'",
+      "normalizedPath": "/admin/marketplace/starter-bundles",
       "matchedRoutes": [
-        "GET /admin/marketplace/orders"
+        "GET /admin/marketplace/starter-bundles"
       ]
     },
     {
       "file": "frontend/app/admin/plugins/page.tsx",
-      "line": 110,
+      "line": 149,
       "surface": "school-web",
       "client": "apiFetch",
       "method": "POST",
@@ -28591,7 +28732,46 @@
     },
     {
       "file": "frontend/app/admin/plugins/page.tsx",
-      "line": 123,
+      "line": 171,
+      "surface": "school-web",
+      "client": "apiFetch",
+      "method": "POST",
+      "target": "school-api",
+      "expression": "`/api/admin/marketplace/starter-bundles/${encodeURIComponent(bundle.id)}/install`",
+      "normalizedPath": "/admin/marketplace/starter-bundles/:dynamic/install",
+      "matchedRoutes": [
+        "POST /admin/marketplace/starter-bundles/:bundleId/install"
+      ]
+    },
+    {
+      "file": "frontend/app/admin/plugins/page.tsx",
+      "line": 183,
+      "surface": "school-web",
+      "client": "apiFetch",
+      "method": "GET",
+      "target": "school-api",
+      "expression": "'/api/admin/marketplace/orders'",
+      "normalizedPath": "/admin/marketplace/orders",
+      "matchedRoutes": [
+        "GET /admin/marketplace/orders"
+      ]
+    },
+    {
+      "file": "frontend/app/admin/plugins/page.tsx",
+      "line": 192,
+      "surface": "school-web",
+      "client": "apiFetch",
+      "method": "POST",
+      "target": "school-api",
+      "expression": "'/api/admin/marketplace/orders'",
+      "normalizedPath": "/admin/marketplace/orders",
+      "matchedRoutes": [
+        "POST /admin/marketplace/orders"
+      ]
+    },
+    {
+      "file": "frontend/app/admin/plugins/page.tsx",
+      "line": 220,
       "surface": "school-web",
       "client": "apiFetch",
       "method": "POST",
@@ -28604,7 +28784,7 @@
     },
     {
       "file": "frontend/app/admin/plugins/page.tsx",
-      "line": 137,
+      "line": 234,
       "surface": "school-web",
       "client": "apiFetch",
       "method": "POST",
@@ -28617,7 +28797,7 @@
     },
     {
       "file": "frontend/app/admin/plugins/page.tsx",
-      "line": 169,
+      "line": 266,
       "surface": "school-web",
       "client": "apiFetch",
       "method": "POST",
@@ -28630,7 +28810,7 @@
     },
     {
       "file": "frontend/app/admin/plugins/page.tsx",
-      "line": 191,
+      "line": 288,
       "surface": "school-web",
       "client": "apiFetch",
       "method": "POST",
@@ -28643,7 +28823,7 @@
     },
     {
       "file": "frontend/app/admin/plugins/page.tsx",
-      "line": 203,
+      "line": 311,
       "surface": "school-web",
       "client": "apiFetch",
       "method": "POST",
@@ -28656,7 +28836,7 @@
     },
     {
       "file": "frontend/app/admin/plugins/page.tsx",
-      "line": 217,
+      "line": 325,
       "surface": "school-web",
       "client": "apiFetch",
       "method": "DELETE",
@@ -28669,7 +28849,7 @@
     },
     {
       "file": "frontend/app/admin/plugins/page.tsx",
-      "line": 228,
+      "line": 336,
       "surface": "school-web",
       "client": "apiFetch",
       "method": "POST",
@@ -28681,6 +28861,19 @@
         "POST /plugins/:id/rollback",
         "POST /plugins/:id/deactivate",
         "POST /plugins/:id/permission-grants"
+      ]
+    },
+    {
+      "file": "frontend/app/admin/plugins/page.tsx",
+      "line": 348,
+      "surface": "school-web",
+      "client": "apiFetch",
+      "method": "POST",
+      "target": "school-api",
+      "expression": "`/api/plugins/${encodeURIComponent(plugin.id)}/rollback`",
+      "normalizedPath": "/plugins/:dynamic/rollback",
+      "matchedRoutes": [
+        "POST /plugins/:id/rollback"
       ]
     },
     {
@@ -33494,7 +33687,7 @@
     },
     {
       "file": "frontend/components/plugin-ui/PluginDocumentDesigner.tsx",
-      "line": 33,
+      "line": 36,
       "surface": "school-web",
       "client": "apiFetch",
       "method": "GET",
@@ -33703,7 +33896,7 @@
     },
     {
       "file": "frontend/components/Sidebar.tsx",
-      "line": 154,
+      "line": 151,
       "surface": "school-web",
       "client": "fetch",
       "method": "GET",
@@ -33716,7 +33909,7 @@
     },
     {
       "file": "frontend/components/Sidebar.tsx",
-      "line": 155,
+      "line": 152,
       "surface": "school-web",
       "client": "fetch",
       "method": "GET",
@@ -33729,7 +33922,7 @@
     },
     {
       "file": "frontend/components/Sidebar.tsx",
-      "line": 156,
+      "line": 153,
       "surface": "school-web",
       "client": "fetch",
       "method": "GET",
@@ -33742,7 +33935,7 @@
     },
     {
       "file": "frontend/components/Sidebar.tsx",
-      "line": 160,
+      "line": 157,
       "surface": "school-web",
       "client": "fetch",
       "method": "GET",
@@ -33755,7 +33948,7 @@
     },
     {
       "file": "frontend/components/Sidebar.tsx",
-      "line": 203,
+      "line": 200,
       "surface": "school-web",
       "client": "fetch",
       "method": "GET",
@@ -33768,7 +33961,7 @@
     },
     {
       "file": "frontend/components/Sidebar.tsx",
-      "line": 208,
+      "line": 205,
       "surface": "school-web",
       "client": "fetch",
       "method": "GET",
@@ -33781,7 +33974,7 @@
     },
     {
       "file": "frontend/components/Sidebar.tsx",
-      "line": 234,
+      "line": 235,
       "surface": "school-web",
       "client": "fetch",
       "method": "POST",
@@ -33962,7 +34155,7 @@
     },
     {
       "file": "frontend/scripts/run-plugin-ui-e2e.js",
-      "line": 35,
+      "line": 40,
       "surface": "school-web",
       "client": "fetch",
       "method": "GET",
@@ -34585,15 +34778,15 @@
       "methods": [
         {
           "method": "GET",
-          "line": 164
+          "line": 167
         },
         {
           "method": "POST",
-          "line": 169
+          "line": 172
         },
         {
           "method": "PATCH",
-          "line": 174
+          "line": 177
         }
       ]
     },
@@ -42149,6 +42342,12 @@
       "resolved": "frontend/lib/navigation-registry.ts"
     },
     {
+      "file": "frontend/lib/route-policy.ts",
+      "line": 2,
+      "specifier": "../core-routes.json",
+      "resolved": "frontend/core-routes.json"
+    },
+    {
       "file": "frontend/lib/timetable-plugin-api.ts",
       "line": 1,
       "specifier": "./api",
@@ -42179,6 +42378,12 @@
       "resolved": null
     },
     {
+      "file": "frontend/playwright.plugin-ui.config.ts",
+      "line": 2,
+      "specifier": "node:path",
+      "resolved": null
+    },
+    {
       "file": "frontend/proxy.ts",
       "line": 1,
       "specifier": "next/server",
@@ -42197,6 +42402,60 @@
       "resolved": "frontend/lib/route-policy.ts"
     },
     {
+      "file": "frontend/scripts/build-core.js",
+      "line": 3,
+      "specifier": "node:fs",
+      "resolved": null
+    },
+    {
+      "file": "frontend/scripts/build-core.js",
+      "line": 4,
+      "specifier": "node:path",
+      "resolved": null
+    },
+    {
+      "file": "frontend/scripts/build-core.js",
+      "line": 5,
+      "specifier": "node:child_process",
+      "resolved": null
+    },
+    {
+      "file": "frontend/scripts/build-core.js",
+      "line": 6,
+      "specifier": "../core-routes.json",
+      "resolved": "frontend/core-routes.json"
+    },
+    {
+      "file": "frontend/scripts/build-core.test.js",
+      "line": 1,
+      "specifier": "node:assert/strict",
+      "resolved": null
+    },
+    {
+      "file": "frontend/scripts/build-core.test.js",
+      "line": 2,
+      "specifier": "node:fs",
+      "resolved": null
+    },
+    {
+      "file": "frontend/scripts/build-core.test.js",
+      "line": 3,
+      "specifier": "node:path",
+      "resolved": null
+    },
+    {
+      "file": "frontend/scripts/build-core.test.js",
+      "line": 4,
+      "specifier": "node:test",
+      "resolved": null
+    },
+    {
+      "file": "frontend/scripts/build-core.test.js",
+      "line": 5,
+      "specifier": "./build-core",
+      "resolved": "frontend/scripts/build-core.js"
+    },
+    {
       "file": "frontend/scripts/run-plugin-ui-e2e.js",
       "line": 3,
       "specifier": "node:child_process",
@@ -42213,6 +42472,24 @@
       "line": 5,
       "specifier": "node:path",
       "resolved": null
+    },
+    {
+      "file": "frontend/scripts/run-plugin-ui-e2e.test.js",
+      "line": 3,
+      "specifier": "node:assert/strict",
+      "resolved": null
+    },
+    {
+      "file": "frontend/scripts/run-plugin-ui-e2e.test.js",
+      "line": 4,
+      "specifier": "node:test",
+      "resolved": null
+    },
+    {
+      "file": "frontend/scripts/run-plugin-ui-e2e.test.js",
+      "line": 5,
+      "specifier": "./run-plugin-ui-e2e",
+      "resolved": "frontend/scripts/run-plugin-ui-e2e.js"
     },
     {
       "file": "frontend/server.js",
@@ -43043,6 +43320,138 @@
       "line": 3,
       "specifier": "../plugins/plugins.module",
       "resolved": "backend/src/plugins/plugins.module.ts"
+    },
+    {
+      "file": "backend/src/app-core.module.ts",
+      "line": 1,
+      "specifier": "@nestjs/common",
+      "resolved": null
+    },
+    {
+      "file": "backend/src/app-core.module.ts",
+      "line": 2,
+      "specifier": "@nestjs/core",
+      "resolved": null
+    },
+    {
+      "file": "backend/src/app-core.module.ts",
+      "line": 3,
+      "specifier": "@nestjs/schedule",
+      "resolved": null
+    },
+    {
+      "file": "backend/src/app-core.module.ts",
+      "line": 4,
+      "specifier": "@nestjs/throttler",
+      "resolved": null
+    },
+    {
+      "file": "backend/src/app-core.module.ts",
+      "line": 5,
+      "specifier": "./app.controller",
+      "resolved": "backend/src/app.controller.ts"
+    },
+    {
+      "file": "backend/src/app-core.module.ts",
+      "line": 6,
+      "specifier": "./app.service",
+      "resolved": "backend/src/app.service.ts"
+    },
+    {
+      "file": "backend/src/app-core.module.ts",
+      "line": 7,
+      "specifier": "./audit/audit.module",
+      "resolved": "backend/src/audit/audit.module.ts"
+    },
+    {
+      "file": "backend/src/app-core.module.ts",
+      "line": 8,
+      "specifier": "./auth/auth.module",
+      "resolved": "backend/src/auth/auth.module.ts"
+    },
+    {
+      "file": "backend/src/app-core.module.ts",
+      "line": 9,
+      "specifier": "./backup/backup.module",
+      "resolved": "backend/src/backup/backup.module.ts"
+    },
+    {
+      "file": "backend/src/app-core.module.ts",
+      "line": 10,
+      "specifier": "./config/environment",
+      "resolved": "backend/src/config/environment.ts"
+    },
+    {
+      "file": "backend/src/app-core.module.ts",
+      "line": 11,
+      "specifier": "./database/database.module",
+      "resolved": "backend/src/database/database.module.ts"
+    },
+    {
+      "file": "backend/src/app-core.module.ts",
+      "line": 12,
+      "specifier": "./health/health.module",
+      "resolved": "backend/src/health/health.module.ts"
+    },
+    {
+      "file": "backend/src/app-core.module.ts",
+      "line": 13,
+      "specifier": "./installation/installation.module",
+      "resolved": "backend/src/installation/installation.module.ts"
+    },
+    {
+      "file": "backend/src/app-core.module.ts",
+      "line": 14,
+      "specifier": "./marketplace/marketplace.module",
+      "resolved": "backend/src/marketplace/marketplace.module.ts"
+    },
+    {
+      "file": "backend/src/app-core.module.ts",
+      "line": 15,
+      "specifier": "./marketplace/school-access.module",
+      "resolved": "backend/src/marketplace/school-access.module.ts"
+    },
+    {
+      "file": "backend/src/app-core.module.ts",
+      "line": 16,
+      "specifier": "./marketplace/school-billing-access.guard",
+      "resolved": "backend/src/marketplace/school-billing-access.guard.ts"
+    },
+    {
+      "file": "backend/src/app-core.module.ts",
+      "line": 17,
+      "specifier": "./notification/notification.module",
+      "resolved": "backend/src/notification/notification.module.ts"
+    },
+    {
+      "file": "backend/src/app-core.module.ts",
+      "line": 18,
+      "specifier": "./notification-preference/notification-preference.module",
+      "resolved": "backend/src/notification-preference/notification-preference.module.ts"
+    },
+    {
+      "file": "backend/src/app-core.module.ts",
+      "line": 19,
+      "specifier": "./observability/observability.module",
+      "resolved": "backend/src/observability/observability.module.ts"
+    },
+    {
+      "file": "backend/src/app-core.module.ts",
+      "line": 20,
+      "specifier": "./plugins/plugins.module",
+      "resolved": "backend/src/plugins/plugins.module.ts"
+    },
+    {
+      "file": "backend/src/app-core.module.ts",
+      "line": 21,
+      "specifier": "./site-settings/site-settings.module",
+      "resolved": "backend/src/site-settings/site-settings.module.ts"
+    },
+    {
+      "file": "backend/src/app-core.module.ts",
+      "line": 22,
+      "specifier": "./updates/updates.module",
+      "resolved": "backend/src/updates/updates.module.ts"
     },
     {
       "file": "backend/src/app.controller.ts",
@@ -44369,6 +44778,66 @@
       "line": 6,
       "specifier": "@nestjs/schedule",
       "resolved": null
+    },
+    {
+      "file": "backend/src/bootstrap-api.ts",
+      "line": 1,
+      "specifier": "@nestjs/common",
+      "resolved": null
+    },
+    {
+      "file": "backend/src/bootstrap-api.ts",
+      "line": 2,
+      "specifier": "@nestjs/core",
+      "resolved": null
+    },
+    {
+      "file": "backend/src/bootstrap-api.ts",
+      "line": 3,
+      "specifier": "compression",
+      "resolved": null
+    },
+    {
+      "file": "backend/src/bootstrap-api.ts",
+      "line": 4,
+      "specifier": "cookie-parser",
+      "resolved": null
+    },
+    {
+      "file": "backend/src/bootstrap-api.ts",
+      "line": 5,
+      "specifier": "express",
+      "resolved": null
+    },
+    {
+      "file": "backend/src/bootstrap-api.ts",
+      "line": 6,
+      "specifier": "helmet",
+      "resolved": null
+    },
+    {
+      "file": "backend/src/bootstrap-api.ts",
+      "line": 7,
+      "specifier": "@nestjs/common",
+      "resolved": null
+    },
+    {
+      "file": "backend/src/bootstrap-api.ts",
+      "line": 8,
+      "specifier": "./config/startup-config",
+      "resolved": "backend/src/config/startup-config.ts"
+    },
+    {
+      "file": "backend/src/bootstrap-api.ts",
+      "line": 9,
+      "specifier": "./notification/notification-config",
+      "resolved": "backend/src/notification/notification-config.ts"
+    },
+    {
+      "file": "backend/src/bootstrap-api.ts",
+      "line": 10,
+      "specifier": "./updates/update-config",
+      "resolved": "backend/src/updates/update-config.ts"
     },
     {
       "file": "backend/src/bus/bus.controller.ts",
@@ -45969,26 +46438,8 @@
     {
       "file": "backend/src/installation/installation-preflight.service.spec.ts",
       "line": 4,
-      "specifier": "crypto",
-      "resolved": null
-    },
-    {
-      "file": "backend/src/installation/installation-preflight.service.spec.ts",
-      "line": 5,
-      "specifier": "yazl",
-      "resolved": null
-    },
-    {
-      "file": "backend/src/installation/installation-preflight.service.spec.ts",
-      "line": 6,
       "specifier": "./installation-preflight.service",
       "resolved": "backend/src/installation/installation-preflight.service.ts"
-    },
-    {
-      "file": "backend/src/installation/installation-preflight.service.spec.ts",
-      "line": 7,
-      "specifier": "../plugins/plugin-package",
-      "resolved": "backend/src/plugins/plugin-package.ts"
     },
     {
       "file": "backend/src/installation/installation-preflight.service.ts",
@@ -46031,18 +46482,6 @@
       "line": 7,
       "specifier": "../notification/notification-config",
       "resolved": "backend/src/notification/notification-config.ts"
-    },
-    {
-      "file": "backend/src/installation/installation-preflight.service.ts",
-      "line": 8,
-      "specifier": "../plugins/plugin-package",
-      "resolved": "backend/src/plugins/plugin-package.ts"
-    },
-    {
-      "file": "backend/src/installation/installation-preflight.service.ts",
-      "line": 9,
-      "specifier": "../plugins/plugin-config",
-      "resolved": "backend/src/plugins/plugin-config.ts"
     },
     {
       "file": "backend/src/installation/installation.controller.spec.ts",
@@ -46117,12 +46556,6 @@
       "resolved": "backend/src/installation/installation-preflight.service.ts"
     },
     {
-      "file": "backend/src/installation/installation.module.ts",
-      "line": 6,
-      "specifier": "../plugins/plugin-package",
-      "resolved": "backend/src/plugins/plugin-package.ts"
-    },
-    {
       "file": "backend/src/installation/installation.service.spec.ts",
       "line": 1,
       "specifier": "@nestjs/common",
@@ -46165,64 +46598,100 @@
       "resolved": "backend/src/installation/dto/install.dto.ts"
     },
     {
+      "file": "backend/src/main-core.ts",
+      "line": 1,
+      "specifier": "./app-core.module",
+      "resolved": "backend/src/app-core.module.ts"
+    },
+    {
+      "file": "backend/src/main-core.ts",
+      "line": 2,
+      "specifier": "./bootstrap-api",
+      "resolved": "backend/src/bootstrap-api.ts"
+    },
+    {
+      "file": "backend/src/main-core.ts",
+      "line": 3,
+      "specifier": "./config/environment",
+      "resolved": "backend/src/config/environment.ts"
+    },
+    {
       "file": "backend/src/main.ts",
       "line": 1,
-      "specifier": "@nestjs/core",
-      "resolved": null
-    },
-    {
-      "file": "backend/src/main.ts",
-      "line": 2,
-      "specifier": "@nestjs/common",
-      "resolved": null
-    },
-    {
-      "file": "backend/src/main.ts",
-      "line": 3,
       "specifier": "./app.module",
       "resolved": "backend/src/app.module.ts"
     },
     {
       "file": "backend/src/main.ts",
-      "line": 4,
-      "specifier": "compression",
-      "resolved": null
-    },
-    {
-      "file": "backend/src/main.ts",
-      "line": 5,
-      "specifier": "cookie-parser",
-      "resolved": null
-    },
-    {
-      "file": "backend/src/main.ts",
-      "line": 6,
-      "specifier": "helmet",
-      "resolved": null
-    },
-    {
-      "file": "backend/src/main.ts",
-      "line": 7,
-      "specifier": "express",
-      "resolved": null
-    },
-    {
-      "file": "backend/src/main.ts",
-      "line": 8,
+      "line": 2,
       "specifier": "./config/startup-config",
       "resolved": "backend/src/config/startup-config.ts"
     },
     {
       "file": "backend/src/main.ts",
-      "line": 9,
-      "specifier": "./updates/update-config",
-      "resolved": "backend/src/updates/update-config.ts"
+      "line": 3,
+      "specifier": "./bootstrap-api",
+      "resolved": "backend/src/bootstrap-api.ts"
     },
     {
-      "file": "backend/src/main.ts",
-      "line": 10,
-      "specifier": "./notification/notification-config",
-      "resolved": "backend/src/notification/notification-config.ts"
+      "file": "backend/src/marketplace/document-designer-clean-core-install.spec.ts",
+      "line": 1,
+      "specifier": "crypto",
+      "resolved": null
+    },
+    {
+      "file": "backend/src/marketplace/document-designer-clean-core-install.spec.ts",
+      "line": 2,
+      "specifier": "fs",
+      "resolved": null
+    },
+    {
+      "file": "backend/src/marketplace/document-designer-clean-core-install.spec.ts",
+      "line": 3,
+      "specifier": "os",
+      "resolved": null
+    },
+    {
+      "file": "backend/src/marketplace/document-designer-clean-core-install.spec.ts",
+      "line": 4,
+      "specifier": "path",
+      "resolved": null
+    },
+    {
+      "file": "backend/src/marketplace/document-designer-clean-core-install.spec.ts",
+      "line": 5,
+      "specifier": "../plugins/plugin-package",
+      "resolved": "backend/src/plugins/plugin-package.ts"
+    },
+    {
+      "file": "backend/src/marketplace/document-designer-clean-core-install.spec.ts",
+      "line": 6,
+      "specifier": "../plugins/plugins.service",
+      "resolved": "backend/src/plugins/plugins.service.ts"
+    },
+    {
+      "file": "backend/src/marketplace/document-designer-clean-core-install.spec.ts",
+      "line": 7,
+      "specifier": "./marketplace-commerce.service",
+      "resolved": "backend/src/marketplace/marketplace-commerce.service.ts"
+    },
+    {
+      "file": "backend/src/marketplace/document-designer-clean-core-install.spec.ts",
+      "line": 8,
+      "specifier": "./plugin-install-consent",
+      "resolved": "backend/src/marketplace/plugin-install-consent.ts"
+    },
+    {
+      "file": "backend/src/marketplace/document-designer-clean-core-install.spec.ts",
+      "line": 9,
+      "specifier": "../plugins/plugin-config",
+      "resolved": "backend/src/plugins/plugin-config.ts"
+    },
+    {
+      "file": "backend/src/marketplace/document-designer-clean-core-install.spec.ts",
+      "line": 11,
+      "specifier": "../../../packages/plugin-cli/src/commands/pack",
+      "resolved": "packages/plugin-cli/src/commands/pack.js"
     },
     {
       "file": "backend/src/marketplace/entitlement-cache.service.spec.ts",
@@ -46555,6 +47024,12 @@
       "resolved": "backend/src/plugins/plugin-config.ts"
     },
     {
+      "file": "backend/src/marketplace/marketplace-commerce.service.spec.ts",
+      "line": 4,
+      "specifier": "./plugin-install-consent",
+      "resolved": "backend/src/marketplace/plugin-install-consent.ts"
+    },
+    {
       "file": "backend/src/marketplace/marketplace-commerce.service.ts",
       "line": 1,
       "specifier": "@nestjs/common",
@@ -46625,6 +47100,24 @@
       "line": 12,
       "specifier": "./marketplace-identity-config",
       "resolved": "backend/src/marketplace/marketplace-identity-config.ts"
+    },
+    {
+      "file": "backend/src/marketplace/marketplace-commerce.service.ts",
+      "line": 13,
+      "specifier": "./plugin-install-consent",
+      "resolved": "backend/src/marketplace/plugin-install-consent.ts"
+    },
+    {
+      "file": "backend/src/marketplace/marketplace-commerce.service.ts",
+      "line": 14,
+      "specifier": "./entitlement-cache.service",
+      "resolved": "backend/src/marketplace/entitlement-cache.service.ts"
+    },
+    {
+      "file": "backend/src/marketplace/marketplace-commerce.service.ts",
+      "line": 15,
+      "specifier": "../plugins/plugin-entitlement-policy.service",
+      "resolved": "backend/src/plugins/plugin-entitlement-policy.service.ts"
     },
     {
       "file": "backend/src/marketplace/marketplace-identity-config.spec.ts",
@@ -46829,6 +47322,18 @@
       "line": 14,
       "specifier": "./school-billing-control.service",
       "resolved": "backend/src/marketplace/school-billing-control.service.ts"
+    },
+    {
+      "file": "backend/src/marketplace/plugin-install-consent.spec.ts",
+      "line": 1,
+      "specifier": "./plugin-install-consent",
+      "resolved": "backend/src/marketplace/plugin-install-consent.ts"
+    },
+    {
+      "file": "backend/src/marketplace/plugin-install-consent.ts",
+      "line": 1,
+      "specifier": "crypto",
+      "resolved": null
     },
     {
       "file": "backend/src/marketplace/school-access.controller.ts",
@@ -47037,12 +47542,24 @@
     {
       "file": "backend/src/marketplace/school-billing-control.service.ts",
       "line": 6,
+      "specifier": "./entitlement-config",
+      "resolved": "backend/src/marketplace/entitlement-config.ts"
+    },
+    {
+      "file": "backend/src/marketplace/school-billing-control.service.ts",
+      "line": 7,
+      "specifier": "./school-control-verification",
+      "resolved": "backend/src/marketplace/school-control-verification.ts"
+    },
+    {
+      "file": "backend/src/marketplace/school-billing-control.service.ts",
+      "line": 8,
       "specifier": "./school-access.service",
       "resolved": "backend/src/marketplace/school-access.service.ts"
     },
     {
       "file": "backend/src/marketplace/school-billing-control.service.ts",
-      "line": 7,
+      "line": 9,
       "specifier": "./school-payment-signing",
       "resolved": "backend/src/marketplace/school-payment-signing.ts"
     },
@@ -47081,6 +47598,36 @@
       "line": 7,
       "specifier": "./school-payment-signing",
       "resolved": "backend/src/marketplace/school-payment-signing.ts"
+    },
+    {
+      "file": "backend/src/marketplace/school-control-verification.spec.ts",
+      "line": 1,
+      "specifier": "crypto",
+      "resolved": null
+    },
+    {
+      "file": "backend/src/marketplace/school-control-verification.spec.ts",
+      "line": 2,
+      "specifier": "./canonical-json",
+      "resolved": "backend/src/marketplace/canonical-json.ts"
+    },
+    {
+      "file": "backend/src/marketplace/school-control-verification.spec.ts",
+      "line": 3,
+      "specifier": "./school-control-verification",
+      "resolved": "backend/src/marketplace/school-control-verification.ts"
+    },
+    {
+      "file": "backend/src/marketplace/school-control-verification.ts",
+      "line": 1,
+      "specifier": "crypto",
+      "resolved": null
+    },
+    {
+      "file": "backend/src/marketplace/school-control-verification.ts",
+      "line": 2,
+      "specifier": "./canonical-json",
+      "resolved": "backend/src/marketplace/canonical-json.ts"
     },
     {
       "file": "backend/src/marketplace/school-payment-signing.ts",
@@ -47599,6 +48146,54 @@
       "resolved": "backend/src/database/prisma.service.ts"
     },
     {
+      "file": "backend/src/plugins/all-plugin-package-lifecycle.spec.ts",
+      "line": 1,
+      "specifier": "crypto",
+      "resolved": null
+    },
+    {
+      "file": "backend/src/plugins/all-plugin-package-lifecycle.spec.ts",
+      "line": 2,
+      "specifier": "fs",
+      "resolved": null
+    },
+    {
+      "file": "backend/src/plugins/all-plugin-package-lifecycle.spec.ts",
+      "line": 3,
+      "specifier": "os",
+      "resolved": null
+    },
+    {
+      "file": "backend/src/plugins/all-plugin-package-lifecycle.spec.ts",
+      "line": 4,
+      "specifier": "path",
+      "resolved": null
+    },
+    {
+      "file": "backend/src/plugins/all-plugin-package-lifecycle.spec.ts",
+      "line": 5,
+      "specifier": "semver",
+      "resolved": null
+    },
+    {
+      "file": "backend/src/plugins/all-plugin-package-lifecycle.spec.ts",
+      "line": 6,
+      "specifier": "./plugin-package",
+      "resolved": "backend/src/plugins/plugin-package.ts"
+    },
+    {
+      "file": "backend/src/plugins/all-plugin-package-lifecycle.spec.ts",
+      "line": 7,
+      "specifier": "./plugins.service",
+      "resolved": "backend/src/plugins/plugins.service.ts"
+    },
+    {
+      "file": "backend/src/plugins/all-plugin-package-lifecycle.spec.ts",
+      "line": 9,
+      "specifier": "../../../packages/plugin-cli/src/commands/pack",
+      "resolved": "packages/plugin-cli/src/commands/pack.js"
+    },
+    {
       "file": "backend/src/plugins/attendance-manager-plugin-source.spec.ts",
       "line": 1,
       "specifier": "fs",
@@ -47624,19 +48219,19 @@
     },
     {
       "file": "backend/src/plugins/communication-plugin-source.spec.ts",
-      "line": 1,
+      "line": 2,
       "specifier": "path",
       "resolved": null
     },
     {
       "file": "backend/src/plugins/communication-plugin-source.spec.ts",
-      "line": 1,
+      "line": 3,
       "specifier": "./plugin-migrations.service",
       "resolved": "backend/src/plugins/plugin-migrations.service.ts"
     },
     {
       "file": "backend/src/plugins/communication-plugin-source.spec.ts",
-      "line": 1,
+      "line": 4,
       "specifier": "./plugin-ui-schema",
       "resolved": "backend/src/plugins/plugin-ui-schema.ts"
     },
@@ -47684,19 +48279,19 @@
     },
     {
       "file": "backend/src/plugins/finance-plugin-source.spec.ts",
-      "line": 1,
+      "line": 2,
       "specifier": "path",
       "resolved": null
     },
     {
       "file": "backend/src/plugins/finance-plugin-source.spec.ts",
-      "line": 1,
+      "line": 3,
       "specifier": "./plugin-migrations.service",
       "resolved": "backend/src/plugins/plugin-migrations.service.ts"
     },
     {
       "file": "backend/src/plugins/finance-plugin-source.spec.ts",
-      "line": 1,
+      "line": 4,
       "specifier": "./plugin-ui-schema",
       "resolved": "backend/src/plugins/plugin-ui-schema.ts"
     },
@@ -47714,19 +48309,19 @@
     },
     {
       "file": "backend/src/plugins/human-resources-plugin-source.spec.ts",
-      "line": 1,
+      "line": 2,
       "specifier": "path",
       "resolved": null
     },
     {
       "file": "backend/src/plugins/human-resources-plugin-source.spec.ts",
-      "line": 1,
+      "line": 3,
       "specifier": "./plugin-migrations.service",
       "resolved": "backend/src/plugins/plugin-migrations.service.ts"
     },
     {
       "file": "backend/src/plugins/human-resources-plugin-source.spec.ts",
-      "line": 1,
+      "line": 4,
       "specifier": "./plugin-ui-schema",
       "resolved": "backend/src/plugins/plugin-ui-schema.ts"
     },
@@ -47759,6 +48354,24 @@
       "line": 4,
       "specifier": "./plugin-ui-schema",
       "resolved": "backend/src/plugins/plugin-ui-schema.ts"
+    },
+    {
+      "file": "backend/src/plugins/official-plugin-operational-contract.spec.ts",
+      "line": 1,
+      "specifier": "node:fs",
+      "resolved": null
+    },
+    {
+      "file": "backend/src/plugins/official-plugin-operational-contract.spec.ts",
+      "line": 2,
+      "specifier": "node:path",
+      "resolved": null
+    },
+    {
+      "file": "backend/src/plugins/official-plugin-operational-contract.spec.ts",
+      "line": 3,
+      "specifier": "./plugin-manifest",
+      "resolved": "backend/src/plugins/plugin-manifest.ts"
     },
     {
       "file": "backend/src/plugins/parent-portal-plugin-behavior.spec.ts",
@@ -48007,6 +48620,24 @@
       "resolved": "backend/src/database/prisma.service.ts"
     },
     {
+      "file": "backend/src/plugins/plugin-entitlement-policy.service.spec.ts",
+      "line": 1,
+      "specifier": "./plugin-entitlement-policy.service",
+      "resolved": "backend/src/plugins/plugin-entitlement-policy.service.ts"
+    },
+    {
+      "file": "backend/src/plugins/plugin-entitlement-policy.service.ts",
+      "line": 1,
+      "specifier": "@nestjs/common",
+      "resolved": null
+    },
+    {
+      "file": "backend/src/plugins/plugin-entitlement-policy.service.ts",
+      "line": 2,
+      "specifier": "../database/prisma.service",
+      "resolved": "backend/src/database/prisma.service.ts"
+    },
+    {
       "file": "backend/src/plugins/plugin-events.ts",
       "line": 1,
       "specifier": "@nestjs/common",
@@ -48067,6 +48698,12 @@
       "resolved": "backend/src/plugins/plugin-resource-quota.service.ts"
     },
     {
+      "file": "backend/src/plugins/plugin-extensions.service.ts",
+      "line": 7,
+      "specifier": "./plugin-entitlement-policy.service",
+      "resolved": "backend/src/plugins/plugin-entitlement-policy.service.ts"
+    },
+    {
       "file": "backend/src/plugins/plugin-jobs.service.spec.ts",
       "line": 1,
       "specifier": "./plugin-jobs.service",
@@ -48107,6 +48744,12 @@
       "line": 6,
       "specifier": "./plugin-resource-quota.service",
       "resolved": "backend/src/plugins/plugin-resource-quota.service.ts"
+    },
+    {
+      "file": "backend/src/plugins/plugin-jobs.service.ts",
+      "line": 7,
+      "specifier": "./plugin-entitlement-policy.service",
+      "resolved": "backend/src/plugins/plugin-entitlement-policy.service.ts"
     },
     {
       "file": "backend/src/plugins/plugin-manifest.spec.ts",
@@ -49069,6 +49712,12 @@
       "resolved": "backend/src/plugins/plugin-account.service.ts"
     },
     {
+      "file": "backend/src/plugins/plugins.module.ts",
+      "line": 27,
+      "specifier": "./plugin-entitlement-policy.service",
+      "resolved": "backend/src/plugins/plugin-entitlement-policy.service.ts"
+    },
+    {
       "file": "backend/src/plugins/plugins.service.spec.ts",
       "line": 1,
       "specifier": "fs",
@@ -49187,6 +49836,12 @@
       "line": 15,
       "specifier": "./plugin-contract-runtime.service",
       "resolved": "backend/src/plugins/plugin-contract-runtime.service.ts"
+    },
+    {
+      "file": "backend/src/plugins/plugins.service.ts",
+      "line": 16,
+      "specifier": "./plugin-entitlement-policy.service",
+      "resolved": "backend/src/plugins/plugin-entitlement-policy.service.ts"
     },
     {
       "file": "backend/src/plugins/reference-plugin.spec.ts",
@@ -50367,24 +51022,30 @@
     {
       "file": "backend/src/updates/updates.service.spec.ts",
       "line": 5,
+      "specifier": "../marketplace/plugin-install-consent",
+      "resolved": "backend/src/marketplace/plugin-install-consent.ts"
+    },
+    {
+      "file": "backend/src/updates/updates.service.spec.ts",
+      "line": 6,
       "specifier": "fs",
       "resolved": null
     },
     {
       "file": "backend/src/updates/updates.service.spec.ts",
-      "line": 6,
+      "line": 7,
       "specifier": "os",
       "resolved": null
     },
     {
       "file": "backend/src/updates/updates.service.spec.ts",
-      "line": 7,
+      "line": 8,
       "specifier": "path",
       "resolved": null
     },
     {
       "file": "backend/src/updates/updates.service.spec.ts",
-      "line": 8,
+      "line": 9,
       "specifier": "fs",
       "resolved": null
     },
@@ -50459,6 +51120,18 @@
       "line": 12,
       "specifier": "./repository-signature",
       "resolved": "backend/src/updates/repository-signature.ts"
+    },
+    {
+      "file": "backend/src/updates/updates.service.ts",
+      "line": 13,
+      "specifier": "../marketplace/plugin-install-consent",
+      "resolved": "backend/src/marketplace/plugin-install-consent.ts"
+    },
+    {
+      "file": "backend/src/updates/updates.service.ts",
+      "line": 14,
+      "specifier": "../plugins/plugin-entitlement-policy.service",
+      "resolved": "backend/src/plugins/plugin-entitlement-policy.service.ts"
     },
     {
       "file": "backend/src/worker.ts",
@@ -52048,13 +52721,13 @@
     },
     {
       "file": "frontend/app/admin/plugins/page.tsx",
-      "line": 261,
+      "line": 386,
       "kind": "jsx-href",
       "expression": "/admin/licensing"
     },
     {
       "file": "frontend/app/admin/plugins/page.tsx",
-      "line": 307,
+      "line": 452,
       "kind": "jsx-href",
       "expression": "/marketplace/link/:dynamic"
     },
@@ -52972,25 +53645,25 @@
     },
     {
       "file": "frontend/components/Sidebar.tsx",
-      "line": 237,
+      "line": 238,
       "kind": "router",
       "expression": "/login"
     },
     {
       "file": "frontend/components/Sidebar.tsx",
-      "line": 372,
+      "line": 373,
       "kind": "jsx-href",
       "expression": "/"
     },
     {
       "file": "frontend/components/Sidebar.tsx",
-      "line": 422,
+      "line": 423,
       "kind": "jsx-href",
       "expression": "/"
     },
     {
       "file": "frontend/components/Sidebar.tsx",
-      "line": 520,
+      "line": 521,
       "kind": "jsx-href",
       "expression": "/settings/notifications"
     },
@@ -53852,7 +54525,7 @@
     },
     {
       "file": "backend/src/backup/backup.service.ts",
-      "line": 108,
+      "line": 152,
       "kind": "Cron",
       "scheduleExpression": "'0 2 * * *'",
       "scheduleValue": "0 2 * * *",
@@ -53862,7 +54535,7 @@
     },
     {
       "file": "backend/src/marketplace/entitlement-cache.service.ts",
-      "line": 24,
+      "line": 23,
       "kind": "Cron",
       "scheduleExpression": "'0 */6 * * *'",
       "scheduleValue": "0 */6 * * *",
@@ -53872,7 +54545,7 @@
     },
     {
       "file": "backend/src/marketplace/school-billing-control.service.ts",
-      "line": 24,
+      "line": 26,
       "kind": "Cron",
       "scheduleExpression": "'0 * * * *'",
       "scheduleValue": "0 * * * *",
@@ -53882,7 +54555,7 @@
     },
     {
       "file": "backend/src/marketplace/school-billing-control.service.ts",
-      "line": 106,
+      "line": 111,
       "kind": "Cron",
       "scheduleExpression": "'5-55/5 * * * *'",
       "scheduleValue": "5-55/5 * * * *",
@@ -54042,7 +54715,7 @@
     },
     {
       "file": "plugins/wattanam.attendance-manager/backend/index.js",
-      "line": 390,
+      "line": 391,
       "id": "attendance-alerts",
       "intervalSecondsExpression": "900",
       "handlerDeclared": true,
@@ -54797,13 +55470,13 @@
       },
       {
         "file": "frontend/components/plugin-ui/PluginDocumentPreview.tsx",
-        "line": 40,
+        "line": 52,
         "kind": "print",
         "value": "window.print"
       },
       {
         "file": "frontend/components/plugin-ui/PluginDocumentPreview.tsx",
-        "line": 40,
+        "line": 52,
         "kind": "print",
         "value": "window.print"
       },
@@ -54869,13 +55542,13 @@
       },
       {
         "file": "plugins/wattanam.attendance-manager/backend/index.js",
-        "line": 322,
+        "line": 323,
         "kind": "csv-generation",
         "value": "text/csv"
       },
       {
         "file": "plugins/wattanam.reporting/backend/index.js",
-        "line": 11,
+        "line": 214,
         "kind": "csv-generation",
         "value": "text/csv"
       }
@@ -54906,50 +55579,140 @@
         "value": "writeFile"
       },
       {
-        "file": "backend/src/backup/backup.service.ts",
-        "line": 37,
+        "file": "backend/src/backup/backup.service.spec.ts",
+        "line": 53,
         "kind": "filesystem",
-        "value": "readdir"
+        "value": "writeFile"
+      },
+      {
+        "file": "backend/src/backup/backup.service.spec.ts",
+        "line": 54,
+        "kind": "filesystem",
+        "value": "writeFile"
+      },
+      {
+        "file": "backend/src/backup/backup.service.spec.ts",
+        "line": 55,
+        "kind": "filesystem",
+        "value": "writeFile"
+      },
+      {
+        "file": "backend/src/backup/backup.service.spec.ts",
+        "line": 56,
+        "kind": "filesystem",
+        "value": "writeFile"
+      },
+      {
+        "file": "backend/src/backup/backup.service.spec.ts",
+        "line": 62,
+        "kind": "filesystem",
+        "value": "rm"
+      },
+      {
+        "file": "backend/src/backup/backup.service.spec.ts",
+        "line": 76,
+        "kind": "filesystem",
+        "value": "writeFile"
+      },
+      {
+        "file": "backend/src/backup/backup.service.spec.ts",
+        "line": 77,
+        "kind": "filesystem",
+        "value": "writeFile"
+      },
+      {
+        "file": "backend/src/backup/backup.service.spec.ts",
+        "line": 78,
+        "kind": "filesystem",
+        "value": "writeFile"
+      },
+      {
+        "file": "backend/src/backup/backup.service.spec.ts",
+        "line": 79,
+        "kind": "filesystem",
+        "value": "writeFile"
+      },
+      {
+        "file": "backend/src/backup/backup.service.spec.ts",
+        "line": 96,
+        "kind": "filesystem",
+        "value": "writeFile"
+      },
+      {
+        "file": "backend/src/backup/backup.service.spec.ts",
+        "line": 97,
+        "kind": "filesystem",
+        "value": "writeFile"
+      },
+      {
+        "file": "backend/src/backup/backup.service.spec.ts",
+        "line": 98,
+        "kind": "filesystem",
+        "value": "writeFile"
+      },
+      {
+        "file": "backend/src/backup/backup.service.spec.ts",
+        "line": 99,
+        "kind": "filesystem",
+        "value": "writeFile"
       },
       {
         "file": "backend/src/backup/backup.service.ts",
         "line": 41,
         "kind": "filesystem",
+        "value": "readdir"
+      },
+      {
+        "file": "backend/src/backup/backup.service.ts",
+        "line": 46,
+        "kind": "filesystem",
         "value": "readFile"
       },
       {
+        "file": "backend/src/backup/backup.service.ts",
+        "line": 54,
+        "kind": "filesystem",
+        "value": "readFile"
+      },
+      {
+        "file": "backend/src/backup/backup.service.ts",
+        "line": 70,
+        "kind": "filesystem",
+        "value": "access"
+      },
+      {
         "file": "backend/src/installation/install-cli.ts",
-        "line": 43,
+        "line": 41,
         "kind": "filesystem",
         "value": "readFile"
       },
       {
         "file": "backend/src/installation/installation-preflight.service.spec.ts",
-        "line": 60,
+        "line": 16,
         "kind": "filesystem",
         "value": "writeFile"
       },
       {
         "file": "backend/src/installation/installation-preflight.service.spec.ts",
-        "line": 77,
+        "line": 32,
         "kind": "filesystem",
         "value": "rm"
       },
       {
         "file": "backend/src/installation/installation-preflight.service.ts",
-        "line": 84,
+        "line": 72,
         "kind": "filesystem",
         "value": "mkdir"
       },
       {
         "file": "backend/src/installation/installation-preflight.service.ts",
-        "line": 85,
+        "line": 73,
         "kind": "filesystem",
         "value": "writeFile"
       },
       {
         "file": "backend/src/installation/installation-preflight.service.ts",
-        "line": 86,
+        "line": 74,
         "kind": "filesystem",
         "value": "unlink"
       },
@@ -55429,87 +56192,63 @@
       },
       {
         "file": "backend/src/plugins/plugins.service.spec.ts",
-        "line": 53,
+        "line": 54,
         "kind": "filesystem",
         "value": "rm"
       },
       {
         "file": "backend/src/plugins/plugins.service.spec.ts",
-        "line": 80,
+        "line": 97,
         "kind": "filesystem",
         "value": "mkdir"
       },
       {
         "file": "backend/src/plugins/plugins.service.spec.ts",
-        "line": 83,
+        "line": 100,
         "kind": "filesystem",
         "value": "access"
       },
       {
         "file": "backend/src/plugins/plugins.service.spec.ts",
-        "line": 89,
+        "line": 106,
         "kind": "filesystem",
         "value": "mkdir"
       },
       {
         "file": "backend/src/plugins/plugins.service.spec.ts",
-        "line": 90,
+        "line": 107,
         "kind": "filesystem",
         "value": "writeFile"
       },
       {
         "file": "backend/src/plugins/plugins.service.spec.ts",
-        "line": 93,
+        "line": 110,
         "kind": "filesystem",
         "value": "access"
       },
       {
         "file": "backend/src/plugins/plugins.service.spec.ts",
-        "line": 99,
+        "line": 116,
         "kind": "filesystem",
         "value": "mkdir"
       },
       {
         "file": "backend/src/plugins/plugins.service.spec.ts",
-        "line": 102,
+        "line": 119,
         "kind": "filesystem",
         "value": "access"
       },
       {
         "file": "backend/src/plugins/plugins.service.spec.ts",
-        "line": 117,
+        "line": 134,
         "kind": "filesystem",
         "value": "access"
       },
       {
         "file": "backend/src/plugins/plugins.service.spec.ts",
-        "line": 126,
+        "line": 143,
         "kind": "filesystem",
         "value": "readdir"
-      },
-      {
-        "file": "backend/src/plugins/plugins.service.spec.ts",
-        "line": 138,
-        "kind": "filesystem",
-        "value": "access"
-      },
-      {
-        "file": "backend/src/plugins/plugins.service.spec.ts",
-        "line": 139,
-        "kind": "filesystem",
-        "value": "readdir"
-      },
-      {
-        "file": "backend/src/plugins/plugins.service.spec.ts",
-        "line": 149,
-        "kind": "filesystem",
-        "value": "mkdir"
-      },
-      {
-        "file": "backend/src/plugins/plugins.service.spec.ts",
-        "line": 150,
-        "kind": "filesystem",
-        "value": "writeFile"
       },
       {
         "file": "backend/src/plugins/plugins.service.spec.ts",
@@ -55521,113 +56260,143 @@
         "file": "backend/src/plugins/plugins.service.spec.ts",
         "line": 156,
         "kind": "filesystem",
-        "value": "access"
+        "value": "readdir"
       },
       {
         "file": "backend/src/plugins/plugins.service.spec.ts",
-        "line": 175,
+        "line": 166,
         "kind": "filesystem",
         "value": "mkdir"
       },
       {
         "file": "backend/src/plugins/plugins.service.spec.ts",
+        "line": 167,
+        "kind": "filesystem",
+        "value": "writeFile"
+      },
+      {
+        "file": "backend/src/plugins/plugins.service.spec.ts",
+        "line": 172,
+        "kind": "filesystem",
+        "value": "access"
+      },
+      {
+        "file": "backend/src/plugins/plugins.service.spec.ts",
+        "line": 173,
+        "kind": "filesystem",
+        "value": "access"
+      },
+      {
+        "file": "backend/src/plugins/plugins.service.spec.ts",
+        "line": 192,
+        "kind": "filesystem",
+        "value": "mkdir"
+      },
+      {
+        "file": "backend/src/plugins/plugins.service.spec.ts",
+        "line": 193,
+        "kind": "filesystem",
+        "value": "writeFile"
+      },
+      {
+        "file": "backend/src/plugins/plugins.service.spec.ts",
+        "line": 215,
+        "kind": "filesystem",
+        "value": "mkdir"
+      },
+      {
+        "file": "backend/src/plugins/plugins.service.spec.ts",
+        "line": 227,
+        "kind": "filesystem",
+        "value": "mkdir"
+      },
+      {
+        "file": "backend/src/plugins/plugins.service.spec.ts",
+        "line": 267,
+        "kind": "filesystem",
+        "value": "mkdir"
+      },
+      {
+        "file": "backend/src/plugins/plugins.service.spec.ts",
+        "line": 274,
+        "kind": "filesystem",
+        "value": "access"
+      },
+      {
+        "file": "backend/src/plugins/plugins.service.ts",
+        "line": 67,
+        "kind": "filesystem",
+        "value": "access"
+      },
+      {
+        "file": "backend/src/plugins/plugins.service.ts",
+        "line": 75,
+        "kind": "filesystem",
+        "value": "rm"
+      },
+      {
+        "file": "backend/src/plugins/plugins.service.ts",
+        "line": 97,
+        "kind": "filesystem",
+        "value": "access"
+      },
+      {
+        "file": "backend/src/plugins/plugins.service.ts",
+        "line": 171,
+        "kind": "filesystem",
+        "value": "mkdir"
+      },
+      {
+        "file": "backend/src/plugins/plugins.service.ts",
         "line": 176,
         "kind": "filesystem",
-        "value": "writeFile"
-      },
-      {
-        "file": "backend/src/plugins/plugins.service.spec.ts",
-        "line": 189,
-        "kind": "filesystem",
         "value": "mkdir"
-      },
-      {
-        "file": "backend/src/plugins/plugins.service.spec.ts",
-        "line": 201,
-        "kind": "filesystem",
-        "value": "mkdir"
-      },
-      {
-        "file": "backend/src/plugins/plugins.service.spec.ts",
-        "line": 241,
-        "kind": "filesystem",
-        "value": "mkdir"
-      },
-      {
-        "file": "backend/src/plugins/plugins.service.spec.ts",
-        "line": 248,
-        "kind": "filesystem",
-        "value": "access"
-      },
-      {
-        "file": "backend/src/plugins/plugins.service.ts",
-        "line": 65,
-        "kind": "filesystem",
-        "value": "access"
-      },
-      {
-        "file": "backend/src/plugins/plugins.service.ts",
-        "line": 73,
-        "kind": "filesystem",
-        "value": "rm"
-      },
-      {
-        "file": "backend/src/plugins/plugins.service.ts",
-        "line": 132,
-        "kind": "filesystem",
-        "value": "mkdir"
-      },
-      {
-        "file": "backend/src/plugins/plugins.service.ts",
-        "line": 137,
-        "kind": "filesystem",
-        "value": "mkdir"
-      },
-      {
-        "file": "backend/src/plugins/plugins.service.ts",
-        "line": 138,
-        "kind": "filesystem",
-        "value": "writeFile"
-      },
-      {
-        "file": "backend/src/plugins/plugins.service.ts",
-        "line": 140,
-        "kind": "filesystem",
-        "value": "mkdir"
-      },
-      {
-        "file": "backend/src/plugins/plugins.service.ts",
-        "line": 148,
-        "kind": "filesystem",
-        "value": "rename"
-      },
-      {
-        "file": "backend/src/plugins/plugins.service.ts",
-        "line": 158,
-        "kind": "filesystem",
-        "value": "rm"
-      },
-      {
-        "file": "backend/src/plugins/plugins.service.ts",
-        "line": 164,
-        "kind": "filesystem",
-        "value": "rm"
-      },
-      {
-        "file": "backend/src/plugins/plugins.service.ts",
-        "line": 175,
-        "kind": "filesystem",
-        "value": "access"
       },
       {
         "file": "backend/src/plugins/plugins.service.ts",
         "line": 177,
         "kind": "filesystem",
+        "value": "writeFile"
+      },
+      {
+        "file": "backend/src/plugins/plugins.service.ts",
+        "line": 179,
+        "kind": "filesystem",
+        "value": "mkdir"
+      },
+      {
+        "file": "backend/src/plugins/plugins.service.ts",
+        "line": 187,
+        "kind": "filesystem",
+        "value": "rename"
+      },
+      {
+        "file": "backend/src/plugins/plugins.service.ts",
+        "line": 197,
+        "kind": "filesystem",
+        "value": "rm"
+      },
+      {
+        "file": "backend/src/plugins/plugins.service.ts",
+        "line": 203,
+        "kind": "filesystem",
+        "value": "rm"
+      },
+      {
+        "file": "backend/src/plugins/plugins.service.ts",
+        "line": 215,
+        "kind": "filesystem",
         "value": "access"
       },
       {
         "file": "backend/src/plugins/plugins.service.ts",
-        "line": 230,
+        "line": 217,
+        "kind": "filesystem",
+        "value": "access"
+      },
+      {
+        "file": "backend/src/plugins/plugins.service.ts",
+        "line": 270,
         "kind": "filesystem",
         "value": "rm"
       },
@@ -55717,49 +56486,49 @@
       },
       {
         "file": "backend/src/updates/updates.service.ts",
-        "line": 100,
+        "line": 106,
         "kind": "filesystem",
         "value": "mkdir"
-      },
-      {
-        "file": "backend/src/updates/updates.service.ts",
-        "line": 111,
-        "kind": "filesystem",
-        "value": "readFile"
       },
       {
         "file": "backend/src/updates/updates.service.ts",
         "line": 117,
         "kind": "filesystem",
+        "value": "readFile"
+      },
+      {
+        "file": "backend/src/updates/updates.service.ts",
+        "line": 123,
+        "kind": "filesystem",
         "value": "unlink"
       },
       {
         "file": "backend/src/updates/updates.service.ts",
-        "line": 122,
+        "line": 128,
         "kind": "filesystem",
         "value": "readFile"
       },
       {
         "file": "backend/src/updates/updates.service.ts",
-        "line": 173,
+        "line": 179,
         "kind": "filesystem",
         "value": "writeFile"
       },
       {
         "file": "backend/src/updates/updates.service.ts",
-        "line": 174,
+        "line": 180,
         "kind": "filesystem",
         "value": "rename"
       },
       {
         "file": "backend/src/updates/updates.service.ts",
-        "line": 183,
+        "line": 189,
         "kind": "filesystem",
         "value": "mkdir"
       },
       {
         "file": "backend/src/updates/updates.service.ts",
-        "line": 185,
+        "line": 191,
         "kind": "filesystem",
         "value": "readFile"
       },
@@ -55789,7 +56558,7 @@
       },
       {
         "file": "frontend/app/admin/plugins/page.tsx",
-        "line": 134,
+        "line": 231,
         "kind": "filesystem",
         "value": "open"
       },
@@ -55874,15 +56643,51 @@
         "value": "BACKUP_DIR"
       },
       {
+        "file": "backend/scripts/academic-admissions-restored-backup-certification.js",
+        "line": 27,
+        "kind": "environment-object",
+        "value": "BACKUP_DIR"
+      },
+      {
+        "file": "backend/scripts/academic-admissions-restored-backup-certification.js",
+        "line": 28,
+        "kind": "environment-object",
+        "value": "BACKUP_DIR"
+      },
+      {
         "file": "backend/scripts/academic-admissions-rollback-drill.js",
         "line": 71,
         "kind": "environment",
         "value": "BACKUP_DIR"
       },
       {
+        "file": "backend/scripts/academic-aggregate-restored-backup-certification.js",
+        "line": 42,
+        "kind": "environment-object",
+        "value": "BACKUP_DIR"
+      },
+      {
+        "file": "backend/scripts/academic-aggregate-restored-backup-certification.js",
+        "line": 43,
+        "kind": "environment-object",
+        "value": "BACKUP_DIR"
+      },
+      {
         "file": "backend/scripts/academic-classes-adopt.js",
         "line": 135,
         "kind": "environment",
+        "value": "BACKUP_DIR"
+      },
+      {
+        "file": "backend/scripts/academic-classes-restored-backup-certification.js",
+        "line": 24,
+        "kind": "environment-object",
+        "value": "BACKUP_DIR"
+      },
+      {
+        "file": "backend/scripts/academic-classes-restored-backup-certification.js",
+        "line": 25,
+        "kind": "environment-object",
         "value": "BACKUP_DIR"
       },
       {
@@ -55893,14 +56698,26 @@
       },
       {
         "file": "backend/scripts/academic-enrollment-adopt.js",
-        "line": 81,
+        "line": 85,
         "kind": "environment",
         "value": "BACKUP_DIR"
       },
       {
         "file": "backend/scripts/academic-enrollment-adopt.js",
-        "line": 94,
+        "line": 98,
         "kind": "environment",
+        "value": "BACKUP_DIR"
+      },
+      {
+        "file": "backend/scripts/academic-enrollment-restored-backup-certification.js",
+        "line": 23,
+        "kind": "environment-object",
+        "value": "BACKUP_DIR"
+      },
+      {
+        "file": "backend/scripts/academic-enrollment-restored-backup-certification.js",
+        "line": 24,
+        "kind": "environment-object",
         "value": "BACKUP_DIR"
       },
       {
@@ -55917,14 +56734,38 @@
       },
       {
         "file": "backend/scripts/academic-management-cutover-readiness.js",
-        "line": 234,
+        "line": 258,
         "kind": "environment",
+        "value": "BACKUP_DIR"
+      },
+      {
+        "file": "backend/scripts/academic-management-restored-backup-certification.js",
+        "line": 31,
+        "kind": "environment-object",
+        "value": "BACKUP_DIR"
+      },
+      {
+        "file": "backend/scripts/academic-management-restored-backup-certification.js",
+        "line": 32,
+        "kind": "environment-object",
         "value": "BACKUP_DIR"
       },
       {
         "file": "backend/scripts/academic-student-profiles-adopt.js",
         "line": 92,
         "kind": "environment",
+        "value": "BACKUP_DIR"
+      },
+      {
+        "file": "backend/scripts/academic-student-profiles-restored-backup-certification.js",
+        "line": 26,
+        "kind": "environment-object",
+        "value": "BACKUP_DIR"
+      },
+      {
+        "file": "backend/scripts/academic-student-profiles-restored-backup-certification.js",
+        "line": 27,
+        "kind": "environment-object",
         "value": "BACKUP_DIR"
       },
       {
@@ -55940,6 +56781,18 @@
         "value": "BACKUP_DIR"
       },
       {
+        "file": "backend/scripts/academic-study-years-restored-backup-certification.js",
+        "line": 24,
+        "kind": "environment-object",
+        "value": "BACKUP_DIR"
+      },
+      {
+        "file": "backend/scripts/academic-study-years-restored-backup-certification.js",
+        "line": 25,
+        "kind": "environment-object",
+        "value": "BACKUP_DIR"
+      },
+      {
         "file": "backend/scripts/academic-study-years-rollback-drill.js",
         "line": 71,
         "kind": "environment",
@@ -55952,8 +56805,20 @@
         "value": "BACKUP_DIR"
       },
       {
+        "file": "backend/scripts/academic-subjects-restored-backup-certification.js",
+        "line": 24,
+        "kind": "environment-object",
+        "value": "BACKUP_DIR"
+      },
+      {
+        "file": "backend/scripts/academic-subjects-restored-backup-certification.js",
+        "line": 25,
+        "kind": "environment-object",
+        "value": "BACKUP_DIR"
+      },
+      {
         "file": "backend/scripts/academic-subjects-rollback-drill.js",
-        "line": 27,
+        "line": 37,
         "kind": "environment",
         "value": "BACKUP_DIR"
       },
@@ -55964,6 +56829,18 @@
         "value": "BACKUP_DIR"
       },
       {
+        "file": "backend/scripts/attendance-manager-restored-backup-certification.js",
+        "line": 27,
+        "kind": "environment-object",
+        "value": "BACKUP_DIR"
+      },
+      {
+        "file": "backend/scripts/attendance-manager-restored-backup-certification.js",
+        "line": 28,
+        "kind": "environment-object",
+        "value": "BACKUP_DIR"
+      },
+      {
         "file": "backend/scripts/attendance-manager-rollback-drill.js",
         "line": 37,
         "kind": "environment",
@@ -55971,8 +56848,20 @@
       },
       {
         "file": "backend/scripts/communication-adopt.js",
-        "line": 7,
+        "line": 8,
         "kind": "environment",
+        "value": "BACKUP_DIR"
+      },
+      {
+        "file": "backend/scripts/communication-restored-backup-certification.js",
+        "line": 7,
+        "kind": "environment-object",
+        "value": "BACKUP_DIR"
+      },
+      {
+        "file": "backend/scripts/communication-restored-backup-certification.js",
+        "line": 7,
+        "kind": "environment-object",
         "value": "BACKUP_DIR"
       },
       {
@@ -55983,32 +56872,50 @@
       },
       {
         "file": "backend/scripts/db-toolkit.js",
-        "line": 47,
+        "line": 61,
         "kind": "environment",
         "value": "BACKUP_DIR"
       },
       {
         "file": "backend/scripts/db-toolkit.js",
-        "line": 47,
+        "line": 61,
         "kind": "persistent-path",
         "value": "/data/backups"
       },
       {
         "file": "backend/scripts/db-toolkit.js",
-        "line": 99,
+        "line": 113,
         "kind": "persistent-path",
         "value": "/data/plugins"
       },
       {
         "file": "backend/scripts/db-toolkit.js",
-        "line": 103,
+        "line": 117,
         "kind": "persistent-path",
         "value": "/data/plugin-data"
       },
       {
         "file": "backend/scripts/document-designer-adopt.js",
-        "line": 120,
+        "line": 122,
         "kind": "environment",
+        "value": "BACKUP_DIR"
+      },
+      {
+        "file": "backend/scripts/document-designer-convert-assets.js",
+        "line": 89,
+        "kind": "environment",
+        "value": "BACKUP_DIR"
+      },
+      {
+        "file": "backend/scripts/document-designer-restored-backup-certification.js",
+        "line": 36,
+        "kind": "environment-object",
+        "value": "BACKUP_DIR"
+      },
+      {
+        "file": "backend/scripts/document-designer-restored-backup-certification.js",
+        "line": 37,
+        "kind": "environment-object",
         "value": "BACKUP_DIR"
       },
       {
@@ -56024,6 +56931,18 @@
         "value": "BACKUP_DIR"
       },
       {
+        "file": "backend/scripts/examination-restored-backup-certification.js",
+        "line": 10,
+        "kind": "environment-object",
+        "value": "BACKUP_DIR"
+      },
+      {
+        "file": "backend/scripts/examination-restored-backup-certification.js",
+        "line": 10,
+        "kind": "environment-object",
+        "value": "BACKUP_DIR"
+      },
+      {
         "file": "backend/scripts/examination-rollback-drill.js",
         "line": 34,
         "kind": "environment",
@@ -56036,6 +56955,18 @@
         "value": "BACKUP_DIR"
       },
       {
+        "file": "backend/scripts/finance-restored-backup-certification.js",
+        "line": 2,
+        "kind": "environment-object",
+        "value": "BACKUP_DIR"
+      },
+      {
+        "file": "backend/scripts/finance-restored-backup-certification.js",
+        "line": 2,
+        "kind": "environment-object",
+        "value": "BACKUP_DIR"
+      },
+      {
         "file": "backend/scripts/finance-rollback-drill.js",
         "line": 5,
         "kind": "environment",
@@ -56043,8 +56974,20 @@
       },
       {
         "file": "backend/scripts/human-resources-adopt.js",
-        "line": 8,
+        "line": 10,
         "kind": "environment",
+        "value": "BACKUP_DIR"
+      },
+      {
+        "file": "backend/scripts/human-resources-restored-backup-certification.js",
+        "line": 2,
+        "kind": "environment-object",
+        "value": "BACKUP_DIR"
+      },
+      {
+        "file": "backend/scripts/human-resources-restored-backup-certification.js",
+        "line": 2,
+        "kind": "environment-object",
         "value": "BACKUP_DIR"
       },
       {
@@ -56060,6 +57003,18 @@
         "value": "BACKUP_DIR"
       },
       {
+        "file": "backend/scripts/learning-restored-backup-certification.js",
+        "line": 4,
+        "kind": "environment-object",
+        "value": "BACKUP_DIR"
+      },
+      {
+        "file": "backend/scripts/learning-restored-backup-certification.js",
+        "line": 4,
+        "kind": "environment-object",
+        "value": "BACKUP_DIR"
+      },
+      {
         "file": "backend/scripts/learning-rollback-drill.js",
         "line": 6,
         "kind": "environment",
@@ -56067,14 +57022,38 @@
       },
       {
         "file": "backend/scripts/parent-portal-adopt.js",
-        "line": 11,
+        "line": 12,
         "kind": "environment",
+        "value": "BACKUP_DIR"
+      },
+      {
+        "file": "backend/scripts/parent-portal-restored-backup-certification.js",
+        "line": 21,
+        "kind": "environment-object",
+        "value": "BACKUP_DIR"
+      },
+      {
+        "file": "backend/scripts/parent-portal-restored-backup-certification.js",
+        "line": 22,
+        "kind": "environment-object",
         "value": "BACKUP_DIR"
       },
       {
         "file": "backend/scripts/parent-portal-rollback-drill.js",
         "line": 10,
         "kind": "environment",
+        "value": "BACKUP_DIR"
+      },
+      {
+        "file": "backend/scripts/reporting-restored-backup-certification.js",
+        "line": 4,
+        "kind": "environment-object",
+        "value": "BACKUP_DIR"
+      },
+      {
+        "file": "backend/scripts/reporting-restored-backup-certification.js",
+        "line": 4,
+        "kind": "environment-object",
         "value": "BACKUP_DIR"
       },
       {
@@ -56132,6 +57111,18 @@
         "value": "BACKUP_DIR"
       },
       {
+        "file": "backend/scripts/timetable-restored-backup-certification.js",
+        "line": 21,
+        "kind": "environment-object",
+        "value": "BACKUP_DIR"
+      },
+      {
+        "file": "backend/scripts/timetable-restored-backup-certification.js",
+        "line": 22,
+        "kind": "environment-object",
+        "value": "BACKUP_DIR"
+      },
+      {
         "file": "backend/scripts/timetable-rollback-drill.js",
         "line": 26,
         "kind": "environment",
@@ -56144,6 +57135,18 @@
         "value": "BACKUP_DIR"
       },
       {
+        "file": "backend/scripts/transportation-restored-backup-certification.js",
+        "line": 2,
+        "kind": "environment-object",
+        "value": "BACKUP_DIR"
+      },
+      {
+        "file": "backend/scripts/transportation-restored-backup-certification.js",
+        "line": 2,
+        "kind": "environment-object",
+        "value": "BACKUP_DIR"
+      },
+      {
         "file": "backend/scripts/transportation-rollback-drill.js",
         "line": 5,
         "kind": "environment",
@@ -56151,13 +57154,13 @@
       },
       {
         "file": "backend/src/backup/backup.service.ts",
-        "line": 31,
+        "line": 35,
         "kind": "environment",
         "value": "BACKUP_DIR"
       },
       {
         "file": "backend/src/backup/backup.service.ts",
-        "line": 31,
+        "line": 35,
         "kind": "persistent-path",
         "value": "/data/backups"
       },
@@ -56181,7 +57184,13 @@
       },
       {
         "file": "backend/src/installation/installation-preflight.service.spec.ts",
-        "line": 108,
+        "line": 63,
+        "kind": "environment",
+        "value": "PLUGIN_DIR"
+      },
+      {
+        "file": "backend/src/marketplace/document-designer-clean-core-install.spec.ts",
+        "line": 126,
         "kind": "environment",
         "value": "PLUGIN_DIR"
       },
@@ -56247,13 +57256,13 @@
       },
       {
         "file": "backend/src/plugins/plugins.service.ts",
-        "line": 269,
+        "line": 309,
         "kind": "environment",
         "value": "PLUGIN_DIR"
       },
       {
         "file": "backend/src/plugins/plugins.service.ts",
-        "line": 269,
+        "line": 309,
         "kind": "persistent-path",
         "value": "/data/plugins"
       },
@@ -56319,7 +57328,7 @@
       },
       {
         "file": "backend/src/updates/updates.service.spec.ts",
-        "line": 30,
+        "line": 32,
         "kind": "environment",
         "value": "UPDATE_STATE_DIR"
       }
@@ -56339,43 +57348,43 @@
       },
       {
         "file": "plugins/wattanam.document-designer/backend/index.js",
-        "line": 296,
+        "line": 449,
         "kind": "plugin-storage",
         "value": "list"
       },
       {
         "file": "plugins/wattanam.document-designer/backend/index.js",
-        "line": 299,
+        "line": 452,
         "kind": "plugin-storage",
         "value": "readText"
       },
       {
         "file": "plugins/wattanam.document-designer/backend/index.js",
-        "line": 317,
+        "line": 470,
         "kind": "plugin-storage",
         "value": "writeText"
       },
       {
         "file": "plugins/wattanam.document-designer/backend/index.js",
-        "line": 319,
+        "line": 472,
         "kind": "plugin-storage",
         "value": "delete"
       },
       {
         "file": "plugins/wattanam.document-designer/backend/index.js",
-        "line": 329,
+        "line": 482,
         "kind": "plugin-storage",
         "value": "readText"
       },
       {
         "file": "plugins/wattanam.document-designer/backend/index.js",
-        "line": 340,
+        "line": 493,
         "kind": "plugin-storage",
         "value": "delete"
       },
       {
         "file": "plugins/wattanam.document-designer/backend/index.js",
-        "line": 341,
+        "line": 494,
         "kind": "plugin-storage",
         "value": "delete"
       }
@@ -56557,7 +57566,7 @@
       },
       {
         "file": "plugins/wattanam.academic-management/backend/index.js",
-        "line": 1584,
+        "line": 1444,
         "channel": "email",
         "method": "sendEmail",
         "recipientExpression": "reg.email",
@@ -56568,7 +57577,7 @@
       },
       {
         "file": "plugins/wattanam.academic-management/backend/index.js",
-        "line": 1626,
+        "line": 1486,
         "channel": "email",
         "method": "sendEmail",
         "recipientExpression": "reg.email",
@@ -56579,7 +57588,7 @@
       },
       {
         "file": "plugins/wattanam.academic-management/backend/index.js",
-        "line": 1739,
+        "line": 1599,
         "channel": "in-app",
         "method": "notifyInApp",
         "recipientExpression": "a.id",
@@ -56590,7 +57599,7 @@
       },
       {
         "file": "plugins/wattanam.attendance-manager/backend/index.js",
-        "line": 374,
+        "line": 375,
         "channel": "in-app",
         "method": "notifyInApp",
         "recipientExpression": "userId",
@@ -56601,7 +57610,7 @@
       },
       {
         "file": "plugins/wattanam.examination/backend/attempts.js",
-        "line": 150,
+        "line": 151,
         "channel": "in-app",
         "method": "notifyInApp",
         "recipientExpression": "attempt.directoryUserId",
@@ -56691,13 +57700,13 @@
       },
       {
         "file": "backend/src/marketplace/school-billing-control.service.ts",
-        "line": 126,
+        "line": 131,
         "kind": "notification-write",
         "value": "createMany"
       },
       {
         "file": "backend/src/marketplace/school-billing-control.service.ts",
-        "line": 144,
+        "line": 149,
         "kind": "notification-write",
         "value": "updateMany"
       },
@@ -56903,37 +57912,37 @@
       },
       {
         "file": "plugins/wattanam.academic-management/backend/index.js",
-        "line": 792,
+        "line": 652,
         "kind": "directory-recipient-resolution",
         "value": "resolveAudience"
       },
       {
         "file": "plugins/wattanam.academic-management/backend/index.js",
-        "line": 953,
+        "line": 813,
         "kind": "directory-recipient-resolution",
         "value": "lookupUsers"
       },
       {
         "file": "plugins/wattanam.academic-management/backend/index.js",
-        "line": 1167,
+        "line": 1027,
         "kind": "directory-recipient-resolution",
         "value": "lookupUsers"
       },
       {
         "file": "plugins/wattanam.academic-management/backend/index.js",
-        "line": 1239,
+        "line": 1099,
         "kind": "directory-recipient-resolution",
         "value": "lookupUsers"
       },
       {
         "file": "plugins/wattanam.academic-management/backend/index.js",
-        "line": 1737,
+        "line": 1597,
         "kind": "directory-recipient-resolution",
         "value": "resolveAudience"
       },
       {
         "file": "plugins/wattanam.attendance-manager/backend/index.js",
-        "line": 71,
+        "line": 72,
         "kind": "directory-recipient-resolution",
         "value": "classesForUser"
       },
@@ -56957,7 +57966,7 @@
       },
       {
         "file": "plugins/wattanam.document-designer/backend/index.js",
-        "line": 74,
+        "line": 76,
         "kind": "directory-recipient-resolution",
         "value": "lookupUsers"
       },
@@ -57005,13 +58014,13 @@
       },
       {
         "file": "plugins/wattanam.examination/backend/index.js",
-        "line": 85,
+        "line": 86,
         "kind": "directory-recipient-resolution",
         "value": "classesForUser"
       },
       {
         "file": "plugins/wattanam.examination/backend/index.js",
-        "line": 92,
+        "line": 93,
         "kind": "directory-recipient-resolution",
         "value": "classesForUser"
       },
@@ -57083,13 +58092,13 @@
       },
       {
         "file": "plugins/wattanam.reporting/backend/index.js",
-        "line": 10,
+        "line": 100,
         "kind": "directory-recipient-resolution",
         "value": "resolveAudience"
       },
       {
         "file": "plugins/wattanam.reporting/backend/index.js",
-        "line": 10,
+        "line": 114,
         "kind": "directory-recipient-resolution",
         "value": "lookupUsers"
       },
@@ -57267,7 +58276,7 @@
       },
       {
         "file": "backend/src/plugins/plugins.module.ts",
-        "line": 31,
+        "line": 32,
         "kind": "plugin-notification-quota",
         "value": "PluginNotificationQuotaService"
       }
@@ -57652,7 +58661,7 @@
       },
       {
         "file": "frontend/components/Sidebar.tsx",
-        "line": 154,
+        "line": 151,
         "surface": "school-web",
         "client": "fetch",
         "method": "GET",
@@ -57665,7 +58674,7 @@
       },
       {
         "file": "frontend/components/Sidebar.tsx",
-        "line": 155,
+        "line": 152,
         "surface": "school-web",
         "client": "fetch",
         "method": "GET",
@@ -57752,6 +58761,7 @@
       "frontend/app/wattaman/teacher-reports/page.tsx",
       "frontend/app/wattaman/teacher-reports/print/page.tsx",
       "frontend/lib/reporter-nav.ts",
+      "frontend/scripts/plugin-ui-result-reporter.js",
       "plugins/wattanam.reporting/CHANGELOG.md",
       "plugins/wattanam.reporting/README.md",
       "plugins/wattanam.reporting/backend/index.js",
@@ -64478,67 +65488,67 @@
       },
       {
         "file": "plugins/wattanam.reporting/backend/index.js",
-        "line": 7,
+        "line": 49,
         "kind": "collection-calculation",
         "value": "map"
       },
       {
         "file": "plugins/wattanam.reporting/backend/index.js",
-        "line": 8,
+        "line": 67,
         "kind": "collection-calculation",
         "value": "map"
       },
       {
         "file": "plugins/wattanam.reporting/backend/index.js",
-        "line": 8,
+        "line": 70,
         "kind": "collection-calculation",
         "value": "map"
       },
       {
         "file": "plugins/wattanam.reporting/backend/index.js",
-        "line": 8,
+        "line": 86,
         "kind": "collection-calculation",
         "value": "map"
       },
       {
         "file": "plugins/wattanam.reporting/backend/index.js",
-        "line": 10,
+        "line": 104,
         "kind": "collection-calculation",
         "value": "filter"
       },
       {
         "file": "plugins/wattanam.reporting/backend/index.js",
-        "line": 10,
+        "line": 108,
         "kind": "collection-calculation",
         "value": "map"
       },
       {
         "file": "plugins/wattanam.reporting/backend/index.js",
-        "line": 10,
+        "line": 129,
         "kind": "collection-calculation",
         "value": "map"
       },
       {
         "file": "plugins/wattanam.reporting/backend/index.js",
-        "line": 10,
+        "line": 132,
         "kind": "collection-calculation",
         "value": "map"
       },
       {
         "file": "plugins/wattanam.reporting/backend/index.js",
-        "line": 10,
+        "line": 134,
         "kind": "collection-calculation",
         "value": "filter"
       },
       {
         "file": "plugins/wattanam.reporting/backend/index.js",
-        "line": 11,
+        "line": 208,
         "kind": "collection-calculation",
         "value": "map"
       },
       {
         "file": "plugins/wattanam.reporting/backend/index.js",
-        "line": 11,
+        "line": 209,
         "kind": "collection-calculation",
         "value": "map"
       }
@@ -65098,13 +66108,13 @@
       },
       {
         "file": "plugins/wattanam.attendance-manager/backend/index.js",
-        "line": 322,
+        "line": 323,
         "kind": "csv-generation",
         "value": "text/csv"
       },
       {
         "file": "plugins/wattanam.reporting/backend/index.js",
-        "line": 11,
+        "line": 214,
         "kind": "csv-generation",
         "value": "text/csv"
       }
@@ -65232,13 +66242,13 @@
       },
       {
         "file": "frontend/components/plugin-ui/PluginDocumentPreview.tsx",
-        "line": 40,
+        "line": 52,
         "kind": "print",
         "value": "window.print"
       },
       {
         "file": "frontend/components/plugin-ui/PluginDocumentPreview.tsx",
-        "line": 40,
+        "line": 52,
         "kind": "print",
         "value": "window.print"
       },
@@ -66268,7 +67278,7 @@
       "directory": "plugins/announcements",
       "manifest": "plugins/announcements/plugin.json",
       "pluginId": "wattanam.announcements",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "capabilities": [
         "api.routes",
         "database.read",
@@ -66292,7 +67302,7 @@
       "directory": "plugins/wattanam.academic-management",
       "manifest": "plugins/wattanam.academic-management/plugin.json",
       "pluginId": "wattanam.academic-management",
-      "version": "0.1.10",
+      "version": "0.1.12",
       "capabilities": [
         "accounts.student.create",
         "accounts.student.update",
@@ -66315,7 +67325,7 @@
       "directory": "plugins/wattanam.attendance-manager",
       "manifest": "plugins/wattanam.attendance-manager/plugin.json",
       "pluginId": "wattanam.attendance-manager",
-      "version": "0.1.6",
+      "version": "0.1.8",
       "capabilities": [
         "api.routes",
         "database.read",
@@ -66340,7 +67350,7 @@
       "directory": "plugins/wattanam.communication",
       "manifest": "plugins/wattanam.communication/plugin.json",
       "pluginId": "wattanam.communication",
-      "version": "0.1.2",
+      "version": "0.1.3",
       "capabilities": [
         "api.routes",
         "database.read",
@@ -66361,7 +67371,7 @@
       "directory": "plugins/wattanam.document-designer",
       "manifest": "plugins/wattanam.document-designer/plugin.json",
       "pluginId": "wattanam.document-designer",
-      "version": "0.1.4",
+      "version": "0.1.7",
       "capabilities": [
         "api.routes",
         "database.read",
@@ -66381,7 +67391,7 @@
       "directory": "plugins/wattanam.examination",
       "manifest": "plugins/wattanam.examination/plugin.json",
       "pluginId": "wattanam.examination",
-      "version": "0.1.4",
+      "version": "0.1.7",
       "capabilities": [
         "api.routes",
         "database.read",
@@ -66401,7 +67411,7 @@
       "directory": "plugins/wattanam.finance",
       "manifest": "plugins/wattanam.finance/plugin.json",
       "pluginId": "wattanam.finance",
-      "version": "0.1.0",
+      "version": "0.1.3",
       "capabilities": [
         "api.routes",
         "database.read",
@@ -66420,7 +67430,7 @@
       "directory": "plugins/wattanam.human-resources",
       "manifest": "plugins/wattanam.human-resources/plugin.json",
       "pluginId": "wattanam.human-resources",
-      "version": "0.1.2",
+      "version": "0.1.3",
       "capabilities": [
         "api.routes",
         "database.read",
@@ -66437,7 +67447,7 @@
       "directory": "plugins/wattanam.learning",
       "manifest": "plugins/wattanam.learning/plugin.json",
       "pluginId": "wattanam.learning",
-      "version": "0.1.2",
+      "version": "0.1.5",
       "capabilities": [
         "api.routes",
         "database.read",
@@ -66456,7 +67466,7 @@
       "directory": "plugins/wattanam.parent-portal",
       "manifest": "plugins/wattanam.parent-portal/plugin.json",
       "pluginId": "wattanam.parent-portal",
-      "version": "0.1.1",
+      "version": "0.1.3",
       "capabilities": [
         "accounts.guardian.assign",
         "accounts.parent.resolve",
@@ -66477,7 +67487,7 @@
       "directory": "plugins/wattanam.reporting",
       "manifest": "plugins/wattanam.reporting/plugin.json",
       "pluginId": "wattanam.reporting",
-      "version": "0.1.1",
+      "version": "0.1.3",
       "capabilities": [
         "api.routes",
         "directory.read",
@@ -66494,7 +67504,7 @@
       "directory": "plugins/wattanam.timetable",
       "manifest": "plugins/wattanam.timetable/plugin.json",
       "pluginId": "wattanam.timetable",
-      "version": "0.1.3",
+      "version": "0.1.6",
       "capabilities": [
         "api.routes",
         "database.read",
@@ -66506,13 +67516,15 @@
         "settings.read",
         "ui.pages"
       ],
-      "dependencies": {}
+      "dependencies": {
+        "wattanam.academic-management": ">=0.1.0 <1.0.0"
+      }
     },
     {
       "directory": "plugins/wattanam.transportation",
       "manifest": "plugins/wattanam.transportation/plugin.json",
       "pluginId": "wattanam.transportation",
-      "version": "0.1.2",
+      "version": "0.1.4",
       "capabilities": [
         "api.routes",
         "database.read",
@@ -66549,7 +67561,7 @@
       "wattanam.transportation"
     ],
     "summary": {
-      "items": 1513,
+      "items": 1554,
       "provisionalItems": 4,
       "gaps": 0,
       "errors": 0,
@@ -66558,16 +67570,16 @@
     },
     "byOwner": {
       "lean-core": {
-        "modules": 18,
+        "modules": 19,
         "models": 22,
         "controllers": 16,
-        "routes": 94,
+        "routes": 97,
         "pages": 30,
         "navigation": 15,
         "scheduledJobs": 7,
         "websocketGateways": 1,
         "frontendApiProxies": 2,
-        "files": 347,
+        "files": 364,
         "mobileConfiguration": 28
       },
       "platform-control-plane": {
@@ -66582,7 +67594,7 @@
         "pages": 8,
         "navigation": 8,
         "officialPlugins": 1,
-        "files": 44
+        "files": 49
       },
       "wattanam.announcements": {
         "modules": 1,
@@ -66605,7 +67617,7 @@
         "websocketGateways": 1,
         "pluginJobs": 1,
         "officialPlugins": 1,
-        "files": 50
+        "files": 54
       },
       "wattanam.communication": {
         "modules": 1,
@@ -66617,7 +67629,7 @@
         "websocketGateways": 1,
         "pluginJobs": 1,
         "officialPlugins": 1,
-        "files": 19
+        "files": 20
       },
       "wattanam.document-designer": {
         "modules": 1,
@@ -66627,7 +67639,7 @@
         "pages": 12,
         "navigation": 6,
         "officialPlugins": 1,
-        "files": 28
+        "files": 30
       },
       "wattanam.examination": {
         "modules": 2,
@@ -66637,7 +67649,7 @@
         "pages": 11,
         "navigation": 5,
         "officialPlugins": 1,
-        "files": 32
+        "files": 33
       },
       "wattanam.finance": {
         "modules": 1,
@@ -66647,7 +67659,7 @@
         "pages": 8,
         "navigation": 6,
         "officialPlugins": 1,
-        "files": 17
+        "files": 18
       },
       "wattanam.human-resources": {
         "modules": 2,
@@ -66657,7 +67669,7 @@
         "pages": 13,
         "navigation": 13,
         "officialPlugins": 1,
-        "files": 25
+        "files": 26
       },
       "wattanam.learning": {
         "modules": 2,
@@ -66667,7 +67679,7 @@
         "pages": 14,
         "navigation": 2,
         "officialPlugins": 1,
-        "files": 30
+        "files": 31
       },
       "wattanam.parent-portal": {
         "modules": 1,
@@ -66677,14 +67689,14 @@
         "pages": 8,
         "navigation": 2,
         "officialPlugins": 1,
-        "files": 15
+        "files": 16
       },
       "wattanam.reporting": {
         "routes": 1,
         "pages": 1,
         "navigation": 1,
         "officialPlugins": 1,
-        "files": 7
+        "files": 8
       },
       "wattanam.timetable": {
         "modules": 1,
@@ -66694,7 +67706,7 @@
         "pages": 23,
         "navigation": 6,
         "officialPlugins": 1,
-        "files": 34
+        "files": 35
       },
       "wattanam.transportation": {
         "modules": 1,
@@ -66705,7 +67717,7 @@
         "navigation": 1,
         "websocketGateways": 1,
         "officialPlugins": 1,
-        "files": 10
+        "files": 11
       }
     },
     "provisional": {
@@ -66834,20 +67846,20 @@
         "wattanam.timetable": 61
       },
       "fileStorage": {
-        "lean-core": 247,
-        "wattanam.academic-management": 25,
+        "lean-core": 264,
+        "wattanam.academic-management": 37,
         "wattanam.announcements": 2,
-        "wattanam.attendance-manager": 22,
-        "wattanam.communication": 3,
-        "wattanam.document-designer": 32,
-        "wattanam.examination": 4,
-        "wattanam.finance": 15,
-        "wattanam.human-resources": 12,
-        "wattanam.learning": 5,
-        "wattanam.parent-portal": 2,
-        "wattanam.reporting": 4,
-        "wattanam.timetable": 10,
-        "wattanam.transportation": 2
+        "wattanam.attendance-manager": 28,
+        "wattanam.communication": 5,
+        "wattanam.document-designer": 35,
+        "wattanam.examination": 6,
+        "wattanam.finance": 17,
+        "wattanam.human-resources": 14,
+        "wattanam.learning": 7,
+        "wattanam.parent-portal": 4,
+        "wattanam.reporting": 6,
+        "wattanam.timetable": 12,
+        "wattanam.transportation": 4
       },
       "mobile": {
         "lean-core": 61,
@@ -66856,7 +67868,7 @@
         "wattanam.human-resources": 18
       },
       "apiConsumers": {
-        "lean-core": 171,
+        "lean-core": 176,
         "platform-control-plane": 8,
         "wattanam.academic-management": 80,
         "wattanam.announcements": 3,
@@ -66897,6 +67909,12 @@
           "rootComposition": false,
           "owner": "wattanam.announcements",
           "rule": "files[4]"
+        },
+        {
+          "file": "backend/src/app-core.module.ts",
+          "rootComposition": false,
+          "owner": "lean-core",
+          "rule": "files[1]"
         },
         {
           "file": "backend/src/app.module.ts",
@@ -69398,6 +70416,13 @@
           "rule": "files[26]"
         },
         {
+          "route": "GET /admin/marketplace/starter-bundles",
+          "file": "backend/src/marketplace/marketplace-commerce.controller.ts",
+          "handler": "starterBundles",
+          "owner": "lean-core",
+          "rule": "files[26]"
+        },
+        {
           "route": "GET /admin/marketplace/orders",
           "file": "backend/src/marketplace/marketplace-commerce.controller.ts",
           "handler": "listOrders",
@@ -69415,6 +70440,13 @@
           "route": "POST /admin/marketplace/plugins/:pluginId/:version/install",
           "file": "backend/src/marketplace/marketplace-commerce.controller.ts",
           "handler": "install",
+          "owner": "lean-core",
+          "rule": "files[26]"
+        },
+        {
+          "route": "POST /admin/marketplace/starter-bundles/:bundleId/install",
+          "file": "backend/src/marketplace/marketplace-commerce.controller.ts",
+          "handler": "installBundle",
           "owner": "lean-core",
           "rule": "files[26]"
         },
@@ -69740,6 +70772,13 @@
           "route": "GET /plugins/runtime-status",
           "file": "backend/src/plugins/plugins.controller.ts",
           "handler": "runtimeStatus",
+          "owner": "lean-core",
+          "rule": "files[33]"
+        },
+        {
+          "route": "GET /plugins/diagnostics",
+          "file": "backend/src/plugins/plugins.controller.ts",
+          "handler": "diagnostics",
           "owner": "lean-core",
           "rule": "files[33]"
         },
@@ -72184,19 +73223,19 @@
           "file": "plugins/announcements/backend/index.js",
           "id": "digest-heartbeat",
           "owner": "wattanam.announcements",
-          "rule": "files[85]"
+          "rule": "files[89]"
         },
         {
           "file": "plugins/wattanam.attendance-manager/backend/index.js",
           "id": "attendance-alerts",
           "owner": "wattanam.attendance-manager",
-          "rule": "files[88]"
+          "rule": "files[92]"
         },
         {
           "file": "plugins/wattanam.communication/backend/index.js",
           "id": "communication-delivery-outbox",
           "owner": "wattanam.communication",
-          "rule": "files[98]"
+          "rule": "files[103]"
         }
       ],
       "frontendApiProxies": [
@@ -72204,360 +73243,410 @@
           "file": "apps/platform-admin/app/api/platform/[...path]/route.ts",
           "route": "/api/platform/[...path]",
           "owner": "platform-control-plane",
-          "rule": "files[73]"
+          "rule": "files[77]"
         },
         {
           "file": "frontend/app/api/[...path]/route.ts",
           "route": "/api/[...path]",
           "owner": "lean-core",
-          "rule": "files[55]"
+          "rule": "files[59]"
         },
         {
           "file": "frontend/app/api/marketplace/[...path]/route.ts",
           "route": "/api/marketplace/[...path]",
           "owner": "lean-core",
-          "rule": "files[56]"
+          "rule": "files[60]"
         }
       ],
       "officialPlugins": [
         {
           "directory": "plugins/announcements",
           "pluginId": "wattanam.announcements",
-          "version": "0.1.0",
+          "version": "0.1.1",
           "owner": "wattanam.announcements",
-          "rule": "files[85]"
+          "rule": "files[89]"
         },
         {
           "directory": "plugins/wattanam.academic-management",
           "pluginId": "wattanam.academic-management",
-          "version": "0.1.10",
+          "version": "0.1.12",
           "owner": "wattanam.academic-management",
-          "rule": "files[87]"
+          "rule": "files[91]"
         },
         {
           "directory": "plugins/wattanam.attendance-manager",
           "pluginId": "wattanam.attendance-manager",
-          "version": "0.1.6",
+          "version": "0.1.8",
           "owner": "wattanam.attendance-manager",
-          "rule": "files[88]"
+          "rule": "files[92]"
         },
         {
           "directory": "plugins/wattanam.communication",
           "pluginId": "wattanam.communication",
-          "version": "0.1.2",
+          "version": "0.1.3",
           "owner": "wattanam.communication",
-          "rule": "files[98]"
+          "rule": "files[103]"
         },
         {
           "directory": "plugins/wattanam.document-designer",
           "pluginId": "wattanam.document-designer",
-          "version": "0.1.4",
+          "version": "0.1.7",
           "owner": "wattanam.document-designer",
-          "rule": "files[86]"
+          "rule": "files[90]"
         },
         {
           "directory": "plugins/wattanam.examination",
           "pluginId": "wattanam.examination",
-          "version": "0.1.4",
+          "version": "0.1.7",
           "owner": "wattanam.examination",
-          "rule": "files[90]"
+          "rule": "files[94]"
         },
         {
           "directory": "plugins/wattanam.finance",
           "pluginId": "wattanam.finance",
-          "version": "0.1.0",
+          "version": "0.1.3",
           "owner": "wattanam.finance",
-          "rule": "files[99]"
+          "rule": "files[104]"
         },
         {
           "directory": "plugins/wattanam.human-resources",
           "pluginId": "wattanam.human-resources",
-          "version": "0.1.2",
+          "version": "0.1.3",
           "owner": "wattanam.human-resources",
-          "rule": "files[100]"
+          "rule": "files[105]"
         },
         {
           "directory": "plugins/wattanam.learning",
           "pluginId": "wattanam.learning",
-          "version": "0.1.2",
+          "version": "0.1.5",
           "owner": "wattanam.learning",
-          "rule": "files[91]"
+          "rule": "files[95]"
         },
         {
           "directory": "plugins/wattanam.parent-portal",
           "pluginId": "wattanam.parent-portal",
-          "version": "0.1.1",
+          "version": "0.1.3",
           "owner": "wattanam.parent-portal",
-          "rule": "files[101]"
+          "rule": "files[106]"
         },
         {
           "directory": "plugins/wattanam.reporting",
           "pluginId": "wattanam.reporting",
-          "version": "0.1.1",
+          "version": "0.1.3",
           "owner": "wattanam.reporting",
-          "rule": "files[102]"
+          "rule": "files[107]"
         },
         {
           "directory": "plugins/wattanam.timetable",
           "pluginId": "wattanam.timetable",
-          "version": "0.1.3",
+          "version": "0.1.6",
           "owner": "wattanam.timetable",
-          "rule": "files[89]"
+          "rule": "files[93]"
         },
         {
           "directory": "plugins/wattanam.transportation",
           "pluginId": "wattanam.transportation",
-          "version": "0.1.2",
+          "version": "0.1.4",
           "owner": "wattanam.transportation",
-          "rule": "files[97]"
+          "rule": "files[102]"
         }
       ],
       "files": [
         {
           "file": "apps/marketplace-api/scripts/admin-and-metrics-token-rotation-live-drill.js",
           "owner": "platform-control-plane",
-          "rule": "files[73]"
+          "rule": "files[77]"
         },
         {
           "file": "apps/marketplace-api/scripts/governance-identity-forgery-live-drill.js",
           "owner": "platform-control-plane",
-          "rule": "files[73]"
+          "rule": "files[77]"
         },
         {
           "file": "apps/marketplace-api/scripts/identity-registration-entitlement-live-drill.js",
           "owner": "platform-control-plane",
-          "rule": "files[73]"
+          "rule": "files[77]"
         },
         {
           "file": "apps/marketplace-api/scripts/school-directory-live-drill.js",
           "owner": "platform-control-plane",
-          "rule": "files[73]"
+          "rule": "files[77]"
         },
         {
           "file": "apps/marketplace-api/src/transactional-email.service.ts",
           "owner": "platform-control-plane",
-          "rule": "files[73]"
+          "rule": "files[77]"
         },
         {
           "file": "apps/mobile/App.tsx",
           "owner": "lean-core",
-          "rule": "files[77]"
+          "rule": "files[81]"
         },
         {
           "file": "apps/mobile/assets/logo.png",
           "owner": "lean-core",
-          "rule": "files[77]"
+          "rule": "files[81]"
         },
         {
           "file": "apps/mobile/index.ts",
           "owner": "lean-core",
-          "rule": "files[77]"
+          "rule": "files[81]"
         },
         {
           "file": "apps/mobile/src/AuthContext.ts",
           "owner": "lean-core",
-          "rule": "files[77]"
+          "rule": "files[81]"
         },
         {
           "file": "apps/mobile/src/api.ts",
           "owner": "lean-core",
-          "rule": "files[77]"
+          "rule": "files[81]"
         },
         {
           "file": "apps/mobile/src/config.ts",
           "owner": "lean-core",
-          "rule": "files[77]"
+          "rule": "files[81]"
         },
         {
           "file": "apps/mobile/src/screens/ClassesScreen.tsx",
           "owner": "wattanam.academic-management",
-          "rule": "files[81]"
+          "rule": "files[85]"
         },
         {
           "file": "apps/mobile/src/screens/DashboardScreen.tsx",
           "owner": "lean-core",
-          "rule": "files[80]"
+          "rule": "files[84]"
         },
         {
           "file": "apps/mobile/src/screens/EditAttendanceScreen.tsx",
           "owner": "wattanam.attendance-manager",
-          "rule": "files[82]"
+          "rule": "files[86]"
         },
         {
           "file": "apps/mobile/src/screens/ForgotPasswordScreen.tsx",
           "owner": "lean-core",
-          "rule": "files[80]"
+          "rule": "files[84]"
         },
         {
           "file": "apps/mobile/src/screens/HolidaysScreen.tsx",
           "owner": "wattanam.attendance-manager",
-          "rule": "files[82]"
+          "rule": "files[86]"
         },
         {
           "file": "apps/mobile/src/screens/LoginScreen.tsx",
           "owner": "lean-core",
-          "rule": "files[80]"
+          "rule": "files[84]"
         },
         {
           "file": "apps/mobile/src/screens/MyReportsScreen.tsx",
           "owner": "wattanam.human-resources",
-          "rule": "files[84]"
+          "rule": "files[88]"
         },
         {
           "file": "apps/mobile/src/screens/ReportsScreen.tsx",
           "owner": "wattanam.attendance-manager",
-          "rule": "files[82]"
+          "rule": "files[86]"
         },
         {
           "file": "apps/mobile/src/screens/ScannerScreen.tsx",
           "owner": "wattanam.attendance-manager",
-          "rule": "files[83]",
+          "rule": "files[87]",
           "splitPlan": "mobile-scanner"
         },
         {
           "file": "apps/mobile/src/screens/SearchScreen.tsx",
           "owner": "lean-core",
-          "rule": "files[80]"
+          "rule": "files[84]"
         },
         {
           "file": "apps/mobile/src/screens/SessionSettingsScreen.tsx",
           "owner": "wattanam.attendance-manager",
-          "rule": "files[82]"
+          "rule": "files[86]"
         },
         {
           "file": "apps/mobile/src/screens/SettingsScreen.tsx",
           "owner": "lean-core",
-          "rule": "files[80]"
+          "rule": "files[84]"
         },
         {
           "file": "apps/mobile/src/screens/StaffAttendanceScreen.tsx",
           "owner": "wattanam.human-resources",
-          "rule": "files[84]"
+          "rule": "files[88]"
         },
         {
           "file": "apps/mobile/src/screens/StaffReportsScreen.tsx",
           "owner": "wattanam.human-resources",
-          "rule": "files[84]"
+          "rule": "files[88]"
         },
         {
           "file": "apps/mobile/src/screens/UsersScreen.tsx",
           "owner": "lean-core",
-          "rule": "files[80]"
+          "rule": "files[84]"
         },
         {
           "file": "apps/mobile/src/screens/WelcomeScreen.tsx",
           "owner": "lean-core",
-          "rule": "files[80]"
+          "rule": "files[84]"
         },
         {
           "file": "apps/mobile/src/theme.ts",
           "owner": "lean-core",
-          "rule": "files[77]"
+          "rule": "files[81]"
         },
         {
           "file": "apps/platform-admin/app/api/platform/[...path]/route.ts",
           "owner": "platform-control-plane",
-          "rule": "files[73]"
+          "rule": "files[77]"
         },
         {
           "file": "apps/platform-admin/e2e/support.ts",
           "owner": "platform-control-plane",
-          "rule": "files[73]"
+          "rule": "files[77]"
         },
         {
           "file": "apps/platform-admin/lib/api.ts",
           "owner": "platform-control-plane",
-          "rule": "files[73]"
+          "rule": "files[77]"
         },
         {
           "file": "backend/scripts/academic-admissions-adopt.js",
           "owner": "wattanam.academic-management",
-          "rule": "files[46]"
+          "rule": "files[47]"
+        },
+        {
+          "file": "backend/scripts/academic-admissions-restored-backup-certification.js",
+          "owner": "wattanam.academic-management",
+          "rule": "files[47]"
         },
         {
           "file": "backend/scripts/academic-admissions-rollback-drill.js",
           "owner": "wattanam.academic-management",
-          "rule": "files[46]"
+          "rule": "files[47]"
+        },
+        {
+          "file": "backend/scripts/academic-aggregate-restored-backup-certification.js",
+          "owner": "wattanam.academic-management",
+          "rule": "files[48]"
         },
         {
           "file": "backend/scripts/academic-classes-adopt.js",
           "owner": "wattanam.academic-management",
-          "rule": "files[46]"
+          "rule": "files[47]"
+        },
+        {
+          "file": "backend/scripts/academic-classes-restored-backup-certification.js",
+          "owner": "wattanam.academic-management",
+          "rule": "files[47]"
         },
         {
           "file": "backend/scripts/academic-classes-rollback-drill.js",
           "owner": "wattanam.academic-management",
-          "rule": "files[46]"
+          "rule": "files[47]"
         },
         {
           "file": "backend/scripts/academic-enrollment-adopt.js",
           "owner": "wattanam.academic-management",
-          "rule": "files[46]"
+          "rule": "files[47]"
+        },
+        {
+          "file": "backend/scripts/academic-enrollment-restored-backup-certification.js",
+          "owner": "wattanam.academic-management",
+          "rule": "files[47]"
         },
         {
           "file": "backend/scripts/academic-enrollment-rollback-drill.js",
           "owner": "wattanam.academic-management",
-          "rule": "files[46]"
+          "rule": "files[47]"
         },
         {
           "file": "backend/scripts/academic-management-adopt.js",
           "owner": "wattanam.academic-management",
-          "rule": "files[46]"
+          "rule": "files[47]"
         },
         {
           "file": "backend/scripts/academic-management-cutover-readiness.js",
           "owner": "wattanam.academic-management",
-          "rule": "files[46]"
+          "rule": "files[47]"
+        },
+        {
+          "file": "backend/scripts/academic-management-restored-backup-certification.js",
+          "owner": "wattanam.academic-management",
+          "rule": "files[47]"
         },
         {
           "file": "backend/scripts/academic-student-profiles-adopt.js",
           "owner": "wattanam.academic-management",
-          "rule": "files[46]"
+          "rule": "files[47]"
+        },
+        {
+          "file": "backend/scripts/academic-student-profiles-restored-backup-certification.js",
+          "owner": "wattanam.academic-management",
+          "rule": "files[47]"
         },
         {
           "file": "backend/scripts/academic-student-profiles-rollback-drill.js",
           "owner": "wattanam.academic-management",
-          "rule": "files[46]"
+          "rule": "files[47]"
         },
         {
           "file": "backend/scripts/academic-study-years-adopt.js",
-          "owner": "wattanam.academic-management",
+          "owner": "wattanam.attendance-manager",
+          "rule": "files[46]"
+        },
+        {
+          "file": "backend/scripts/academic-study-years-restored-backup-certification.js",
+          "owner": "wattanam.attendance-manager",
           "rule": "files[46]"
         },
         {
           "file": "backend/scripts/academic-study-years-rollback-drill.js",
-          "owner": "wattanam.academic-management",
+          "owner": "wattanam.attendance-manager",
           "rule": "files[46]"
         },
         {
           "file": "backend/scripts/academic-subjects-adopt.js",
           "owner": "wattanam.academic-management",
-          "rule": "files[46]"
+          "rule": "files[47]"
+        },
+        {
+          "file": "backend/scripts/academic-subjects-restored-backup-certification.js",
+          "owner": "wattanam.academic-management",
+          "rule": "files[47]"
         },
         {
           "file": "backend/scripts/academic-subjects-rollback-drill.js",
           "owner": "wattanam.academic-management",
-          "rule": "files[46]"
+          "rule": "files[47]"
         },
         {
           "file": "backend/scripts/attendance-manager-adopt.js",
           "owner": "wattanam.attendance-manager",
-          "rule": "files[47]"
+          "rule": "files[49]"
+        },
+        {
+          "file": "backend/scripts/attendance-manager-restored-backup-certification.js",
+          "owner": "wattanam.attendance-manager",
+          "rule": "files[49]"
         },
         {
           "file": "backend/scripts/attendance-manager-rollback-drill.js",
           "owner": "wattanam.attendance-manager",
-          "rule": "files[47]"
+          "rule": "files[49]"
         },
         {
           "file": "backend/scripts/communication-adopt.js",
           "owner": "wattanam.communication",
-          "rule": "files[93]"
+          "rule": "files[97]"
+        },
+        {
+          "file": "backend/scripts/communication-restored-backup-certification.js",
+          "owner": "wattanam.communication",
+          "rule": "files[97]"
         },
         {
           "file": "backend/scripts/communication-rollback-drill.js",
           "owner": "wattanam.communication",
-          "rule": "files[93]"
+          "rule": "files[97]"
         },
         {
           "file": "backend/scripts/db-toolkit.js",
@@ -72567,62 +73656,102 @@
         {
           "file": "backend/scripts/document-designer-adopt.js",
           "owner": "wattanam.document-designer",
-          "rule": "files[51]"
+          "rule": "files[53]"
+        },
+        {
+          "file": "backend/scripts/document-designer-convert-assets.js",
+          "owner": "wattanam.document-designer",
+          "rule": "files[53]"
+        },
+        {
+          "file": "backend/scripts/document-designer-restored-backup-certification.js",
+          "owner": "wattanam.document-designer",
+          "rule": "files[53]"
         },
         {
           "file": "backend/scripts/document-designer-rollback-drill.js",
           "owner": "wattanam.document-designer",
-          "rule": "files[51]"
+          "rule": "files[53]"
         },
         {
           "file": "backend/scripts/examination-adopt.js",
           "owner": "wattanam.examination",
-          "rule": "files[49]"
+          "rule": "files[51]"
+        },
+        {
+          "file": "backend/scripts/examination-restored-backup-certification.js",
+          "owner": "wattanam.examination",
+          "rule": "files[51]"
         },
         {
           "file": "backend/scripts/examination-rollback-drill.js",
           "owner": "wattanam.examination",
-          "rule": "files[49]"
+          "rule": "files[51]"
         },
         {
           "file": "backend/scripts/finance-adopt.js",
           "owner": "wattanam.finance",
-          "rule": "files[95]"
+          "rule": "files[99]"
+        },
+        {
+          "file": "backend/scripts/finance-restored-backup-certification.js",
+          "owner": "wattanam.finance",
+          "rule": "files[99]"
         },
         {
           "file": "backend/scripts/finance-rollback-drill.js",
           "owner": "wattanam.finance",
-          "rule": "files[95]"
+          "rule": "files[99]"
         },
         {
           "file": "backend/scripts/human-resources-adopt.js",
           "owner": "wattanam.human-resources",
-          "rule": "files[96]"
+          "rule": "files[100]"
+        },
+        {
+          "file": "backend/scripts/human-resources-restored-backup-certification.js",
+          "owner": "wattanam.human-resources",
+          "rule": "files[100]"
         },
         {
           "file": "backend/scripts/human-resources-rollback-drill.js",
           "owner": "wattanam.human-resources",
-          "rule": "files[96]"
+          "rule": "files[100]"
         },
         {
           "file": "backend/scripts/learning-adopt.js",
           "owner": "wattanam.learning",
-          "rule": "files[50]"
+          "rule": "files[52]"
+        },
+        {
+          "file": "backend/scripts/learning-restored-backup-certification.js",
+          "owner": "wattanam.learning",
+          "rule": "files[52]"
         },
         {
           "file": "backend/scripts/learning-rollback-drill.js",
           "owner": "wattanam.learning",
-          "rule": "files[50]"
+          "rule": "files[52]"
         },
         {
           "file": "backend/scripts/parent-portal-adopt.js",
           "owner": "wattanam.parent-portal",
-          "rule": "files[94]"
+          "rule": "files[98]"
+        },
+        {
+          "file": "backend/scripts/parent-portal-restored-backup-certification.js",
+          "owner": "wattanam.parent-portal",
+          "rule": "files[98]"
         },
         {
           "file": "backend/scripts/parent-portal-rollback-drill.js",
           "owner": "wattanam.parent-portal",
-          "rule": "files[94]"
+          "rule": "files[98]"
+        },
+        {
+          "file": "backend/scripts/reporting-restored-backup-certification.js",
+          "owner": "wattanam.reporting",
+          "rule": "files[101]"
         },
         {
           "file": "backend/scripts/storage-s3-cutover-live-drill.js",
@@ -72632,27 +73761,37 @@
         {
           "file": "backend/scripts/timetable-adopt.js",
           "owner": "wattanam.timetable",
-          "rule": "files[48]"
+          "rule": "files[50]"
+        },
+        {
+          "file": "backend/scripts/timetable-restored-backup-certification.js",
+          "owner": "wattanam.timetable",
+          "rule": "files[50]"
         },
         {
           "file": "backend/scripts/timetable-rollback-drill.js",
           "owner": "wattanam.timetable",
-          "rule": "files[48]"
+          "rule": "files[50]"
         },
         {
           "file": "backend/scripts/transportation-adopt.js",
           "owner": "wattanam.transportation",
-          "rule": "files[92]"
+          "rule": "files[96]"
+        },
+        {
+          "file": "backend/scripts/transportation-restored-backup-certification.js",
+          "owner": "wattanam.transportation",
+          "rule": "files[96]"
         },
         {
           "file": "backend/scripts/transportation-rollback-drill.js",
           "owner": "wattanam.transportation",
-          "rule": "files[92]"
+          "rule": "files[96]"
         },
         {
           "file": "backend/src/__mocks__/@nestjs/schedule.js",
           "owner": "lean-core",
-          "rule": "files[78]"
+          "rule": "files[82]"
         },
         {
           "file": "backend/src/announcements/announcements.controller.spec.ts",
@@ -72668,6 +73807,11 @@
           "file": "backend/src/announcements/announcements.module.ts",
           "owner": "wattanam.announcements",
           "rule": "files[4]"
+        },
+        {
+          "file": "backend/src/app-core.module.ts",
+          "owner": "lean-core",
+          "rule": "files[1]"
         },
         {
           "file": "backend/src/app.controller.ts",
@@ -72930,6 +74074,11 @@
           "file": "backend/src/backup/backup.service.ts",
           "owner": "lean-core",
           "rule": "files[9]"
+        },
+        {
+          "file": "backend/src/bootstrap-api.ts",
+          "owner": "lean-core",
+          "rule": "files[1]"
         },
         {
           "file": "backend/src/bus/bus.controller.ts",
@@ -73372,12 +74521,22 @@
           "rule": "files[25]"
         },
         {
+          "file": "backend/src/main-core.ts",
+          "owner": "lean-core",
+          "rule": "files[1]"
+        },
+        {
           "file": "backend/src/main.ts",
           "owner": "lean-core",
           "rule": "files[1]"
         },
         {
           "file": "backend/src/marketplace/canonical-json.ts",
+          "owner": "lean-core",
+          "rule": "files[26]"
+        },
+        {
+          "file": "backend/src/marketplace/document-designer-clean-core-install.spec.ts",
           "owner": "lean-core",
           "rule": "files[26]"
         },
@@ -73482,6 +74641,16 @@
           "rule": "files[26]"
         },
         {
+          "file": "backend/src/marketplace/plugin-install-consent.spec.ts",
+          "owner": "lean-core",
+          "rule": "files[26]"
+        },
+        {
+          "file": "backend/src/marketplace/plugin-install-consent.ts",
+          "owner": "lean-core",
+          "rule": "files[26]"
+        },
+        {
           "file": "backend/src/marketplace/school-access.controller.ts",
           "owner": "lean-core",
           "rule": "files[26]"
@@ -73543,6 +74712,16 @@
         },
         {
           "file": "backend/src/marketplace/school-billing-payment.spec.ts",
+          "owner": "lean-core",
+          "rule": "files[26]"
+        },
+        {
+          "file": "backend/src/marketplace/school-control-verification.spec.ts",
+          "owner": "lean-core",
+          "rule": "files[26]"
+        },
+        {
+          "file": "backend/src/marketplace/school-control-verification.ts",
           "owner": "lean-core",
           "rule": "files[26]"
         },
@@ -73683,6 +74862,11 @@
           "splitPlan": "parent-messaging"
         },
         {
+          "file": "backend/src/plugins/all-plugin-package-lifecycle.spec.ts",
+          "owner": "lean-core",
+          "rule": "files[33]"
+        },
+        {
           "file": "backend/src/plugins/attendance-manager-plugin-source.spec.ts",
           "owner": "lean-core",
           "rule": "files[33]"
@@ -73738,6 +74922,11 @@
           "rule": "files[33]"
         },
         {
+          "file": "backend/src/plugins/official-plugin-operational-contract.spec.ts",
+          "owner": "lean-core",
+          "rule": "files[33]"
+        },
+        {
           "file": "backend/src/plugins/parent-portal-plugin-behavior.spec.ts",
           "owner": "lean-core",
           "rule": "files[33]"
@@ -73784,6 +74973,16 @@
         },
         {
           "file": "backend/src/plugins/plugin-contract-runtime.service.ts",
+          "owner": "lean-core",
+          "rule": "files[33]"
+        },
+        {
+          "file": "backend/src/plugins/plugin-entitlement-policy.service.spec.ts",
+          "owner": "lean-core",
+          "rule": "files[33]"
+        },
+        {
+          "file": "backend/src/plugins/plugin-entitlement-policy.service.ts",
           "owner": "lean-core",
           "rule": "files[33]"
         },
@@ -74332,7 +75531,7 @@
         {
           "file": "frontend/app/admin/appearance/posts/PostEditorForm.tsx",
           "owner": "wattanam.communication",
-          "rule": "files[57]"
+          "rule": "files[61]"
         },
         {
           "file": "frontend/app/admin/appearance/posts/[id]/page.tsx",
@@ -74352,7 +75551,7 @@
         {
           "file": "frontend/app/admin/appearance/posts/shared.tsx",
           "owner": "wattanam.communication",
-          "rule": "files[57]"
+          "rule": "files[61]"
         },
         {
           "file": "frontend/app/admin/attendance/edit/page.tsx",
@@ -74672,12 +75871,12 @@
         {
           "file": "frontend/app/api/[...path]/route.ts",
           "owner": "lean-core",
-          "rule": "files[55]"
+          "rule": "files[59]"
         },
         {
           "file": "frontend/app/api/marketplace/[...path]/route.ts",
           "owner": "lean-core",
-          "rule": "files[56]"
+          "rule": "files[60]"
         },
         {
           "file": "frontend/app/employee/my-card/page.tsx",
@@ -74702,12 +75901,12 @@
         {
           "file": "frontend/app/global-error.tsx",
           "owner": "lean-core",
-          "rule": "files[54]"
+          "rule": "files[58]"
         },
         {
           "file": "frontend/app/layout.tsx",
           "owner": "lean-core",
-          "rule": "files[54]"
+          "rule": "files[58]"
         },
         {
           "file": "frontend/app/login/page.tsx",
@@ -74755,7 +75954,7 @@
         {
           "file": "frontend/app/not-found.tsx",
           "owner": "lean-core",
-          "rule": "files[54]"
+          "rule": "files[58]"
         },
         {
           "file": "frontend/app/page.tsx",
@@ -74770,7 +75969,7 @@
         {
           "file": "frontend/app/parent/bus/LeafletBusMap.tsx",
           "owner": "wattanam.transportation",
-          "rule": "files[58]"
+          "rule": "files[62]"
         },
         {
           "file": "frontend/app/parent/bus/page.tsx",
@@ -74790,7 +75989,7 @@
         {
           "file": "frontend/app/parent/layout.tsx",
           "owner": "wattanam.parent-portal",
-          "rule": "files[59]"
+          "rule": "files[63]"
         },
         {
           "file": "frontend/app/parent/messages/page.tsx",
@@ -74860,7 +76059,7 @@
         {
           "file": "frontend/app/providers.tsx",
           "owner": "lean-core",
-          "rule": "files[54]"
+          "rule": "files[58]"
         },
         {
           "file": "frontend/app/register/page.tsx",
@@ -75124,17 +76323,17 @@
         {
           "file": "frontend/components/AnnouncementFeed.tsx",
           "owner": "wattanam.communication",
-          "rule": "files[72]"
+          "rule": "files[76]"
         },
         {
           "file": "frontend/components/AuthGuard.tsx",
           "owner": "lean-core",
-          "rule": "files[67]"
+          "rule": "files[71]"
         },
         {
           "file": "frontend/components/ConfirmModal.tsx",
           "owner": "lean-core",
-          "rule": "files[67]"
+          "rule": "files[71]"
         },
         {
           "file": "frontend/components/CoreAdminDashboard.tsx",
@@ -75149,7 +76348,7 @@
         {
           "file": "frontend/components/EmptyState.tsx",
           "owner": "lean-core",
-          "rule": "files[67]"
+          "rule": "files[71]"
         },
         {
           "file": "frontend/components/ExamForm.tsx",
@@ -75198,7 +76397,7 @@
         {
           "file": "frontend/components/Icons.tsx",
           "owner": "lean-core",
-          "rule": "files[67]"
+          "rule": "files[71]"
         },
         {
           "file": "frontend/components/InstallAppButton.tsx",
@@ -75211,7 +76410,7 @@
         {
           "file": "frontend/components/MathText.tsx",
           "owner": "lean-core",
-          "rule": "files[67]"
+          "rule": "files[71]"
         },
         {
           "file": "frontend/components/NetworkQualityBadge.tsx",
@@ -75234,12 +76433,12 @@
         {
           "file": "frontend/components/PortalManager.tsx",
           "owner": "lean-core",
-          "rule": "files[70]"
+          "rule": "files[74]"
         },
         {
           "file": "frontend/components/ProgressBar.tsx",
           "owner": "lean-core",
-          "rule": "files[67]"
+          "rule": "files[71]"
         },
         {
           "file": "frontend/components/QuickNavCard.tsx",
@@ -75252,12 +76451,12 @@
         {
           "file": "frontend/components/RichText.tsx",
           "owner": "lean-core",
-          "rule": "files[67]"
+          "rule": "files[71]"
         },
         {
           "file": "frontend/components/RichTextEditor.tsx",
           "owner": "lean-core",
-          "rule": "files[67]"
+          "rule": "files[71]"
         },
         {
           "file": "frontend/components/SectionPager.tsx",
@@ -75271,62 +76470,62 @@
         {
           "file": "frontend/components/Sidebar.tsx",
           "owner": "lean-core",
-          "rule": "files[67]"
+          "rule": "files[71]"
         },
         {
           "file": "frontend/components/StatCard.tsx",
           "owner": "lean-core",
-          "rule": "files[67]"
+          "rule": "files[71]"
         },
         {
           "file": "frontend/components/TimetableGrid.tsx",
           "owner": "wattanam.timetable",
-          "rule": "files[71]"
+          "rule": "files[75]"
         },
         {
           "file": "frontend/components/card-designer/CardCanvas.tsx",
           "owner": "wattanam.document-designer",
-          "rule": "files[69]"
+          "rule": "files[73]"
         },
         {
           "file": "frontend/components/card-designer/CardEditor.tsx",
           "owner": "wattanam.document-designer",
-          "rule": "files[69]"
+          "rule": "files[73]"
         },
         {
           "file": "frontend/components/card-designer/CropModal.tsx",
           "owner": "wattanam.document-designer",
-          "rule": "files[69]"
+          "rule": "files[73]"
         },
         {
           "file": "frontend/components/card-designer/LayersPanel.tsx",
           "owner": "wattanam.document-designer",
-          "rule": "files[69]"
+          "rule": "files[73]"
         },
         {
           "file": "frontend/components/card-designer/NewProjectDialog.tsx",
           "owner": "wattanam.document-designer",
-          "rule": "files[69]"
+          "rule": "files[73]"
         },
         {
           "file": "frontend/components/card-designer/Toolbar.tsx",
           "owner": "wattanam.document-designer",
-          "rule": "files[69]"
+          "rule": "files[73]"
         },
         {
           "file": "frontend/components/card-designer/generateCardPDF.ts",
           "owner": "wattanam.document-designer",
-          "rule": "files[69]"
+          "rule": "files[73]"
         },
         {
           "file": "frontend/components/card-designer/renderDesignToCanvas.ts",
           "owner": "wattanam.document-designer",
-          "rule": "files[69]"
+          "rule": "files[73]"
         },
         {
           "file": "frontend/components/card-designer/types.ts",
           "owner": "wattanam.document-designer",
-          "rule": "files[69]"
+          "rule": "files[73]"
         },
         {
           "file": "frontend/components/plugin-ui/PluginActions.tsx",
@@ -75419,67 +76618,72 @@
         {
           "file": "frontend/components/questions/DictationField.tsx",
           "owner": "lean-core",
-          "rule": "files[68]"
+          "rule": "files[72]"
         },
         {
           "file": "frontend/components/questions/DragDropField.tsx",
           "owner": "lean-core",
-          "rule": "files[68]"
+          "rule": "files[72]"
         },
         {
           "file": "frontend/components/questions/DragWordsField.tsx",
           "owner": "lean-core",
-          "rule": "files[68]"
+          "rule": "files[72]"
         },
         {
           "file": "frontend/components/questions/EssayField.tsx",
           "owner": "lean-core",
-          "rule": "files[68]"
+          "rule": "files[72]"
         },
         {
           "file": "frontend/components/questions/FillBlanksField.tsx",
           "owner": "lean-core",
-          "rule": "files[68]"
+          "rule": "files[72]"
         },
         {
           "file": "frontend/components/questions/SortParagraphsField.tsx",
           "owner": "lean-core",
-          "rule": "files[68]"
+          "rule": "files[72]"
         },
         {
           "file": "frontend/components/questions/SpeakWordsField.tsx",
           "owner": "lean-core",
-          "rule": "files[68]"
+          "rule": "files[72]"
         },
         {
           "file": "frontend/components/questions/SpeakWordsSetField.tsx",
           "owner": "lean-core",
-          "rule": "files[68]"
+          "rule": "files[72]"
+        },
+        {
+          "file": "frontend/core-routes.json",
+          "owner": "lean-core",
+          "rule": "files[55]"
         },
         {
           "file": "frontend/e2e/plugin-ui/document-designer-ui.spec.ts",
           "owner": "lean-core",
-          "rule": "files[74]"
+          "rule": "files[78]"
         },
         {
           "file": "frontend/e2e/plugin-ui/plugin-ui-v2.spec.ts",
           "owner": "lean-core",
-          "rule": "files[74]"
+          "rule": "files[78]"
         },
         {
           "file": "frontend/lib/accounter-nav.ts",
           "owner": "lean-core",
-          "rule": "files[63]"
+          "rule": "files[67]"
         },
         {
           "file": "frontend/lib/admin-nav.ts",
           "owner": "lean-core",
-          "rule": "files[63]"
+          "rule": "files[67]"
         },
         {
           "file": "frontend/lib/api.ts",
           "owner": "lean-core",
-          "rule": "files[60]"
+          "rule": "files[64]"
         },
         {
           "file": "frontend/lib/dashboard-extensions.ts",
@@ -75489,37 +76693,37 @@
         {
           "file": "frontend/lib/dateUtils.ts",
           "owner": "lean-core",
-          "rule": "files[61]"
+          "rule": "files[65]"
         },
         {
           "file": "frontend/lib/employee-nav.ts",
           "owner": "lean-core",
-          "rule": "files[63]"
+          "rule": "files[67]"
         },
         {
           "file": "frontend/lib/examQuestionLogic.ts",
           "owner": "wattanam.examination",
-          "rule": "files[64]"
+          "rule": "files[68]"
         },
         {
           "file": "frontend/lib/exportCsv.ts",
           "owner": "lean-core",
-          "rule": "files[60]"
+          "rule": "files[64]"
         },
         {
           "file": "frontend/lib/formatMoney.ts",
           "owner": "lean-core",
-          "rule": "files[61]"
+          "rule": "files[65]"
         },
         {
           "file": "frontend/lib/h5pQuestionLogic.ts",
           "owner": "lean-core",
-          "rule": "files[62]"
+          "rule": "files[66]"
         },
         {
           "file": "frontend/lib/i18n.tsx",
           "owner": "lean-core",
-          "rule": "files[60]"
+          "rule": "files[64]"
         },
         {
           "file": "frontend/lib/image-upload.ts",
@@ -75533,12 +76737,12 @@
         {
           "file": "frontend/lib/installation.ts",
           "owner": "lean-core",
-          "rule": "files[60]"
+          "rule": "files[64]"
         },
         {
           "file": "frontend/lib/messageSocket.ts",
           "owner": "wattanam.communication",
-          "rule": "files[65]"
+          "rule": "files[69]"
         },
         {
           "file": "frontend/lib/navigation-registry.ts",
@@ -75548,7 +76752,7 @@
         {
           "file": "frontend/lib/offline-attendance.ts",
           "owner": "wattanam.attendance-manager",
-          "rule": "files[66]"
+          "rule": "files[70]"
         },
         {
           "file": "frontend/lib/plugin-ui-presentation.ts",
@@ -75584,7 +76788,7 @@
         {
           "file": "frontend/lib/reporter-nav.ts",
           "owner": "lean-core",
-          "rule": "files[63]"
+          "rule": "files[67]"
         },
         {
           "file": "frontend/lib/route-policy.ts",
@@ -75594,12 +76798,12 @@
         {
           "file": "frontend/lib/school-lock.ts",
           "owner": "lean-core",
-          "rule": "files[60]"
+          "rule": "files[64]"
         },
         {
           "file": "frontend/lib/teacher-nav.ts",
           "owner": "lean-core",
-          "rule": "files[63]"
+          "rule": "files[67]"
         },
         {
           "file": "frontend/lib/textFormatting.ts",
@@ -75630,27 +76834,27 @@
         {
           "file": "frontend/lib/useMathJax.ts",
           "owner": "lean-core",
-          "rule": "files[62]"
+          "rule": "files[66]"
         },
         {
           "file": "frontend/lib/useSpeechRecognition.ts",
           "owner": "lean-core",
-          "rule": "files[62]"
+          "rule": "files[66]"
         },
         {
           "file": "frontend/lib/wattaman-nav.ts",
           "owner": "lean-core",
-          "rule": "files[63]"
+          "rule": "files[67]"
         },
         {
           "file": "frontend/next.config.js",
           "owner": "lean-core",
-          "rule": "files[52]"
+          "rule": "files[54]"
         },
         {
           "file": "frontend/playwright.plugin-ui.config.ts",
           "owner": "lean-core",
-          "rule": "files[75]"
+          "rule": "files[79]"
         },
         {
           "file": "frontend/proxy.ts",
@@ -75660,172 +76864,192 @@
         {
           "file": "frontend/public/sw.js",
           "owner": "lean-core",
-          "rule": "files[53]"
+          "rule": "files[57]"
+        },
+        {
+          "file": "frontend/scripts/build-core.js",
+          "owner": "lean-core",
+          "rule": "files[56]"
+        },
+        {
+          "file": "frontend/scripts/build-core.test.js",
+          "owner": "lean-core",
+          "rule": "files[56]"
+        },
+        {
+          "file": "frontend/scripts/plugin-ui-result-reporter.js",
+          "owner": "lean-core",
+          "rule": "files[80]"
         },
         {
           "file": "frontend/scripts/run-plugin-ui-e2e.js",
           "owner": "lean-core",
-          "rule": "files[76]"
+          "rule": "files[80]"
+        },
+        {
+          "file": "frontend/scripts/run-plugin-ui-e2e.test.js",
+          "owner": "lean-core",
+          "rule": "files[80]"
         },
         {
           "file": "frontend/server.js",
           "owner": "lean-core",
-          "rule": "files[52]"
+          "rule": "files[54]"
         },
         {
           "file": "frontend/tailwind.config.js",
           "owner": "lean-core",
-          "rule": "files[52]"
+          "rule": "files[54]"
         },
         {
           "file": "packages/plugin-cli/src/commands/init.js",
           "owner": "lean-core",
-          "rule": "files[79]"
+          "rule": "files[83]"
         },
         {
           "file": "packages/plugin-cli/src/commands/pack.js",
           "owner": "lean-core",
-          "rule": "files[79]"
+          "rule": "files[83]"
         },
         {
           "file": "plugins/announcements/backend/index.js",
           "owner": "wattanam.announcements",
-          "rule": "files[85]"
+          "rule": "files[89]"
         },
         {
           "file": "plugins/wattanam.academic-management/backend/index.js",
           "owner": "wattanam.academic-management",
-          "rule": "files[87]"
+          "rule": "files[91]"
         },
         {
           "file": "plugins/wattanam.attendance-manager/backend/index.js",
           "owner": "wattanam.attendance-manager",
-          "rule": "files[88]"
+          "rule": "files[92]"
         },
         {
           "file": "plugins/wattanam.communication/backend/index.js",
           "owner": "wattanam.communication",
-          "rule": "files[98]"
+          "rule": "files[103]"
         },
         {
           "file": "plugins/wattanam.document-designer/backend/index.js",
           "owner": "wattanam.document-designer",
-          "rule": "files[86]"
+          "rule": "files[90]"
         },
         {
           "file": "plugins/wattanam.examination/backend/attempts.js",
           "owner": "wattanam.examination",
-          "rule": "files[90]"
+          "rule": "files[94]"
         },
         {
           "file": "plugins/wattanam.examination/backend/gradebooks.js",
           "owner": "wattanam.examination",
-          "rule": "files[90]"
+          "rule": "files[94]"
         },
         {
           "file": "plugins/wattanam.examination/backend/index.js",
           "owner": "wattanam.examination",
-          "rule": "files[90]"
+          "rule": "files[94]"
         },
         {
           "file": "plugins/wattanam.examination/backend/question-types.js",
           "owner": "wattanam.examination",
-          "rule": "files[90]"
+          "rule": "files[94]"
         },
         {
           "file": "plugins/wattanam.examination/backend/student-grade-summary.js",
           "owner": "wattanam.examination",
-          "rule": "files[90]"
+          "rule": "files[94]"
         },
         {
           "file": "plugins/wattanam.finance/backend/index.js",
           "owner": "wattanam.finance",
-          "rule": "files[99]"
+          "rule": "files[104]"
         },
         {
           "file": "plugins/wattanam.human-resources/backend/index.js",
           "owner": "wattanam.human-resources",
-          "rule": "files[100]"
+          "rule": "files[105]"
         },
         {
           "file": "plugins/wattanam.learning/backend/assignment-workflow.js",
           "owner": "wattanam.learning",
-          "rule": "files[91]"
+          "rule": "files[95]"
         },
         {
           "file": "plugins/wattanam.learning/backend/attempts.js",
           "owner": "wattanam.learning",
-          "rule": "files[91]"
+          "rule": "files[95]"
         },
         {
           "file": "plugins/wattanam.learning/backend/course-operations.js",
           "owner": "wattanam.learning",
-          "rule": "files[91]"
+          "rule": "files[95]"
         },
         {
           "file": "plugins/wattanam.learning/backend/index.js",
           "owner": "wattanam.learning",
-          "rule": "files[91]"
+          "rule": "files[95]"
         },
         {
           "file": "plugins/wattanam.learning/backend/lesson-content.js",
           "owner": "wattanam.learning",
-          "rule": "files[91]"
+          "rule": "files[95]"
         },
         {
           "file": "plugins/wattanam.parent-portal/backend/index.js",
           "owner": "wattanam.parent-portal",
-          "rule": "files[101]"
+          "rule": "files[106]"
         },
         {
           "file": "plugins/wattanam.reporting/CHANGELOG.md",
           "owner": "wattanam.reporting",
-          "rule": "files[102]"
+          "rule": "files[107]"
         },
         {
           "file": "plugins/wattanam.reporting/README.md",
           "owner": "wattanam.reporting",
-          "rule": "files[102]"
+          "rule": "files[107]"
         },
         {
           "file": "plugins/wattanam.reporting/backend/index.js",
           "owner": "wattanam.reporting",
-          "rule": "files[102]"
+          "rule": "files[107]"
         },
         {
           "file": "plugins/wattanam.reporting/frontend/page.json",
           "owner": "wattanam.reporting",
-          "rule": "files[102]"
+          "rule": "files[107]"
         },
         {
           "file": "plugins/wattanam.reporting/plugin.json",
           "owner": "wattanam.reporting",
-          "rule": "files[102]"
+          "rule": "files[107]"
         },
         {
           "file": "plugins/wattanam.timetable/backend/generator.js",
           "owner": "wattanam.timetable",
-          "rule": "files[89]"
+          "rule": "files[93]"
         },
         {
           "file": "plugins/wattanam.timetable/backend/index.js",
           "owner": "wattanam.timetable",
-          "rule": "files[89]"
+          "rule": "files[93]"
         },
         {
           "file": "plugins/wattanam.timetable/backend/scheduling.js",
           "owner": "wattanam.timetable",
-          "rule": "files[89]"
+          "rule": "files[93]"
         },
         {
           "file": "plugins/wattanam.timetable/backend/teacher-attendance.js",
           "owner": "wattanam.timetable",
-          "rule": "files[89]"
+          "rule": "files[93]"
         },
         {
           "file": "plugins/wattanam.transportation/backend/index.js",
           "owner": "wattanam.transportation",
-          "rule": "files[97]"
+          "rule": "files[102]"
         }
       ],
       "mobileConfiguration": [
@@ -76699,7 +77923,7 @@
           "frontend/app/page.tsx:313 -> GET /class-registrations/public/classes",
           "frontend/app/teacher/page.tsx:62 -> GET /classes",
           "frontend/components/PortalManager.tsx:234 -> GET /classes/parents",
-          "frontend/components/Sidebar.tsx:156 -> GET /class-registrations/unread-count"
+          "frontend/components/Sidebar.tsx:153 -> GET /class-registrations/unread-count"
         ]
       },
       {
@@ -76772,7 +77996,7 @@
         "withinSplitPlan": 0,
         "resolution": "Plugin dashboard and search contributions, or a published contract (LC2-011, LC2-012, LC4-009)",
         "examples": [
-          "frontend/components/Sidebar.tsx:155 -> GET /announcements/unread-count"
+          "frontend/components/Sidebar.tsx:152 -> GET /announcements/unread-count"
         ]
       },
       {
@@ -76880,7 +78104,7 @@
         "resolution": "Plugin dashboard and search contributions, or a published contract (LC2-011, LC2-012, LC4-009)",
         "examples": [
           "frontend/app/page.tsx:162 -> GET /posts/published",
-          "frontend/components/Sidebar.tsx:154 -> GET /messages/unread-count"
+          "frontend/components/Sidebar.tsx:151 -> GET /messages/unread-count"
         ]
       },
       {
@@ -78138,7 +79362,7 @@
         "from": "lean-core",
         "to": "wattanam.academic-management",
         "kind": "api-call",
-        "source": "frontend/components/Sidebar.tsx:156",
+        "source": "frontend/components/Sidebar.tsx:153",
         "target": "GET /class-registrations/unread-count"
       },
       {
@@ -78474,7 +79698,7 @@
         "from": "lean-core",
         "to": "wattanam.announcements",
         "kind": "api-call",
-        "source": "frontend/components/Sidebar.tsx:155",
+        "source": "frontend/components/Sidebar.tsx:152",
         "target": "GET /announcements/unread-count"
       },
       {
@@ -78782,7 +80006,7 @@
         "from": "lean-core",
         "to": "wattanam.communication",
         "kind": "api-call",
-        "source": "frontend/components/Sidebar.tsx:154",
+        "source": "frontend/components/Sidebar.tsx:151",
         "target": "GET /messages/unread-count"
       },
       {
@@ -89039,8 +90263,8 @@
           "lean-core": 2
         },
         "examples": [
-          "backend/src/installation/installation-preflight.service.ts:121",
-          "backend/src/installation/installation-preflight.service.ts:135"
+          "backend/src/installation/installation-preflight.service.ts:109",
+          "backend/src/installation/installation-preflight.service.ts:123"
         ]
       },
       {
@@ -89092,11 +90316,11 @@
           "lean-core": 14
         },
         "examples": [
-          "backend/src/marketplace/entitlement-cache.service.ts:52",
+          "backend/src/marketplace/entitlement-cache.service.ts:51",
           "backend/src/marketplace/installation-registration.service.ts:183",
-          "backend/src/marketplace/marketplace-commerce.service.ts:104",
-          "backend/src/marketplace/marketplace-commerce.service.ts:141",
-          "backend/src/marketplace/marketplace-commerce.service.ts:154"
+          "backend/src/marketplace/marketplace-commerce.service.ts:180",
+          "backend/src/marketplace/marketplace-commerce.service.ts:217",
+          "backend/src/marketplace/marketplace-commerce.service.ts:230"
         ]
       },
       {
@@ -89110,7 +90334,7 @@
           "lean-core": 1
         },
         "examples": [
-          "backend/src/updates/updates.service.ts:192"
+          "backend/src/updates/updates.service.ts:198"
         ]
       }
     ],
@@ -90985,13 +92209,13 @@
       {
         "destination": "email-provider",
         "owner": "wattanam.academic-management",
-        "source": "plugins/wattanam.academic-management/backend/index.js:1584",
+        "source": "plugins/wattanam.academic-management/backend/index.js:1444",
         "via": "email"
       },
       {
         "destination": "email-provider",
         "owner": "wattanam.academic-management",
-        "source": "plugins/wattanam.academic-management/backend/index.js:1626",
+        "source": "plugins/wattanam.academic-management/backend/index.js:1486",
         "via": "email"
       },
       {
@@ -91009,13 +92233,13 @@
       {
         "destination": "provider-account-check",
         "owner": "lean-core",
-        "source": "backend/src/installation/installation-preflight.service.ts:121",
+        "source": "backend/src/installation/installation-preflight.service.ts:109",
         "via": "http"
       },
       {
         "destination": "provider-account-check",
         "owner": "lean-core",
-        "source": "backend/src/installation/installation-preflight.service.ts:135",
+        "source": "backend/src/installation/installation-preflight.service.ts:123",
         "via": "http"
       },
       {
@@ -91051,7 +92275,7 @@
       {
         "destination": "wattanam-marketplace",
         "owner": "lean-core",
-        "source": "backend/src/marketplace/entitlement-cache.service.ts:52",
+        "source": "backend/src/marketplace/entitlement-cache.service.ts:51",
         "via": "http"
       },
       {
@@ -91063,19 +92287,19 @@
       {
         "destination": "wattanam-marketplace",
         "owner": "lean-core",
-        "source": "backend/src/marketplace/marketplace-commerce.service.ts:104",
+        "source": "backend/src/marketplace/marketplace-commerce.service.ts:180",
         "via": "http"
       },
       {
         "destination": "wattanam-marketplace",
         "owner": "lean-core",
-        "source": "backend/src/marketplace/marketplace-commerce.service.ts:141",
+        "source": "backend/src/marketplace/marketplace-commerce.service.ts:217",
         "via": "http"
       },
       {
         "destination": "wattanam-marketplace",
         "owner": "lean-core",
-        "source": "backend/src/marketplace/marketplace-commerce.service.ts:154",
+        "source": "backend/src/marketplace/marketplace-commerce.service.ts:230",
         "via": "http"
       },
       {
@@ -91093,13 +92317,13 @@
       {
         "destination": "wattanam-marketplace",
         "owner": "lean-core",
-        "source": "backend/src/marketplace/school-billing-control.service.ts:35",
+        "source": "backend/src/marketplace/school-billing-control.service.ts:38",
         "via": "http"
       },
       {
         "destination": "wattanam-marketplace",
         "owner": "lean-core",
-        "source": "backend/src/marketplace/school-billing-control.service.ts:173",
+        "source": "backend/src/marketplace/school-billing-control.service.ts:178",
         "via": "http"
       },
       {
@@ -91135,7 +92359,7 @@
       {
         "destination": "wattanam-update-repository",
         "owner": "lean-core",
-        "source": "backend/src/updates/updates.service.ts:192",
+        "source": "backend/src/updates/updates.service.ts:198",
         "via": "http"
       }
     ]

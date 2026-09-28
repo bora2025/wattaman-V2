@@ -78,6 +78,17 @@ describe('PluginJobsService', () => {
     expect((service as any).running.size).toBe(0);
   });
 
+  it('runs no plugin job when its individual paid-plugin entitlement is read-only', async () => {
+    const handler = jest.fn();
+    const prisma = { $transaction: jest.fn() } as any;
+    const entitlements = { jobsAllowed: jest.fn().mockResolvedValue(false) } as any;
+    const service = new PluginJobsService(prisma, open, undefined, entitlements);
+    await service.run('wattanam.paid', 'digest', handler);
+    expect(entitlements.jobsAllowed).toHaveBeenCalledWith('wattanam.paid');
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(handler).not.toHaveBeenCalled();
+  });
+
   // It is called from a timer: a database hiccup reading the lock must not become an unhandled rejection.
   it('still runs the job when the lock cannot be read', async () => {
     const tx = { $queryRawUnsafe: jest.fn().mockResolvedValue([{ acquired: false }]) };

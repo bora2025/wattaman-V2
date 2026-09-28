@@ -3,7 +3,7 @@
   "id": "wattanam.transportation",
   "name": "Transportation",
   "description": "Routes, stops, vehicles, drivers and live school transport tracking.",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -26,5 +26,8 @@
     { "id": "transport-routes", "label": "Transport routes", "href": "/plugins/wattanam.transportation/routes", "permission": "wattanam.transportation.manage" },
     { "id": "parent-transport", "label": "Child transportation", "href": "/plugins/wattanam.transportation/parent/vehicles", "permission": "wattanam.transportation.parent.track" }
   ],
-  "supportedLanguages": ["en", "km"]
+  "supportedLanguages": ["en", "km"],
+  "supportUrl": "https://wattanam.example/support/transportation",
+  "privacyUrl": "https://wattanam.example/privacy/plugins/transportation",
+  "operational": { "healthCheck": "runtime", "dataClassification": ["personal-data", "location-data"], "backup": { "database": "required", "files": "none", "restore": "required" }, "uninstall": { "dataRetention": "preserve" }, "pricing": "marketplace" }
 }

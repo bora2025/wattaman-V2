@@ -14,6 +14,9 @@ function config() {
 }
 
 function prismaWith(tx: any) {
+  if (tx.installationEntitlement && !tx.installationEntitlement.findUnique) {
+    tx.installationEntitlement.findUnique = jest.fn().mockResolvedValue(null);
+  }
   return { $transaction: jest.fn((work: (value: any) => unknown) => work(tx)) } as any;
 }
 
@@ -62,7 +65,7 @@ describe('marketplace commerce invariants', () => {
         findUnique: jest.fn().mockResolvedValue({ id: ids.order, accountId: ids.account, installationId: ids.installation, status: 'PENDING', totalMinor: 2500, account: {}, installation: { installationId: 'school-public-id' }, lines: [line] }),
         update: jest.fn().mockResolvedValue({}),
       },
-      installationEntitlement: { upsert: jest.fn().mockResolvedValue({ id: 'entitlement-1' }) },
+      installationEntitlement: { findUnique: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue({ id: 'entitlement-1' }) },
       publisherRevenueEntry: { upsert: jest.fn().mockResolvedValue({ id: 'revenue-1' }) },
       schoolPluginRequest: { findUnique: jest.fn().mockResolvedValue(null), update: jest.fn() },
       platformAuditEvent: { create: jest.fn() },
@@ -71,7 +74,7 @@ describe('marketplace commerce invariants', () => {
     const result = await service.settleManualPayment({ orderId: ids.order, providerReference: 'invoice-2026-001' }, new Date('2026-08-28Z'));
     expect(result).toEqual({ orderId: ids.order, status: 'PAID', paymentId: 'payment-1', entitlementIds: ['entitlement-1'] });
     const token = tx.installationEntitlement.upsert.mock.calls[0][0].create.signedToken;
-    expect(token.payload).toMatchObject({ installationId: 'school-public-id', productId: 'official.attendance', licensedMajorRange: '^1.0.0' });
+    expect(token.payload).toMatchObject({ generation: 1, status: 'ACTIVE', installationId: 'school-public-id', productId: 'official.attendance', licensedMajorRange: '^1.0.0' });
     expect(tx.marketplaceOrder.update).toHaveBeenCalledWith({ where: { id: ids.order }, data: { status: 'PAID' } });
   });
 
@@ -87,7 +90,7 @@ describe('marketplace commerce invariants', () => {
         findUnique: jest.fn().mockResolvedValue({ id: ids.order, accountId: ids.account, installationId: ids.installation, status: 'PENDING', totalMinor: 2500, account: {}, installation: { installationId: 'school-public-id' }, lines: [line] }),
         update: jest.fn().mockResolvedValue({}),
       },
-      installationEntitlement: { upsert: jest.fn().mockResolvedValue({ id: 'entitlement-1' }) },
+      installationEntitlement: { findUnique: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue({ id: 'entitlement-1' }) },
       publisherRevenueEntry: { upsert: jest.fn().mockResolvedValue({ id: 'revenue-1' }) },
       schoolPluginRequest: {
         findUnique: jest.fn().mockResolvedValue({ id: 'request-1', status: 'APPROVED' }),
@@ -122,7 +125,7 @@ describe('marketplace commerce invariants', () => {
         id: ids.order, status: 'PAID', account: {}, installation: { installationId: 'school-public-id' },
         lines: [{ entitlement: { id: 'entitlement-1' } }],
       }), update: jest.fn() },
-      installationEntitlement: { upsert: jest.fn() },
+      installationEntitlement: { findUnique: jest.fn().mockResolvedValue(null), upsert: jest.fn() },
       publisherRevenueEntry: { upsert: jest.fn() },
     };
     const service = new CommerceService(prismaWith(tx), config());
@@ -135,11 +138,21 @@ describe('marketplace commerce invariants', () => {
 });
 
 describe('marketplace refund, revocation, and expiry policy', () => {
+  function activeToken(generation = 1) {
+    return { payload: {
+      schemaVersion: 1, generation, status: 'ACTIVE', tokenId: '00000000-0000-4000-8000-000000000010',
+      installationId: 'school-public-id', customerId: ids.account, productId: 'official.attendance', licensedMajorRange: '^1.0.0',
+      issuedAt: '2026-01-01T00:00:00.000Z', notBefore: '2026-01-01T00:00:00.000Z', expiresAt: '2027-01-01T00:00:00.000Z',
+      updatesThrough: '2026-12-01T00:00:00.000Z', offlineRecheckAfter: '2026-10-01T00:00:00.000Z', features: [],
+      issuer: 'https://marketplace.example', audience: 'wattanam-school', keyId: 'entitlement-1', nonce: 'a'.repeat(32),
+    }, signature: { algorithm: 'ed25519', keyId: 'entitlement-1', value: 'unused' } };
+  }
+
   function paidOrder(overrides: Partial<{ status: string; entitlementStatus: string; paymentStatus: string; refunds: unknown[] }> = {}) {
     return {
       id: ids.order, status: overrides.status ?? 'PAID', refunds: overrides.refunds ?? [],
       payments: [{ id: 'payment-1', status: overrides.paymentStatus ?? 'SUCCEEDED', amountMinor: 2500 }],
-      lines: [{ id: 'line-1', entitlement: { id: 'entitlement-1', status: overrides.entitlementStatus ?? 'ACTIVE' } }],
+      lines: [{ id: 'line-1', entitlement: { id: 'entitlement-1', status: overrides.entitlementStatus ?? 'ACTIVE', signedToken: activeToken() } }],
     };
   }
 
@@ -157,9 +170,9 @@ describe('marketplace refund, revocation, and expiry policy', () => {
     expect(tx.marketplaceRefund.create.mock.calls[0][0].data).toMatchObject({ orderId: ids.order, paymentId: 'payment-1', amountMinor: 2500, initiatedBy: 'admin' });
     expect(tx.marketplacePayment.update).toHaveBeenCalledWith({ where: { id: 'payment-1' }, data: { status: 'REFUNDED' } });
     expect(tx.marketplaceOrder.update).toHaveBeenCalledWith({ where: { id: ids.order }, data: { status: 'REFUNDED' } });
-    expect(tx.installationEntitlement.update).toHaveBeenCalledWith({
-      where: { id: 'entitlement-1' }, data: { status: 'REFUNDED', revokedAt: now, revokedReason: 'customer requested cancellation' },
-    });
+    expect(tx.installationEntitlement.update).toHaveBeenCalledWith({ where: { id: 'entitlement-1' }, data: expect.objectContaining({
+      status: 'REFUNDED', generation: 2, revokedAt: now, revokedReason: 'customer requested cancellation', signedToken: expect.objectContaining({ payload: expect.objectContaining({ status: 'REFUNDED', generation: 2 }) }),
+    }) });
   });
 
   it('returns the recorded refund without reprocessing an already-refunded order', async () => {
@@ -210,7 +223,7 @@ describe('marketplace refund, revocation, and expiry policy', () => {
     const entitlementId = '00000000-0000-4000-8000-000000000005';
     const tx = {
       installationEntitlement: {
-        findUnique: jest.fn().mockResolvedValue({ id: entitlementId, status: 'ACTIVE' }),
+        findUnique: jest.fn().mockResolvedValue({ id: entitlementId, status: 'ACTIVE', signedToken: activeToken() }),
         update: jest.fn().mockResolvedValue({ id: entitlementId, status: 'REVOKED' }),
       },
     };
@@ -228,13 +241,14 @@ describe('marketplace refund, revocation, and expiry policy', () => {
   });
 
   it('expires only active entitlements whose license window has passed', async () => {
-    const prisma = { installationEntitlement: { updateMany: jest.fn().mockResolvedValue({ count: 3 }) } } as any;
+    const overdue = [1, 2, 3].map((number) => ({ id: `entitlement-${number}`, status: 'ACTIVE', signedToken: activeToken(number) }));
+    const prisma = { installationEntitlement: { findMany: jest.fn().mockResolvedValue(overdue), update: jest.fn().mockResolvedValue({}) } } as any;
     const service = new CommerceService(prisma, config());
     const now = new Date('2027-01-01Z');
     await expect(service.expireOverdueEntitlements(now)).resolves.toEqual({ expiredCount: 3 });
-    expect(prisma.installationEntitlement.updateMany).toHaveBeenCalledWith({
-      where: { status: 'ACTIVE', expiresAt: { lt: now } }, data: { status: 'EXPIRED' },
-    });
+    expect(prisma.installationEntitlement.findMany).toHaveBeenCalledWith({ where: { status: 'ACTIVE', expiresAt: { lt: now } } });
+    expect(prisma.installationEntitlement.update).toHaveBeenCalledTimes(3);
+    expect(prisma.installationEntitlement.update.mock.calls[0][0].data).toMatchObject({ status: 'EXPIRED', generation: 2 });
   });
 });
 
@@ -266,7 +280,7 @@ describe('CommerceService invoice settlement', () => {
       marketplaceAccount: { findUnique: jest.fn().mockResolvedValue({ id: ACCOUNT }) },
       installationRegistration: { findUnique: jest.fn().mockResolvedValue({ id: INSTALLATION, installationId: 'install-abc', accountId: ACCOUNT, school }) },
       productPrice: { findMany: jest.fn().mockResolvedValue([{ id: PRICE, pluginId: 'plugin-1', currency: 'USD', amountMinor: 12000, licensedMajor: 1, licenseDays: 3650, updatesDays: 365, validFrom: new Date('2020-01-01'), validUntil: null, plugin: { id: 'plugin-1', isPaid: true, status: 'APPROVED' } }]) },
-      installationEntitlement: { upsert: jest.fn().mockResolvedValue({ id: 'entitlement-1' }) },
+      installationEntitlement: { findUnique: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue({ id: 'entitlement-1' }) },
       publisherRevenueEntry: { upsert: jest.fn().mockResolvedValue({ id: 'revenue-1' }) },
     };
     const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
@@ -361,7 +375,7 @@ describe('CommerceService publisher revenue', () => {
         findUnique: jest.fn().mockResolvedValue({ id: ORDER, accountId: ACCOUNT, installationId: 'registration-1', status: 'PENDING', currency: 'USD', totalMinor: 10000, account: {}, installation: { installationId: 'install-abc' }, lines: [line] }),
         update: jest.fn().mockResolvedValue({}),
       },
-      installationEntitlement: { upsert: jest.fn().mockResolvedValue({ id: 'entitlement-1' }) },
+      installationEntitlement: { findUnique: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue({ id: 'entitlement-1' }) },
       publisherRevenueEntry: { upsert: jest.fn().mockResolvedValue({ id: 'revenue-1' }) },
       schoolPluginRequest: { findUnique: jest.fn().mockResolvedValue(null) },
     };

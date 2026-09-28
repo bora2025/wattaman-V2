@@ -8,7 +8,7 @@ const root = path.resolve(__dirname, '../../../plugins/wattanam.learning');
 describe('Learning plugin source', () => {
   const manifest = JSON.parse(readFileSync(path.join(root, 'plugin.json'), 'utf8'));
   it('owns the complete 13-model Learning foundation without cross-plugin foreign keys', () => {
-    expect(manifest.version).toBe('0.1.2');
+    expect(manifest.version).toBe('0.1.5');
     expect(manifest.dependencies['wattanam.academic-management']).toBeDefined();
     expect(manifest.permissions).toHaveLength(6);
     expect(manifest.migrations).toHaveLength(14);

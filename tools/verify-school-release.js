@@ -13,6 +13,8 @@ for (const name of ['api', 'web', 'gateway']) {
 }
 if (value.services.api.volume !== '/data' || value.services.postgres.volume !== '/var/lib/postgresql/data') throw new Error('Required persistent volume is missing');
 if (value.services.api.variables.DATABASE_URL !== '${{Postgres.DATABASE_URL}}') throw new Error('API must use the project-local PostgreSQL service');
+if (value.services.api.variables.WATTANAM_DISTRIBUTION !== 'core') throw new Error('API distribution must be core');
+if (value.services.web.variables.WATTANAM_DISTRIBUTION !== 'core' || value.services.web.variables.NEXT_PUBLIC_WATTANAM_DISTRIBUTION !== 'core') throw new Error('Web distribution must be core');
 if (!value.services.api.variables.JWT_SECRET.includes('secret(')) throw new Error('JWT secret must be generated per deployment');
 if (value.services.api.variables.CORS_ORIGINS !== 'https://${{gateway.RAILWAY_PUBLIC_DOMAIN}}') throw new Error('CORS must bind to the public gateway origin');
 if (value.services.api.variables.PUBLIC_APP_URL !== 'https://${{gateway.RAILWAY_PUBLIC_DOMAIN}}') throw new Error('Public app URL must bind to the public gateway origin');

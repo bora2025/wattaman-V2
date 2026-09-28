@@ -87,6 +87,36 @@ describe('PluginMigrationsService', () => {
     expect(tx.pluginMigration.create).toHaveBeenCalledWith({ data: expect.objectContaining({ pluginId: 'wattanam.attendance-manager', migrationId, checksum }) });
   });
 
+  it('installs every exact published Attendance multi-statement migration and rejects modified bytes', async () => {
+    const ids = [
+      '003_enforce_student_boundary',
+      '004_add_corrections_scans_alerts_snapshots',
+      '005_add_alert_delivery_ledger',
+      '006_add_legacy_adoption_fields',
+    ];
+    const migrations = ids.map((id) => {
+      const migrationPath = path.resolve(__dirname, `../../../plugins/wattanam.attendance-manager/migrations/${id}.sql`);
+      const content = readFileSync(migrationPath);
+      return { id, path: `migrations/${id}.sql`, checksum: createHash('sha256').update(content).digest('hex'), destructive: false, content };
+    });
+    const service = new PluginMigrationsService();
+    for (const migration of migrations) {
+      const manifest: any = { id: 'wattanam.attendance-manager', version: '0.1.6', migrations: [{ ...migration, content: undefined }] };
+      expect(() => service.validateSql(manifest, migration.id, migration.content.toString(), false)).not.toThrow();
+      expect(() => service.validateSql(manifest, migration.id, `${migration.content.toString()} `, false)).toThrow('exactly one SQL statement');
+      expect(() => service.validateSql({ ...manifest, id: 'wattanam.other' }, migration.id, migration.content.toString(), false)).toThrow('exactly one SQL statement');
+    }
+
+    const attendancePackage: any = {
+      manifest: { id: 'wattanam.attendance-manager', version: '0.1.6', migrations: migrations.map(({ content, ...migration }) => migration) },
+      files: new Map(migrations.map((migration) => [migration.path, migration.content])),
+    };
+    const tx = { pluginMigration: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({}) }, $executeRawUnsafe: jest.fn().mockResolvedValue(0) } as any;
+    await service.apply(tx, attendancePackage);
+    expect(tx.$executeRawUnsafe.mock.calls.length).toBeGreaterThan(migrations.length);
+    expect(tx.pluginMigration.create).toHaveBeenCalledTimes(migrations.length);
+  });
+
   it('accepts the new single-statement Attendance branding migration through normal validation', () => {
     const migrationId = '002_add_study_year_branding';
     const migrationPath = path.resolve(__dirname, '../../../plugins/wattanam.attendance-manager/migrations/002_add_study_year_branding.sql');

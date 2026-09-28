@@ -6,6 +6,9 @@ yarn-error.log*
 
 # Build and test outputs
 dist/
+dist-core/
+.core-build/
+.tmp-wattanam-*/
 .next/
 build/
 out/

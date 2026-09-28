@@ -40,7 +40,7 @@ Configure only the public key through `PLUGIN_TRUSTED_KEYS_FILE`, using publishe
 
 ## Manifest v1
 
-The contract includes identity, semantic version, core range, publisher, license, backend and declarative frontend entries, SDK/runtime ranges, capabilities, namespaced permissions, dependencies, immutable migrations, navigation, languages, and HTTPS support/privacy URLs.
+The contract includes identity, semantic version, core range, publisher, license, backend and declarative frontend entries, SDK/runtime ranges, capabilities, namespaced permissions, dependencies, immutable migrations, navigation, languages, HTTPS support/privacy URLs, and an optional backward-compatible operational declaration. All new scaffolds and official releases include the operational declaration; older signed schema-v1 packages remain readable during the compatibility window.
 
 ```json
 {
@@ -61,11 +61,24 @@ The contract includes identity, semantic version, core range, publisher, license
   "dependencies": {},
   "migrations": [],
   "navigation": [],
-  "supportedLanguages": ["en"]
+  "supportedLanguages": ["en"],
+  "supportUrl": "https://publisher.example/support/plugin-name",
+  "privacyUrl": "https://publisher.example/privacy/plugins/plugin-name",
+  "operational": {
+    "healthCheck": "runtime",
+    "dataClassification": ["personal-data"],
+    "backup": { "database": "required", "files": "none", "restore": "required" },
+    "uninstall": { "dataRetention": "preserve" },
+    "pricing": "marketplace"
+  }
 }
 ```
 
 Unknown capabilities fail validation. Navigation and frontend paths must be plugin-namespaced. SDK/runtime requirements must include the core's `1.0.0` contract.
+Operational classifications use the closed SDK vocabulary. Database/file backup participation is
+consumed by recovery-set v2; restore verification and preserved uninstall data are mandatory, and
+pricing remains controlled by Marketplace orders/entitlements. The scaffold's `.example` support
+and privacy URLs are deliberate placeholders that a publisher must replace before publication.
 
 ## Inspection and lifecycle
 

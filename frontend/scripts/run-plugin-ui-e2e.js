@@ -10,6 +10,11 @@ const playwrightBin = path.join(root, 'node_modules', '@playwright', 'test', 'cl
 let server;
 let stopped = false;
 
+function parsePlaywrightResult(output) {
+  const matches = [...output.matchAll(/WATTANAM_PLAYWRIGHT_RESULT=(passed|failed|timedout|interrupted)/g)];
+  return matches.at(-1)?.[1] || null;
+}
+
 function killTree(pid) {
   if (!pid) return;
   if (process.platform === 'win32') spawn('taskkill.exe', ['/pid', String(pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true }).unref();
@@ -54,8 +59,11 @@ async function main() {
       const forward = (stream, target) => stream.on('data', (chunk) => {
         target.write(chunk); output = `${output}${chunk}`.slice(-8192);
         const plain = output.replace(/\u001b\[[0-9;?]*[ -/]*[@-~]/g, '');
-        const match = plain.match(/(passed|failed)\s*\(/);
-        if (match && !settled) { settled = true; setTimeout(() => { killTree(test.pid); resolve(match[1] === 'passed' ? 0 : 1); }, 250); }
+        const result = parsePlaywrightResult(plain);
+        if (result && !settled) {
+          settled = true;
+          setTimeout(() => { killTree(test.pid); resolve(result === 'passed' ? 0 : 1); }, 250);
+        }
       });
       forward(test.stdout, process.stdout); forward(test.stderr, process.stderr);
       test.once('error', (error) => { if (!settled) { settled = true; reject(error); } });
@@ -67,6 +75,10 @@ async function main() {
   process.exit(code);
 }
 
-process.on('SIGINT', () => { stopServer(); process.exit(130); });
-process.on('SIGTERM', () => { stopServer(); process.exit(143); });
-main().catch((error) => { process.stderr.write(`${error.message}\n`); process.exitCode = 1; stopServer(); });
+if (require.main === module) {
+  process.on('SIGINT', () => { stopServer(); process.exit(130); });
+  process.on('SIGTERM', () => { stopServer(); process.exit(143); });
+  main().catch((error) => { process.stderr.write(`${error.message}\n`); process.exitCode = 1; stopServer(); });
+}
+
+module.exports = { parsePlaywrightResult };

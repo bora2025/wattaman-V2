@@ -22,6 +22,9 @@ export class PluginsController {
   @Get('runtime-status')
   runtimeStatus() { return this.plugins.runtimeStatus(); }
 
+  @Get('diagnostics')
+  diagnostics() { return this.plugins.diagnostics(); }
+
   @Get(':id/contract-health')
   contractHealth(@Param('id') id: string) { return this.plugins.contractHealth(id); }
 

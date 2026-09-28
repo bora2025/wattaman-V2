@@ -7,6 +7,7 @@ function fixture() {
   const publicKey = pair.publicKey.export({ type: 'spki', format: 'pem' }).toString();
   const now = new Date('2026-08-28T00:00:00.000Z');
   const token = issueEntitlement({
+    generation: 1, status: 'ACTIVE',
     installationId: 'school-001', customerId: 'customer-001', productId: 'official.attendance',
     licensedMajorRange: '^1.0.0', notBefore: now.toISOString(),
     expiresAt: '2027-08-28T00:00:00.000Z', updatesThrough: '2027-06-01T00:00:00.000Z',
@@ -44,5 +45,15 @@ describe('offline entitlement tokens', () => {
     expect(() => verifyEntitlement(token, new Map([['entitlement-2026-01', publicKey]]), {
       installationId: 'school-001', productId: 'official.attendance', now: new Date('2026-10-01T00:00:00.000Z'),
     })).toThrow('online refresh');
+  });
+
+  it('allows the documented five-minute clock skew but rejects a larger not-before gap', () => {
+    const { token, publicKey } = fixture();
+    expect(() => verifyEntitlement(token, new Map([['entitlement-2026-01', publicKey]]), {
+      installationId: 'school-001', productId: 'official.attendance', now: new Date('2026-08-27T23:56:00.000Z'),
+    })).not.toThrow();
+    expect(() => verifyEntitlement(token, new Map([['entitlement-2026-01', publicKey]]), {
+      installationId: 'school-001', productId: 'official.attendance', now: new Date('2026-08-27T23:54:59.999Z'),
+    })).toThrow('not active yet');
   });
 });

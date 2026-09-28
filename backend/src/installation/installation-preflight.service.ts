@@ -5,8 +5,6 @@ import path from 'path';
 import { PrismaService } from '../database/prisma.service';
 import { readRuntimeConfig } from '../config/environment';
 import { NotificationProviderConfig, readNotificationProviderConfig } from '../notification/notification-config';
-import { PluginPackageVerifier } from '../plugins/plugin-package';
-import { trustedPluginKeys } from '../plugins/plugin-config';
 
 export interface PreflightCheckResult {
   name: string;
@@ -24,8 +22,6 @@ export interface PreflightInput {
   timezone: string;
   currency: string;
   acceptedLicenseVersion?: string;
-  /** Base64-encoded plugin package (.zip) contents -- verified here, never installed here. */
-  initialPlugins?: string[];
 }
 
 /**
@@ -37,10 +33,7 @@ export interface PreflightInput {
  */
 @Injectable()
 export class InstallationPreflightService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly verifier: PluginPackageVerifier,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async run(input: PreflightInput): Promise<PreflightReport> {
     const checks: PreflightCheckResult[] = [
@@ -49,13 +42,8 @@ export class InstallationPreflightService {
       this.checkLocale(input.locale, input.timezone, input.currency),
       ...(await this.checkProviders()),
       this.checkLicense(input.acceptedLicenseVersion),
-      ...(await this.checkInitialPlugins(input.initialPlugins)),
     ];
-    // Requested initial plugins are a genuine precondition for what the operator is trying to
-    // do (unlike email/sms, which are optional best-effort adapters) -- an invalid or
-    // incompatible package the operator explicitly asked for should fail loudly here, not be
-    // silently skipped, same reasoning as database/storage.
-    const blocking = checks.filter((check) => check.name === 'database' || check.name.startsWith('storage:') || check.name.startsWith('initialPlugin:'));
+    const blocking = checks.filter((check) => check.name === 'database' || check.name.startsWith('storage:'));
     return { ok: blocking.every((check) => check.ok), checks };
   }
 
@@ -140,32 +128,6 @@ export class InstallationPreflightService {
     } catch (error: any) {
       return { name: 'sms', ok: false, detail: `unreachable: ${error?.message || error}` };
     }
-  }
-
-  /**
-   * Validates each requested initial plugin package (signature, manifest, checksums, and
-   * core-version compatibility via the same PluginPackageVerifier the marketplace install path
-   * uses) without installing or activating anything -- no database writes, no files extracted.
-   * Actually installing a verified package still requires a marketplace-authorized server-side
-   * download once setup completes; this only proves upfront that deployment-CLI input is a
-   * legitimate, compatible package.
-   */
-  private async checkInitialPlugins(base64Packages: string[] | undefined): Promise<PreflightCheckResult[]> {
-    if (!base64Packages?.length) return [];
-    const coreVersion = readRuntimeConfig().appVersion;
-    const trustedKeys = await trustedPluginKeys();
-    return Promise.all(base64Packages.map(async (encoded, index) => {
-      const name = `initialPlugin:${index}`;
-      // Buffer.from(str, 'base64') never throws -- it decodes leniently -- so a garbage input
-      // simply produces a garbage buffer that verify() itself rejects (empty/not a zip/etc.)
-      // with a clear message, rather than needing a separate base64-specific check here.
-      try {
-        const verified = await this.verifier.verify(Buffer.from(encoded, 'base64'), trustedKeys, coreVersion);
-        return { name, ok: true, detail: `${verified.manifest.id}@${verified.manifest.version} verified, compatible with core ${coreVersion}` };
-      } catch (error: any) {
-        return { name, ok: false, detail: error?.message || 'plugin package failed verification' };
-      }
-    }));
   }
 
   private checkLicense(acceptedLicenseVersion?: string): PreflightCheckResult {

@@ -57,4 +57,14 @@ describe('parsePluginManifest', () => {
   it('rejects a plugin declaring an sdkVersion range this SDK does not satisfy', () => {
     expect(() => parsePluginManifest(validManifest({ sdkVersion: '>=2.0.0' }))).toThrow('unsupported SDK version');
   });
+
+  it('normalizes and rejects unsafe operational contracts using the host rules', () => {
+    const operational = {
+      healthCheck: 'runtime', dataClassification: ['personal-data', 'personal-data'],
+      backup: { database: 'required', files: 'none', restore: 'required' },
+      uninstall: { dataRetention: 'preserve' }, pricing: 'marketplace',
+    };
+    expect(parsePluginManifest(validManifest({ operational })).operational?.dataClassification).toEqual(['personal-data']);
+    expect(() => parsePluginManifest(validManifest({ operational: { ...operational, pricing: 'embedded' } }))).toThrow('pricing');
+  });
 });

@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client';
 import { runsBackgroundJobs } from '../config/environment';
 import { SchoolAccessService } from '../marketplace/school-access.service';
 import { PluginResourceQuotaService } from './plugin-resource-quota.service';
+import { PluginEntitlementPolicyService } from './plugin-entitlement-policy.service';
 
 @Injectable()
 export class PluginJobsService implements OnApplicationShutdown {
@@ -13,7 +14,7 @@ export class PluginJobsService implements OnApplicationShutdown {
   private readonly running = new Set<string>();
   private readonly draining = new Set<string>();
 
-  constructor(private readonly prisma: PrismaService, private readonly schoolAccess: SchoolAccessService, @Optional() private readonly quota?: PluginResourceQuotaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly schoolAccess: SchoolAccessService, @Optional() private readonly quota?: PluginResourceQuotaService, @Optional() private readonly entitlements?: PluginEntitlementPolicyService) {}
 
   async register(pluginId: string, definition: { id: string; intervalSeconds: number; handler(): void | Promise<void> }) {
     if (!/^[a-z0-9][a-z0-9._-]{0,99}$/.test(definition.id)) throw new BadRequestException('Plugin job id is invalid');
@@ -70,6 +71,7 @@ export class PluginJobsService implements OnApplicationShutdown {
       // so two timer ticks cannot both slip past while the lock is read. If the lock cannot be read
       // the job runs: this is called from a timer and must never reject.
       if (await this.schoolAccess.isSuspended().catch(() => false)) return;
+      if (this.entitlements && !await this.entitlements.jobsAllowed(pluginId)) return;
       await this.prisma.$transaction(async (tx) => {
         const lock = await tx.$queryRawUnsafe<Array<{ acquired: boolean }>>(
           'SELECT pg_try_advisory_xact_lock(hashtext($1), hashtext($2)) AS acquired', pluginId, jobId,

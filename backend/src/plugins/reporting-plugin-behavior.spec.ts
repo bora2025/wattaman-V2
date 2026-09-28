@@ -72,6 +72,12 @@ describe('Reporting plugin behavior', () => {
     expect(csv.content.startsWith('\uFEFF')).toBe(true);
     expect(csv.content).toContain('"One, ""Quoted"""');
     expect(csv.filename).toBe('student-summary-class-1-2026-09-25.csv');
+
+    directory.getClassRoster.mockResolvedValueOnce({ classId: 'class-1', students: [{ studentId: 'student-1', studentNumber: '+123', name: '=HYPERLINK("https://example.test")' }] });
+    const safeCsv = await routes.get('GET student-summaries/export.csv').handler(request);
+    expect(safeCsv.content).toContain("'+123");
+    expect(safeCsv.content).toContain("'=HYPERLINK");
+    expect(safeCsv.content).not.toContain('\r\n+123,=HYPERLINK');
   });
 
   it('builds a dated staff report through Directory and the HR projection only', async () => {

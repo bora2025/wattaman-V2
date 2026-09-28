@@ -1,0 +1,28 @@
+{
+  "format": "wattanam-railway-core-hosted-preflight-v1",
+  "passed": false,
+  "checkedAt": "2026-09-28T08:02:20.132Z",
+  "distribution": "legacy-full",
+  "appVersion": null,
+  "publicHost": "gateway-production-618b.up.railway.app",
+  "marketplaceHost": "marketplace-api-production-f821.up.railway.app",
+  "deployment": {
+    "id": "b2081369-f794-4a04-8f8c-6474ec4d5b44",
+    "status": "SUCCESS",
+    "imageDigest": "sha256:13fa979845761dac4df2550d977d274006157fdcdb985725969463cd6ff6ea86",
+    "createdAt": "2026-09-25T15:02:52.364Z"
+  },
+  "health": {
+    "status": 200,
+    "service": "wattanam-api"
+  },
+  "installation": {
+    "status": 200,
+    "state": "installed",
+    "schoolSlug": "angkor-international-school",
+    "coreVersion": "0.1.0-dev"
+  },
+  "failures": [
+    "WATTANAM_DISTRIBUTION must be core, received legacy-full"
+  ]
+}

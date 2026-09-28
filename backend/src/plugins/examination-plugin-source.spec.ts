@@ -9,7 +9,7 @@ describe('Examination plugin source', () => {
   const manifest = JSON.parse(readFileSync(path.join(root, 'plugin.json'), 'utf8'));
 
   it('declares the complete namespaced examination and gradebook data foundation', () => {
-    expect(manifest.version).toBe('0.1.4');
+    expect(manifest.version).toBe('0.1.7');
     expect(manifest.dependencies['wattanam.academic-management']).toBeDefined();
     expect(manifest.permissions).toHaveLength(6);
     expect(manifest.capabilities).toContain('readmodels.publish');
@@ -38,6 +38,7 @@ describe('Examination plugin source', () => {
     expect(attempts).toContain("path: 'attempts/:id/submit'");
     expect(attempts).toContain("path: 'attempts/:id/grade'");
     expect(attempts).toContain("path: 'attempts/:id/reset'");
+    expect(attempts).toContain('pg_advisory_xact_lock');
     expect(attempts).toContain('questions: questions.map(safeQuestion)');
     const gradebooks = readFileSync(path.join(root, 'backend/gradebooks.js'), 'utf8');
     expect(gradebooks).toContain("path: 'gradebooks'");

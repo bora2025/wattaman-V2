@@ -23,8 +23,8 @@ async function zip(entries: Record<string, Buffer>) {
   return Buffer.concat(chunks);
 }
 
-async function fixture(change: 'none' | 'tamper' | 'extra' | 'wrong-key' = 'none') {
-  const pluginJson = Buffer.from(JSON.stringify(manifest));
+async function fixture(change: 'none' | 'tamper' | 'extra' | 'wrong-key' = 'none', manifestValue: object = manifest) {
+  const pluginJson = Buffer.from(JSON.stringify(manifestValue));
   const backend = Buffer.from('module.exports = {};');
   const checksums = Buffer.from(JSON.stringify({ algorithm: 'sha256', files: { 'backend/index.js': digest(backend), 'plugin.json': digest(pluginJson) } }));
   const signingKey = change === 'wrong-key' ? generateKeyPairSync('ed25519').privateKey : keys.privateKey;
@@ -57,5 +57,18 @@ describe('marketplace publication verifier', () => {
   it('does not trust a key with the same id under another publisher', async () => {
     const wrongScope = new Map([['another-publisher', trusted.get('wattanam')!]]);
     await expect(verifyPluginPackage(await fixture(), wrongScope, 1024 * 1024)).rejects.toThrow('not trusted');
+  });
+
+  it('rejects an invalid declared operational contract before publication', async () => {
+    const invalid = {
+      ...manifest,
+      operational: {
+        healthCheck: 'runtime', dataClassification: ['secret-data'],
+        backup: { database: 'required', files: 'none', restore: 'required' },
+        uninstall: { dataRetention: 'delete' }, pricing: 'free',
+      },
+    };
+    await expect(verifyPluginPackage(await fixture('none', invalid), trusted, 1024 * 1024))
+      .rejects.toThrow('Invalid plugin manifest');
   });
 });

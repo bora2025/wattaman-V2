@@ -1,14 +1,20 @@
 'use strict';
 
-// Guarded rollback drill for legacy-derived canonical subjects. It removes only
-// deterministic rows proven to belong to this adoption; legacy Class.subject is untouched.
+// Guarded, non-destructive rollback drill for legacy-derived canonical subjects. It verifies the
+// adopted rows, switches routing back to legacy, and preserves both datasets for the rollback window.
 const path = require('node:path');
 const { collect, TARGET_TABLE } = require('./academic-subjects-adoption-preflight');
 const { journalPath, parseConfirmation } = require('./academic-subjects-adopt');
-const { loadJournal } = require('./plugin-adoption-toolkit');
+const { loadJournal, rollbackRouting } = require('./plugin-adoption-toolkit');
 const { verifyRecoveryBackup } = require('./document-designer-adopt');
 
-async function rollback({ adapter, directory, backupName, confirmation }) {
+function routingRegistry(owner = process.env.ACADEMIC_SUBJECTS_ROUTE_OWNER) {
+  const value = String(owner || 'legacy').trim().toLowerCase();
+  if (!['legacy', 'plugin'].includes(value)) throw new Error('ACADEMIC_SUBJECTS_ROUTE_OWNER must be legacy or plugin');
+  return { routeOwner: value, pluginEnabled: value === 'plugin' };
+}
+
+async function rollback({ adapter, directory, backupName, confirmation, registry = routingRegistry() }) {
   const backup = verifyRecoveryBackup(directory, backupName, confirmation.slug);
   const source = await collect(adapter);
   if (source.sha256 !== confirmation.sourceSha256) throw new Error('legacy subject fingerprint changed; rollback refused');
@@ -16,10 +22,14 @@ async function rollback({ adapter, directory, backupName, confirmation }) {
   const journal = loadJournal(journalPath(directory, confirmation.slug), identity);
   if (journal.stage !== 'reconciled') throw new Error('a reconciled subject adoption journal is required');
   const ids = source.subjects.map((subject) => subject.id);
-  await adapter.deleteSubjects(ids);
-  const remaining = await adapter.findSubjects(ids);
-  if (remaining.length) throw new Error('subject rollback reconciliation failed');
-  return { stage: 'rolled-back', removed: ids.length, sourceSha256: source.sha256, backupSha256: backup.sha256, legacyPreserved: true };
+  const retained = await adapter.findSubjects(ids);
+  if (retained.length !== ids.length) throw new Error('subject rollback requires every adopted row to remain present');
+  const rolled = rollbackRouting({ journalFile: journalPath(directory, confirmation.slug), registry, identity, legacyOwner: 'legacy' });
+  return {
+    stage: 'rolled-back', rolledBack: rolled.stage === 'rolled_back', retained: ids.length,
+    sourceSha256: source.sha256, backupSha256: backup.sha256, registry,
+    legacyPreserved: true, pluginDataPreserved: true,
+  };
 }
 
 async function main() {
@@ -31,10 +41,9 @@ async function main() {
   const prisma = new PrismaClient();
   const adapter = {
     readClassSubjectChunk: ({ after, limit }) => prisma.class.findMany({ ...(after ? { cursor: { id: after }, skip: 1 } : {}), orderBy: { id: 'asc' }, take: limit, select: { id: true, subject: true } }),
-    deleteSubjects: (ids) => ids.length ? prisma.$executeRawUnsafe(`DELETE FROM "${TARGET_TABLE}" WHERE "id" = ANY($1::text[])`, ids) : Promise.resolve(0),
     findSubjects: (ids) => ids.length ? prisma.$queryRawUnsafe(`SELECT "id" FROM "${TARGET_TABLE}" WHERE "id" = ANY($1::text[])`, ids) : Promise.resolve([]),
   };
-  try { process.stdout.write(`${JSON.stringify(await rollback({ adapter, directory, backupName: process.env.ACADEMIC_BACKUP_FILE, confirmation }), null, 2)}\n`); }
+  try { process.stdout.write(`${JSON.stringify(await rollback({ adapter, directory, backupName: process.env.ACADEMIC_BACKUP_FILE, confirmation, registry: routingRegistry() }), null, 2)}\n`); }
   finally { await prisma.$disconnect(); }
 }
 
@@ -43,4 +52,4 @@ if (require.main === module) main().catch((error) => {
   process.exitCode = 1;
 });
 
-module.exports = { rollback };
+module.exports = { rollback, routingRegistry };

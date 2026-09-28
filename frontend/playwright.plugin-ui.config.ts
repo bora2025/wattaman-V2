@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import path from 'node:path';
 const port = process.env.PLAYWRIGHT_WEB_PORT || '4141';
 const baseURL = `http://localhost:${port}`;
 
@@ -9,7 +10,10 @@ export default defineConfig({
   retries: 0,
   timeout: 45_000,
   expect: { timeout: 10_000 },
-  reporter: [['list']],
+  reporter: [
+    ['list'],
+    [path.resolve(__dirname, 'scripts', 'plugin-ui-result-reporter.js')],
+  ],
   webServer: process.env.PLAYWRIGHT_EXTERNAL_SERVER === 'true' ? undefined : {
     command: `node node_modules/next/dist/bin/next dev --webpack --port ${port}`,
     url: `${baseURL}/login`,

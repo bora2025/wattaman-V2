@@ -35,7 +35,7 @@ const blueprint = {
       healthcheck: '/health/ready',
       volume: '/data',
       variables: {
-        NODE_ENV: 'production', PORT: '3001', APP_VERSION: evidence.version, GIT_COMMIT: evidence.source.commit,
+        NODE_ENV: 'production', WATTANAM_DISTRIBUTION: 'core', PORT: '3001', APP_VERSION: evidence.version, GIT_COMMIT: evidence.source.commit,
         DATABASE_URL: '${{Postgres.DATABASE_URL}}', JWT_SECRET: '${{secret(64)}}',
         CORS_ORIGINS: 'https://${{gateway.RAILWAY_PUBLIC_DOMAIN}}', PUBLIC_APP_URL: 'https://${{gateway.RAILWAY_PUBLIC_DOMAIN}}', COOKIE_SECURE: 'true',
         BACKUP_DIR: '/data/backups', PLUGIN_DIR: '/data/plugins', PLUGIN_DATA_DIR: '/data/plugin-data',
@@ -46,7 +46,7 @@ const blueprint = {
       private: true,
       port: 3000,
       healthcheck: '/setup',
-      variables: { NODE_ENV: 'production', PORT: '3000', API_URL: 'http://${{api.RAILWAY_PRIVATE_DOMAIN}}:3001', NEXT_PUBLIC_API_URL: '' },
+      variables: { NODE_ENV: 'production', WATTANAM_DISTRIBUTION: 'core', NEXT_PUBLIC_WATTANAM_DISTRIBUTION: 'core', PORT: '3000', API_URL: 'http://${{api.RAILWAY_PRIVATE_DOMAIN}}:3001', NEXT_PUBLIC_API_URL: '' },
     },
     gateway: {
       image: evidence.images.gateway,

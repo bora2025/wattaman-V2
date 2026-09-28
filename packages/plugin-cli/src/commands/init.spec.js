@@ -17,6 +17,11 @@ describe('wattanam-plugin init', () => {
     expect(manifest.navigation[0].href).toBe('/plugins/acme.widget/records');
     expect(manifest.sdkVersion).toBe('1.1.0');
     expect(manifest.supportedLanguages).toEqual(['en', 'km']);
+    expect(manifest.operational).toEqual({
+      healthCheck: 'runtime', dataClassification: ['personal-data'],
+      backup: { database: 'required', files: 'none', restore: 'required' },
+      uninstall: { dataRetention: 'preserve' }, pricing: 'marketplace',
+    });
     expect(manifest.migrations[0].checksum).toMatch(/^[a-f0-9]{64}$/);
 
     const backend = fs.readFileSync(path.join(dest, 'backend', 'index.js'), 'utf8');

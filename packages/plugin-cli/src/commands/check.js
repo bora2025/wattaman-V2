@@ -68,6 +68,13 @@ async function run(argv, options = {}) {
         entryModule._compile(fs.readFileSync(entryPath, 'utf8'), entryPath);
         plugin = entryModule.exports;
         check('backend entry exports { id, activate }', Boolean(plugin) && plugin.id === manifest.id && typeof plugin.activate === 'function', plugin ? `id=${plugin.id}` : 'module has no exports');
+        if (manifest.operational?.healthCheck === 'runtime') {
+          check('backend entry exports the declared health check', typeof plugin?.health === 'function');
+          if (typeof plugin?.health === 'function') {
+            const health = await plugin.health();
+            check('runtime health check reports ready', health?.status === 'ready', `status=${health?.status || 'missing'}`);
+          }
+        }
       } catch (error) {
         check('backend entry loads without throwing', false, error.message);
       }

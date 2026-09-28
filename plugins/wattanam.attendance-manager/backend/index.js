@@ -41,6 +41,7 @@ function zonedDateTime(value, timeZone) {
 
 module.exports = {
   id: 'wattanam.attendance-manager',
+  health() { return { status: 'ready' }; },
   async activate(context) {
     context.logger.log('Wattanam Attendance Manager activated');
     const publishStudyYear = (year) => context.readModels.publish('study-year', 1, year.id, year);
@@ -95,7 +96,7 @@ module.exports = {
       { id: 'wattanam.attendance-manager.export', label: 'Deprecated compatibility permission; grant report and print instead' },
     ]);
     context.navigation.register([
-      { id: 'attendance', label: 'Attendance', href: '/plugins/wattanam.attendance-manager/attendance', permission: 'wattanam.attendance-manager.view' },
+      { id: 'attendance', label: 'Attendance', href: '/plugins/wattanam.attendance-manager/attendance', permission: 'wattanam.attendance-manager.view', dashboard: { title: 'Attendance Manager', description: 'Scan attendance, correct records, and review today\'s results.', priority: 100 } },
       { id: 'scanner', label: 'Attendance Scanner', href: '/plugins/wattanam.attendance-manager/scanner', permission: 'wattanam.attendance-manager.scan' },
       { id: 'corrections', label: 'Attendance Corrections', href: '/plugins/wattanam.attendance-manager/corrections', permission: 'wattanam.attendance-manager.correct' },
       { id: 'alerts', label: 'Attendance Alerts', href: '/plugins/wattanam.attendance-manager/alerts', permission: 'wattanam.attendance-manager.view' },
@@ -159,7 +160,7 @@ module.exports = {
     };
     const writeRecord = async (tx, prepared) => {
         await tx.execute(
-          `INSERT INTO ${RECORD} ("id","personId","personType","classId","studyYearId","date","session","status","permissionType","checkInTime","markedById","scanMode","scanLatitude","scanLongitude","scanLocation","personNameSnapshot","personNumberSnapshot","classNameSnapshot","studyYearLabelSnapshot") VALUES ($1,$2,$3,$4,$5,$6::date,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) ON CONFLICT ("personType","personId","classId","date","session") DO UPDATE SET "status"=EXCLUDED."status", "permissionType"=EXCLUDED."permissionType", "checkInTime"=EXCLUDED."checkInTime", "markedById"=EXCLUDED."markedById", "scanMode"=EXCLUDED."scanMode", "scanLatitude"=EXCLUDED."scanLatitude", "scanLongitude"=EXCLUDED."scanLongitude", "scanLocation"=EXCLUDED."scanLocation", "updatedAt"=CURRENT_TIMESTAMP`,
+          `INSERT INTO ${RECORD} ("id","personId","personType","classId","studyYearId","date","session","status","permissionType","checkInTime","markedById","scanMode","scanLatitude","scanLongitude","scanLocation","personNameSnapshot","personNumberSnapshot","classNameSnapshot","studyYearLabelSnapshot") VALUES ($1,$2,$3,$4,$5,$6::date,$7,$8,$9,$10::timestamptz,$11,$12,$13,$14,$15,$16,$17,$18,$19) ON CONFLICT ("personType","personId","classId","date","session") DO UPDATE SET "status"=EXCLUDED."status", "permissionType"=EXCLUDED."permissionType", "checkInTime"=EXCLUDED."checkInTime", "markedById"=EXCLUDED."markedById", "scanMode"=EXCLUDED."scanMode", "scanLatitude"=EXCLUDED."scanLatitude", "scanLongitude"=EXCLUDED."scanLongitude", "scanLocation"=EXCLUDED."scanLocation", "updatedAt"=CURRENT_TIMESTAMP`,
           [prepared.id, prepared.personId, prepared.personType, prepared.classId, prepared.studyYearId, prepared.attendanceDate, prepared.session, prepared.status, prepared.permissionType, prepared.checkInTime, prepared.markedById, prepared.scanMode, prepared.latitude, prepared.longitude, prepared.location, prepared.personNameSnapshot, prepared.personNumberSnapshot, prepared.classNameSnapshot, prepared.studyYearLabelSnapshot],
         );
         const record = await tx.query(`SELECT * FROM ${RECORD} WHERE "personType"=$1 AND "personId"=$2 AND "classId"=$3 AND "date"=$4::date AND "session"=$5 LIMIT 1`, [prepared.personType, prepared.personId, prepared.classId, prepared.attendanceDate, prepared.session]).then((rows) => rows[0]);
@@ -244,7 +245,7 @@ module.exports = {
       request.body = { ...body, ...aliases[0], classId, date: local.date, session: Number(activeSession.session), status: 'PRESENT', checkInTime: capturedAt.toISOString() };
       const prepared = await prepareRecord(request, mode);
       const result = await context.database.transaction(async (tx) => {
-        await tx.query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0)) FROM (SELECT COUNT(*) FROM ${SCAN}) AS namespace_guard`, [`${module.exports.id}:scan:${commandKey}`]);
+        await tx.execute(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0)) FROM (SELECT COUNT(*) FROM ${SCAN}) AS namespace_guard`, [`${module.exports.id}:scan:${commandKey}`]);
         const previous = await tx.query(`SELECT "recordId", "outcome", "errorCode" FROM ${SCAN} WHERE "idempotencyKey"=$1 LIMIT 1`, [commandKey]);
         if (previous.length) {
           if (previous[0].outcome !== 'ACCEPTED' || !previous[0].recordId) throw new Error(previous[0].errorCode || 'Attendance scan was rejected');

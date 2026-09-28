@@ -3,7 +3,7 @@
   "id": "wattanam.finance",
   "name": "Finance",
   "description": "Student fees, immutable receipts, invoice settings and financial summaries.",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -12,16 +12,20 @@
   "sdkVersion": "1.1.0",
   "runtimeVersion": "1.0.0",
   "capabilities": ["api.routes", "database.read", "database.write", "directory.read", "navigation.register", "permissions.register", "readmodels.publish", "ui.pages"],
-  "permissions": ["wattanam.finance.view", "wattanam.finance.manage", "wattanam.finance.payments.record", "wattanam.finance.settings.manage"],
+  "permissions": ["wattanam.finance.view", "wattanam.finance.manage", "wattanam.finance.payments.record", "wattanam.finance.payments.reverse", "wattanam.finance.settings.manage"],
   "dependencies": { "wattanam.academic-management": ">=0.1.0 <1.0.0" },
   "migrations": [
     { "id": "001_create_fee_record", "path": "migrations/001_create_fee_record.sql", "checksum": "b91e380d8fbc8fce9d64daebc8ebc1e800ea6db4bb3f07932def1ebcc2f9cf00", "destructive": false },
     { "id": "002_create_fee_payment", "path": "migrations/002_create_fee_payment.sql", "checksum": "8df8e33ea0896da9d32a6bf94a5183e7e8a0c4a0a7d9aa6ddc09a015c69ff9ea", "destructive": false },
-    { "id": "003_create_fee_settings", "path": "migrations/003_create_fee_settings.sql", "checksum": "122c6f32ecf78fad7ce5dd030838f5f7c2cbec4ecce256bc2b1d945916577797", "destructive": false }
+    { "id": "003_create_fee_settings", "path": "migrations/003_create_fee_settings.sql", "checksum": "122c6f32ecf78fad7ce5dd030838f5f7c2cbec4ecce256bc2b1d945916577797", "destructive": false },
+    { "id": "004_create_payment_reversal", "path": "migrations/004_create_payment_reversal.sql", "checksum": "218820bf1cf9176c721df33eab9efe87ee6e5d66932719709d246b15c10043f7", "destructive": false }
   ],
   "navigation": [
     { "id": "fees", "label": "Fees", "href": "/plugins/wattanam.finance/fees", "permission": "wattanam.finance.view" },
     { "id": "finance-settings", "label": "Finance settings", "href": "/plugins/wattanam.finance/settings", "permission": "wattanam.finance.settings.manage" }
   ],
-  "supportedLanguages": ["en", "km"]
+  "supportedLanguages": ["en", "km"],
+  "supportUrl": "https://wattanam.example/support/finance",
+  "privacyUrl": "https://wattanam.example/privacy/plugins/finance",
+  "operational": { "healthCheck": "runtime", "dataClassification": ["financial-records", "personal-data"], "backup": { "database": "required", "files": "none", "restore": "required" }, "uninstall": { "dataRetention": "preserve" }, "pricing": "marketplace" }
 }

@@ -22,6 +22,10 @@ interface RecoverySetJournal {
   journalFile: string;
   createdAt: string;
   database: { file: string; sha256: string; sizeBytes: number };
+  pluginFiles?: { archive?: { file?: string; sha256?: string; sizeBytes?: number }; checksums?: { files?: Record<string, string> } };
+  pluginData?: { archive?: { file?: string; sha256?: string; sizeBytes?: number }; checksums?: { files?: Record<string, string> } };
+  pluginContracts?: Array<{ id?: string; version?: string; legacyException?: boolean }>;
+  contractVerification?: { verified?: boolean; pluginCount?: number; legacyExceptionCount?: number };
 }
 
 @Injectable()
@@ -36,6 +40,7 @@ export class BackupService {
     try {
       const names = await fs.readdir(directory);
       const manifests: BackupManifest[] = [];
+      const recoverySets: Array<RecoverySetJournal & { journalFile: string }> = [];
       for (const name of names.filter((item) => /^wattanam-.*\.manifest\.json$/.test(item))) {
         try {
           const parsed = JSON.parse(await fs.readFile(path.join(directory, name), 'utf8')) as BackupManifest;
@@ -44,8 +49,27 @@ export class BackupService {
           // Invalid manifests are ignored and remain available for operator investigation.
         }
       }
+      for (const name of names.filter((item) => /^wattanam-recovery-.*\.recovery-set\.json$/.test(item))) {
+        try {
+          const parsed = JSON.parse(await fs.readFile(path.join(directory, name), 'utf8')) as RecoverySetJournal;
+          if (['wattanam-recovery-set-v1', 'wattanam-recovery-set-v2'].includes(parsed.format) && parsed.createdAt && parsed.database?.file) recoverySets.push({ ...parsed, journalFile: name });
+        } catch {
+          // Invalid journals remain for operator investigation and are never advertised as backups.
+        }
+      }
       manifests.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      recoverySets.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
       const latest = manifests[0] || null;
+      const latestRecoverySet = recoverySets[0] || null;
+      const recoveryArtifacts = latestRecoverySet ? [
+        latestRecoverySet.database.file,
+        latestRecoverySet.pluginFiles?.archive?.file,
+        latestRecoverySet.pluginData?.archive?.file,
+      ].filter((name): name is string => !!name) : [];
+      const recoveryArtifactsPresent = latestRecoverySet
+        ? (await Promise.all(recoveryArtifacts.map((name) => fs.access(path.join(directory, name)).then(() => true).catch(() => false)))).every(Boolean)
+          && recoveryArtifacts.length === 3
+        : false;
       return {
         strategy: 'postgresql-native',
         configured: true,
@@ -58,11 +82,31 @@ export class BackupService {
           installationSlug: latest.installationSlug || null,
           appVersion: latest.appVersion || null,
         } : null,
+        recoverySetCount: recoverySets.length,
+        latestRecoverySet: latestRecoverySet ? {
+          createdAt: latestRecoverySet.createdAt, journalFile: latestRecoverySet.journalFile,
+          artifactsPresent: recoveryArtifactsPresent,
+          coverage: {
+            database: !!latestRecoverySet.database?.file,
+            pluginCode: !!latestRecoverySet.pluginFiles?.archive?.file,
+            pluginData: !!latestRecoverySet.pluginData?.archive?.file,
+          },
+          pluginFileCount: Object.keys(latestRecoverySet.pluginFiles?.checksums?.files || {}).length,
+          pluginDataFileCount: Object.keys(latestRecoverySet.pluginData?.checksums?.files || {}).length,
+          pluginContractCount: latestRecoverySet.pluginContracts?.length || 0,
+          contractVerified: latestRecoverySet.format === 'wattanam-recovery-set-v2'
+            && latestRecoverySet.contractVerification?.verified === true
+            && latestRecoverySet.contractVerification.pluginCount === (latestRecoverySet.pluginContracts?.length || 0)
+            && latestRecoverySet.contractVerification.legacyExceptionCount === 0,
+          contractJournalVerified: latestRecoverySet.format === 'wattanam-recovery-set-v2'
+            && latestRecoverySet.contractVerification?.verified === true,
+          legacyPluginContractExceptions: latestRecoverySet.contractVerification?.legacyExceptionCount || 0,
+        } : null,
         restoreMode: 'offline-cli-only',
       };
     } catch (error: any) {
       if (error?.code === 'ENOENT') {
-        return { strategy: 'postgresql-native', configured: false, backupCount: 0, latest: null, restoreMode: 'offline-cli-only' };
+        return { strategy: 'postgresql-native', configured: false, backupCount: 0, latest: null, recoverySetCount: 0, latestRecoverySet: null, restoreMode: 'offline-cli-only' };
       }
       throw error;
     }
@@ -93,7 +137,7 @@ export class BackupService {
     });
     const lines = stdout.trim().split(/\r?\n/);
     const journal = JSON.parse(lines[lines.length - 1]) as RecoverySetJournal;
-    if (journal.format !== 'wattanam-recovery-set-v1' || !journal.journalFile) throw new Error('Recovery-set backup command returned an invalid journal');
+    if (!['wattanam-recovery-set-v1', 'wattanam-recovery-set-v2'].includes(journal.format) || !journal.journalFile) throw new Error('Recovery-set backup command returned an invalid journal');
     return journal;
   }
 

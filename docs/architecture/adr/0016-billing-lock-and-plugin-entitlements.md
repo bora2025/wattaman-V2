@@ -52,6 +52,15 @@ Drafting this record surfaced four gaps between the code and lean-core plan 12.8
 - A plugin now has three runtime states (active, read-only, disabled). The plugin host enforces them centrally, at route dispatch and in the job runner, rather than trusting each plugin to.
 - Point 4 is a pricing constraint: Academic Management cannot be sold on its own.
 
+## Implementation status (2026-09-26)
+
+Per-plugin enforcement, signed status/generation, replay rejection, five-minute skew tolerance,
+legacy-token upgrade and signed/generated whole-school control documents are implemented and
+covered by focused tests. See
+[the entitlement enforcement evidence](../../acceptance/lean-core/wordpress-style-plugin-entitlement-enforcement-2026-09-26.md).
+Hosted replay, skew, expiry, revocation and outage drills remain; therefore this ADR is accepted as a
+decision but not yet fully certified for production.
+
 ## Alternatives considered
 
 - **An expired plugin keeps working fully; only updates stop.** This is DEC-002's model for core and the kindest to schools, but it makes every plugin licence effectively perpetual.

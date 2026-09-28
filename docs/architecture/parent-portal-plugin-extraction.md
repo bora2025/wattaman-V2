@@ -1,7 +1,9 @@
 # Parent Portal plugin extraction worksheet
 
-Status: parent-link workflow, optional read-model composition and guarded legacy adoption toolkit
-implemented locally; restored-backup execution and lifecycle certification remain open.
+Status: parent-link workflow, serialized resolution, optional read-model composition and guarded
+legacy adoption toolkit implemented locally. PostgreSQL concurrency/composition certification is
+enforced in CI; its first hosted run, restored-backup execution and lifecycle certification remain
+open.
 
 ## Ownership boundary
 
@@ -13,7 +15,7 @@ student-keyed read models. Parent Portal never reads their tables.
 
 ## Implemented foundation
 
-Version 0.1.0 has one namespaced workflow table, three granular permissions, three host-rendered
+Version 0.1.2 has one namespaced workflow table, three granular permissions, three host-rendered
 pages and routes for roster-scoped children, student link requests, admin review and optional child
 overview adapters. Missing optional plugins or projections degrade section-by-section.
 
@@ -37,8 +39,9 @@ Academic ownership-aware guardian command. Both operations are capability-gated 
    Transportation and Communication version 1 projections and test mixed installed subsets.
 2. Execute the implemented ParentLinkRequest adoption/exact-reconciliation/metadata-only rollback
    toolkit against a restored production-shaped PostgreSQL backup.
-3. Hosted-certify the locally implemented compare-and-set detach/relink and concurrent-resolution
-   compensation policy. Replacement requires explicit confirmation plus the expected current
-   guardian; a lost request-resolution race restores the prior guardian.
+3. [~] PostgreSQL certification now proves concurrent request resolution is serialized before any
+   guardian mutation. Replacement still requires explicit confirmation plus the expected current
+   guardian. Hosted detach/relink and failure-compensation evidence remains.
 4. Complete notification, privacy, accessibility and password-reset onboarding review.
-5. Certify PostgreSQL concurrency, hosted roles, lifecycle, backup/restore and controlled pilot.
+5. PostgreSQL concurrency is now part of required CI. Hosted roles, lifecycle, backup/restore and
+   controlled pilot evidence remain.

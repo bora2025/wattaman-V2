@@ -4,9 +4,17 @@ import { PluginContractError, PluginRouteDefinition, PluginRouteRequest } from '
 import { PluginPermissionsService } from './plugin-permissions.service';
 import { parsePluginUiBundle, PluginUiPage } from './plugin-ui-schema';
 import { PluginResourceQuotaService } from './plugin-resource-quota.service';
+import { PluginEntitlementPolicyService } from './plugin-entitlement-policy.service';
 
 export interface PermissionExtension { pluginId: string; id: string; label: string; description?: string }
-export interface NavigationExtension { pluginId: string; id: string; label: string; href: string; permission?: string }
+export interface NavigationExtension {
+  pluginId: string;
+  id: string;
+  label: string;
+  href: string;
+  permission?: string;
+  dashboard?: { title?: string; description: string; priority?: number } | false;
+}
 export type PageExtension =
   | { pluginId: string; schemaVersion: 1; id: string; title: string; routePath: string; kind: 'json-settings' }
   | (PluginUiPage & { pluginId: string; schemaVersion: 2; kind: 'declarative-ui' });
@@ -23,6 +31,7 @@ export class PluginExtensionsService {
     private readonly grants: PluginPermissionsService,
     private readonly audit: AuditService,
     @Optional() private readonly quota?: PluginResourceQuotaService,
+    @Optional() private readonly entitlements?: PluginEntitlementPolicyService,
   ) {}
 
   registerRoute(pluginId: string, declaredPermissions: Set<string>, definition: PluginRouteDefinition) {
@@ -92,6 +101,7 @@ export class PluginExtensionsService {
     }
     let timer: NodeJS.Timeout | undefined;
     try {
+      await this.entitlements?.assertRouteAllowed(pluginId, request.method);
       let result = await Promise.race([
         Promise.resolve(definition.handler(request)),
         new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('Plugin route timed out')), 10_000); timer.unref(); }),
@@ -130,6 +140,12 @@ export class PluginExtensionsService {
     for (const entry of entries) {
       if (!/^[a-z0-9][a-z0-9._-]*$/.test(entry.id) || !entry.label?.trim() || !entry.href.startsWith(`/plugins/${pluginId}/`) || entry.href.includes('..')) throw new BadRequestException('Plugin navigation entry is invalid');
       if (entry.permission && !declared.has(entry.permission)) throw new BadRequestException('Plugin navigation permission is not declared');
+      if (entry.dashboard && (
+        !entry.dashboard.description?.trim()
+        || entry.dashboard.description.length > 240
+        || (entry.dashboard.title !== undefined && (!entry.dashboard.title.trim() || entry.dashboard.title.length > 100))
+        || (entry.dashboard.priority !== undefined && (!Number.isInteger(entry.dashboard.priority) || entry.dashboard.priority < 0 || entry.dashboard.priority > 1000))
+      )) throw new BadRequestException('Plugin dashboard contribution is invalid');
       const key = `${pluginId}:${entry.id}`;
       if (this.navigation.has(key)) throw new BadRequestException(`Plugin navigation is already registered: ${entry.id}`);
       this.navigation.set(key, { ...entry, pluginId, label: entry.label.trim() });

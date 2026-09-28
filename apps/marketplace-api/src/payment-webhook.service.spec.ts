@@ -3,6 +3,7 @@ import { PaymentWebhookService, paymentWebhookSignature } from './payment-webhoo
 
 const now = new Date('2026-08-28T00:00:00.000Z');
 const secret = 'webhook-secret-that-is-at-least-32-characters';
+const entitlementKey = generateKeyPairSync('ed25519').privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
 const event = {
   id: 'evt-2026-001', type: 'payment.failed', createdAt: now.toISOString(),
   data: { orderId: '00000000-0000-4000-8000-000000000004', providerReference: 'pay-001', amountMinor: 2500, currency: 'USD' },
@@ -12,7 +13,19 @@ function body(value: unknown = event) { return Buffer.from(JSON.stringify(value)
 function signature(value: Buffer, at = now) { return paymentWebhookSignature(value, Math.floor(at.getTime() / 1000), secret); }
 function service(tx: any) {
   const prisma = { $transaction: jest.fn((work: (value: any) => unknown) => work(tx)) } as any;
-  return { instance: new PaymentWebhookService(prisma, { paymentWebhookSecrets: [secret] } as any), prisma };
+  return { instance: new PaymentWebhookService(prisma, {
+    paymentWebhookSecrets: [secret], entitlementPrivateKey: entitlementKey, entitlementKeyId: 'entitlement-1', publicBaseUrl: 'https://marketplace.example',
+  } as any), prisma };
+}
+
+function activeToken() {
+  return { payload: {
+    schemaVersion: 1, generation: 1, status: 'ACTIVE', tokenId: '00000000-0000-4000-8000-000000000010',
+    installationId: 'school-public-id', customerId: 'customer-1', productId: 'official.attendance', licensedMajorRange: '^1.0.0',
+    issuedAt: '2026-01-01T00:00:00.000Z', notBefore: '2026-01-01T00:00:00.000Z', expiresAt: '2027-01-01T00:00:00.000Z',
+    updatesThrough: '2026-12-01T00:00:00.000Z', offlineRecheckAfter: '2026-10-01T00:00:00.000Z', features: [],
+    issuer: 'https://marketplace.example', audience: 'wattanam-school', keyId: 'entitlement-1', nonce: 'a'.repeat(32),
+  }, signature: { algorithm: 'ed25519', keyId: 'entitlement-1', value: 'unused' } };
 }
 
 describe('authenticated payment webhooks', () => {
@@ -122,7 +135,7 @@ describe('authenticated payment webhooks', () => {
         }),
         update: jest.fn().mockResolvedValue({}),
       },
-      installationEntitlement: { upsert: jest.fn().mockResolvedValue({ id: 'entitlement-1' }) },
+      installationEntitlement: { findUnique: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue({ id: 'entitlement-1' }) },
       publisherRevenueEntry: { upsert: jest.fn().mockResolvedValue({ id: 'revenue-1' }) },
       schoolPluginRequest: { findUnique: jest.fn().mockResolvedValue(null), update: jest.fn() },
       platformAuditEvent: { create: jest.fn() },
@@ -195,7 +208,7 @@ describe('authenticated payment dispute webhooks', () => {
     const paidOrder = {
       id: event.data.orderId, status: 'PAID', refunds: [],
       payments: [{ id: 'payment-1', status: 'SUCCEEDED', amountMinor: 2500 }],
-      lines: [{ id: 'line-1', entitlement: { id: 'entitlement-1', status: 'ACTIVE' } }],
+      lines: [{ id: 'line-1', entitlement: { id: 'entitlement-1', status: 'ACTIVE', signedToken: activeToken() } }],
     };
     const tx = {
       paymentWebhookEvent: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'evidence-6' }), update: jest.fn().mockResolvedValue({}) },

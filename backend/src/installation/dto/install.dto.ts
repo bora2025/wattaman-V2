@@ -1,4 +1,4 @@
-import { IsArray, IsBase64, IsEmail, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { IsEmail, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
 export class InstallDto {
   @IsString()
@@ -51,16 +51,4 @@ export class InstallDto {
   @MaxLength(40)
   acceptedLicenseVersion?: string;
 
-  /**
-   * Base64-encoded plugin package (.zip) contents, verified by InstallationPreflightService
-   * (signature/manifest/checksums/core-compatibility) but never installed here -- actually
-   * installing a verified package is deliberately not performed here. Production schools obtain
-   * plugins through the connected marketplace after setup; this field remains available to the
-   * deployment CLI for preflight compatibility checks only.
-   */
-  @IsOptional()
-  @IsArray()
-  @IsBase64({}, { each: true })
-  @MaxLength(70_000_000, { each: true })
-  initialPlugins?: string[];
 }

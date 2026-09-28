@@ -2,7 +2,7 @@ import { Prisma, PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { MarketplaceConfig } from './config';
 import { recordSaleEntries } from './publisher-governance.service';
-import { issueEntitlement } from './entitlement';
+import { issueEntitlement, issueTerminalEntitlement } from './entitlement';
 import { HttpError } from './http-error';
 
 const orderInput = z.object({
@@ -142,10 +142,16 @@ export class CommerceService {
     const entitlementIds: string[] = [];
     for (const line of order.lines) {
       if (line.entitlement) { entitlementIds.push(line.entitlement.id); continue; }
+      const previous = await tx.installationEntitlement.findUnique({
+        where: { installationId_pluginId: { installationId: order.installationId, pluginId: line.pluginId } },
+        select: { generation: true },
+      });
+      const generation = (previous?.generation ?? 0) + 1;
       const expiresAt = addDays(now, line.price.licenseDays);
       const updatesThrough = addDays(now, Math.min(line.price.updatesDays, line.price.licenseDays));
       const offlineRecheckAfter = addDays(now, Math.min(30, line.price.licenseDays));
       const token = issueEntitlement({
+        generation, status: 'ACTIVE',
         installationId: order.installation.installationId, customerId: order.accountId, productId: line.pluginId,
         licensedMajorRange: `^${line.price.licensedMajor}.0.0`, notBefore: now.toISOString(), expiresAt: expiresAt.toISOString(),
         updatesThrough: updatesThrough.toISOString(), offlineRecheckAfter: offlineRecheckAfter.toISOString(), features: [], issuer: this.config.publicBaseUrl,
@@ -154,11 +160,11 @@ export class CommerceService {
         where: { installationId_pluginId: { installationId: order.installationId, pluginId: line.pluginId } },
         create: {
           installationId: order.installationId, pluginId: line.pluginId, orderLineId: line.id, tokenId: token.payload.tokenId,
-          expiresAt, updatesThrough, offlineUntil: offlineRecheckAfter, signedToken: token as unknown as Prisma.InputJsonValue,
+          generation, expiresAt, updatesThrough, offlineUntil: offlineRecheckAfter, signedToken: token as unknown as Prisma.InputJsonValue,
         },
         update: {
           status: 'ACTIVE', orderLineId: line.id, tokenId: token.payload.tokenId, revokedAt: null, revokedReason: null,
-          expiresAt, updatesThrough, offlineUntil: offlineRecheckAfter, signedToken: token as unknown as Prisma.InputJsonValue,
+          generation, expiresAt, updatesThrough, offlineUntil: offlineRecheckAfter, signedToken: token as unknown as Prisma.InputJsonValue,
         },
       });
       entitlementIds.push(entitlement.id);
@@ -201,8 +207,12 @@ export class CommerceService {
     const entitlementIds: string[] = [];
     for (const line of order.lines) {
       if (!line.entitlement || line.entitlement.status !== 'ACTIVE') continue;
+      const token = issueTerminalEntitlement(line.entitlement.signedToken, revokedStatus, this.config.entitlementPrivateKey, this.config.entitlementKeyId, now);
       await tx.installationEntitlement.update({
-        where: { id: line.entitlement.id }, data: { status: revokedStatus, revokedAt: now, revokedReason: input.reason },
+        where: { id: line.entitlement.id }, data: {
+          status: revokedStatus, generation: token.payload.generation, tokenId: token.payload.tokenId,
+          signedToken: token as unknown as Prisma.InputJsonValue, revokedAt: now, revokedReason: input.reason,
+        },
       });
       entitlementIds.push(line.entitlement.id);
     }
@@ -215,19 +225,27 @@ export class CommerceService {
       const entitlement = await tx.installationEntitlement.findUnique({ where: { id: input.entitlementId } });
       if (!entitlement) throw new HttpError(404, 'Entitlement not found');
       if (entitlement.status !== 'ACTIVE') throw new HttpError(409, `Entitlement cannot be revoked from ${entitlement.status}`);
+      const token = issueTerminalEntitlement(entitlement.signedToken, 'REVOKED', this.config.entitlementPrivateKey, this.config.entitlementKeyId, now);
       const updated = await tx.installationEntitlement.update({
-        where: { id: entitlement.id }, data: { status: 'REVOKED', revokedAt: now, revokedReason: input.reason },
+        where: { id: entitlement.id }, data: {
+          status: 'REVOKED', generation: token.payload.generation, tokenId: token.payload.tokenId,
+          signedToken: token as unknown as Prisma.InputJsonValue, revokedAt: now, revokedReason: input.reason,
+        },
       });
       return { entitlementId: updated.id, status: updated.status };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 
   async expireOverdueEntitlements(now = new Date()) {
-    const result = await this.prisma.installationEntitlement.updateMany({
-      where: { status: 'ACTIVE', expiresAt: { lt: now } },
-      data: { status: 'EXPIRED' },
-    });
-    return { expiredCount: result.count };
+    const overdue = await this.prisma.installationEntitlement.findMany({ where: { status: 'ACTIVE', expiresAt: { lt: now } } });
+    for (const entitlement of overdue) {
+      const token = issueTerminalEntitlement(entitlement.signedToken, 'EXPIRED', this.config.entitlementPrivateKey, this.config.entitlementKeyId, now);
+      await this.prisma.installationEntitlement.update({ where: { id: entitlement.id }, data: {
+        status: 'EXPIRED', generation: token.payload.generation, tokenId: token.payload.tokenId,
+        signedToken: token as unknown as Prisma.InputJsonValue,
+      } });
+    }
+    return { expiredCount: overdue.length };
   }
 }
 

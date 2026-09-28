@@ -5,13 +5,21 @@ const test = require('node:test');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { expectedSchemaLineage, safeRelativePath, walkDirectoryChecksums, verifyDirectoryChecksums, sha256 } = require('./db-toolkit');
+const { expectedSchemaLineage, postgresClientExecutable, safeRelativePath, walkDirectoryChecksums, verifyDirectoryChecksums, sha256 } = require('./db-toolkit');
 
 test('expectedSchemaLineage selects core and legacy restore boundaries', () => {
   assert.equal(expectedSchemaLineage('core'), 'wattanam-core-v1');
   assert.equal(expectedSchemaLineage('legacy-full'), 'wattanam-legacy-v1');
   assert.equal(expectedSchemaLineage(undefined), 'wattanam-legacy-v1');
   assert.throws(() => expectedSchemaLineage('unknown'), /must be core or legacy-full/);
+});
+
+test('selects a PostgreSQL client matching the connected server major when available', () => {
+  assert.equal(postgresClientExecutable('pg_dump', '160011', (candidate) => candidate.includes('/16/')), '/usr/lib/postgresql/16/bin/pg_dump');
+  assert.equal(postgresClientExecutable('pg_restore', '180006', (candidate) => candidate.includes('/18/')), '/usr/lib/postgresql/18/bin/pg_restore');
+  assert.equal(postgresClientExecutable('pg_dump', '160011', () => false), 'pg_dump');
+  assert.throws(() => postgresClientExecutable('psql', '160011'), /unsupported/);
+  assert.throws(() => postgresClientExecutable('pg_dump', 'not-a-version'), /invalid/);
 });
 
 function tempDir() {

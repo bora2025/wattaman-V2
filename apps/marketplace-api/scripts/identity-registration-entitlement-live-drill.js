@@ -28,6 +28,7 @@ const fs = require('fs');
 const os = require('os');
 const http = require('http');
 const crypto = require('crypto');
+const yazl = require('yazl');
 
 const backendRoot = path.resolve(__dirname, '../../../backend');
 require(path.join(backendRoot, 'node_modules/reflect-metadata'));
@@ -38,11 +39,43 @@ const { readConfig } = require('../dist/config');
 const { totpCode } = require('../dist/identity-crypto');
 const { canonicalJson } = require('../dist/signing');
 const { CommerceService } = require('../dist/commerce.service');
+const { StarterBundleService } = require('../dist/starter-bundle.service');
+
+function digest(value) { return crypto.createHash('sha256').update(value).digest('hex'); }
+async function zip(entries) {
+  const archive = new yazl.ZipFile();
+  for (const [name, value] of Object.entries(entries)) archive.addBuffer(value, name);
+  archive.end();
+  const chunks = [];
+  for await (const chunk of archive.outputStream) chunks.push(Buffer.from(chunk));
+  return Buffer.concat(chunks);
+}
+async function signedPluginPackage(pluginId, name, publisherKey, publisherKeyId) {
+  const manifest = {
+    schemaVersion: 1, id: pluginId, name, description: 'Phase E signed installation fixture.',
+    version: '1.0.0', requiresCore: '^1.0.0', publisher: 'drill-publisher', license: 'commercial',
+    capabilities: [], permissions: [], dependencies: {}, migrations: [], navigation: [], supportedLanguages: [],
+  };
+  const pluginJson = Buffer.from(JSON.stringify(manifest));
+  const checksums = Buffer.from(JSON.stringify({ algorithm: 'sha256', files: { 'plugin.json': digest(pluginJson) } }));
+  const signature = Buffer.from(JSON.stringify({
+    algorithm: 'ed25519', publisher: 'drill-publisher', keyId: publisherKeyId,
+    signature: crypto.sign(null, checksums, publisherKey.privateKey).toString('base64'),
+  }));
+  return { manifest, buffer: await zip({ 'plugin.json': pluginJson, 'checksums.json': checksums, 'signature.json': signature }) };
+}
 
 const { PrismaClient: SchoolPrismaClient } = require(path.join(backendRoot, 'node_modules/@prisma/client'));
 const { InstallationKeyService } = require(path.join(backendRoot, 'dist/marketplace/installation-key.service'));
 const { InstallationRegistrationService: SchoolInstallationRegistrationService } = require(path.join(backendRoot, 'dist/marketplace/installation-registration.service'));
 const { EntitlementCacheService } = require(path.join(backendRoot, 'dist/marketplace/entitlement-cache.service'));
+const { MarketplaceCommerceService } = require(path.join(backendRoot, 'dist/marketplace/marketplace-commerce.service'));
+const { pluginInstallConsentDigest } = require(path.join(backendRoot, 'dist/marketplace/plugin-install-consent'));
+const { PluginEntitlementPolicyService } = require(path.join(backendRoot, 'dist/plugins/plugin-entitlement-policy.service'));
+const { PluginPackageVerifier } = require(path.join(backendRoot, 'dist/plugins/plugin-package'));
+const { PluginMigrationsService } = require(path.join(backendRoot, 'dist/plugins/plugin-migrations.service'));
+const { PluginsService } = require(path.join(backendRoot, 'dist/plugins/plugins.service'));
+const { UpdatesService } = require(path.join(backendRoot, 'dist/updates/updates.service'));
 const { AuditService } = require(path.join(backendRoot, 'dist/audit/audit.service'));
 
 const PORT = Number(process.env.DRILL_MARKETPLACE_PORT || 34910);
@@ -132,10 +165,16 @@ async function main() {
   // Backend-side config readers (marketplace-identity-config.ts, entitlement-config.ts)
   // read process.env directly with no override parameter, so these must be real globals.
   process.env.NODE_ENV = 'development';
+  process.env.DATABASE_URL = schoolDatabaseUrl;
+  process.env.APP_VERSION = '1.0.0';
   process.env.MARKETPLACE_URL = BASE;
   process.env.INSTALLATION_KEY_DIR = path.join(workDir, 'installation-identity');
   process.env.ENTITLEMENT_PUBLIC_KEY = entitlementKey.publicKey;
   process.env.ENTITLEMENT_KEY_ID = 'entitlement-drill-2026';
+  process.env.UPDATE_REPOSITORY_PUBLIC_KEY = metadataKey.publicKey;
+  process.env.UPDATE_REPOSITORY_KEY_ID = 'metadata-drill-2026';
+  process.env.UPDATE_CHANNEL = 'stable';
+  process.env.PLUGIN_DIR = path.join(workDir, 'plugins');
 
   const schoolPrisma = new SchoolPrismaClient({ datasourceUrl: schoolDatabaseUrl });
   await schoolPrisma.$connect();
@@ -300,7 +339,7 @@ async function main() {
     // timestamp. To exercise the backoff schedule (1/5/15/60 minutes) without either forging that
     // signed timestamp or actually sleeping for up to an hour, ageCacheRow() backdates only the
     // cache's own bookkeeping column that the backoff decision reads.
-    const pluginId = 'official.attendance-drill';
+    const pluginId = 'drill-publisher.attendance-drill';
     async function ageCacheRow(minutesAgo) {
       await schoolPrisma.pluginEntitlementCache.update({ where: { pluginId }, data: { lastRefreshAttemptAt: new Date(Date.now() - minutesAgo * 60_000) } });
     }
@@ -309,11 +348,70 @@ async function main() {
     check('a plugin with no purchase yet resolves to NONE, not an error', beforePurchase.status === 'NONE');
     await schoolPrisma.pluginEntitlementCache.delete({ where: { pluginId } });
 
-    const publisher = await marketplacePrisma.publisher.create({ data: { slug: 'drill-publisher', displayName: 'Drill Publisher' } });
+    const publisherSigningKey = crypto.generateKeyPairSync('ed25519');
+    const publisherKeyId = 'drill-publisher-key';
+    const publisher = await marketplacePrisma.publisher.create({ data: {
+      slug: 'drill-publisher', displayName: 'Drill Publisher', status: 'VERIFIED',
+      keys: { create: {
+        keyId: publisherKeyId,
+        publicKeyPem: publisherSigningKey.publicKey.export({ type: 'spki', format: 'pem' }).toString(),
+        approvedAt: new Date(), approvedBy: 'phase-e-certification',
+      } },
+    } });
     const plugin = await marketplacePrisma.marketplacePlugin.create({ data: { id: pluginId, publisherId: publisher.id, name: 'Attendance Drill', description: 'Live drill fixture', license: 'proprietary', isPaid: true, status: 'APPROVED' } });
     const price = await marketplacePrisma.productPrice.create({ data: { pluginId: plugin.id, currency: 'USD', amountMinor: 2500, licensedMajor: 1, validFrom: new Date(Date.now() - 86_400_000), updatesDays: 180, licenseDays: 365 } });
+    const freePluginId = 'drill-publisher.academic-foundation-drill';
+    await marketplacePrisma.marketplacePlugin.create({ data: {
+      id: freePluginId, publisherId: publisher.id, name: 'Academic Foundation Drill',
+      description: 'Free member of the live starter-bundle fixture', license: 'proprietary', isPaid: false, status: 'APPROVED',
+    } });
+    const packages = new Map();
+    for (const [releasePluginId, releaseName] of [[freePluginId, 'Academic Foundation Drill'], [pluginId, 'Attendance Drill']]) {
+      const signedPackage = await signedPluginPackage(releasePluginId, releaseName, publisherSigningKey, publisherKeyId);
+      const packageSha256 = digest(signedPackage.buffer);
+      const storageKey = `sha256/${packageSha256.slice(0, 2)}/${packageSha256}.wtp`;
+      const storageFile = path.join(workDir, 'artifacts', storageKey);
+      fs.mkdirSync(path.dirname(storageFile), { recursive: true });
+      fs.writeFileSync(storageFile, signedPackage.buffer);
+      packages.set(releasePluginId, { ...signedPackage, packageSha256 });
+      await marketplacePrisma.pluginVersion.create({ data: {
+        pluginId: releasePluginId, version: '1.0.0', requiresCore: '^1.0.0', channel: 'STABLE', reviewStatus: 'APPROVED',
+        manifestJson: signedPackage.manifest, publishedAt: new Date(),
+        artifact: { create: {
+          sha256: packageSha256, sizeBytes: signedPackage.buffer.length, storageKey,
+          publisherKeyId,
+        } },
+      } });
+    }
+    const bundleOperator = await marketplacePrisma.platformOperator.create({ data: {
+      email: 'bundle-operator@drill.test', displayName: 'Bundle Drill Operator', passwordHash: 'live-drill-only',
+    } });
+    const bundleActor = {
+      operatorId: bundleOperator.id, reason: 'Phase E real-stack starter-bundle certification',
+      context: { correlationId: 'starter-bundle-live-drill', ip: '127.0.0.1', userAgent: 'phase-e-certification' },
+    };
+    const starterBundles = new StarterBundleService(marketplacePrisma);
+    const bundle = await starterBundles.create({
+      slug: 'phase-e-school-starter', name: 'Phase E School Starter', description: 'Mixed free and paid live certification.',
+      items: [
+        { pluginId: freePluginId, versionRange: '^1.0.0', required: true },
+        { pluginId, versionRange: '^1.0.0', required: true },
+      ],
+    }, bundleActor);
+    await starterBundles.publish(bundle.id, bundleActor);
+    const bundleCatalog = await call('GET', '/v1/starter-bundles', { query: { coreVersion: '1.0.0', currency: 'USD' } });
+    const discoveredBundle = Array.isArray(bundleCatalog.body)
+      ? bundleCatalog.body.find((candidate) => candidate.id === bundle.id)
+      : null;
+    check('the linked school discovers the published mixed starter bundle over real HTTP',
+      bundleCatalog.status === 200 && discoveredBundle?.plugins?.length === 2);
+    check('bundle discovery keeps free and paid acquisition independent',
+      discoveredBundle?.plugins?.[0]?.paid === false && !discoveredBundle.plugins[0].price
+      && discoveredBundle?.plugins?.[1]?.paid === true && discoveredBundle.plugins[1].price?.id === price.id);
     const commerce = new CommerceService(marketplacePrisma, marketplaceConfig);
-    const order = await commerce.createOrder({ accountId, installationId: registrationRow.id, currency: 'USD', priceIds: [price.id], idempotencyKey: 'drill-order-0001' });
+    const paidBundlePriceId = discoveredBundle?.plugins?.find((candidate) => candidate.pluginId === pluginId)?.price?.id;
+    check('the paid order is sourced from the server-resolved bundle plan', paidBundlePriceId === price.id);
+    const order = await commerce.createOrder({ accountId, installationId: registrationRow.id, currency: 'USD', priceIds: [paidBundlePriceId], idempotencyKey: 'drill-order-0001' });
     const settlement = await commerce.settleManualPayment({ orderId: order.id, providerReference: 'drill-invoice-0001' });
     check('a real purchase settles and issues exactly one entitlement', settlement.status === 'PAID' && settlement.entitlementIds.length === 1);
 
@@ -362,6 +460,68 @@ async function main() {
 
     const allStatuses = await entitlementCache.getAllStatuses();
     check('getAllStatuses reflects the one plugin this drill purchased', allStatuses.some((row) => row.pluginId === pluginId));
+
+    console.log('\n== LCF-002: signed starter-bundle install, interruption, retry, remove, reinstall ==');
+    const delegatedToken = crypto.randomBytes(32).toString('hex');
+    await marketplacePrisma.marketplaceSession.create({ data: {
+      accountId, tokenHash: digest(delegatedToken), scope: 'COMMERCE_PROXY',
+      expiresAt: new Date(Date.now() + 60 * 60_000),
+    } });
+    const runtime = {
+      load: async () => undefined, unload: async () => undefined,
+      status: () => ({ safeMode: false, loaded: [] }),
+    };
+    const entitlementPolicy = new PluginEntitlementPolicyService(schoolPrisma);
+    const realPlugins = new PluginsService(
+      schoolPrisma, new PluginPackageVerifier(), runtime, new PluginMigrationsService(),
+      undefined, undefined, undefined, entitlementPolicy,
+    );
+    const updates = new UpdatesService(schoolPrisma, realPlugins, {}, entitlementPolicy);
+    const link = { getValidAccessToken: async () => delegatedToken };
+    let injectSecondInstallFailure = true;
+    let installCalls = 0;
+    const interruptiblePlugins = {
+      install: async (...args) => {
+        installCalls += 1;
+        if (installCalls === 2 && injectSecondInstallFailure) {
+          injectSecondInstallFailure = false;
+          throw new Error('injected second-plugin failure');
+        }
+        return realPlugins.install(...args);
+      },
+      activate: (...args) => realPlugins.activate(...args),
+    };
+    const schoolCommerce = new MarketplaceCommerceService(
+      schoolPrisma, link, updates, interruptiblePlugins, entitlementCache, entitlementPolicy,
+    );
+    const schoolBundles = await schoolCommerce.starterBundles();
+    const schoolBundle = schoolBundles.find((candidate) => candidate.id === bundle.id);
+    check('the school service resolves the same published bundle through its marketplace adapter', schoolBundle?.plugins?.length === 2);
+    const installPlan = schoolBundle.plugins.map((candidate) => ({
+      pluginId: candidate.pluginId, version: candidate.version,
+      consentDigest: pluginInstallConsentDigest(packages.get(candidate.pluginId).manifest),
+    }));
+    const interrupted = await (async () => {
+      try { await schoolCommerce.installBundle(bundle.id, installPlan, true); return null; }
+      catch (error) { return error; }
+    })();
+    check('an injected second-plugin failure reports the completed first member',
+      interrupted && /injected second-plugin failure/.test(interrupted.message) && interrupted.message.includes(freePluginId));
+    const afterInterruption = await schoolPrisma.pluginInstallation.findMany({ orderBy: { id: 'asc' } });
+    check('the completed first plugin remains active after the second member fails',
+      afterInterruption.length === 1 && afterInterruption[0].id === freePluginId && afterInterruption[0].status === 'active');
+
+    const retried = await schoolCommerce.installBundle(bundle.id, installPlan, true);
+    check('retry reuses the completed member and activates both signed packages',
+      retried.installed.length === 2 && installCalls === 3
+      && retried.installed.every((entry) => entry.result.status === 'active'));
+    await realPlugins.deactivate(freePluginId);
+    const removed = await realPlugins.remove(freePluginId);
+    check('independent removal preserves plugin-owned data by default', removed.status === 'removed' && removed.dataPreserved === true);
+    const reinstalled = await schoolCommerce.installBundle(bundle.id, installPlan, true);
+    const finalRows = await schoolPrisma.pluginInstallation.findMany({ where: { id: { in: [freePluginId, pluginId] } } });
+    check('bundle reinstall restores the removed member without replacing the paid member',
+      reinstalled.installed.length === 2 && finalRows.length === 2 && finalRows.every((row) => row.status === 'active'));
   } finally {
     await new Promise((resolve) => server.close(resolve));
     await marketplacePrisma.$disconnect();

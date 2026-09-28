@@ -6,6 +6,8 @@ const instant = z.string().datetime({ offset: true });
 
 export const entitlementPayloadSchema = z.object({
   schemaVersion: z.literal(1),
+  generation: z.number().int().positive(),
+  status: z.enum(['ACTIVE', 'EXPIRED', 'REVOKED', 'REFUNDED']),
   tokenId: z.string().uuid(),
   installationId: z.string().min(1).max(200),
   customerId: z.string().min(1).max(200),
@@ -56,10 +58,37 @@ export function issueEntitlement(
   };
 }
 
+/** Issues the next signed terminal decision for an existing entitlement subject. */
+export function issueTerminalEntitlement(
+  currentToken: unknown,
+  status: 'EXPIRED' | 'REVOKED' | 'REFUNDED',
+  privateKey: string,
+  keyId: string,
+  now = new Date(),
+): SignedEntitlement {
+  const current = z.object({ payload: entitlementPayloadSchema }).passthrough().parse(currentToken).payload;
+  const decisionExpiresAt = new Date(now.getTime() + 10 * 365 * 86_400_000);
+  const recheckAt = new Date(now.getTime() + 30 * 86_400_000);
+  return issueEntitlement({
+    generation: current.generation + 1,
+    status,
+    installationId: current.installationId,
+    customerId: current.customerId,
+    productId: current.productId,
+    licensedMajorRange: current.licensedMajorRange,
+    notBefore: now.toISOString(),
+    expiresAt: decisionExpiresAt.toISOString(),
+    updatesThrough: now.toISOString(),
+    offlineRecheckAfter: recheckAt.toISOString(),
+    features: current.features,
+    issuer: current.issuer,
+  }, privateKey, keyId, now);
+}
+
 export function verifyEntitlement(
   token: unknown,
   publicKeys: ReadonlyMap<string, string>,
-  expected: { installationId: string; productId: string; now?: Date },
+  expected: { installationId: string; productId: string; now?: Date; clockSkewMs?: number },
 ): EntitlementPayload {
   const envelope = z.object({
     payload: entitlementPayloadSchema,
@@ -78,9 +107,10 @@ export function verifyEntitlement(
   if (envelope.payload.productId !== expected.productId) throw new Error('Entitlement belongs to another product');
   validateWindows(envelope.payload);
   const now = (expected.now ?? new Date()).getTime();
-  if (now < Date.parse(envelope.payload.notBefore)) throw new Error('Entitlement is not active yet');
-  if (now > Date.parse(envelope.payload.expiresAt)) throw new Error('Entitlement has expired');
-  if (now > Date.parse(envelope.payload.offlineRecheckAfter)) throw new Error('Entitlement requires an online refresh');
+  const skew = expected.clockSkewMs ?? 5 * 60_000;
+  if (now + skew < Date.parse(envelope.payload.notBefore)) throw new Error('Entitlement is not active yet');
+  if (now - skew > Date.parse(envelope.payload.expiresAt)) throw new Error('Entitlement has expired');
+  if (now - skew > Date.parse(envelope.payload.offlineRecheckAfter)) throw new Error('Entitlement requires an online refresh');
   return envelope.payload;
 }
 
@@ -90,7 +120,7 @@ function validateWindows(payload: EntitlementPayload) {
   const expires = Date.parse(payload.expiresAt);
   const updates = Date.parse(payload.updatesThrough);
   const recheck = Date.parse(payload.offlineRecheckAfter);
-  if (notBefore < issued || expires <= notBefore) throw new Error('Invalid entitlement validity window');
+  if (issued > expires || expires <= notBefore) throw new Error('Invalid entitlement validity window');
   if (updates < notBefore || updates > expires) throw new Error('Invalid entitlement update window');
   if (recheck < notBefore || recheck > expires) throw new Error('Invalid entitlement offline window');
 }

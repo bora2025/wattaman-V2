@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.12
+
+- Declare the operational contract and expose the standard runtime health probe.
+
+## 0.1.11
+
+- Remove duplicate Academic Study Year runtime routes. Attendance Manager is the sole lifecycle
+  owner, while Academic class responses consume its versioned `study-year` read model.
+- Preserve the previously published Academic Study Year migration byte-for-byte as dormant upgrade
+  history; no destructive cleanup occurs during this release.
+
 ## 0.1.10
 
 - Publish the capability-gated canonical subject lookup contract used by dependent plugins.

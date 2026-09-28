@@ -109,10 +109,10 @@ describe('Timetable plugin route behavior', () => {
     });
     const create = await routes.get('POST timetables')({ body: {
       name: 'School', academicYear: '2026-2027', weekend: ['SATURDAY', 'SUNDAY'],
-      timeOffRules: JSON.stringify([{ from: '12:00', to: '13:00' }]), distribution: 'Balanced',
+      periodTimes: ['07:00', '08:00'], timeOffRules: JSON.stringify([{ from: '12:00', to: '13:00' }]), distribution: 'Balanced',
     } });
-    expect(database.execute).toHaveBeenCalledWith(expect.stringContaining('"weekend","timeOffRules","distribution"'), expect.arrayContaining([
-      '["SATURDAY","SUNDAY"]', '[{"from":"12:00","to":"13:00"}]', '"Balanced"',
+    expect(database.execute).toHaveBeenCalledWith(expect.stringContaining('"weekend","periodTimes","timeOffRules","distribution"'), expect.arrayContaining([
+      '["SATURDAY","SUNDAY"]', '["07:00","08:00"]', '[{"from":"12:00","to":"13:00"}]', '"Balanced"',
     ]));
     expect(create.timeOffRules).toBe('[{"from":"12:00","to":"13:00"}]');
     const detail = await routes.get('GET timetables/:id')({ params: { id: 'tt-1' } });

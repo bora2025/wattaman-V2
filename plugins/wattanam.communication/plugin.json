@@ -3,7 +3,7 @@
   "id": "wattanam.communication",
   "name": "Communication",
   "description": "Safeguarded school messaging and public news/posts.",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -23,5 +23,8 @@
     { "id": "messages", "label": "Messages", "href": "/plugins/wattanam.communication/messages", "permission": "wattanam.communication.messages.read" },
     { "id": "posts", "label": "Posts", "href": "/plugins/wattanam.communication/posts", "permission": "wattanam.communication.posts.manage" }
   ],
-  "supportedLanguages": ["en", "km"]
+  "supportedLanguages": ["en", "km"],
+  "supportUrl": "https://wattanam.example/support/communication",
+  "privacyUrl": "https://wattanam.example/privacy/plugins/communication",
+  "operational": { "healthCheck": "runtime", "dataClassification": ["personal-data", "communications"], "backup": { "database": "required", "files": "none", "restore": "required" }, "uninstall": { "dataRetention": "preserve" }, "pricing": "marketplace" }
 }

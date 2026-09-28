@@ -4,7 +4,6 @@ const crypto = require('crypto');
 
 const DEPARTMENT = 'plugin_wattanam_academic_management_department';
 const USER_DEPARTMENT = 'plugin_wattanam_academic_management_user_department';
-const STUDY_YEAR = 'plugin_wattanam_academic_management_study_year';
 const CLASS = 'plugin_wattanam_academic_management_class';
 const REGISTRATION = 'plugin_wattanam_academic_management_class_registration';
 const SETTINGS = 'plugin_wattanam_academic_management_class_registration_settings';
@@ -100,6 +99,7 @@ function sanitizeFieldTypeAndOptions(fieldType, options) {
 
 module.exports = {
   id: 'wattanam.academic-management',
+  health() { return { status: 'ready' }; },
   async activate(context) {
     context.logger.log('Wattanam Academic Management activated');
     const lookupUserMap = async (ids) => new Map(
@@ -184,7 +184,7 @@ module.exports = {
     context.navigation.register([
       { id: 'departments', label: 'Departments', href: '/plugins/wattanam.academic-management/departments', permission: 'wattanam.academic-management.view' },
       { id: 'subjects', label: 'Subjects', href: '/plugins/wattanam.academic-management/subjects', permission: 'wattanam.academic-management.view' },
-      { id: 'classes', label: 'Classes', href: '/plugins/wattanam.academic-management/classes', permission: 'wattanam.academic-management.view' },
+      { id: 'classes', label: 'Classes', href: '/plugins/wattanam.academic-management/classes', permission: 'wattanam.academic-management.view', dashboard: { title: 'Academic Management', description: 'Manage classes, subjects, enrollment, and student academic profiles.', priority: 50 } },
       { id: 'teachers', label: 'Teachers', href: '/plugins/wattanam.academic-management/teachers', permission: 'wattanam.academic-management.view' },
       { id: 'registrations', label: 'Registrations', href: '/plugins/wattanam.academic-management/registrations', permission: 'wattanam.academic-management.manage' },
     ]);
@@ -362,148 +362,8 @@ module.exports = {
           .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
       },
     });
-    context.routes.register({
-      method: 'GET', path: 'study-years', permission: 'wattanam.academic-management.view',
-      handler: () => context.database.query(`SELECT "id", "year", "label", "startDate", "endDate", "isCurrent", "schoolName", "logoUrl", "createdAt", "updatedAt" FROM ${STUDY_YEAR} ORDER BY "year" DESC`),
-    });
-    context.routes.register({
-      method: 'GET', path: 'study-years/current', permission: 'wattanam.academic-management.view',
-      handler: async () => {
-        const rows = await context.database.query(`SELECT "id", "year", "label", "startDate", "endDate", "isCurrent", "schoolName", "logoUrl", "createdAt", "updatedAt" FROM ${STUDY_YEAR} WHERE "isCurrent" = TRUE ORDER BY "year" DESC LIMIT 1`);
-        return rows[0] ?? null;
-      },
-    });
-    context.routes.register({
-      method: 'GET', path: 'study-years/:id', permission: 'wattanam.academic-management.view',
-      handler: async (request) => {
-        const id = request?.params?.id;
-        const rows = await context.database.query(`SELECT "id", "year", "label", "startDate", "endDate", "isCurrent", "schoolName", "logoUrl", "createdAt", "updatedAt" FROM ${STUDY_YEAR} WHERE "id" = $1 LIMIT 1`, [id]);
-        if (!rows.length) throw new Error('Study year not found');
-        return rows[0];
-      },
-    });
-    context.routes.register({
-      method: 'POST', path: 'study-years', permission: 'wattanam.academic-management.manage',
-      handler: async (request) => {
-        throw new Error('Study Years are owned by Attendance Manager');
-        const body = request?.body || {};
-        if (!body.year || typeof body.year !== 'number') throw new Error('year is required');
-        const existing = await context.database.query(`SELECT "id" FROM ${STUDY_YEAR} WHERE "year" = $1 LIMIT 1`, [body.year]);
-        if (existing.length) throw new Error(`Study year ${body.year} already exists`);
-        const id = crypto.randomUUID();
-        const label = body.label || `${body.year}-${body.year + 1}`;
-        const startDate = body.startDate || null;
-        const endDate = body.endDate || null;
-        const schoolName = body.schoolName || null;
-        const logoUrl = body.logoUrl || null;
-        await context.database.transaction(async (tx) => {
-          await tx.execute(
-            `INSERT INTO ${STUDY_YEAR} ("id", "year", "label", "startDate", "endDate", "isCurrent", "schoolName", "logoUrl", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, FALSE, $6, $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-            [id, body.year, label, startDate, endDate, schoolName, logoUrl],
-          );
-          const created = await tx.query(`SELECT "id", "year", "label", "startDate", "endDate", "isCurrent", "schoolName", "logoUrl", "createdAt", "updatedAt" FROM ${STUDY_YEAR} WHERE "id" = $1 LIMIT 1`, [id]).then((rows) => rows[0]);
-          tx.publish({
-            event: 'wattanam.academic-management.study-year.created',
-            version: 1,
-            subjectKey: created.id,
-            payload: { studyYear: created, principal: request?.principal },
-            idempotencyKey: `study-year-created-${created.id}`,
-          });
-          return created;
-        });
-        const created = await context.database.query(`SELECT "id", "year", "label", "startDate", "endDate", "isCurrent", "schoolName", "logoUrl", "createdAt", "updatedAt" FROM ${STUDY_YEAR} WHERE "id" = $1 LIMIT 1`, [id]).then((rows) => rows[0]);
-        context.events.publish('academic.study-year.created.v1', { studyYear: created, principal: request?.principal });
-        return created;
-      },
-    });
-    context.routes.register({
-      method: 'PUT', path: 'study-years/:id', permission: 'wattanam.academic-management.manage',
-      handler: async (request) => {
-        throw new Error('Study Years are owned by Attendance Manager');
-        const id = request?.params?.id;
-        const body = request?.body || {};
-        const sets = [];
-        const params = [];
-        if (body.year !== undefined) {
-          const yearConflict = await context.database.query(`SELECT "id" FROM ${STUDY_YEAR} WHERE "year" = $1 AND "id" <> $2 LIMIT 1`, [body.year, id]);
-          if (yearConflict.length) throw new Error(`Study year ${body.year} already exists`);
-          sets.push(`"year" = $${params.length + 1}`);
-          params.push(body.year);
-        }
-        if (body.label !== undefined) { sets.push(`"label" = $${params.length + 1}`); params.push(body.label); }
-        if (body.startDate !== undefined) { sets.push(`"startDate" = $${params.length + 1}`); params.push(body.startDate || null); }
-        if (body.endDate !== undefined) { sets.push(`"endDate" = $${params.length + 1}`); params.push(body.endDate || null); }
-        if (body.schoolName !== undefined) { sets.push(`"schoolName" = $${params.length + 1}`); params.push(body.schoolName || null); }
-        if (body.logoUrl !== undefined) { sets.push(`"logoUrl" = $${params.length + 1}`); params.push(body.logoUrl || null); }
-        if (sets.length === 0) throw new Error('No valid study year updates provided');
-        sets.push(`"updatedAt" = CURRENT_TIMESTAMP`);
-        params.push(id);
-        await context.database.transaction(async (tx) => {
-          await tx.execute(
-            `UPDATE ${STUDY_YEAR} SET ${sets.join(', ')} WHERE "id" = $${params.length}`,
-            params,
-          );
-          const updated = await tx.query(`SELECT "id", "year", "label", "startDate", "endDate", "isCurrent", "schoolName", "logoUrl", "createdAt", "updatedAt" FROM ${STUDY_YEAR} WHERE "id" = $1 LIMIT 1`, [id]).then((rows) => rows[0]);
-          tx.publish({
-            event: 'wattanam.academic-management.study-year.updated',
-            version: 1,
-            subjectKey: updated.id,
-            payload: { studyYear: updated, principal: request?.principal },
-            idempotencyKey: eventKey('study-year-updated', updated),
-          });
-          return updated;
-        });
-        const updated = await context.database.query(`SELECT "id", "year", "label", "startDate", "endDate", "isCurrent", "schoolName", "logoUrl", "createdAt", "updatedAt" FROM ${STUDY_YEAR} WHERE "id" = $1 LIMIT 1`, [id]).then((rows) => rows[0]);
-        context.events.publish('academic.study-year.updated.v1', { studyYear: updated, principal: request?.principal });
-        return updated;
-      },
-    });
-    context.routes.register({
-      method: 'POST', path: 'study-years/:id/set-current', permission: 'wattanam.academic-management.manage',
-      handler: async (request) => {
-        throw new Error('Study Years are owned by Attendance Manager');
-        const id = request?.params?.id;
-        await context.database.transaction(async (tx) => {
-          const target = await tx.query(`SELECT "id" FROM ${STUDY_YEAR} WHERE "id" = $1 LIMIT 1`, [id]);
-          if (!target.length) throw new Error('Study year not found');
-          await tx.execute(`UPDATE ${STUDY_YEAR} SET "isCurrent" = FALSE, "updatedAt" = CURRENT_TIMESTAMP WHERE "id" <> $1`, [id]);
-          await tx.execute(`UPDATE ${STUDY_YEAR} SET "isCurrent" = TRUE, "updatedAt" = CURRENT_TIMESTAMP WHERE "id" = $1`, [id]);
-          const current = await tx.query(`SELECT "id", "year", "label", "startDate", "endDate", "isCurrent", "schoolName", "logoUrl", "createdAt", "updatedAt" FROM ${STUDY_YEAR} WHERE "id" = $1 LIMIT 1`, [id]).then((rows) => rows[0]);
-          tx.publish({
-            event: 'wattanam.academic-management.study-year.set-current',
-            version: 1,
-            subjectKey: current.id,
-            payload: { studyYear: current, principal: request?.principal },
-            idempotencyKey: eventKey('study-year-set-current', current),
-          });
-          return current;
-        });
-        const current = await context.database.query(`SELECT "id", "year", "label", "startDate", "endDate", "isCurrent", "schoolName", "logoUrl", "createdAt", "updatedAt" FROM ${STUDY_YEAR} WHERE "id" = $1 LIMIT 1`, [id]).then((rows) => rows[0]);
-        context.events.publish('academic.study-year.set-current.v1', { studyYear: current, principal: request?.principal });
-        return current;
-      },
-    });
-    context.routes.register({
-      method: 'DELETE', path: 'study-years/:id', permission: 'wattanam.academic-management.manage',
-      handler: async (request) => {
-        throw new Error('Study Years are owned by Attendance Manager');
-        const id = request?.params?.id;
-        const classCount = await context.database.query(`SELECT COUNT(*)::int AS "count" FROM ${CLASS} WHERE "studyYearId" = $1`, [id]);
-        if (classCount[0]?.count > 0) throw new Error('Cannot delete study year that has classes. Remove or reassign classes first.');
-        await context.database.transaction(async (tx) => {
-          await tx.execute(`DELETE FROM ${STUDY_YEAR} WHERE "id" = $1`, [id]);
-          tx.publish({
-            event: 'wattanam.academic-management.study-year.deleted',
-            version: 1,
-            subjectKey: id,
-            payload: { studyYearId: id, principal: request?.principal },
-            idempotencyKey: eventKey('study-year-deleted', { id }),
-          });
-        });
-        context.events.publish('academic.study-year.deleted.v1', { studyYearId: id, principal: request?.principal });
-        return { success: true };
-      },
-    });
+    // Migration 004 remains immutable because it was already published. Attendance Manager is
+    // the sole runtime owner for Study Years; Academic Management consumes its versioned read model.
     context.routes.register({
       method: 'POST', path: 'classes', permission: 'wattanam.academic-management.manage',
       handler: async (request) => {
@@ -1342,10 +1202,10 @@ module.exports = {
     });
     context.routes.register({
       method: 'GET', path: 'admissions/public/classes', permission: 'wattanam.academic-management.view',
-      handler: () => context.database.query(
-        `SELECT c."id", c."name", c."subject", c."registrationStatus", c."thumbnail", c."description", CASE WHEN c."showPrice" THEN c."price" ELSE NULL END AS "price", c."showPrice", CASE WHEN sy."id" IS NULL THEN NULL ELSE jsonb_build_object('label', sy."label", 'year', sy."year") END AS "studyYear" FROM ${CLASS} c LEFT JOIN ${STUDY_YEAR} sy ON sy."id" = c."studyYearId" WHERE c."registrationStatus" <> 'HIDDEN' ORDER BY c."name" ASC`,
+      handler: async () => decorateClassRows(await context.database.query(
+        `SELECT c."id", c."name", c."subject", c."teacherId", c."classAdminId", c."studyYearId", c."registrationStatus", c."thumbnail", c."description", CASE WHEN c."showPrice" THEN c."price" ELSE NULL END AS "price", c."showPrice" FROM ${CLASS} c WHERE c."registrationStatus" <> 'HIDDEN' ORDER BY c."name" ASC`,
         [],
-      ),
+      )),
     });
     const defaultSettings = {
       id: 'singleton',

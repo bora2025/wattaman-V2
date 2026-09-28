@@ -136,9 +136,6 @@ export default function Sidebar({ title, subtitle, navItems, accentColor = 'indi
     }
   }, [pathname]);
 
-  const tabs = pickBottomTabs(navItems, bottomTabs);
-  const hasMore = tabs.some(t => t.href === '__more__');
-
   // Unread counts for badge-bearing nav items. Lightweight, polls every 30s.
   const needMessages = navItems.some(n => n.badgeKey === 'messages');
   const needAnnouncements = navItems.some(n => n.badgeKey === 'announcements');
@@ -228,6 +225,10 @@ export default function Sidebar({ title, subtitle, navItems, accentColor = 'indi
     runtimeDistribution,
     pluginNav,
   );
+  // All navigation surfaces must consume the same composed registry. Calculating tabs from the
+  // static prop hid plugin entries on mobile even though the desktop sidebar displayed them.
+  const tabs = pickBottomTabs(effectiveNavItems, bottomTabs);
+  const hasMore = tabs.some(t => t.href === '__more__');
 
   const handleLogout = async () => {
     try {

@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { createHash } from 'node:crypto';
 import semver from 'semver';
 import { z } from 'zod';
 import { CommerceService } from './commerce.service';
@@ -30,7 +31,12 @@ export class CustomerMarketplaceService {
       return {
         id: plugin.id, name: plugin.name, description: plugin.description, license: plugin.license, paid: plugin.isPaid,
         publisher: plugin.publisher, prices: plugin.prices.map((price) => ({ id: price.id, currency: price.currency, amountMinor: price.amountMinor, licensedMajor: price.licensedMajor, updatesDays: price.updatesDays, licenseDays: price.licenseDays })),
-        versions: compatibleVersions.map((version) => ({ version: version.version, requiresCore: version.requiresCore, changelog: version.changelog, publishedAt: version.publishedAt, sha256: version.artifact?.sha256, sizeBytes: version.artifact?.sizeBytes })),
+        versions: compatibleVersions.map((version) => ({
+          version: version.version, requiresCore: version.requiresCore, changelog: version.changelog,
+          publishedAt: version.publishedAt, sha256: version.artifact?.sha256,
+          sizeBytes: version.artifact?.sizeBytes,
+          ...publicInstallDisclosure(version.manifestJson),
+        })),
         compatible: compatibleVersions.length > 0,
         ownership: accountId ? (plugin.entitlements as any[]).map((item) => ({ installationId: item.installation.installationId, installationLabel: item.installation.label, status: item.status, expiresAt: item.expiresAt, updatesThrough: item.updatesThrough })) : undefined,
       };
@@ -64,4 +70,37 @@ export class CustomerMarketplaceService {
     if (!entitlement) throw new HttpError(403, 'An active entitlement with update access is required');
     return entitlement.installationId;
   }
+}
+
+/**
+ * Expose only the signed manifest fields a school owner needs to make an install decision. The
+ * complete manifest remains repository metadata; entry paths and other packaging internals do not
+ * belong in the customer catalog response. Removal currently has one safe core policy: files are
+ * removed while settings, migrations, storage and business data are preserved for reinstall.
+ */
+function publicInstallDisclosure(value: unknown) {
+  const manifest = value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  const strings = (candidate: unknown) => Array.isArray(candidate)
+    ? [...new Set(candidate.filter((item): item is string => typeof item === 'string'))]
+    : [];
+  const ranges = (candidate: unknown) => candidate && typeof candidate === 'object' && !Array.isArray(candidate)
+    ? Object.fromEntries(Object.entries(candidate as Record<string, unknown>).filter((entry): entry is [string, string] => typeof entry[1] === 'string'))
+    : {};
+  const migrations = Array.isArray(manifest.migrations) ? manifest.migrations : [];
+  const sortedRanges = (candidate: unknown) => Object.fromEntries(Object.entries(ranges(candidate)).sort(([left], [right]) => left.localeCompare(right)));
+  const disclosure = {
+    capabilities: strings(manifest.capabilities).sort(),
+    permissions: strings(manifest.permissions).sort(),
+    dependencies: sortedRanges(manifest.dependencies),
+    optionalDependencies: sortedRanges(manifest.optionalDependencies),
+    migrationSummary: {
+      count: migrations.length,
+      destructive: migrations.some((item) => !!item && typeof item === 'object' && !Array.isArray(item) && (item as Record<string, unknown>).destructive === true),
+    },
+    dataRetention: { onDeactivate: 'preserve', onRemove: 'preserve', onReinstall: 'adopt' },
+  };
+  return {
+    ...disclosure,
+    consentDigest: createHash('sha256').update(JSON.stringify(disclosure)).digest('hex'),
+  };
 }

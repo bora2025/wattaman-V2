@@ -14,8 +14,8 @@ export class UpdatesController {
   check() { return this.updates.check(); }
 
   @Post('plugins/:pluginId/:version/install')
-  installPlugin(@Param('pluginId') pluginId: string, @Param('version') version: string) {
-    return this.updates.installPlugin(pluginId, version);
+  installPlugin(@Param('pluginId') pluginId: string, @Param('version') version: string, @Body() body: { consentDigest?: string }) {
+    return this.updates.installPlugin(pluginId, version, String(body?.consentDigest || ''));
   }
 
   @Post('core/:version/prepare')

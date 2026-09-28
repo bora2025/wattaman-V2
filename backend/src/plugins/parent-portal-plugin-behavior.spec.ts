@@ -5,6 +5,7 @@ describe('Parent Portal plugin behavior', () => {
   function activate() {
     const routes = new Map<string, any>();
     const database: any = { query: jest.fn(), execute: jest.fn().mockResolvedValue({ count: 1 }) };
+    database.transaction = jest.fn(async (work: any) => work(database));
     const directory = {
       classesForUser: jest.fn().mockResolvedValue(['class-1']),
       getClassRoster: jest.fn().mockResolvedValue({ classId: 'class-1', className: 'Grade 1', students: [{ studentId: 'student-1', userId: 'student-user-1', studentNumber: 'S001', name: 'Student', parentId: 'parent-1' }] }),
@@ -40,6 +41,8 @@ describe('Parent Portal plugin behavior', () => {
     directory.getClassRoster.mockResolvedValueOnce({ classId: 'class-1', className: 'Grade 1', students: [{ studentId: 'student-1', userId: 'student-user-1', parentId: null }] });
     database.query.mockResolvedValueOnce([{ id: 'request-1', studentDirectoryUserId: 'student-user-1', parentEmail: 'parent@example.test', parentName: 'Parent', parentPhone: null, status: 'PENDING' }]);
     const result = await routes.get('PATCH requests/:id').handler({ principal: { userId: 'admin-1' }, params: { id: 'request-1' }, body: { action: 'APPROVE' } });
+    expect(database.transaction).toHaveBeenCalledTimes(1);
+    expect(database.query.mock.calls[0][0]).toContain('FOR UPDATE');
     expect(result).toMatchObject({ status: 'APPROVED', parentId: 'parent-1', resetPasswordRequired: true });
     expect(accounts.resolveParent).toHaveBeenCalledWith(expect.objectContaining({ commandKey: 'parent-link:request-1', email: 'parent@example.test', passwordHash: '$2b$12$opaque' }));
     expect(accounts.assignGuardian).toHaveBeenCalledWith({ studentUserId: 'student-user-1', parentId: 'parent-1', idempotencyKey: 'assign-parent:student-user-1:parent-1' });

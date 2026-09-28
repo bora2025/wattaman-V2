@@ -1,8 +1,9 @@
 # Reporting plugin extraction worksheet
 
-Status: local foundation implemented, not cut over or production-certified  
+Status: local foundation, PostgreSQL read-model certification and restored-backup parity implemented;
+first hosted run and production cutover remain open
 Plugin: `wattanam.reporting`  
-Version: `0.1.1`
+Version: `0.1.2`
 
 ## Boundary
 
@@ -34,13 +35,17 @@ selected date's status counts and recorded-session total.
   content are never returned.
 - Reporting has no database capability and no migrations.
 - CSV/PDF/print output uses the host declarative UI; the API also provides a BOM-prefixed,
-  correctly escaped CSV response for automation.
+  correctly escaped and spreadsheet-formula-neutralized CSV response for automation.
 
 ## Remaining certification work
 
-- Exercise bulk keyed reads against real PostgreSQL with mixed available/disabled plugins.
+- [x] Exercise bulk keyed reads against real PostgreSQL with mixed available/disabled plugins in
+  the required CI job; its first hosted run remains pending.
 - Verify administrator authorization and absence of student/teacher access in a hosted browser.
-- Compare the new report against approved legacy report totals on a restored backup.
+- [x] Compare the new report against approved representative totals on a restored PostgreSQL 16
+  backup while proving the stateless plugin leaves no tables or read-model residue
+  ([evidence](../acceptance/lean-core/wordpress-style-existing-school-reporting-rehearsal-2026-09-28.md));
+  hosted execution and production-school owner approval remain open.
 - Install, disable, enable, update, remove and reinstall the marketplace package on clean core.
 - Run backup/restore and production observability checks.
 - Cut over and remove legacy cross-feature reporting only after the rollback window is approved.

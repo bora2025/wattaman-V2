@@ -28,7 +28,7 @@ describe('installation entitlement access', () => {
       installationRegistration: {
         findUnique: jest.fn().mockResolvedValue({ id: registrationId, keys: [{ publicKeyPem: publicKey }] }),
       },
-      installationEntitlement: { findUnique: jest.fn(), findMany: jest.fn() },
+      installationEntitlement: { findUnique: jest.fn(), findMany: jest.fn(), update: jest.fn() },
       ...overrides,
     } as any;
   }
@@ -41,6 +41,29 @@ describe('installation entitlement access', () => {
     const service = new InstallationEntitlementAccessService(p);
     const result = await service.getOne({ installationId, pluginId, ts, signature }, now);
     expect(result).toMatchObject({ pluginId, status: 'ACTIVE' });
+  });
+
+  it('automatically upgrades a legacy signed token to a generated decision on first fetch', async () => {
+    const requestKeys = keyPair();
+    const entitlementKeys = keyPair();
+    const p = prisma({ installationRegistration: { findUnique: jest.fn().mockResolvedValue({ id: registrationId, keys: [{ publicKeyPem: requestKeys.publicKey }] }) } });
+    const legacyToken = { payload: {
+      schemaVersion: 1, tokenId: '00000000-0000-4000-8000-000000000020', installationId, customerId: 'customer-1', productId: pluginId,
+      licensedMajorRange: '^1.0.0', issuedAt: '2026-01-01T00:00:00.000Z', notBefore: '2026-01-01T00:00:00.000Z',
+      expiresAt: '2027-01-01T00:00:00.000Z', updatesThrough: '2026-12-01T00:00:00.000Z', offlineRecheckAfter: '2026-09-27T00:00:00.000Z',
+      features: [], issuer: 'https://marketplace.example', audience: 'wattanam-school', keyId: 'legacy', nonce: 'a'.repeat(32),
+    }, signature: { algorithm: 'ed25519', keyId: 'legacy', value: 'legacy' } };
+    p.installationEntitlement.findUnique.mockResolvedValue({
+      id: 'entitlement-row', status: 'ACTIVE', generation: 1, signedToken: legacyToken,
+      expiresAt: new Date('2027-01-01T00:00:00.000Z'), updatesThrough: new Date('2026-12-01T00:00:00.000Z'), offlineUntil: new Date('2026-09-27T00:00:00.000Z'),
+    });
+    p.installationEntitlement.update.mockImplementation(async ({ data }: any) => ({ id: 'entitlement-row', ...data }));
+    const config = { entitlementPrivateKey: entitlementKeys.privateKey, entitlementKeyId: 'entitlement-2' } as any;
+    const result = await new InstallationEntitlementAccessService(p, config).getOne({
+      installationId, pluginId, ts, signature: signed(requestKeys.privateKey, { installationId, pluginId, ts }),
+    }, now);
+    expect(result.signedToken.payload).toMatchObject({ generation: 1, status: 'ACTIVE', keyId: 'entitlement-2' });
+    expect(p.installationEntitlement.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ generation: 1, status: 'ACTIVE' }) }));
   });
 
   it('rejects a request signed by a key that is not the active one', async () => {

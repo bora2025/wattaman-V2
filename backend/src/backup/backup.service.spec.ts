@@ -42,6 +42,67 @@ describe('BackupService', () => {
     expect(serialized).not.toContain(directory);
   });
 
+  it('reports complete plugin-aware recovery coverage only when all three bound artifacts exist', async () => {
+    const journal = {
+      format: 'wattanam-recovery-set-v1', createdAt: '2026-09-26T00:00:00.000Z',
+      database: { file: 'school.dump', sha256: 'a', sizeBytes: 1 },
+      pluginFiles: { archive: { file: 'plugin-files.tar', sha256: 'b', sizeBytes: 1 }, checksums: { files: { 'wattanam.test/plugin.json': 'c' } } },
+      pluginData: { archive: { file: 'plugin-data.tar', sha256: 'd', sizeBytes: 1 }, checksums: { files: { 'wattanam.test/data.json': 'e' } } },
+    };
+    await Promise.all([
+      fs.writeFile(path.join(directory, 'wattanam-recovery-test.recovery-set.json'), JSON.stringify(journal)),
+      fs.writeFile(path.join(directory, 'school.dump'), 'db'),
+      fs.writeFile(path.join(directory, 'plugin-files.tar'), 'plugins'),
+      fs.writeFile(path.join(directory, 'plugin-data.tar'), 'data'),
+    ]);
+    await expect(new BackupService().status()).resolves.toMatchObject({
+      recoverySetCount: 1,
+      latestRecoverySet: { artifactsPresent: true, coverage: { database: true, pluginCode: true, pluginData: true }, pluginFileCount: 1, pluginDataFileCount: 1 },
+    });
+    await fs.rm(path.join(directory, 'plugin-data.tar'));
+    await expect(new BackupService().status()).resolves.toMatchObject({ latestRecoverySet: { artifactsPresent: false } });
+  });
+
+  it('reports v2 operational-contract coverage and explicit legacy exceptions', async () => {
+    const journal = {
+      format: 'wattanam-recovery-set-v2', createdAt: '2026-09-28T00:00:00.000Z',
+      database: { file: 'school.dump', sha256: 'a', sizeBytes: 1 },
+      pluginFiles: { archive: { file: 'plugin-files.tar', sha256: 'b', sizeBytes: 1 }, checksums: { files: {} } },
+      pluginData: { archive: { file: 'plugin-data.tar', sha256: 'c', sizeBytes: 1 }, checksums: { files: {} } },
+      pluginContracts: [{ id: 'wattanam.files', version: '1.2.3' }],
+      contractVerification: { verified: true, pluginCount: 1, legacyExceptionCount: 0 },
+    };
+    await Promise.all([
+      fs.writeFile(path.join(directory, 'wattanam-recovery-v2.recovery-set.json'), JSON.stringify(journal)),
+      fs.writeFile(path.join(directory, 'school.dump'), 'db'),
+      fs.writeFile(path.join(directory, 'plugin-files.tar'), 'plugins'),
+      fs.writeFile(path.join(directory, 'plugin-data.tar'), 'data'),
+    ]);
+    await expect(new BackupService().status()).resolves.toMatchObject({
+      latestRecoverySet: { pluginContractCount: 1, contractVerified: true, contractJournalVerified: true, legacyPluginContractExceptions: 0 },
+    });
+  });
+
+  it('does not describe a checksum-verified legacy exception as fully contract verified', async () => {
+    const journal = {
+      format: 'wattanam-recovery-set-v2', createdAt: '2026-09-29T00:00:00.000Z',
+      database: { file: 'school.dump', sha256: 'a', sizeBytes: 1 },
+      pluginFiles: { archive: { file: 'plugin-files.tar', sha256: 'b', sizeBytes: 1 }, checksums: { files: {} } },
+      pluginData: { archive: { file: 'plugin-data.tar', sha256: 'c', sizeBytes: 1 }, checksums: { files: {} } },
+      pluginContracts: [{ id: 'wattanam.legacy', version: '0.1.0', legacyException: true }],
+      contractVerification: { verified: true, pluginCount: 1, legacyExceptionCount: 1 },
+    };
+    await Promise.all([
+      fs.writeFile(path.join(directory, 'wattanam-recovery-legacy.recovery-set.json'), JSON.stringify(journal)),
+      fs.writeFile(path.join(directory, 'school.dump'), 'db'),
+      fs.writeFile(path.join(directory, 'plugin-files.tar'), 'plugins'),
+      fs.writeFile(path.join(directory, 'plugin-data.tar'), 'data'),
+    ]);
+    await expect(new BackupService().status()).resolves.toMatchObject({
+      latestRecoverySet: { contractVerified: false, contractJournalVerified: true, legacyPluginContractExceptions: 1 },
+    });
+  });
+
   it('scheduledBackup() logs and never throws when the underlying backup fails', async () => {
     const service = new BackupService();
     jest.spyOn(service, 'createRecoverySet').mockRejectedValue(new Error('pg_dump could not start'));
@@ -58,4 +119,3 @@ describe('BackupService', () => {
     expect(spy).toHaveBeenCalledTimes(1);
   });
 });
-

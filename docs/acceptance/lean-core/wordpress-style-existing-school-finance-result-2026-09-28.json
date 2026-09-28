@@ -1,0 +1,25 @@
+{
+  "format": "wattanam-existing-school-finance-rehearsal-v1",
+  "passed": true,
+  "sourceDatabase": "finance_source",
+  "targetDatabase": "finance_restored",
+  "schoolSlug": "restored-finance-school",
+  "backupFile": "wattanam-20260928T074212Z.dump",
+  "conversion": {
+    "policy": "EXACT_ONLY",
+    "currency": "USD",
+    "minorExponent": 2
+  },
+  "datasets": {
+    "feeRecords": 1,
+    "feePayments": 1,
+    "feeSettings": 1
+  },
+  "sourceSha256": "1e5acff75cee0f0e9489e31d301cf9afa1597fa96c17aac3bf3ea221165a276a",
+  "targetSha256": "1e5acff75cee0f0e9489e31d301cf9afa1597fa96c17aac3bf3ea221165a276a",
+  "dryRunZeroWrite": true,
+  "adopted": true,
+  "rolledBack": true,
+  "legacyPreserved": true,
+  "pluginDataPreserved": true
+}

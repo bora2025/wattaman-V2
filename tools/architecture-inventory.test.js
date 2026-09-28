@@ -298,9 +298,22 @@ test('LC1-011: every discovered item in this repository has exactly one owner', 
   for (const [category, list] of Object.entries(ownership.items)) {
     for (const item of list) assert.ok(catalog.has(item.owner), `${category} item owned by unknown owner ${item.owner}`);
   }
-  // Checklist LC-1 baseline: the existing official plugin is recorded under its real identity.
+  // Every extracted official plugin is recorded under its real manifest identity. Keep this list
+  // explicit so adding, renaming, or accidentally dropping a plugin is reviewed architecture drift.
   assert.deepEqual(ownership.items.officialPlugins.map(({ directory, pluginId }) => ({ directory, pluginId })), [
     { directory: 'plugins/announcements', pluginId: 'wattanam.announcements' },
+    { directory: 'plugins/wattanam.academic-management', pluginId: 'wattanam.academic-management' },
+    { directory: 'plugins/wattanam.attendance-manager', pluginId: 'wattanam.attendance-manager' },
+    { directory: 'plugins/wattanam.communication', pluginId: 'wattanam.communication' },
+    { directory: 'plugins/wattanam.document-designer', pluginId: 'wattanam.document-designer' },
+    { directory: 'plugins/wattanam.examination', pluginId: 'wattanam.examination' },
+    { directory: 'plugins/wattanam.finance', pluginId: 'wattanam.finance' },
+    { directory: 'plugins/wattanam.human-resources', pluginId: 'wattanam.human-resources' },
+    { directory: 'plugins/wattanam.learning', pluginId: 'wattanam.learning' },
+    { directory: 'plugins/wattanam.parent-portal', pluginId: 'wattanam.parent-portal' },
+    { directory: 'plugins/wattanam.reporting', pluginId: 'wattanam.reporting' },
+    { directory: 'plugins/wattanam.timetable', pluginId: 'wattanam.timetable' },
+    { directory: 'plugins/wattanam.transportation', pluginId: 'wattanam.transportation' },
   ]);
   // Mixed modules are split by a documented plan, never guessed: every declared plan covers real items.
   for (const plan of ownership.splitPlans) assert.ok(plan.items > 0, `split plan ${plan.id} covers no item`);

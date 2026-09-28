@@ -311,8 +311,11 @@ Evidence: `docs/acceptance/lean-core/lc3-plugin-ui-v2.md`
 - [~] **LC4-001 Artifact origin** — SHA-256-addressed local/S3 providers, provider-boundary digest
   checks, create-only S3 writes and streaming reads are implemented and tested. Concurrent API
   create races now converge only after validating the winning object's immutable metadata, and a
-  checked-in restart/multi-instance/overwrite live-drill command exists; execution against the
-  production-shaped S3 service and its non-secret evidence record remain.
+  checked-in restart/multi-instance/overwrite live-drill command exists. Required PR CI now runs
+  that drill against a pinned disposable MinIO origin. The local production-shaped execution
+  passes; CI now builds the exact pinned release from source after the Docker Hub image was removed,
+  and its workflow passes `actionlint`. Its first remote green execution and the hosted
+  production-shaped service's non-secret evidence record remain.
 - [x] **LC4-002 API cache** — each API process seeds/fetches a digest-addressed package, verifies the
   archive and publisher signature, and atomically rebuilds a missing/damaged runtime directory
   before activation.
@@ -414,18 +417,21 @@ Recommended first plugin: **`wattanam.document-designer`**.
   backup-bound zero-write dry-run plus journaled copy/reconciliation are implemented with local
   crash/retry tests; explicit compatibility routing defaults to legacy and supports a
   backup-bound non-destructive rollback drill that passes locally
-  ([rollback evidence](../acceptance/mp1-document-designer-rollback-drill-2026-09-25.md)). Real backup restore, hosted adoption, rendered-output
-  comparison and live rollback certification remain open
-  ([evidence](../acceptance/mp1-document-designer-adoption-preflight-2026-09-15.md)).
+  ([rollback evidence](../acceptance/mp1-document-designer-rollback-drill-2026-09-25.md)). A real PostgreSQL 16
+  backup/isolated-restore/adoption/rollback rehearsal passed on 2026-09-26; the required rehearsal
+  now additionally verifies scoped-asset conversion and generation from the adopted row, but that
+  enhanced revision still needs its first PostgreSQL/CI execution. Hosted adoption and live rollback
+  remain open ([rehearsal evidence](../acceptance/lean-core/wordpress-style-existing-school-document-designer-rehearsal-2026-09-26.md),
+  [preflight evidence](../acceptance/mp1-document-designer-adoption-preflight-2026-09-15.md)).
 - [~] **MP1-005 UI** — list/detail remain declarative; a separate permission-gated edit page now
   submits validated JSON-object designs through the plugin route. Actual descriptor/schema tests
-  pass; three desktop browser assertions passed but Playwright teardown hung, so clean browser
-  certification is open. The detail page now submits bounded generation input and consumes the
+  pass. The detail page now submits bounded generation input and consumes the
   mutation result through the host print/CSV/PDF renderer. Discoverable editor navigation, rich
   version 0.1.3 now produces a bounded positioned document preview and live visual editor through
   safe host-owned components; table rows link directly to the editor. Bounded pointer drag/resize
-  behavior passes three focused desktop browser scenarios
-  with a clean zero exit
+  behavior and host-rendered shape creation pass all 12 phone/tablet/desktop browser scenarios
+  with a clean zero exit; a machine-readable reporter makes the result independent of residual
+  Windows browser handles
   ([evidence](../acceptance/mp1-document-designer-drag-resize-2026-09-25.md)). Hosted pixel/output parity certification
   remain open ([editor evidence](../acceptance/mp1-document-designer-json-editor-2026-09-16.md),
   [render-model evidence](../acceptance/mp1-document-designer-render-model-2026-09-23.md)).
@@ -441,13 +447,40 @@ Recommended first plugin: **`wattanam.document-designer`**.
   authorization, browser staff-card generation and pixel/output parity tests remain open.
 - [~] **MP1-007 Storage** — version 0.1.1 adds host-quota-enforced scoped asset upload/list/read/delete
   routes with generated IDs, canonical base64 and a bounded MIME allowlist. Version 0.1.2 connects
-  safe image types to the host upload/preview/download/delete UI; legacy asset discovery, adoption,
-  reconciliation and restored-backup certification remain open.
-- [ ] **MP1-008 Fresh certification** — install from marketplace on clean core.
-- [ ] **MP1-009 Legacy certification** — adopt existing data and compare rendered output.
+  safe image types to the host upload/preview/download/delete UI. The legacy preflight now
+  inventories embedded PNG/JPEG/WebP assets by content hash, deduplicates references, and blocks
+  non-portable, malformed, unsupported, or over-quota payloads before writes; portable bytes are
+  covered by exact design reconciliation. A separate backup/journal-bound, idempotent conversion
+  copies them into plugin-scoped storage under deterministic IDs while retaining legacy sources
+  and enforcing optimistic row concurrency. The required restored-backup job now fails unless the
+  converted asset appears with unchanged geometry/style in a generated plugin render model; its
+  first enhanced PostgreSQL/CI run and hosted certification remain open.
+- [~] **MP1 legacy output parity** — Document Designer 0.1.7 projects bounded legacy text,
+  converted images, QR placeholders and solid rectangle/circle/line shapes into the safe schema-v2
+  render model rather than silently returning an empty document. The host editor and print preview
+  render shapes and record-bound person photos without plugin HTML/script. Photo values are limited
+  to bounded canonical embedded raster data or same-origin paths; remote URLs and unsafe schemes
+  fail server-side. Validated linear/radial gradients with 2..8 ordered color stops and solid,
+  dashed or dotted borders render through host CSS; malformed tokens and unconverted images fail
+  closed. Page frames, layer order, allowlisted typography, image opacity/radius and QR/photo
+  borders now pass a deterministic local preservation contract and the production host build/browser
+  suite ([evidence](../acceptance/mp1-document-designer-visual-parity-contract-2026-09-28.md)). Hosted
+  restored-school pixel comparison remains required.
+- [~] **MP1-008 Fresh certification** — the actual Document Designer 0.1.7 source now packs into a
+  signed `.wtp`, passes the production verifier, and traverses the clean-core marketplace download,
+  consent, release-key persistence, install and activation pipeline locally
+  ([evidence](../acceptance/mp1-document-designer-clean-core-marketplace-install-2026-09-28.md)).
+  A newly provisioned hosted school install/restart/UI proof remains required.
+- [~] **MP1-009 Legacy certification** — the 2026-09-26 real PostgreSQL restored-backup rehearsal
+  proved exact adoption and non-destructive rollback. The required job now also generates the
+  adopted template and compares page, asset, geometry and style semantics
+  ([evidence](../acceptance/lean-core/wordpress-style-existing-school-document-designer-rehearsal-2026-09-26.md));
+  its first enhanced green run and hosted screenshot/pixel comparison remain open.
 - [~] **MP1-010 Lifecycle/recovery** — local reactivation preserves template data and compatibility
-  routing has an explicit legacy rollback; hosted disable/update/remove/reinstall and clean
-  backup/restore remain open.
+  routing has an explicit legacy rollback. The actual signed 0.1.6 archive now passes production
+  install/activate/deactivate/remove/reinstall/reactivate with plugin-owned template data preserved
+  ([evidence](../acceptance/mp1-document-designer-clean-core-marketplace-install-2026-09-28.md));
+  hosted restart/update/rollback and clean backup/restore remain open.
 - [ ] **MP1-011 Pilot** — controlled school rollout with rollback evidence.
 - [ ] **MP1-012 Cleanup** — remove legacy ownership only after rollback window approval.
 
@@ -567,10 +600,12 @@ Do not start this gate until LC-3, LC-4, LC-5 and MP-2 are complete.
   course-session attendance to Learning. An additive database constraint rejects future boundary
   violations without deleting historical rows
   ([evidence](../acceptance/mp3-attendance-ownership-boundary-2026-09-25.md)).
-- [~] **MP3-003 Data schema** — Attendance Manager 0.1.6 now declares records, sessions,
+- [x] **MP3-003 Data schema** — Attendance Manager 0.1.7 declares records, sessions,
   corrections, idempotent scans, holidays, aliases, alerts and historical snapshot fields through
-  immutable migrations; manifest/checksum/source tests pass, but a real PostgreSQL migration drill
-  is still required ([local evidence](../acceptance/mp3-attendance-data-foundation-2026-09-25.md)).
+  immutable migrations. Manifest/checksum/source tests, guarded PostgreSQL runtime certification,
+  and a complete six-dataset restored-backup adoption/rollback rehearsal pass
+  ([local evidence](../acceptance/mp3-attendance-data-foundation-2026-09-25.md),
+  [restored-school evidence](../acceptance/lean-core/wordpress-style-existing-school-attendance-manager-rehearsal-2026-09-28.md)).
 - [x] **MP3-004 Historical snapshots** — every accepted write snapshots student name/number, class
   name and Study Year label; conflict updates retain the original display state
   ([evidence](../acceptance/mp3-attendance-academic-snapshot-contract-2026-09-25.md)).
@@ -622,21 +657,43 @@ business implementation or compiled attendance page remains in lean core.
 
 Apply the same per-plugin gate in the migration plan.
 
+All 13 currently discovered official plugins now share a data-driven signed-package lifecycle gate:
+the real sources are packed and verified, dependencies are validated, then every package is
+installed/activated in dependency order, deactivated/removed in reverse order, and
+rolled to separately signed preceding patch versions, updated forward, then removed and
+reinstalled/reactivated with durable-data sentinels preserved
+([evidence](../acceptance/lean-core/wordpress-style-official-plugin-catalog-lifecycle-2026-09-28.md)).
+They also pass a fail-closed operational manifest gate for runtime health, classified data,
+database/file backup participation, required restore verification, preserved uninstall data,
+central Marketplace pricing, and support/privacy metadata
+([evidence](../acceptance/lean-core/wordpress-style-official-plugin-operational-contract-2026-09-28.md)).
+Portable restore execution and hosted operational review remain independent requirements.
+Recovery-set v2 now consumes those declarations, binds exact manifest digests, preserves required
+empty file namespaces, verifies contracts before touching the database/live directories, and
+surfaces historical-manifest exceptions without breaking existing-school backups
+([evidence](../acceptance/lean-core/wordpress-style-plugin-recovery-contract-v2-2026-09-28.md)).
+The reusable portable-backup gate remains open until its strict zero-exception PostgreSQL,
+self-hosted and Railway restore executions pass.
+This closes the local package/registry portion only; database, hosted, device, review and pilot
+requirements below remain independent.
+
 - [~] **MP4 Timetable** — scheduling, classrooms, subjects, teachers, reports and print. Local
-  extraction and adoption tooling are implemented; real-PostgreSQL, hosted parity and lifecycle
-  certification remain open.
+  extraction, adoption tooling and signed package/registry lifecycle are implemented;
+  real-PostgreSQL, hosted parity and complete lifecycle certification remain open.
 - [~] **MP5 Examination** — exams, questions, attempts, scoring, gradebook and reports. Local rich
-  workflows and adoption tooling are implemented; real-PostgreSQL, hosted parity and lifecycle
-  certification remain open.
+  workflows, adoption tooling and signed package/registry lifecycle are implemented;
+  real-PostgreSQL, hosted parity and complete lifecycle certification remain open.
 - [~] **MP6 Learning** — courses, lessons, assignments, quizzes, rich interactive questions,
   engagement and course attendance are implemented locally in 0.1.2; adoption tooling, rich UI,
-  real-PostgreSQL and lifecycle certification remain open.
+  and signed package/registry lifecycle are present; real-PostgreSQL and complete lifecycle
+  certification remain open.
 - [~] **MP7 Transportation and Communication** — Transportation 0.1.1 has a local five-table,
   permission-gated CRUD/tracking foundation, dated-roster parent model and guarded adoption tooling.
   Communication 0.1.1 has isolated Message/Post/outbox storage, dated-roster safeguarding,
   retryable delivery, host-rendered authoring and guarded adoption/rollback tooling while
   Announcements remains standalone. Both require restored-backup/hosted certification; Communication
-  additionally requires rich composition, outbox delivery and privacy review.
+  additionally requires rich composition, outbox delivery and privacy review. Both pass the
+  catalog-wide signed package/registry lifecycle gate.
 - [~] **MP8 Finance and Human Resources** — Finance 0.1.0 has an isolated minor-unit fee/receipt
   foundation with transactional immutable receipts plus a privacy-safe, exact-only read preflight
   for its three legacy datasets passing 7 tests; it blocks rather than rounds unrepresentable money
@@ -649,7 +706,7 @@ Apply the same per-plugin gate in the migration plan.
   ([evidence](../acceptance/mp8-human-resources-adoption-preflight-2026-09-25.md)); its backup-bound
   resumable adoption, exact six-dataset reconciliation and metadata-only rollback suite passes 4
   more tests. Restored-backup execution for both plugins, row scope, hosted proof and specialist
-  approvals remain open.
+  approvals remain open; both pass the catalog-wide signed package/registry lifecycle gate.
 - [~] **MP9 Parent Portal and Reporting** — Parent Portal 0.1.1 has an isolated parent-link workflow,
   dated-roster child scope, optional read-model composition and audited idempotent parent/guardian
   core commands passing 17 focused backend tests plus 8 SDK tests
@@ -662,7 +719,8 @@ Apply the same per-plugin gate in the migration plan.
   Resources v1 projection; the focused HR/Reporting source/behavior suites pass 14 tests
   ([worksheet](./reporting-plugin-extraction.md),
   [evidence](../acceptance/mp9-reporting-foundation-2026-09-25.md)). Hosted PostgreSQL, lifecycle,
-  restored-backup parity, privacy/accessibility review and legacy cutover remain open for MP9.
+  restored-backup parity, privacy/accessibility review and legacy cutover remain open for MP9;
+  both packages pass the catalog-wide signed registry lifecycle gate.
 
 For every plugin:
 
@@ -680,11 +738,34 @@ For every plugin:
 
 - [ ] **LCF-001 New install default** — set new installations to `core` only after every preceding
   core gate passes.
-- [ ] **LCF-002 Starter bundles** — optional bundles are normal marketplace transactions.
-- [ ] **LCF-003 No local upload** — direct customer package inspection/install endpoints remain absent.
-- [ ] **LCF-004 No optional schema** — clean core database contains no business-plugin tables.
-- [ ] **LCF-005 No optional UI** — core build contains no compiled business pages or static links.
-- [ ] **LCF-006 No optional runtime** — core starts no business jobs, gateways or providers.
+- [~] **LCF-002 Starter bundles** — governed Marketplace bundle metadata now resolves independent
+  compatible plugin releases; paid members use one normal multi-line order, and installation uses
+  the existing per-plugin signature, consent, entitlement and lifecycle path with safe retries.
+  Platform Admin now supplies permission-scoped, reasoned, transactionally audited bundle
+  management. Required CI now includes both an isolated Marketplace lifecycle drill and a
+  two-database school drill covering real signed artifacts, paid settlement, interruption-safe
+  retry, removal and reinstall. Their first successful execution plus hosted browser
+  commerce/install certification remain
+  ([evidence](../acceptance/lean-core/wordpress-style-starter-bundles-2026-09-28.md)).
+- [x] **LCF-003 No local upload** — direct customer package inspection/install endpoints are absent;
+  customer acquisition is restricted to the role-guarded marketplace catalog/install route, while
+  signed package ingestion remains confined to authenticated central publisher/operator routes.
+  This boundary is enforced in PR CI
+  ([evidence](../acceptance/lean-core/wordpress-style-marketplace-only-installation-2026-09-25.md)).
+- [~] **LCF-004 No optional schema** — a fail-closed verifier now derives the complete canonical
+  table allowlist from core migrations and rejects any extra or missing table after the fresh-core
+  CI installation; local verifier and workflow-contract tests pass 7/7. Closure awaits the first
+  updated PostgreSQL smoke run
+  ([evidence](../acceptance/lean-core/wordpress-style-no-optional-schema-2026-09-28.md)).
+- [x] **LCF-005 No optional UI** — freshly rebuilt physical backend and frontend core artifacts pass
+  the strict compiled-artifact gate with zero optional module/page violations; the frontend emits
+  only the 27 approved core/marketplace/generic-host routes, and the build/gate is required in PR
+  CI. Docker and hosted runtime certification remain separately tracked by LCF-008/009
+  ([evidence](../acceptance/lean-core/wordpress-style-physical-core-artifacts-2026-09-25.md)).
+- [x] **LCF-006 No optional runtime** — the artifact verifier now derives every decorated optional
+  provider/controller/job/processor/gateway from the ownership registry and rejects its symbol in
+  the physical core bundle; PR CI then boots that exact bundle in the isolated deployment smoke
+  ([evidence](../acceptance/lean-core/wordpress-style-no-optional-runtime-2026-09-28.md)).
 - [~] **LCF-007 Upgrade path** — the [existing-school upgrade runbook](../operations/existing-school-lean-core-upgrade-runbook.md) provides the migration/exception process, command matrix, staged ownership cutover and non-destructive rollback rules; every supported existing school still needs its own restored-backup rehearsal and accepted evidence before this item can close.
   exception.
 - [ ] **LCF-008 Hosted proof** — clean Railway school installation, marketplace link, plugin install,

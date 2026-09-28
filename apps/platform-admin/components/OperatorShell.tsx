@@ -18,6 +18,7 @@ const NAV: Array<{ href: string; label: string; permission: string }> = [
   { href: '/installations', label: 'School installations', permission: 'schools.read' },
   { href: '/publishers', label: 'Publishers', permission: 'publishers.read' },
   { href: '/plugins', label: 'Plugins', permission: 'plugins.read' },
+  { href: '/starter-bundles', label: 'Starter bundles', permission: 'starter_bundles.read' },
   { href: '/plugin-requests', label: 'School plugin requests', permission: 'plugin_requests.read' },
   { href: '/submissions', label: 'Submissions', permission: 'plugins.review' },
   { href: '/orders', label: 'Orders', permission: 'orders.read' },

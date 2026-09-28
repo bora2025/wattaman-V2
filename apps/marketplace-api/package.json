@@ -10,6 +10,7 @@
     "test": "jest --runInBand",
     "drill:artifact-s3": "tsx scripts/artifact-s3-live-drill.ts",
     "certify:commerce-offline": "tsx scripts/commerce-offline-certification.ts",
+    "certify:starter-bundles:postgres": "tsx scripts/starter-bundle-postgres-certification.ts",
     "db:validate": "prisma validate",
     "db:generate": "prisma generate",
     "db:migrate:deploy": "prisma migrate deploy"

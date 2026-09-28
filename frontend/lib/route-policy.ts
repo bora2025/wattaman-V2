@@ -1,36 +1,8 @@
 import type { FrontendDistribution } from './navigation-registry';
+import coreRoutes from '../core-routes.json' with { type: 'json' };
 
-const CORE_EXACT_ROUTES = new Set([
-  '/',
-  '/login',
-  '/reset-password',
-  '/setup',
-  '/suspended',
-  '/admin',
-  '/admin/search',
-  '/admin/users',
-  '/admin/plugins',
-  '/admin/settings',
-  '/admin/backup',
-  '/admin/system',
-  '/admin/platform-billing',
-  '/admin/audit',
-  '/admin/profile',
-  '/admin/notifications',
-  '/admin/licensing',
-  '/admin/appearance',
-  '/admin/appearance/about',
-  '/teacher',
-  '/student',
-  '/settings/notifications',
-]);
-
-const CORE_ROUTE_PREFIXES = [
-  '/api/',
-  '/marketplace',
-  '/plugins/',
-  '/_next/',
-];
+const CORE_EXACT_ROUTES = new Set(coreRoutes.exact);
+const CORE_ROUTE_PREFIXES = coreRoutes.prefixes;
 
 export function isRouteAvailable(pathname: string, distribution: FrontendDistribution): boolean {
   if (distribution === 'legacy-full') return true;

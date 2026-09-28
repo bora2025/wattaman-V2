@@ -48,12 +48,16 @@ function confirmation(env) {
   return { slug, sourceSha256: env.ACADEMIC_ENROLLMENT_SOURCE_SHA256 };
 }
 
+function journalPath(directory, slug) {
+  return path.join(path.resolve(directory), `academic-${slug}-enrollments.journal.json`);
+}
+
 async function adopt({ adapter, directory, backupName, approved, chunkSize = 250 }) {
   const backup = verifyRecoveryBackup(directory, backupName, approved.slug);
   const before = await inspect(adapter);
   if (!before.ready || before.source.sha256 !== approved.sourceSha256) throw new Error('enrollment preflight is blocked or fingerprint changed');
   const identity = `academic-enrollment:${approved.slug}:${before.source.sha256}:${backup.sha256}`;
-  const journalFile = path.join(path.resolve(directory), `academic-${approved.slug}-enrollments.journal.json`);
+  const journalFile = journalPath(directory, approved.slug);
   const maintenanceFile = path.join(path.resolve(directory), 'plugin-adoption.maintenance.lock');
   if (!fs.existsSync(journalFile)) atomicJson(journalFile, { format: 'wattanam-plugin-adoption-v1', identity, stage: 'prepared', cursor: null, processedRows: 0, chunks: [], backupSha256: backup.sha256 });
   else if (loadJournal(journalFile, identity).backupSha256 !== backup.sha256) throw new Error('enrollment adoption journal backup mismatch');
@@ -98,4 +102,4 @@ async function main() {
 }
 
 if (require.main === module) main().catch((error) => { process.stderr.write(`Academic enrollment adoption failed: ${error.message}\n`); process.exitCode = 1; });
-module.exports = { TARGET_TABLE, adopt, confirmation, fingerprint, inspect, interval };
+module.exports = { TARGET_TABLE, adopt, confirmation, fingerprint, inspect, interval, journalPath };

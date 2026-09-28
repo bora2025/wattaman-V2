@@ -25,6 +25,10 @@ test('portable recovery set binds database registry/grants, plugin code and muta
   assert.match(create, /pluginFiles/);
   assert.match(create, /pluginData/);
   assert.match(restore, /database restore failed; plugin files were not touched/);
+  assert.match(restore, /Staging and verifying plugin archives before database restore/);
+  assert.match(restore, /validateArchiveEntries/);
+  assert.match(restore, /replaceDirectory/);
+  assert.match(restore, /pre-restore-/);
   assert.match(restore, /verifyDirectoryChecksums\(pluginTarget/);
   assert.match(restore, /verifyDirectoryChecksums\(pluginDataTarget/);
 });

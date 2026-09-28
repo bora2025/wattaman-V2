@@ -8,7 +8,7 @@ describe('Parent Portal official plugin source', () => {
   it('declares optional domain adapters and only namespaced workflow storage', () => {
     const manifest = parsePluginManifest(JSON.parse(fs.readFileSync(path.join(root, 'plugin.json'), 'utf8')));
     expect(manifest.id).toBe('wattanam.parent-portal');
-    expect(manifest.version).toBe('0.1.1');
+    expect(manifest.version).toBe('0.1.3');
     expect(manifest.dependencies).toEqual({});
     expect(Object.keys(manifest.optionalDependencies).sort()).toEqual([
       'wattanam.academic-management', 'wattanam.attendance-manager', 'wattanam.communication',

@@ -11,9 +11,8 @@ const BACKOFF_MINUTES = [1, 5, 15, 60];
 
 /**
  * Caches signed marketplace entitlements locally so plugin licensing survives a
- * marketplace outage. This service only ever reads and refreshes the cache — it is
- * deliberately never consulted to gate plugin install/activation. A marketplace
- * outage or a rejected refresh must never disable functionality a school already has.
+ * marketplace outage. Runtime policy consumes only this independently verified,
+ * replay-protected last-known-good state. A failed refresh never overwrites it.
  */
 @Injectable()
 export class EntitlementCacheService {
@@ -63,6 +62,8 @@ export class EntitlementCacheService {
     let payload;
     try {
       payload = verifyFetchedEntitlement(body.signedToken, entitlementConfig.publicKeys, { installationId: installation.installationId, productId: pluginId, now });
+      if (body.status !== undefined && body.status !== payload.status) throw new Error('Entitlement response status does not match its signed token');
+      this.assertNotReplay(cache, payload);
     } catch (error) {
       await this.audit.log({
         action: 'entitlement_verification_failed', resource: 'PLUGIN_ENTITLEMENT', resourceId: pluginId, success: false,
@@ -72,7 +73,7 @@ export class EntitlementCacheService {
     }
 
     const fields = {
-      status: String(body.status), tokenId: payload.tokenId, signedTokenJson: JSON.stringify(body.signedToken),
+      status: payload.status, tokenId: payload.tokenId, generation: payload.generation, signedTokenJson: JSON.stringify(body.signedToken),
       expiresAt: new Date(payload.expiresAt), updatesThrough: new Date(payload.updatesThrough), offlineRecheckAfter: new Date(payload.offlineRecheckAfter),
       lastVerifiedAt: now, lastRefreshAttemptAt: now, lastRefreshSucceededAt: now, consecutiveFailures: 0, lastError: null,
     };
@@ -101,12 +102,14 @@ export class EntitlementCacheService {
     let payload;
     try {
       payload = verifyFetchedEntitlement(signedToken, entitlementConfig.publicKeys, { installationId: installation.installationId, productId: pluginId, now });
+      const existing = await this.prisma.pluginEntitlementCache.findUnique({ where: { pluginId } });
+      this.assertNotReplay(existing, payload);
     } catch (error) {
       await this.audit.log({ action: 'entitlement_offline_import_failed', resource: 'PLUGIN_ENTITLEMENT', resourceId: pluginId, success: false, metadata: { reason: error instanceof Error ? error.message : String(error) } });
       throw new BadRequestException('Offline entitlement token is invalid');
     }
     const fields = {
-      status: 'ACTIVE', tokenId: payload.tokenId, signedTokenJson: JSON.stringify(signedToken), expiresAt: new Date(payload.expiresAt),
+      status: payload.status, tokenId: payload.tokenId, generation: payload.generation, signedTokenJson: JSON.stringify(signedToken), expiresAt: new Date(payload.expiresAt),
       updatesThrough: new Date(payload.updatesThrough), offlineRecheckAfter: new Date(payload.offlineRecheckAfter),
       lastVerifiedAt: now, lastRefreshAttemptAt: null, lastRefreshSucceededAt: null, consecutiveFailures: 0, lastError: null,
     };
@@ -120,7 +123,7 @@ export class EntitlementCacheService {
       return this.recordFailure(pluginId, 'Marketplace unexpectedly reports no entitlement for a previously known plugin', now);
     }
     const fields = {
-      status: 'NONE', tokenId: null, signedTokenJson: null, expiresAt: null, updatesThrough: null, offlineRecheckAfter: null,
+      status: 'NONE', tokenId: null, generation: 0, signedTokenJson: null, expiresAt: null, updatesThrough: null, offlineRecheckAfter: null,
       lastVerifiedAt: now, lastRefreshAttemptAt: now, lastRefreshSucceededAt: now, consecutiveFailures: 0, lastError: null,
     };
     return this.prisma.pluginEntitlementCache.upsert({ where: { pluginId }, create: { pluginId, ...fields }, update: fields });
@@ -140,5 +143,12 @@ export class EntitlementCacheService {
     if (!cache.lastRefreshAttemptAt) return true;
     const minutes = BACKOFF_MINUTES[Math.min(cache.consecutiveFailures, BACKOFF_MINUTES.length - 1)];
     return now.getTime() - cache.lastRefreshAttemptAt.getTime() >= minutes * 60_000;
+  }
+
+  private assertNotReplay(cache: { generation?: number; tokenId?: string | null } | null, payload: { generation: number; tokenId: string }) {
+    const current = cache?.generation ?? 0;
+    if (payload.generation < current || (payload.generation === current && cache?.tokenId && payload.tokenId !== cache.tokenId)) {
+      throw new Error(`Entitlement generation ${payload.generation} is older than or conflicts with cached generation ${current}`);
+    }
   }
 }

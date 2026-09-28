@@ -18,7 +18,7 @@ const EXPECTED_NAV: Record<string, string[]> = {
   'reviewer@e2e.test': ['Dashboard', 'Plugins', 'Submissions'],
   'auditor@e2e.test': [
     'Dashboard', 'Customers', 'Customer schools', 'School installations', 'Publishers', 'Plugins',
-    'School plugin requests', 'Orders', 'Entitlements', 'Advisories', 'Operations', 'Exports', 'Audit',
+    'Starter bundles', 'School plugin requests', 'Orders', 'Entitlements', 'Advisories', 'Operations', 'Exports', 'Audit',
   ],
   'norole@e2e.test': [],
 };
