@@ -7,6 +7,8 @@ const file = process.argv[2];
 if (!file) throw new Error('Usage: node tools/verify-school-release.js <school-release.json>');
 const value = JSON.parse(fs.readFileSync(file, 'utf8'));
 if (value.schemaVersion !== 1 || value.invariants?.tenancy !== 'one-school-per-project') throw new Error('Unsupported school release blueprint');
+if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(value.release?.repository || '')) throw new Error('Release repository identity is missing');
+if (value.release?.workflowRef !== `${value.release.repository}/.github/workflows/core-release.yml@refs/heads/main`) throw new Error('Release workflow identity is invalid');
 if (JSON.stringify(value.invariants.publicServices) !== JSON.stringify(['gateway'])) throw new Error('Gateway must be the only public service');
 for (const name of ['api', 'web', 'gateway']) {
   if (!/^.+@sha256:[a-f0-9]{64}$/.test(value.services?.[name]?.image || '')) throw new Error(`${name} is not digest-pinned`);

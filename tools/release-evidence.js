@@ -16,7 +16,13 @@ for (const value of Object.values(images)) if (!/^.+@sha256:[a-f0-9]{64}$/.test(
 const sha256 = (file) => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const evidence = {
   schemaVersion: 1, version, channel: argument('channel'),
-  source: { commit: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), repository: process.env.GITHUB_REPOSITORY || null },
+  source: {
+    commit: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
+    repository: process.env.GITHUB_REPOSITORY || null,
+    workflowRef: process.env.GITHUB_WORKFLOW_REF || null,
+    runId: process.env.GITHUB_RUN_ID || null,
+    runAttempt: process.env.GITHUB_RUN_ATTEMPT || null,
+  },
   images,
   lockfiles: {
     backend: sha256('backend/package-lock.json'), frontend: sha256('frontend/package-lock.json'),

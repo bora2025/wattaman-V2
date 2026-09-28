@@ -421,6 +421,11 @@ These plugins consume only permission-filtered, versioned read models from insta
   `legacy-full` as the unapproved default. It therefore supports an isolated certification school
   without silently converting existing production schools
   ([provisioning evidence](../acceptance/lean-core/wordpress-style-railway-core-provisioning-guard-2026-09-28.md)).
+  Release evidence now binds the repository and exact `core-release.yml@refs/heads/main` identity;
+  the release workflow and Railway provisioner independently verify all three keyless GHCR digest
+  signatures with `cosign`, and provisioning fails before mutation for an absent signature, wrong
+  workflow identity, non-GHCR artifact or missing verifier
+  ([signature evidence](../acceptance/lean-core/wordpress-style-core-image-signature-verification-2026-09-28.md)).
 - Link the marketplace and install one free and one paid plugin.
 - Prove update, disable, uninstall, reinstall, backup and restore.
 - Change new-school provisioning from `legacy-full` to `core` only after approval.

@@ -27,6 +27,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
+      - name: Normalize immutable image repository
+        shell: bash
+        run: echo "IMAGE_PREFIX=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with: { node-version: '20', cache: npm, cache-dependency-path: backend/package-lock.json }
       - name: Verify backend
@@ -52,7 +55,7 @@ jobs:
           context: backend
           file: backend/Dockerfile.core
           push: true
-          tags: ghcr.io/${{ github.repository }}/api:${{ inputs.version }}-beta
+          tags: ${{ env.IMAGE_PREFIX }}/api:${{ inputs.version }}-beta
           sbom: true
           provenance: mode=max
       - name: Build and push web with attestations
@@ -62,7 +65,7 @@ jobs:
           context: frontend
           file: frontend/Dockerfile.core
           push: true
-          tags: ghcr.io/${{ github.repository }}/web:${{ inputs.version }}-beta
+          tags: ${{ env.IMAGE_PREFIX }}/web:${{ inputs.version }}-beta
           sbom: true
           provenance: mode=max
       - name: Build and push gateway with attestations
@@ -71,7 +74,7 @@ jobs:
         with:
           context: infrastructure/gateway
           push: true
-          tags: ghcr.io/${{ github.repository }}/gateway:${{ inputs.version }}-beta
+          tags: ${{ env.IMAGE_PREFIX }}/gateway:${{ inputs.version }}-beta
           sbom: true
           provenance: mode=max
       - name: Scan immutable API digest
@@ -79,7 +82,7 @@ jobs:
         continue-on-error: true
         uses: aquasecurity/trivy-action@0.28.0
         with:
-          image-ref: ghcr.io/${{ github.repository }}/api@${{ steps.api.outputs.digest }}
+          image-ref: ${{ env.IMAGE_PREFIX }}/api@${{ steps.api.outputs.digest }}
           format: json
           output: api-trivy.json
           scanners: vuln
@@ -92,7 +95,7 @@ jobs:
         continue-on-error: true
         uses: aquasecurity/trivy-action@0.28.0
         with:
-          image-ref: ghcr.io/${{ github.repository }}/web@${{ steps.web.outputs.digest }}
+          image-ref: ${{ env.IMAGE_PREFIX }}/web@${{ steps.web.outputs.digest }}
           format: json
           output: web-trivy.json
           scanners: vuln
@@ -105,7 +108,7 @@ jobs:
         continue-on-error: true
         uses: aquasecurity/trivy-action@0.28.0
         with:
-          image-ref: ghcr.io/${{ github.repository }}/gateway@${{ steps.gateway.outputs.digest }}
+          image-ref: ${{ env.IMAGE_PREFIX }}/gateway@${{ steps.gateway.outputs.digest }}
           format: json
           output: gateway-trivy.json
           scanners: vuln
@@ -135,9 +138,9 @@ jobs:
           test "$GATEWAY_SCAN" = success
       - name: Keyless-sign immutable image digests
         env:
-          API: ghcr.io/${{ github.repository }}/api@${{ steps.api.outputs.digest }}
-          WEB: ghcr.io/${{ github.repository }}/web@${{ steps.web.outputs.digest }}
-          GATEWAY: ghcr.io/${{ github.repository }}/gateway@${{ steps.gateway.outputs.digest }}
+          API: ${{ env.IMAGE_PREFIX }}/api@${{ steps.api.outputs.digest }}
+          WEB: ${{ env.IMAGE_PREFIX }}/web@${{ steps.web.outputs.digest }}
+          GATEWAY: ${{ env.IMAGE_PREFIX }}/gateway@${{ steps.gateway.outputs.digest }}
         run: |
           cosign sign --yes "$API"
           cosign sign --yes "$WEB"
@@ -145,14 +148,15 @@ jobs:
       - name: Write release evidence
         env:
           VERSION: ${{ inputs.version }}
-          API: ghcr.io/${{ github.repository }}/api@${{ steps.api.outputs.digest }}
-          WEB: ghcr.io/${{ github.repository }}/web@${{ steps.web.outputs.digest }}
-          GATEWAY: ghcr.io/${{ github.repository }}/gateway@${{ steps.gateway.outputs.digest }}
+          API: ${{ env.IMAGE_PREFIX }}/api@${{ steps.api.outputs.digest }}
+          WEB: ${{ env.IMAGE_PREFIX }}/web@${{ steps.web.outputs.digest }}
+          GATEWAY: ${{ env.IMAGE_PREFIX }}/gateway@${{ steps.gateway.outputs.digest }}
         run: node tools/release-evidence.js --version "$VERSION" --channel beta --api "$API" --web "$WEB" --gateway "$GATEWAY" --output release-evidence.json
       - name: Render and verify digest-pinned school deployment blueprint
         run: |
           node tools/render-school-release.js --evidence release-evidence.json --output school-release.json
           node tools/verify-school-release.js school-release.json > school-release-verification.json
+          node tools/verify-core-image-signatures.js --blueprint school-release.json
       - uses: actions/attest-build-provenance@v2
         with: { subject-path: release-evidence.json }
       - uses: actions/attest-build-provenance@v2
@@ -174,7 +178,7 @@ jobs:
           MARKETPLACE_ADMIN_TOKEN: ${{ secrets.MARKETPLACE_ADMIN_TOKEN }}
           VERSION: ${{ inputs.version }}
           NOTES: ${{ inputs.release_notes }}
-          API: ghcr.io/${{ github.repository }}/api@${{ steps.api.outputs.digest }}
-          WEB: ghcr.io/${{ github.repository }}/web@${{ steps.web.outputs.digest }}
-          GATEWAY: ghcr.io/${{ github.repository }}/gateway@${{ steps.gateway.outputs.digest }}
+          API: ${{ env.IMAGE_PREFIX }}/api@${{ steps.api.outputs.digest }}
+          WEB: ${{ env.IMAGE_PREFIX }}/web@${{ steps.web.outputs.digest }}
+          GATEWAY: ${{ env.IMAGE_PREFIX }}/gateway@${{ steps.gateway.outputs.digest }}
         run: node tools/publish-core-release.js

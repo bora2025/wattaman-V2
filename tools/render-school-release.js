@@ -9,13 +9,23 @@ function argument(name) {
 }
 
 const evidence = JSON.parse(fs.readFileSync(argument('evidence'), 'utf8'));
+if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(evidence.source?.repository || '')) throw new Error('release evidence is missing its GitHub repository identity');
+if (evidence.source?.workflowRef !== `${evidence.source.repository}/.github/workflows/core-release.yml@refs/heads/main`) throw new Error('release evidence is not bound to the main core-release workflow');
 for (const name of ['api', 'web', 'gateway']) {
   if (!/^.+@sha256:[a-f0-9]{64}$/.test(evidence.images?.[name] || '')) throw new Error(`${name} image is not digest-pinned`);
 }
 
 const blueprint = {
   schemaVersion: 1,
-  release: { version: evidence.version, commit: evidence.source.commit, evidenceGeneratedAt: evidence.generatedAt },
+  release: {
+    version: evidence.version,
+    commit: evidence.source.commit,
+    evidenceGeneratedAt: evidence.generatedAt,
+    repository: evidence.source.repository,
+    workflowRef: evidence.source.workflowRef,
+    runId: evidence.source.runId,
+    runAttempt: evidence.source.runAttempt,
+  },
   invariants: {
     tenancy: 'one-school-per-project',
     publicServices: ['gateway'],

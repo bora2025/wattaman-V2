@@ -6,6 +6,7 @@ const test = require('node:test');
 const root = path.resolve(__dirname, '..');
 const release = fs.readFileSync(path.join(root, '.github', 'workflows', 'core-release.yml'), 'utf8');
 const promotion = fs.readFileSync(path.join(root, '.github', 'workflows', 'promote-core-release.yml'), 'utf8');
+const pullRequest = fs.readFileSync(path.join(root, '.github', 'workflows', 'pr-validation.yml'), 'utf8');
 
 test('core release builds, scans and publishes only physical core images', () => {
   assert.match(release, /npm run build:core/);
@@ -15,9 +16,9 @@ test('core release builds, scans and publishes only physical core images', () =>
   assert.doesNotMatch(release, /npm run build &&/);
   assert.match(release, /npm audit --omit=dev --audit-level=moderate/);
   assert.equal((release.match(/uses: aquasecurity\/trivy-action@0\.28\.0/g) || []).length, 3);
-  assert.match(release, /image-ref: ghcr\.io\/\$\{\{ github\.repository \}\}\/api@\$\{\{ steps\.api\.outputs\.digest \}\}/);
-  assert.match(release, /image-ref: ghcr\.io\/\$\{\{ github\.repository \}\}\/web@\$\{\{ steps\.web\.outputs\.digest \}\}/);
-  assert.match(release, /image-ref: ghcr\.io\/\$\{\{ github\.repository \}\}\/gateway@\$\{\{ steps\.gateway\.outputs\.digest \}\}/);
+  assert.match(release, /IMAGE_PREFIX=ghcr\.io\/\$\{GITHUB_REPOSITORY,,\}/);
+  assert.equal((release.match(/image-ref: \$\{\{ env\.IMAGE_PREFIX \}\}\/(api|web|gateway)@\$\{\{ steps\.(api|web|gateway)\.outputs\.digest \}\}/g) || []).length, 3);
+  assert.doesNotMatch(release, /ghcr\.io\/\$\{\{ github\.repository \}\}/);
   assert.equal((release.match(/severity: HIGH,CRITICAL/g) || []).length, 3);
   assert.equal((release.match(/ignore-unfixed: false/g) || []).length, 3);
   assert.equal((release.match(/exit-code: '1'/g) || []).length, 3);
@@ -33,10 +34,11 @@ test('core release builds, scans and publishes only physical core images', () =>
   const apiScan = release.indexOf('Scan immutable API digest');
   const scanGate = release.indexOf('Enforce immutable digest vulnerability gate');
   const signing = release.indexOf('Keyless-sign immutable image digests');
+  const signatureVerification = release.indexOf('verify-core-image-signatures.js');
   const publish = release.indexOf('Publish signed repository beta metadata');
   assert.ok(gate > 0 && gate < apiPush && gate < webPush, 'clean-core gate must run before image publication');
   assert.ok(apiScan > apiPush && apiScan > webPush, 'digest scans must run after image publication resolves immutable digests');
-  assert.ok(apiScan < scanGate && scanGate < signing && signing < publish, 'all scans must pass before signing and marketplace publication');
+  assert.ok(apiScan < scanGate && scanGate < signing && signing < signatureVerification && signatureVerification < publish, 'all scans and signature verification must pass before marketplace publication');
   for (const report of ['api-trivy.json', 'web-trivy.json', 'gateway-trivy.json']) assert.match(release, new RegExp(report.replace('.', '\\.')));
 });
 
@@ -44,4 +46,13 @@ test('stable promotion is explicitly metadata-only and cannot rebuild different 
   assert.match(promotion, /Promote existing beta metadata and digests/);
   assert.doesNotMatch(promotion, /docker\/build-push-action|docker build|npm run build/);
   assert.match(promotion, /node tools\/promote-core-release\.js/);
+});
+
+test('pull-request validation guards release provenance and provisioning verification', () => {
+  for (const contract of [
+    'tools/release-evidence.test.js',
+    'tools/verify-core-image-signatures.test.js',
+    'tools/provision-railway-school.test.js',
+    'tools/publish-core-release.test.js',
+  ]) assert.match(pullRequest, new RegExp(contract.replaceAll('.', '\\.')));
 });

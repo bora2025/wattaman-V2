@@ -20,7 +20,14 @@ Never mix digests from different release evidence bundles.
 
 ## Preflight and start
 
-1. Verify signatures and provenance for all three Wattanam image digests.
+1. Install `cosign`, download the attested `school-release.json`, and verify both its signatures
+   and its exact environment bindings without printing secrets:
+
+   `node tools/verify-core-image-signatures.js --blueprint school-release.json --env-file <private-file>`
+
+   This fails unless `POSTGRES_IMAGE`, `API_IMAGE`, `WEB_IMAGE`, `GATEWAY_IMAGE` and `APP_VERSION`
+   exactly match one signed blueprint and all three Wattanam image signatures have the approved
+   GitHub Actions identity.
 2. Verify the environment file is readable only by the deployment operator.
 3. Render the configuration with `docker compose --env-file <private-file> -f docker-compose.core.yml config`.
 4. Confirm every rendered image contains `@sha256:`, both application services say `core`, only

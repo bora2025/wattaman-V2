@@ -30,6 +30,10 @@ for (const name of ['api', 'web']) {
   const declared = blueprint.services?.[name]?.variables?.WATTANAM_DISTRIBUTION;
   if (declared && declared !== distribution) throw new Error(`${name} blueprint distribution ${declared} does not match requested ${distribution}`);
 }
+if (execute) {
+  const verification = spawnSync(process.execPath, [path.join(__dirname, 'verify-core-image-signatures.js'), '--blueprint', path.resolve(blueprintPath)], { encoding: 'utf8' });
+  if (verification.status !== 0) throw new Error(`Core image signature verification failed: ${(verification.stderr || verification.stdout).trim()}`);
+}
 
 const projectName = `Wattanam - ${schoolName} - Production`;
 const plan = [

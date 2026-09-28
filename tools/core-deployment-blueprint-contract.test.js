@@ -27,7 +27,7 @@ test('Railway school release renderer and verifier bind both app services to cor
   try {
     const evidenceFile = path.join(directory, 'evidence.json'); const output = path.join(directory, 'school-release.json');
     const digest = `sha256:${'a'.repeat(64)}`;
-    fs.writeFileSync(evidenceFile, JSON.stringify({ version: '0.2.0', source: { commit: 'abc123' }, generatedAt: '2026-09-26T00:00:00.000Z', images: { api: `example/api@${digest}`, web: `example/web@${digest}`, gateway: `example/gateway@${digest}` } }));
+    fs.writeFileSync(evidenceFile, JSON.stringify({ version: '0.2.0', source: { commit: 'abc123', repository: 'bora2025/wattaman-V2', workflowRef: 'bora2025/wattaman-V2/.github/workflows/core-release.yml@refs/heads/main' }, generatedAt: '2026-09-26T00:00:00.000Z', images: { api: `ghcr.io/bora2025/wattaman-V2/api@${digest}`, web: `ghcr.io/bora2025/wattaman-V2/web@${digest}`, gateway: `ghcr.io/bora2025/wattaman-V2/gateway@${digest}` } }));
     const render = spawnSync(process.execPath, [path.join(root, 'tools', 'render-school-release.js'), '--evidence', evidenceFile, '--output', output], { encoding: 'utf8' });
     assert.equal(render.status, 0, render.stderr);
     const value = JSON.parse(fs.readFileSync(output, 'utf8'));
