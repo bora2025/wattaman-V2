@@ -47,6 +47,11 @@ test('core release builds, scans and publishes only physical core images', () =>
   assert.ok(gate > 0 && gate < apiPush && gate < webPush, 'clean-core gate must run before image publication');
   assert.ok(apiScan > apiPush && apiScan > webPush, 'digest scans must run after image publication resolves immutable digests');
   assert.ok(apiScan < scanGate && scanGate < signing && signing < signatureVerification && signatureVerification < publish, 'all scans and signature verification must pass before marketplace publication');
+  assert.equal(
+    (release.match(/uses: actions\/attest-build-provenance@v2\s+if: github\.event\.repository\.private == false/g) || []).length,
+    2,
+    'GitHub repository attestations must be skipped for user-owned private repositories where the API is unavailable',
+  );
   for (const report of ['api-trivy.json', 'web-trivy.json', 'gateway-trivy.json']) assert.match(release, new RegExp(report.replace('.', '\\.')));
 });
 

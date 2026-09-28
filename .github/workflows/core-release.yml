@@ -171,8 +171,10 @@ jobs:
           node tools/verify-school-release.js school-release.json > school-release-verification.json
           node tools/verify-core-image-signatures.js --blueprint school-release.json
       - uses: actions/attest-build-provenance@v2
+        if: github.event.repository.private == false
         with: { subject-path: release-evidence.json }
       - uses: actions/attest-build-provenance@v2
+        if: github.event.repository.private == false
         with: { subject-path: school-release.json }
       - uses: actions/upload-artifact@v4
         with:
