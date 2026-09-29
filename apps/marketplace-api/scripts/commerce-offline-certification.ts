@@ -52,6 +52,7 @@ function purchaseTransaction(options: { licenseDays: number; updatesDays: number
   const line = {
     id: 'line-1', pluginId: PLUGIN_ID, unitPriceMinor: 2500, entitlement: null,
     price: { amountMinor: 2500, licensedMajor: 1, licenseDays: options.licenseDays, updatesDays: options.updatesDays },
+    plugin: { publisherId: 'publisher-1' },
   };
   const tx: any = {
     marketplacePayment: {
@@ -61,13 +62,17 @@ function purchaseTransaction(options: { licenseDays: number; updatesDays: number
     },
     marketplaceOrder: {
       findUnique: async () => ({
-        id: 'order-1', accountId: 'customer-1', installationId: 'registration-row-1', status: state.orderStatus, totalMinor: 2500,
+        id: 'order-1', accountId: 'customer-1', installationId: 'registration-row-1', status: state.orderStatus,
+        totalMinor: 2500, currency: 'USD',
         account: {}, installation: { installationId: SCHOOL_INSTALLATION_ID }, lines: [line],
         payments: [{ id: 'payment-1', status: 'SUCCEEDED', amountMinor: 2500 }], refunds: [],
       }),
       update: async ({ data }: any) => { state.orderStatus = data.status; return {}; },
     },
+    publisherRevenueEntry: { upsert: async ({ create }: any) => ({ id: 'revenue-1', ...create }) },
+    schoolPluginRequest: { findUnique: async () => null },
     installationEntitlement: {
+      findUnique: async () => state.entitlement ? { generation: state.entitlement.generation } : null,
       upsert: async ({ create }: any) => { state.entitlement = create; return { id: 'entitlement-1' }; },
       update: async ({ data }: any) => { state.entitlement = { ...state.entitlement, ...data }; return {}; },
     },
@@ -213,7 +218,9 @@ async function main() {
   refundTx.tx.marketplaceOrder.findUnique = async () => ({
     id: 'order-1', status: 'PAID', refunds: [],
     payments: [{ id: 'payment-1', status: 'SUCCEEDED', amountMinor: 2500 }],
-    lines: [{ id: 'line-1', entitlement: { id: 'entitlement-1', status: 'ACTIVE' } }],
+    lines: [{ id: 'line-1', entitlement: {
+      id: 'entitlement-1', status: 'ACTIVE', signedToken: refundTx.state.entitlement.signedToken,
+    } }],
   });
   const reversal = await commerce.reverseOrder(refundTx.tx, { orderId: 'order-1', reason: 'customer requested cancellation', initiatedBy: 'admin' }, renewalAt);
   check('refunding the order reverses it and marks the entitlement', reversal.status === 'REFUNDED' && reversal.entitlementIds.length === 1);
