@@ -27,8 +27,9 @@ Plan acceptance bar: "Restore meets RPO/RTO and evidence is retained outside pro
 - **Quarterly automation**: `.github/workflows/quarterly-restore-drill.yml` — runs on the 1st of
   January/April/July/October (cron) plus `workflow_dispatch`, provisions two ephemeral
   PostgreSQL 16 service containers (source and target), seeds the source with a realistic
-  multi-table synthetic fixture, runs the drill, and uploads the report as a build artifact with
-  400-day retention — "evidence retained outside project" in the sense that matters for this
+  multi-table synthetic fixture, runs the drill, and uploads the report as a build artifact. The
+  workflow requests 400-day retention; the repository currently caps Actions artifacts at 90 days,
+  and GitHub applies that cap — "evidence retained outside project" in the sense that matters for this
   repo: the report survives in GitHub's artifact storage independent of whatever ran the drill,
   not inside the ephemeral database being tested.
 
@@ -48,6 +49,14 @@ Plan acceptance bar: "Restore meets RPO/RTO and evidence is retained outside pro
   — 78 tables, zero unexplained row loss, zero content drift in any table, zero foreign-key
   orphans after restore (`exactMatch: true`), and a measured RTO of **1.3 seconds** against the
   14400-second (4h) target. The full report is reproduced below.
+- **The GitHub-hosted quarterly workflow is now certified.** Run
+  [`36526821183`](https://github.com/bora2025/wattaman-V2/actions/runs/36526821183) passed on
+  2026-09-29 after applying all current migrations and using the distribution-aware managed seed.
+  It restored **91 tables** with zero unexplained row loss, zero changed table content, zero
+  foreign-key orphans, four valid credential hashes, and `exactMatch: true`. Measured restore RTO
+  was **0.844 seconds** against the 14,400-second target. Artifact
+  `restore-drill-report-36526821183` contains the self-hashed report (`reportSha256`
+  `916074c605d47766c8b459f58f1eb05bd64bd315b6ff66d0e3c1065ebdf2dc15`).
 - Getting to that clean run surfaced and fixed four real, worth-recording issues:
   1. Copying the host's already-`npm install`ed `backend/` directory into a Linux container
      carries Windows-built `node_modules` (native bindings, and npm's `.bin` shims invoking
@@ -114,12 +123,11 @@ Plan acceptance bar: "Restore meets RPO/RTO and evidence is retained outside pro
 
 ## What this does not close
 
-- No CI run of `quarterly-restore-drill.yml` has actually executed yet (it can be triggered
-  manually via `workflow_dispatch` without waiting for the next quarter boundary). The local
-  drill run proves the *script's* correctness; it does not prove the *workflow YAML* runs
-  cleanly on a real GitHub-hosted Ubuntu runner, which remains genuinely untested.
-- The drill has been run once, against a modest synthetic dataset (78 tables, single-digit row
-  counts) — not against a real production-shaped installation recovery set with realistic data
-  volumes, nor repeated enough times to rule out flakiness.
+- The hosted drill uses a modest managed synthetic dataset (91 tables, single-digit row counts),
+  not a real production-volume installation recovery set; repeated scheduled runs are still needed
+  to establish a long-term reliability history.
+- Artifact retention is currently 90 days because of the repository setting, despite the workflow's
+  400-day request. The repository/organization retention policy must be raised or reports must be
+  copied to a longer-lived evidence store before this satisfies a 400-day retention policy.
 - `BackupController`'s admin-facing status endpoint was not changed; an operator still can't
   trigger a drill or see drill history through the API, only through CI artifacts.

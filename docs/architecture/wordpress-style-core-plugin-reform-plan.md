@@ -250,7 +250,10 @@ customer pilot or organizational approval gates described below.
   replacement, the status API reports coverage, and Plugin Manager exposes aggregate registry/
   artifact/runtime/licence/contract/job diagnostics
   ([evidence](../acceptance/lean-core/wordpress-style-plugin-recovery-diagnostics-2026-09-26.md)).
-  Clean Railway and self-hosted PostgreSQL restore/reconciliation drills remain.
+  The current-schema GitHub-hosted quarterly drill now restores 91 managed tables plus plugin code
+  and mutable plugin data with exact identity and a 0.844-second measured RTO
+  ([evidence](../acceptance/gate-b008-scheduled-backups-and-restore-drills-2026-08-29.md)). Clean
+  Railway and production-shaped self-hosted plugin restore/reconciliation drills remain.
 - [x] Make navigation and dashboard entirely extension-driven. Optional business links and cards
   now come from active permission-filtered plugin extensions, all desktop/mobile surfaces compose
   the same runtime registry, and plugins can provide bounded dashboard title, description,
