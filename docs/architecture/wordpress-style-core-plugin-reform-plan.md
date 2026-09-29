@@ -416,7 +416,10 @@ These plugins consume only permission-filtered, versioned read models from insta
   Hosted CI run `36521359176` now passes the complete source-built topology, fresh installation,
   core-only schema, recovery-set and isolated restore/reconciliation sequence
   ([automation evidence](../acceptance/lean-core/wordpress-style-core-deployment-smoke-automation-2026-09-26.md)).
-  Both released-image live deployment drills remain pending.
+  Released-image workflow run `36521972883` also verifies the retained blueprint and Cosign
+  signatures, boots the exact `0.2.0` API/web/gateway digests without rebuilding, completes fresh
+  installation and reconciles a full restore in hosted Docker. A persistent operator-controlled
+  host and clean Railway released-image drill remain pending.
   A fail-closed Railway preflight now verifies the linked API deployment, gateway health,
   installation state, public/marketplace hosts, image digest and exact `core` distribution without
   exposing service secrets. Its first run correctly rejected the currently linked customer school

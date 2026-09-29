@@ -169,8 +169,10 @@ For **every** plugin in steps 5–8, keep a separate evidence record for: owners
   both production dependency graphs pass a moderate-or-higher audit gate
   ([security evidence](../acceptance/lean-core/wordpress-style-core-runtime-dependency-security-2026-09-26.md)).
   Hosted CI run `36521359176` passes the complete source-built fresh-install and isolated
-  restore/reconciliation topology. Released-digest execution remains open. On a clean Railway
-  school and an operator-controlled self-hosted Docker school,
+  restore/reconciliation topology. Exact released-digest run `36521972883` separately verifies
+  retained evidence and signatures, boots all three `0.2.0` digests without rebuilding, and passes
+  the same fresh-install and restore/reconciliation lifecycle. On a clean Railway school and a
+  persistent operator-controlled self-hosted Docker school,
   still install released core images, link marketplace,
   install free and paid plugins, exercise workflows, disable, update, restore and upgrade core.
   Record exact digests, versions, reconciliation and rollback results.

@@ -123,11 +123,31 @@ The cleanup step also passed and removed the disposable topology. This closes th
 green-run requirement for source-built physical core images. It does not substitute for booting the
 published `0.2.0` digests on an operator-controlled self-hosted host or clean Railway project.
 
+## Exact released-image execution
+
+Workflow `core-released-image-smoke.yml` deliberately does not build application images. It
+downloads the retained `core-0.2.0-release-evidence` artifact, verifies the school blueprint,
+authenticates to the private GHCR package, verifies all three keyless Cosign signatures, reads the
+immutable image references from that blueprint, and boots those exact digests through
+`docker-compose.core.yml`.
+
+Run `36521972883`, job `109256616774`, passed on 2026-09-29 from commit `59a3b2a`. It proved:
+
+- retained blueprint verification and all three immutable image signatures;
+- deployment of API, web and gateway `0.2.0` digests without any `docker build` step;
+- fresh HTTP installation and repeat-install rejection;
+- exact migration-derived core-only schema verification;
+- recovery-set creation containing database, plugin package and mutable plugin data; and
+- restore/reconciliation into an isolated PostgreSQL and filesystem target.
+
+Cleanup passed. This closes the ephemeral hosted-Docker execution of the released self-hosted
+blueprint. A persistent operator-controlled host and clean Railway project remain distinct gates.
+
 The isolated containers, network and both disposable volumes were removed after evidence capture.
 
 ## Remaining acceptance
 
-- Execute the same released digest set on an operator-controlled self-hosted environment.
+- Execute the same released digest set on a persistent operator-controlled self-hosted environment.
 - Execute the released digest set on a clean Railway project.
 - Repeat the second-database restore/reconciliation sequence with released digests in Railway.
 - Link the production-shaped marketplace and exercise one signed free and one paid plugin through
