@@ -413,7 +413,10 @@ These plugins consume only permission-filtered, versioned read models from insta
   performs a fresh HTTP installation, rejects representative legacy pages/tables and creates a
   recovery artifact
   ([automation evidence](../acceptance/lean-core/wordpress-style-core-deployment-smoke-automation-2026-09-26.md)).
-  Its first hosted green run and both released-image live deployment drills remain pending.
+  Hosted CI run `36521359176` now passes the complete source-built topology, fresh installation,
+  core-only schema, recovery-set and isolated restore/reconciliation sequence
+  ([automation evidence](../acceptance/lean-core/wordpress-style-core-deployment-smoke-automation-2026-09-26.md)).
+  Both released-image live deployment drills remain pending.
   A fail-closed Railway preflight now verifies the linked API deployment, gateway health,
   installation state, public/marketplace hosts, image digest and exact `core` distribution without
   exposing service secrets. Its first run correctly rejected the currently linked customer school

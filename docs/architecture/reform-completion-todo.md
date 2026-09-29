@@ -168,7 +168,9 @@ For **every** plugin in steps 5–8, keep a separate evidence record for: owners
   client/server major selection. The API runtime image now excludes development dependencies and
   both production dependency graphs pass a moderate-or-higher audit gate
   ([security evidence](../acceptance/lean-core/wordpress-style-core-runtime-dependency-security-2026-09-26.md)).
-  Its first hosted green run remains open. On a clean Railway school and a self-hosted Docker school,
+  Hosted CI run `36521359176` passes the complete source-built fresh-install and isolated
+  restore/reconciliation topology. Released-digest execution remains open. On a clean Railway
+  school and an operator-controlled self-hosted Docker school,
   still install released core images, link marketplace,
   install free and paid plugins, exercise workflows, disable, update, restore and upgrade core.
   Record exact digests, versions, reconciliation and rollback results.

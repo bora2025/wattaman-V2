@@ -3,8 +3,8 @@
 ## Scope
 
 This evidence records the executable CI acceptance harness for a fresh self-hosted lean-core school.
-It does **not** claim that GitHub-hosted, Railway, paid-commerce, restore, or production approval gates
-have passed. Those remain separate acceptance requirements.
+It does **not** claim that Railway, paid-commerce, released-image self-hosting or production
+approval gates have passed. Those remain separate acceptance requirements.
 
 ## Implemented evidence
 
@@ -105,16 +105,31 @@ Restored plugin data: 1/1 exact checksum and content
 
 The PR workflow now performs this same backup/restore/reconciliation sequence automatically.
 
+## Hosted CI execution
+
+GitHub Actions workflow run `36521359176`, job `core-deployment-smoke`
+(`109254725474`), passed on 2026-09-29 from commit `1201f34`. The hosted Ubuntu runner completed
+every required step:
+
+- deployment smoke contracts;
+- physical core API, web and gateway image builds;
+- runtime-image development-tooling and legacy-Prisma rejection;
+- isolated topology configuration and fresh HTTP installation;
+- exact core-only database verification;
+- full recovery-set creation; and
+- restore/reconciliation into the isolated target database and plugin-data volume.
+
+The cleanup step also passed and removed the disposable topology. This closes the first hosted-CI
+green-run requirement for source-built physical core images. It does not substitute for booting the
+published `0.2.0` digests on an operator-controlled self-hosted host or clean Railway project.
+
 The isolated containers, network and both disposable volumes were removed after evidence capture.
 
 ## Remaining acceptance
 
-- Obtain and retain the first green GitHub Actions run of `core-deployment-smoke` (the equivalent
-  production-shaped topology now passes locally).
 - Execute the same released digest set on an operator-controlled self-hosted environment.
 - Execute the released digest set on a clean Railway project.
-- Retain the first hosted CI green run of the implemented second-database restore/reconciliation
-  sequence and repeat it with released digests in Railway.
+- Repeat the second-database restore/reconciliation sequence with released digests in Railway.
 - Link the production-shaped marketplace and exercise one signed free and one paid plugin through
   install, activate, update, disable, uninstall and reinstall.
 - Obtain release, security and operations approvals before making `core` the provisioning default.
