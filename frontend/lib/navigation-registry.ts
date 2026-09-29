@@ -6,12 +6,47 @@ export interface NavigationItem {
   href: string;
   icon: string;
   section?: string;
+  /** Render this entry as a child of its section instead of a top-level feature. */
+  nested?: boolean;
   badgeKey?: 'messages' | 'announcements' | 'class-registrations' | 'platform-billing';
 }
 
 export interface NavigationRegistration extends NavigationItem {
   source: NavigationSource;
   pluginId?: string;
+}
+
+export interface PluginNavigationExtension {
+  pluginId: string;
+  label: string;
+  href: string;
+}
+
+function pluginSectionLabel(pluginId: string): string {
+  const slug = pluginId.split('.').pop() || pluginId;
+  return slug
+    .split(/[-_]+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+/** Groups each plugin's contributed routes under a readable plugin heading. */
+export function pluginNavigation(entries: readonly PluginNavigationExtension[]): NavigationRegistration[] {
+  const seen = new Set<string>();
+  return entries.map((entry) => {
+    const first = !seen.has(entry.pluginId);
+    seen.add(entry.pluginId);
+    return {
+      label: entry.label,
+      href: entry.href,
+      icon: '🧩',
+      ...(first ? { section: pluginSectionLabel(entry.pluginId) } : {}),
+      nested: true,
+      source: 'plugin' as const,
+      pluginId: entry.pluginId,
+    };
+  });
 }
 
 const CORE_ADMIN_NAVIGATION_HREFS = new Set([

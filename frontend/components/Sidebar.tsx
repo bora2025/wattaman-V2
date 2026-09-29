@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../lib/i18n';
 import { iconMap, IconGlobe, IconLogout } from './Icons';
 import InstallAppButton from './InstallAppButton';
-import { composeNavigation, FrontendDistribution, isCoreNavigationHref, NavigationItem, NavigationRegistration } from '../lib/navigation-registry';
+import { composeNavigation, FrontendDistribution, isCoreNavigationHref, NavigationItem, NavigationRegistration, pluginNavigation } from '../lib/navigation-registry';
 
 /** Renders an icon: if `key` maps to an SVG component, uses it; otherwise falls back to text/emoji. */
 function NavIcon({ icon, size = 20, className }: { icon: string; size?: number; className?: string }) {
@@ -207,12 +207,7 @@ export default function Sidebar({ title, subtitle, navItems, accentColor = 'indi
         const data = await res.json();
         const entries = Array.isArray(data?.navigation) ? data.navigation : [];
         if (!active) return;
-        setPluginNav(entries.map((entry: any, index: number) => ({
-          label: entry.label, href: entry.href, icon: '🧩',
-          section: index === 0 ? 'Plugins' : undefined,
-          source: 'plugin' as const,
-          pluginId: entry.pluginId,
-        })));
+        setPluginNav(pluginNavigation(entries));
       } catch { /* plugin nav is optional; a fetch failure just means none shown */ }
     })();
     return () => { active = false; };
@@ -330,7 +325,7 @@ export default function Sidebar({ title, subtitle, navItems, accentColor = 'indi
                   && effectiveNavItems.some(n => n.href !== item.href && n.href.startsWith(item.href + '/'))
                   && pathname.startsWith(item.href + '/');
                 const isActive = isExact || isParent;
-                const isChild = effectiveNavItems.some(n => n.href !== item.href && n.href.length > 1 && item.href.startsWith(n.href + '/'));
+                const isChild = item.nested || effectiveNavItems.some(n => n.href !== item.href && n.href.length > 1 && item.href.startsWith(n.href + '/'));
                 return (
                   <div key={item.href}>
                     {item.section && (
@@ -446,7 +441,7 @@ export default function Sidebar({ title, subtitle, navItems, accentColor = 'indi
             const parentHref = effectiveNavItems.find(
               n => n.href !== item.href && n.href.length > 1 && item.href.startsWith(n.href + '/')
             )?.href;
-            const isChild = !!parentHref;
+            const isChild = item.nested || !!parentHref;
 
             const badgeCount = item.badgeKey ? unread[item.badgeKey] : 0;
 
