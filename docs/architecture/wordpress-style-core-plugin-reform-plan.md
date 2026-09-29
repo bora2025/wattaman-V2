@@ -212,7 +212,7 @@ Do not migrate all modules in one release. A failure in one plugin must not prev
 
 ## 9. Recommended implementation order
 
-Required hosted PR validation is green at commit `419eda2` (run `36524572802`), including all
+Required hosted PR validation is green at commit `e0464ca` (run `36527087291`), including all
 official-plugin PostgreSQL certifications, every restored-school rehearsal, the clean-core artifact,
 source-built deployment smoke, S3 artifact compatibility, frontend production build, Platform Admin
 browser/accessibility coverage and secret scanning
@@ -427,8 +427,8 @@ These plugins consume only permission-filtered, versioned read models from insta
   Hosted CI run `36521359176` now passes the complete source-built topology, fresh installation,
   core-only schema, recovery-set and isolated restore/reconciliation sequence
   ([automation evidence](../acceptance/lean-core/wordpress-style-core-deployment-smoke-automation-2026-09-26.md)).
-  Required validation run `36524572802` re-certified that complete source-built deployment smoke
-  together with every plugin runtime and restored-school rehearsal at commit `419eda2`
+  Required validation run `36527087291` re-certified that complete source-built deployment smoke
+  together with every plugin runtime and restored-school rehearsal at commit `e0464ca`
   ([validation evidence](../acceptance/lean-core/wordpress-style-required-pr-validation-2026-09-29.md)).
   Released-image workflow run `36521972883` also verifies the retained blueprint and Cosign
   signatures, boots the exact `0.2.0` API/web/gateway digests without rebuilding, completes fresh

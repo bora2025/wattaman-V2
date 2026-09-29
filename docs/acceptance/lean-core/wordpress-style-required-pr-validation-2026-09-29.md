@@ -2,8 +2,11 @@
 
 ## Result
 
-Required PR validation passed for commit `419eda2` in GitHub Actions run
-[`36524572802`](https://github.com/bora2025/wattaman-V2/actions/runs/36524572802).
+Required PR validation first passed for commit `419eda2` in GitHub Actions run
+[`36524572802`](https://github.com/bora2025/wattaman-V2/actions/runs/36524572802). After repairing and
+certifying the separate Phase E commerce and quarterly recovery workflows, the complete required
+suite passed again at commit `e0464ca` in run
+[`36527087291`](https://github.com/bora2025/wattaman-V2/actions/runs/36527087291).
 
 The successful run included:
 
