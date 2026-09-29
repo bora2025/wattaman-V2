@@ -22,7 +22,17 @@ RUN npm run build
 # --- Production stage ---
 FROM node:20-slim AS runner
 
-RUN apt-get update -qq && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
+ARG POSTGRES_CLIENT_MAJOR=18
+RUN apt-get update -qq \
+    && apt-get install -y --no-install-recommends ca-certificates curl gnupg openssl \
+    && install -d -m 0755 /usr/share/postgresql-common/pgdg \
+    && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+       | gpg --dearmor -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg \
+    && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo ${VERSION_CODENAME})-pgdg main" \
+       > /etc/apt/sources.list.d/pgdg.list \
+    && apt-get update -qq \
+    && apt-get install -y --no-install-recommends "postgresql-client-${POSTGRES_CLIENT_MAJOR}" \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -36,7 +46,6 @@ COPY --chown=node:node --from=builder /app/node_modules/@prisma ./node_modules/@
 COPY --chown=node:node --from=builder /app/node_modules/prisma ./node_modules/prisma
 COPY --chown=node:node --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
 
-RUN apt-get update -qq && apt-get install -y --no-install-recommends postgresql-client && rm -rf /var/lib/apt/lists/*
 RUN mkdir -p /data/backups /data/plugins /data/plugin-data && chown -R node:node /data
 
 ENV NODE_ENV=production
