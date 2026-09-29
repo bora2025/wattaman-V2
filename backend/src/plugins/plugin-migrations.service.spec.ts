@@ -51,6 +51,18 @@ describe('PluginMigrationsService', () => {
     expect(() => service.validateSql({ ...manifest, migrations: [{ id: '003_create_enrollment_interval', checksum: 'a'.repeat(64) }] }, '003_create_enrollment_interval', legacySql)).toThrow('identity header');
   });
 
+  it('accepts both exact certified Academic compatibility migrations without broadening the exception', () => {
+    const service = new PluginMigrationsService();
+    const pluginRoot = path.resolve(__dirname, '../../../plugins/wattanam.academic-management');
+    const manifest: any = JSON.parse(readFileSync(path.join(pluginRoot, 'plugin.json'), 'utf8'));
+    for (const migrationId of ['004_create_study_year', '005_create_class']) {
+      const migration = manifest.migrations.find((item: { id: string }) => item.id === migrationId);
+      const migrationSql = readFileSync(path.join(pluginRoot, migration.path), 'utf8');
+      expect(() => service.validateSql(manifest, migrationId, migrationSql)).not.toThrow();
+      expect(() => service.validateSql(manifest, migrationId, `${migrationSql} `)).toThrow('identity header');
+    }
+  });
+
   it('preserves the exact published Attendance Manager multi-statement migration only', () => {
     const service = new PluginMigrationsService();
     const migrationId = '001_create_attendance_manager';

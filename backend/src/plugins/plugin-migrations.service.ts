@@ -13,14 +13,20 @@ const execFileAsync = promisify(execFile);
 // Academic Management 0.1.0 shipped these migrations before identity headers
 // became mandatory. Their exact published bytes remain immutable; only these
 // plugin/migration/checksum triples may use the legacy format.
-const LEGACY_HEADERLESS_MIGRATIONS = new Map<string, string>([
-  ['wattanam.academic-management:003_create_enrollment_interval', '6a7304a8ea29c064a394144ba0fa4aa9288e62fabe03a9f0a81224401d969861'],
-  ['wattanam.academic-management:004_create_study_year', '54a0a91809e5ad924484776f47c8b7638b6d1894bff379f1485c229f25fb0ac1'],
-  ['wattanam.academic-management:005_create_class', '9d10a96010801a827f947e0f04a1fedb8a4eb59e3be3b742e51a7e1d53ea9b9c'],
-  ['wattanam.academic-management:006_create_class_registration', 'a6eaa58785201a91f2236dbbe777eb7900600e71eb193c9052b99a860f53ce67'],
-  ['wattanam.academic-management:007_create_class_registration_settings', 'f7fac966cf3f0d9156898a3a297e7a17747d50a77090af8c85634449a2ba734f'],
-  ['wattanam.academic-management:008_create_class_registration_field', 'b550055dd6951c330f7f8fb0719fb2bfef722c0066486c8a3a2f64946caffa18'],
-  ['wattanam.attendance-manager:001_create_attendance_manager', 'd02277c13ddbf7b0237f7059fb389f3fef36184edbfb907ff536515ef0b69233'],
+const LEGACY_HEADERLESS_MIGRATIONS = new Map<string, ReadonlySet<string>>([
+  ['wattanam.academic-management:003_create_enrollment_interval', new Set(['6a7304a8ea29c064a394144ba0fa4aa9288e62fabe03a9f0a81224401d969861'])],
+  ['wattanam.academic-management:004_create_study_year', new Set([
+    '54a0a91809e5ad924484776f47c8b7638b6d1894bff379f1485c229f25fb0ac1',
+    '19a750f6164c3f10c13dc9e2f871c54e58db450f983082f028e38d03175554ca',
+  ])],
+  ['wattanam.academic-management:005_create_class', new Set([
+    '9d10a96010801a827f947e0f04a1fedb8a4eb59e3be3b742e51a7e1d53ea9b9c',
+    '79a804f2e8d9d5005c58c30cede604ced6b473baa2cfff5fa3e8879602d1a11b',
+  ])],
+  ['wattanam.academic-management:006_create_class_registration', new Set(['a6eaa58785201a91f2236dbbe777eb7900600e71eb193c9052b99a860f53ce67'])],
+  ['wattanam.academic-management:007_create_class_registration_settings', new Set(['f7fac966cf3f0d9156898a3a297e7a17747d50a77090af8c85634449a2ba734f'])],
+  ['wattanam.academic-management:008_create_class_registration_field', new Set(['b550055dd6951c330f7f8fb0719fb2bfef722c0066486c8a3a2f64946caffa18'])],
+  ['wattanam.attendance-manager:001_create_attendance_manager', new Set(['d02277c13ddbf7b0237f7059fb389f3fef36184edbfb907ff536515ef0b69233'])],
 ]);
 
 // Attendance Manager 0.1.x also shipped these additive migrations as multiple simple DDL
@@ -37,8 +43,8 @@ const LEGACY_MULTI_STATEMENT_MIGRATIONS = new Map<string, string>([
 function isChecksumPinnedLegacyMigration(manifest: PluginManifest, migrationId: string, sql: string) {
   const declaredChecksum = manifest.migrations?.find((migration) => migration.id === migrationId)?.checksum;
   const actualChecksum = createHash('sha256').update(sql, 'utf8').digest('hex');
-  const legacyChecksum = LEGACY_HEADERLESS_MIGRATIONS.get(`${manifest.id}:${migrationId}`);
-  return Boolean(legacyChecksum && declaredChecksum === legacyChecksum && actualChecksum === legacyChecksum);
+  const legacyChecksums = LEGACY_HEADERLESS_MIGRATIONS.get(`${manifest.id}:${migrationId}`);
+  return Boolean(legacyChecksums?.has(actualChecksum) && declaredChecksum === actualChecksum);
 }
 
 function isChecksumPinnedMultiStatementMigration(manifest: PluginManifest, migrationId: string, sql: string) {
