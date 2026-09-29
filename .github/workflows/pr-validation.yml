@@ -45,9 +45,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: npm, cache-dependency-path: backend/package-lock.json }
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            packages/plugin-cli/package-lock.json
       - name: Install
         working-directory: backend
+        run: npm ci
+      - name: Install plugin packaging dependencies used by backend lifecycle tests
+        working-directory: packages/plugin-cli
         run: npm ci
       - name: Validate schema and apply every migration (the "migration checks" gate)
         working-directory: backend
@@ -250,7 +258,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: npm, cache-dependency-path: frontend/package-lock.json }
+        # Production frontend images run Node 24, and current DOM sanitization
+        # dependencies intentionally require Node 24 during server prerendering.
+        with: { node-version: 24, cache: npm, cache-dependency-path: frontend/package-lock.json }
       - name: Install
         working-directory: frontend
         run: npm ci
