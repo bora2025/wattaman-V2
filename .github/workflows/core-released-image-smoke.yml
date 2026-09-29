@@ -30,15 +30,15 @@ jobs:
           path: release-artifact
           run-id: ${{ inputs.release_run_id }}
           github-token: ${{ github.token }}
-      - name: Verify retained blueprint and immutable image signatures
-        run: |
-          node tools/verify-school-release.js release-artifact/school-release.json
-          node tools/verify-core-image-signatures.js --blueprint release-artifact/school-release.json
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
+      - name: Verify retained blueprint and immutable image signatures
+        run: |
+          node tools/verify-school-release.js release-artifact/school-release.json
+          node tools/verify-core-image-signatures.js --blueprint release-artifact/school-release.json
       - name: Configure exact released deployment
         env:
           VERSION: ${{ inputs.version }}
@@ -87,7 +87,7 @@ jobs:
             sh -c "grep -q '\"id\":\"wattanam.smoke\"' /restore/plugins/wattanam.smoke/1.0.0/plugin.json && grep -qx 'released-mutable-plugin-state' /restore/plugin-data/wattanam.smoke/state.txt"
       - name: Capture diagnostics on failure
         if: failure()
-        run: docker compose --env-file .env.core-released-smoke -f docker-compose.core.yml logs --no-color
+        run: test ! -f .env.core-released-smoke || docker compose --env-file .env.core-released-smoke -f docker-compose.core.yml logs --no-color
       - name: Stop isolated released deployment
         if: always()
-        run: docker compose --env-file .env.core-released-smoke -f docker-compose.core.yml down -v --remove-orphans
+        run: test ! -f .env.core-released-smoke || docker compose --env-file .env.core-released-smoke -f docker-compose.core.yml down -v --remove-orphans

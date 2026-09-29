@@ -35,6 +35,7 @@ test('released-image workflow verifies and boots retained immutable digests with
   assert.match(workflow, /run-id: \$\{\{ inputs\.release_run_id \}\}/);
   assert.match(workflow, /verify-school-release\.js release-artifact\/school-release\.json/);
   assert.match(workflow, /verify-core-image-signatures\.js --blueprint release-artifact\/school-release\.json/);
+  assert.ok(workflow.indexOf('docker/login-action@v3') < workflow.indexOf('verify-core-image-signatures.js'));
   assert.match(workflow, /services\.api\.image/);
   assert.match(workflow, /services\.web\.image/);
   assert.match(workflow, /services\.gateway\.image/);
@@ -44,6 +45,7 @@ test('released-image workflow verifies and boots retained immutable digests with
   assert.match(workflow, /--profile operations run --rm backup/);
   assert.match(workflow, /--profile recovery-drill run --rm restore/);
   assert.match(workflow, /if: always\(\)/);
+  assert.match(workflow, /test ! -f \.env\.core-released-smoke \|\| docker compose/);
 });
 
 test('core runtime image carries database and plugin-recovery verifiers', () => {
