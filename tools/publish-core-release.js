@@ -21,13 +21,40 @@ function payloadFromEnvironment(environment) {
 
 async function publishCoreRelease(environment = process.env, fetchImplementation = fetch) {
   const base = new URL(required(environment, 'MARKETPLACE_URL'));
+  const payload = payloadFromEnvironment(environment);
   const response = await fetchImplementation(new URL('/admin/v1/core-releases', base), {
     method: 'POST',
     headers: { authorization: `Bearer ${required(environment, 'MARKETPLACE_ADMIN_TOKEN')}`, 'content-type': 'application/json' },
-    body: JSON.stringify(payloadFromEnvironment(environment)),
+    body: JSON.stringify(payload),
     signal: AbortSignal.timeout(30_000),
   });
   const body = await response.text();
+  if (response.status === 409) {
+    const indexUrl = new URL('/v1/index', base);
+    indexUrl.searchParams.set('coreVersion', payload.version);
+    indexUrl.searchParams.set('channel', 'beta');
+    const indexResponse = await fetchImplementation(indexUrl, { signal: AbortSignal.timeout(30_000) });
+    const indexBody = await indexResponse.text();
+    if (indexResponse.ok) {
+      let existing;
+      try {
+        const envelope = JSON.parse(indexBody);
+        existing = envelope?.payload?.coreReleases?.find((release) => release.version === payload.version && release.channel === 'beta');
+      } catch {
+        // Preserve the original conflict below when the signed-index response is not JSON.
+      }
+      if (existing
+        && existing.nodeRange === payload.nodeRange
+        && existing.postgresRange === payload.postgresRange
+        && existing.images?.api === payload.apiImage
+        && existing.images?.web === payload.webImage
+        && existing.images?.gateway === payload.gatewayImage
+        && existing.releaseNotes === payload.releaseNotes
+        && (existing.migrationNotes ?? undefined) === payload.migrationNotes) {
+        return JSON.stringify({ status: 'already-published', version: payload.version, channel: 'BETA' });
+      }
+    }
+  }
   if (!response.ok) throw new Error(`Publish failed (${response.status}): ${body}`);
   return body;
 }
