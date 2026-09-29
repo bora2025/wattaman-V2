@@ -80,6 +80,8 @@ test('required CI executes the real Platform Admin browser bundle journeys', () 
 test('Phase E certifies linked-school bundle discovery and paid acquisition across two databases', () => {
   const workflow = read('.github/workflows/phase-e-commerce-certification.yml');
   const drill = read('apps/marketplace-api/scripts/identity-registration-entitlement-live-drill.js');
+  assert.match(workflow, /node-version:\s*24/);
+  assert.match(workflow, /working-directory:\s*packages\/plugin-cli\s+run:\s*npm ci/);
   assert.match(workflow, /Live identity, installation-registration, and entitlement-cache drill/);
   assert.match(drill, /StarterBundleService/);
   assert.match(drill, /linked school discovers the published mixed starter bundle over real HTTP/);

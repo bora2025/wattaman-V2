@@ -50,6 +50,9 @@ jobs:
       - name: Cross-service purchase and offline-use matrix
         working-directory: apps/marketplace-api
         run: npm run certify:commerce-offline
+      - name: Install plugin packaging dependencies used by school marketplace tests
+        working-directory: packages/plugin-cli
+        run: npm ci
       - name: Install and test school entitlement boundary
         working-directory: backend
         run: npm ci && npm test -- --runInBand src/marketplace && npx prisma generate && DATABASE_URL=$SCHOOL_DATABASE_URL npx prisma migrate deploy && npm run build
