@@ -47,8 +47,8 @@ Starter-bundle architecture contracts: 7/7 passed
 Marketplace API TypeScript build: passed
 Platform Admin typecheck and production build: passed (`/starter-bundles` emitted)
 Platform authorization/OpenAPI/bundle focused tests: 20/20 passed
-Platform Admin Playwright discovery: 56 tests found, including 2 bundle governance journeys;
-required PR CI installs Chromium and executes the full real-stack suite
+Platform Admin Playwright includes 2 bundle governance journeys; required PR CI installs Chromium
+and executes the full real-stack suite
 Backend physical-core build: passed
 Frontend physical-core production build: passed (27 admitted routes)
 Prisma schema validation: passed
@@ -62,9 +62,9 @@ isolated PostgreSQL 16.14 database on 2026-09-28 with two independently resolved
 audited lifecycle mutations. The clean-core artifact job runs the architecture contract that
 forbids bundle archives or alternate install mechanisms.
 
-The browser suite now creates, publishes and withdraws a real bundle as a Marketplace Operator and
+The browser suite creates, publishes and withdraws a real bundle as a Marketplace Operator and
 separately proves an Auditor cannot see mutation controls. Those journeys use the existing real
-API/PostgreSQL E2E stack; their first hosted execution remains pending.
+API/PostgreSQL E2E stack and passed in required hosted validation run `36524572802` on 2026-09-29.
 
 The required Phase E two-database drill now also publishes a mixed free/paid bundle, discovers it
 from a genuinely registered school over the live Marketplace HTTP API, derives the paid order from
@@ -79,9 +79,18 @@ databases on PostgreSQL 16.14. The run also caught and corrected an invalid cert
 synthetic package IDs are now correctly namespaced by their signing publisher, matching the
 production verifier's trust rule.
 
+Hosted Phase E run `36525681934` re-certified the complete two-database flow on 2026-09-29. It
+passed Marketplace migrations/contracts, the 23-check cross-service entitlement and offline-use
+matrix, the real school entitlement boundary, the 75-check live HTTP bundle lifecycle, and the
+customer/school-owner production build under the production-aligned Node 24 runtime. The hosted
+run found and corrected two certification drifts first: the commerce transaction fixture now
+models entitlement generations, publisher revenue, linked requests and signed terminal decisions;
+the workflow installs the plugin packaging dependencies required by its real `.wtp` install tests.
+
 ## Remaining acceptance
 
-LCF-002 stays partial only for the hosted browser journey and hosted clean-school evidence. The
-local Phase E two-database certification and Marketplace PostgreSQL bundle lifecycle are verified.
+LCF-002 stays partial only for a browser-driven install on a persistent newly provisioned clean
+school. Hosted Platform Admin browser governance and hosted Phase E two-database certification are
+verified, as are the local Marketplace PostgreSQL bundle lifecycle checks.
 Discovery, mixed free/paid plan resolution, settlement, entitlement refresh, ordered signed
 installation, interrupted retry, independent removal and reinstall all executed successfully.

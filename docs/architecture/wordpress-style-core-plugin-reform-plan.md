@@ -584,9 +584,12 @@ Until every condition is evidenced, describe the reform as **in progress**, even
   multi-line commerce and independently signed/consented plugin installs. The schema, APIs, school
   UI, Platform Admin governance and retry-safe orchestrator are implemented. A required isolated
   PostgreSQL lifecycle drill and a two-database signed install/retry/remove/reinstall drill are
-  wired into CI. Both the isolated Marketplace lifecycle drill and the complete 75-check
-  Marketplace-to-school drill pass locally on PostgreSQL 16.14 for a mixed free/paid bundle;
-  hosted clean-school and browser proof remain
+  wired into CI. The isolated Marketplace lifecycle drill passes locally, and hosted Phase E run
+  `36525681934` passes the complete 75-check two-database Marketplace-to-school drill, the
+  cross-service entitlement/offline matrix, the real school entitlement boundary and the final
+  production build. Required hosted run `36524572802` also passes the real-stack Platform Admin
+  bundle-governance browser journeys. A browser-driven install on a persistent newly provisioned
+  clean school remains
   ([evidence](../acceptance/lean-core/wordpress-style-starter-bundles-2026-09-28.md)).
 3. Finish and certify Academic Management because most plugins depend on it.
 4. Complete the production-shaped artifact-store drill and plugin backup/restore gate.
