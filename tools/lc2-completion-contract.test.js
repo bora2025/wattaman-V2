@@ -52,6 +52,8 @@ test('LC2-020: backup and restore preserve and verify schema lineage', () => {
   const workflow = read('.github/workflows/quarterly-restore-drill.yml');
   assert.match(workflow, /node-version:\s*24/);
   assert.match(workflow, /ALLOW_SYNTHETIC_LEGACY_FIXTURE:\s*'true'/);
+  assert.match(workflow, /ADOPT_DATABASE_URL:\s*postgresql:\/\/wattanam:drill-password@localhost:5432\/wattanam_source/);
+  assert.match(workflow, /DATABASE_URL:\s*postgresql:\/\/wattanam:drill-password@localhost:5433\/wattanam_target/);
 });
 
 test('LC2-021 and LC2-022: update recovery and core operations remain composed', () => {
