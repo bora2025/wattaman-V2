@@ -36,7 +36,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: npm, cache-dependency-path: backend/package-lock.json }
+        with: { node-version: 24, cache: npm, cache-dependency-path: backend/package-lock.json }
       - name: Install PostgreSQL 16 client tools (version-matched to the CI source and target)
         run: |
           sudo install -d /usr/share/postgresql-common/pgdg
@@ -53,6 +53,10 @@ jobs:
       - name: Seed the source with a realistic multi-table synthetic fixture
         working-directory: backend
         env:
+          # The fixture script is fail-closed because it must never write synthetic legacy rows
+          # against an operator database accidentally. This disposable CI source is the explicit,
+          # reviewed exception.
+          ALLOW_SYNTHETIC_LEGACY_FIXTURE: 'true'
           PLUGIN_DIR: ${{ runner.temp }}/plugins
           PLUGIN_DATA_DIR: ${{ runner.temp }}/plugin-data
         run: |
