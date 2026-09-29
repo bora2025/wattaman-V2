@@ -20,6 +20,7 @@ const { TARGET_TABLE: ENROLLMENT_TARGET_TABLE, fingerprint: enrollmentFingerprin
 const { TARGET_TABLE: SUBJECT_TARGET_TABLE, inspect: inspectSubjects } = require('./academic-subjects-adoption-preflight');
 const { journalPath: subjectJournalPath } = require('./academic-subjects-adopt');
 const { check } = require('./academic-management-cutover-readiness');
+const { OWNER_VARIABLES, SHADOW_WRITE_VARIABLES, inspectOwnership } = require('./academic-management-ownership-readiness');
 
 const backupName = 'wattanam-20260915T000000Z.dump';
 const departments = [{ id: 'd1', name: 'Science', nameKh: null, description: null }];
@@ -210,5 +211,27 @@ test('missing target tables block readiness without querying the absent target',
     assert.equal(report.target.enrollment, null);
     assert.equal(report.target.subjects, null);
     assert.match(report.blockers.join(' '), /is absent/);
+  } finally { sample.close(); }
+});
+
+test('aggregate readiness fails when the requested ownership phase is incomplete', async () => {
+  const sample = await fixture();
+  try {
+    const env = {
+      ...Object.fromEntries(OWNER_VARIABLES.map((name) => [name, 'plugin'])),
+      ...Object.fromEntries(SHADOW_WRITE_VARIABLES.map((name) => [name, 'false'])),
+      ACADEMIC_CLASSES_ROUTE_OWNER: 'legacy',
+    };
+    const ownership = inspectOwnership(env, 'plugin');
+    const report = await check({
+      adapter: sample.adapter,
+      directory: sample.directory,
+      backupName,
+      slug: 'bora-school',
+      ownership,
+    });
+    assert.equal(report.ready, false);
+    assert.equal(report.ownership.expectedOwner, 'plugin');
+    assert.match(report.blockers.join('\n'), /ownership: ACADEMIC_CLASSES_ROUTE_OWNER is legacy/);
   } finally { sample.close(); }
 });

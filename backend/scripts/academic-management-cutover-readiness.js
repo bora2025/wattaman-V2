@@ -19,8 +19,9 @@ const { inspect: inspectSubjects, TARGET_TABLE: SUBJECT_TARGET_TABLE } = require
 const { journalPath: subjectJournalPath } = require('./academic-subjects-adopt');
 const { verifyRecoveryBackup } = require('./document-designer-adopt');
 const { loadJournal } = require('./plugin-adoption-toolkit');
+const { inspectOwnership } = require('./academic-management-ownership-readiness');
 
-async function check({ adapter, directory, backupName, slug }) {
+async function check({ adapter, directory, backupName, slug, ownership = null }) {
   const backup = verifyRecoveryBackup(directory, backupName, slug);
   const files = journalPaths(directory, slug);
   const studyYearJournal = studyYearJournalPath(directory, slug);
@@ -240,6 +241,9 @@ async function check({ adapter, directory, backupName, slug }) {
   const studyYearInstallation = await adapter.studyYearPluginState();
   if (studyYearInstallation?.status !== 'active') blockers.push('Attendance Manager plugin is not active for Study Year ownership');
   if (fs.existsSync(files.maintenance)) blockers.push('plugin adoption maintenance lock is still present');
+  if (ownership && !ownership.ready) {
+    blockers.push(...ownership.blockers.map((blocker) => `ownership: ${blocker}`));
+  }
   return {
     format: 'wattanam-academic-management-cutover-readiness-v1', readOnly: true,
     ready: blockers.length === 0, blockers, schoolSlug: slug,
@@ -249,6 +253,7 @@ async function check({ adapter, directory, backupName, slug }) {
     journals: journalStages,
     plugin: { status: installation?.status ?? 'absent', version: installation?.version ?? null },
     studyYearPlugin: { status: studyYearInstallation?.status ?? 'absent', version: studyYearInstallation?.version ?? null },
+    ownership,
     warning: 'Passing parity does not certify full Academic Management extraction, dual-write consistency, or production cutover',
   };
 }
@@ -388,7 +393,9 @@ async function main() {
     studyYearPluginState: () => prisma.pluginInstallation.findUnique({ where: { id: 'wattanam.attendance-manager' }, select: { status: true, version: true } }),
   };
   try {
-    const report = await check({ adapter, directory, backupName: process.env.ACADEMIC_BACKUP_FILE, slug });
+    const expectedOwner = String(process.env.ACADEMIC_EXPECTED_OWNER ?? 'legacy').trim().toLowerCase();
+    const ownership = inspectOwnership(process.env, expectedOwner);
+    const report = await check({ adapter, directory, backupName: process.env.ACADEMIC_BACKUP_FILE, slug, ownership });
     process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
     if (!report.ready) process.exitCode = 2;
   } finally { await prisma.$disconnect(); }
