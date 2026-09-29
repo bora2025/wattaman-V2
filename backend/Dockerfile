@@ -41,7 +41,8 @@ COPY --chown=node:node --from=builder /app/prisma ./prisma
 COPY --chown=node:node --from=builder /app/scripts ./scripts
 COPY --chown=node:node --from=builder /app/node_modules ./node_modules
 
-RUN mkdir -p /data/backups /data/plugins /data/plugin-data && chown -R node:node /data
+RUN mkdir -p /data/backups /data/plugins /data/plugin-data /data/update-state /data/marketplace-identity \
+    && chown -R node:node /data
 
 ENV NODE_ENV=production
 ENV PROCESS_ROLE=combined
@@ -49,4 +50,4 @@ ENV PROCESS_ROLE=combined
 EXPOSE 3001
 EXPOSE 3002
 
-CMD ["sh", "-c", "mkdir -p /data/backups /data/plugins /data/plugin-data /data/marketplace-identity && chown -R node:node /data && node scripts/deploy-migrations.js && exec gosu node node dist/main"]
+CMD ["sh", "-c", "mkdir -p /data/backups /data/plugins /data/plugin-data /data/update-state /data/marketplace-identity && chown -R node:node /data && gosu node node scripts/deploy-migrations.js && exec gosu node node dist/main"]

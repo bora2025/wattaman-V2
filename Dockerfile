@@ -24,7 +24,7 @@ FROM node:20-slim AS runner
 
 ARG POSTGRES_CLIENT_MAJOR=18
 RUN apt-get update -qq \
-    && apt-get install -y --no-install-recommends ca-certificates curl gnupg openssl \
+    && apt-get install -y --no-install-recommends ca-certificates curl gnupg gosu openssl \
     && install -d -m 0755 /usr/share/postgresql-common/pgdg \
     && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
        | gpg --dearmor -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg \
@@ -46,14 +46,14 @@ COPY --chown=node:node --from=builder /app/node_modules/@prisma ./node_modules/@
 COPY --chown=node:node --from=builder /app/node_modules/prisma ./node_modules/prisma
 COPY --chown=node:node --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
 
-RUN mkdir -p /data/backups /data/plugins /data/plugin-data && chown -R node:node /data
+RUN mkdir -p /data/backups /data/plugins /data/plugin-data /data/update-state /data/marketplace-identity \
+    && chown -R node:node /data
 
 ENV NODE_ENV=production
 
 EXPOSE 3001
 
-USER node
-
 # Apply only checked-in, immutable production migrations. A migration failure
-# prevents the application from starting.
-CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy --schema=prisma/schema.prisma && exec node dist/main"]
+# prevents the application from starting. Railway mounts replace image-time directory ownership,
+# so repair the bounded persistent paths as root and drop privileges before running any app code.
+CMD ["sh", "-c", "mkdir -p /data/backups /data/plugins /data/plugin-data /data/update-state /data/marketplace-identity && chown -R node:node /data && gosu node ./node_modules/.bin/prisma migrate deploy --schema=prisma/schema.prisma && exec gosu node node dist/main"]

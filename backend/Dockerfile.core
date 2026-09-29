@@ -61,7 +61,7 @@ COPY --chown=node:node --from=builder /app/dist-core ./dist-core
 COPY --chown=node:node --from=builder /app/prisma/core ./prisma/core
 COPY --chown=node:node scripts/db-toolkit.js scripts/plugin-recovery-contract.js scripts/backup-database.js scripts/backup-recovery-set.js scripts/restore-database.js scripts/restore-recovery-set.js scripts/deploy-migrations.js scripts/verify-fresh-core-database.js ./scripts/
 
-RUN mkdir -p /data/backups /data/plugins /data/plugin-data /data/marketplace-identity \
+RUN mkdir -p /data/backups /data/plugins /data/plugin-data /data/update-state /data/marketplace-identity \
     && chown -R node:node /data /app
 
 ENV NODE_ENV=production
@@ -70,4 +70,4 @@ ENV WATTANAM_DISTRIBUTION=core
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "node scripts/deploy-migrations.js && exec gosu node node dist-core/main.js"]
+CMD ["sh", "-c", "mkdir -p /data/backups /data/plugins /data/plugin-data /data/update-state /data/marketplace-identity && chown -R node:node /data && gosu node node scripts/deploy-migrations.js && exec gosu node node dist-core/main.js"]
