@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.9
+
+- Replaced the invalid dotted export route with the SDK-compatible `reports/export-csv` path.
+
 ## 0.1.8
 
 - Cast attendance check-in timestamps explicitly and execute advisory locks without deserializing PostgreSQL `void` values.

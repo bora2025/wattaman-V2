@@ -3,7 +3,7 @@
   "id": "wattanam.attendance-manager",
   "name": "Attendance Manager",
   "description": "Study years and student school-day attendance with camera/QR, USB scanning, corrections, reports, printing, and exports.",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",

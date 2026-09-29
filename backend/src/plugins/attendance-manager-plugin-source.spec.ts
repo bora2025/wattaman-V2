@@ -60,7 +60,7 @@ describe('Attendance Manager production database contract', () => {
     expect(route('GET', 'reports/monthly-trend').permission).toBe('wattanam.attendance-manager.report');
     expect(route('GET', 'reports/class-progress').permission).toBe('wattanam.attendance-manager.report');
     expect(route('GET', 'reports/print-data').permission).toBe('wattanam.attendance-manager.print');
-    expect(route('GET', 'reports/export.csv').permission).toBe('wattanam.attendance-manager.print');
+    expect(route('GET', 'reports/export-csv').permission).toBe('wattanam.attendance-manager.print');
     expect(route('PATCH', 'records/:id/correct').permission).toBe('wattanam.attendance-manager.correct');
     expect(route('POST', 'study-years').permission).toBe('wattanam.attendance-manager.configure');
     expect(route('POST', 'identifiers').permission).toBe('wattanam.attendance-manager.devices.manage');
@@ -322,7 +322,7 @@ describe('Attendance Manager production database contract', () => {
 
     await expect(route('GET', 'reports/summary').handler(filtered)).resolves.toHaveLength(1);
     await expect(route('GET', 'reports/print-data').handler(filtered)).resolves.toHaveLength(1);
-    await expect(route('GET', 'reports/export.csv').handler(filtered)).resolves.toMatchObject({ filename: 'student-attendance.csv', content: expect.stringContaining('Student One') });
+    await expect(route('GET', 'reports/export-csv').handler(filtered)).resolves.toMatchObject({ filename: 'student-attendance.csv', content: expect.stringContaining('Student One') });
     await expect(route('GET', 'reports/class-progress').handler({ principal, query: { classId: 'class-1', date: '2026-09-25' } })).resolves.toMatchObject({ total: 1, marked: 1, percent: 100 });
     await expect(route('GET', 'reports/monthly-trend').handler({ principal, query: { classId: 'class-1', year: '2026', month: '9' } })).resolves.toBeDefined();
     await expect(route('GET', 'reports/summary').handler({ principal, query: { classId: 'class-1', startDate: '2026-10-01', endDate: '2026-09-01' } })).rejects.toThrow('startDate');

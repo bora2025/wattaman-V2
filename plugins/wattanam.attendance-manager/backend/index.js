@@ -315,7 +315,7 @@ module.exports = {
       return { classId, className: roster.className || records[0]?.classNameSnapshot || null, date: attendanceDate, total, marked, unmarked: Math.max(0, total - marked), percent: total ? Math.round((marked / total) * 10000) / 100 : 0 };
     }});
     context.routes.register({ method: 'GET', path: 'reports/print-data', permission: 'wattanam.attendance-manager.print', handler: reportRows });
-    context.routes.register({ method: 'GET', path: 'reports/export.csv', permission: 'wattanam.attendance-manager.print', handler: async (request) => {
+    context.routes.register({ method: 'GET', path: 'reports/export-csv', permission: 'wattanam.attendance-manager.print', handler: async (request) => {
       const rows = await reportRows(request);
       const columns = [['Date', 'date'], ['Student number', 'personNumberSnapshot'], ['Student', 'personNameSnapshot'], ['Class', 'classNameSnapshot'], ['Session', 'session'], ['Status', 'status'], ['Permission', 'permissionType'], ['Source', 'scanMode']];
       const cell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
