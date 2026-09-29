@@ -135,12 +135,25 @@ describe('PluginsService lifecycle locking, timeout, progress, and crash recover
       expect(tx.pluginInstallation.upsert).toHaveBeenCalled();
     });
 
-    it('rejects installing over an active plugin before touching the filesystem', async () => {
-      const { service, verifier, prisma } = harness();
-      verifier.verify.mockResolvedValue(verifiedPackage());
-      prisma.pluginInstallation.findUnique.mockResolvedValue({ status: 'active' });
-      await expect(service.install(Buffer.from('package'))).rejects.toThrow('Deactivate');
-      await expect(fs.readdir(pluginDir)).resolves.toEqual([]);
+    it('upgrades an active plugin and restores its active state without deactivating dependents', async () => {
+      const { service, verifier, prisma, tx, runtime } = harness();
+      const verified = verifiedPackage({ version: '1.1.0' });
+      verifier.verify.mockResolvedValue(verified);
+      prisma.pluginInstallation.findUnique.mockResolvedValue({ id: 'wattanam.test', status: 'active', version: '1.0.0' });
+      tx.pluginInstallation.upsert.mockResolvedValue({ id: 'wattanam.test', status: 'installed' });
+      const activate = jest.spyOn(service, 'activate').mockResolvedValue({ id: 'wattanam.test', version: '1.1.0', status: 'active' } as any);
+
+      await expect(service.install(Buffer.from('package'))).resolves.toMatchObject({ version: '1.1.0', status: 'active' });
+      expect(runtime.unload).toHaveBeenCalledWith('wattanam.test');
+      expect(activate).toHaveBeenCalledWith('wattanam.test');
+    });
+
+    it('rejects replacing an active plugin with the same or an older version', async () => {
+      const { service, verifier, prisma, runtime } = harness();
+      verifier.verify.mockResolvedValue(verifiedPackage({ version: '1.0.0' }));
+      prisma.pluginInstallation.findUnique.mockResolvedValue({ id: 'wattanam.test', status: 'active', version: '1.0.0' });
+      await expect(service.install(Buffer.from('package'))).rejects.toThrow('must increase the version');
+      expect(runtime.unload).not.toHaveBeenCalled();
     });
 
     it('marks the registry failed and removes both staged and destination directories when migration application fails', async () => {

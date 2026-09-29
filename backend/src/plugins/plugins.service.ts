@@ -151,9 +151,14 @@ export class PluginsService {
     if (confirmedPackageSha256 !== undefined && confirmedPackageSha256 !== verified.packageSha256) throw new BadRequestException('The package differs from the inspected package');
     await this.assertDependencies(verified);
     const current = await this.prisma.pluginInstallation.findUnique({ where: { id: verified.manifest.id } });
-    if (current?.status === 'active') {
-      throw new ConflictException(`Deactivate ${verified.manifest.id} before installing an update`);
+    const restoreActive = current?.status === 'active';
+    if (restoreActive && !semver.gt(verified.manifest.version, current.version)) {
+      throw new ConflictException(`Active plugin updates must increase the version: ${current.version} -> ${verified.manifest.version}`);
     }
+    // An active dependency must be upgradable without first deactivating every dependent plugin.
+    // Keep dependent registry state intact, briefly unload only the target runtime, replace its
+    // signed artifact under the normal migration/locking pipeline, then reactivate it below.
+    if (restoreActive) await this.runtime.unload(verified.manifest.id);
     if (verified.manifest.migrations.length > 0) {
       await this.migrations.createRecoveryPoint();
       // Visible progress marker: committed in its own short transaction (not the
@@ -192,6 +197,7 @@ export class PluginsService {
             update: { ...this.registryData(verified, destination), status: 'installed', activatedAt: null, deactivatedAt: null, lastError: null },
           });
         });
+        if (restoreActive) return this.activate(verified.manifest.id);
         return this.publicPlugin(registered);
       } catch (error) {
         await fs.rm(destination, { recursive: true, force: true });
@@ -201,6 +207,12 @@ export class PluginsService {
       }
     } catch (error) {
       await fs.rm(staging, { recursive: true, force: true });
+      // Failures before the registry swap leave the previous active installation authoritative.
+      // Restore its runtime so a transient package/filesystem failure does not create downtime.
+      if (restoreActive) {
+        const registered = await this.prisma.pluginInstallation.findUnique({ where: { id: verified.manifest.id } }).catch(() => null);
+        if (registered?.status === 'active') await this.runtime.load(verified.manifest.id).catch(() => undefined);
+      }
       throw error;
     }
   }
