@@ -1,7 +1,7 @@
 # WordPress-style core release image enforcement
 
 Date: 2026-09-26  
-Status: release pipeline corrected and contract-gated; first published beta run pending
+Status: signed beta `0.2.0` published; hosted runtime certification pending
 
 ## Defect corrected
 
@@ -47,8 +47,33 @@ Sixteen checks pass across:
 - consent-aware lifecycle UI; and
 - clean-core artifact verifier fixtures.
 
+## First signed production beta
+
+On 2026-09-28/29, workflow run `36417099742` (commit `744104d`) proved the complete physical
+release path through:
+
+- backend/frontend verification and the zero-violation clean-core gate;
+- immutable API, web and gateway image builds with SBOM/provenance;
+- passing HIGH/CRITICAL fixable-vulnerability gates for all three digests;
+- keyless Cosign signing and signature verification;
+- digest-pinned school blueprint rendering and local verification; and
+- retained release evidence and Trivy reports.
+
+The production Marketplace accepted beta release `0.2.0` as record
+`682ae508-518c-4f53-8712-9f2af85f98f6` with these verified immutable images:
+
+- API `sha256:1fa473eb6bf8970cea6a3338e7accf7fa47c30a0de3231814a951b7ca93759f1`;
+- web `sha256:3db0c9c0a391515cfa25e546251ea03cf32e6d0eef2c2b9f2252e421274c45e1`; and
+- gateway `sha256:2c3fdcc2f4517336251255f5f68e5fe753f7498e57bf49285f2e22915c01c1d7`.
+
+GitHub's repository-attestation API is unavailable for user-owned private repositories, so those
+two optional repository-attestation steps are conditionally skipped. BuildKit provenance/SBOM,
+Cosign signatures, local signature verification, vulnerability reports and the release-evidence
+artifact remain mandatory. Production publication also exposed and fixed BOM/whitespace handling
+for CI-injected URL and bearer-token values.
+
 ## Remaining acceptance gap
 
-This proves source and release configuration, not a published image. The first beta workflow must
-produce signed digests, those exact images must boot against a clean core database, and both
-Railway and self-hosted drills must complete the new-school lifecycle before production default.
+The published images and signed evidence are now proven. Those exact digests must still boot
+against a clean core database, and both Railway and self-hosted drills must complete the full
+new-school lifecycle before production default.

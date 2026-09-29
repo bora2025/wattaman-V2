@@ -3,8 +3,9 @@
 const DIGEST_IMAGE = /^ghcr\.io\/[a-z0-9._-]+\/[a-z0-9._/-]+@sha256:[a-f0-9]{64}$/;
 
 function required(environment, name) {
-  if (!environment[name]) throw new Error(`${name} is required`);
-  return environment[name];
+  const value = String(environment[name] || '').replace(/^\uFEFF/, '').trim();
+  if (!value) throw new Error(`${name} is required`);
+  return value;
 }
 
 function payloadFromEnvironment(environment) {

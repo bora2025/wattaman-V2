@@ -153,7 +153,9 @@ For **every** plugin in steps 5–8, keep a separate evidence record for: owners
   explicitly publishing the two core Dockerfiles; a required contract prevents regression to
   legacy-full release images
   ([release evidence](../acceptance/lean-core/wordpress-style-core-release-image-enforcement-2026-09-26.md)).
-  Its first signed beta run and runtime certification remain open.
+  Signed beta `0.2.0` is published from the physical core release path with retained scan and
+  blueprint evidence; runtime certification of those exact released digests remains open
+  ([evidence](../acceptance/lean-core/wordpress-style-core-release-image-enforcement-2026-09-26.md)).
 - [~] **10. Prove both deployment paths.** Railway release rendering and the separate self-hosted
   `docker-compose.core.yml` now explicitly bind core distribution, digest-pinned application
   images, health dependencies and persistent database/API state; required contracts pass

@@ -400,7 +400,10 @@ These plugins consume only permission-filtered, versioned read models from insta
   artifacts pass the clean-core gate, and the beta release workflow now explicitly publishes only
   `backend/Dockerfile.core` and `frontend/Dockerfile.core` after rebuilding and rescanning them
   ([release evidence](../acceptance/lean-core/wordpress-style-core-release-image-enforcement-2026-09-26.md)).
-  The first signed published beta and runtime boot remain pending.
+  Signed beta `0.2.0` is now published with immutable API/web/gateway digests after all three
+  vulnerability gates, keyless signing and blueprint verification passed
+  ([release evidence](../acceptance/lean-core/wordpress-style-core-release-image-enforcement-2026-09-26.md));
+  runtime boot of those exact released digests remains pending.
 - Provision a completely new school with only the default features in section 3.
 - [~] Railway and self-hosted deployment blueprints now bind API/web explicitly to `core`; the
   self-hosted blueprint requires externally supplied digest-pinned images and persists database and
