@@ -29,6 +29,23 @@ test('PR validation boots and installs the physical core deployment', () => {
   assert.match(workflow, /if: always\(\)/);
 });
 
+test('released-image workflow verifies and boots retained immutable digests without rebuilding', () => {
+  const workflow = fs.readFileSync(path.join(root, '.github/workflows/core-released-image-smoke.yml'), 'utf8');
+  assert.match(workflow, /actions\/download-artifact@v4/);
+  assert.match(workflow, /run-id: \$\{\{ inputs\.release_run_id \}\}/);
+  assert.match(workflow, /verify-school-release\.js release-artifact\/school-release\.json/);
+  assert.match(workflow, /verify-core-image-signatures\.js --blueprint release-artifact\/school-release\.json/);
+  assert.match(workflow, /services\.api\.image/);
+  assert.match(workflow, /services\.web\.image/);
+  assert.match(workflow, /services\.gateway\.image/);
+  assert.doesNotMatch(workflow, /docker build/);
+  assert.match(workflow, /node tools\/core-deployment-smoke\.js/);
+  assert.match(workflow, /node scripts\/verify-fresh-core-database\.js/);
+  assert.match(workflow, /--profile operations run --rm backup/);
+  assert.match(workflow, /--profile recovery-drill run --rm restore/);
+  assert.match(workflow, /if: always\(\)/);
+});
+
 test('core runtime image carries database and plugin-recovery verifiers', () => {
   const dockerfile = fs.readFileSync(path.join(root, 'backend/Dockerfile.core'), 'utf8');
   assert.match(dockerfile, /scripts\/verify-fresh-core-database\.js/);
