@@ -7,6 +7,7 @@ import { resolvePluginSourcePath } from '../../lib/plugin-ui-routing';
 type Field = {
   id: string; type: 'text' | 'email' | 'number' | 'date' | 'datetime' | 'select' | 'textarea' | 'json' | 'checkbox'; label: string;
   required?: boolean; disabled?: boolean; min?: number; max?: number; minLength?: number; maxLength?: number;
+  jsonShape?: 'object' | 'array' | 'any'; defaultValue?: unknown;
   options?: Array<{ label: string; value: string }>; visibleWhen?: { field: string; equals: string | number | boolean };
 };
 
@@ -26,7 +27,7 @@ export default function PluginForm({ pluginId, source, params, fields, options, 
   const [success, setSuccess] = useState('');
   const [busy, setBusy] = useState(false);
   useEffect(() => { const next: Record<string, unknown> = {}; fields.forEach((field) => {
-    const value = initial[field.id];
+    const value = initial[field.id] ?? field.defaultValue;
     next[field.id] = field.type === 'json' && value && typeof value === 'object'
       ? JSON.stringify(value, null, 2)
       : value ?? (field.type === 'checkbox' ? false : '');
@@ -45,7 +46,9 @@ export default function PluginForm({ pluginId, source, params, fields, options, 
       else if (field.type === 'json') {
         try {
           const parsed = JSON.parse(String(value));
-          if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) next[field.id] = 'Enter a JSON object.';
+          const shape = field.jsonShape || 'object';
+          if (shape === 'object' && (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))) next[field.id] = 'Enter a JSON object.';
+          if (shape === 'array' && !Array.isArray(parsed)) next[field.id] = 'Enter a JSON array.';
         } catch { next[field.id] = 'Enter valid JSON.'; }
       }
       else if (field.type === 'number' && text !== '' && (!Number.isFinite(Number(text)) || (field.min !== undefined && Number(text) < field.min) || (field.max !== undefined && Number(text) > field.max))) next[field.id] = `Enter a number${field.min !== undefined ? ` from ${field.min}` : ''}${field.max !== undefined ? ` to ${field.max}` : ''}.`;

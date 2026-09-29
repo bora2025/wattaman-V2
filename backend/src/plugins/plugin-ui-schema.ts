@@ -203,6 +203,8 @@ export function parsePluginUiBundle(value: unknown, pluginId: string, declaredPe
           if (!ID.test(fieldId) || fieldIds.has(fieldId) || !['text', 'email', 'number', 'date', 'datetime', 'select', 'textarea', 'json', 'checkbox'].includes(fieldType)) throw new BadRequestException('Plugin UI form field id or type is invalid');
           fieldIds.add(fieldId);
           string(field.label, 'form field label', 120);
+          if (field.jsonShape !== undefined && (fieldType !== 'json' || !['object', 'array', 'any'].includes(String(field.jsonShape)))) throw new BadRequestException('Plugin UI form jsonShape is invalid');
+          if (field.defaultValue !== undefined) inspectSafeJson(field.defaultValue, `form fields[${fieldIndex}].defaultValue`);
           for (const booleanKey of ['required', 'disabled'] as const) if (field[booleanKey] !== undefined && typeof field[booleanKey] !== 'boolean') throw new BadRequestException(`Plugin UI form ${booleanKey} must be boolean`);
           for (const numericKey of ['min', 'max', 'minLength', 'maxLength'] as const) if (field[numericKey] !== undefined && typeof field[numericKey] !== 'number') throw new BadRequestException(`Plugin UI form ${numericKey} must be numeric`);
           if (fieldType === 'select') {

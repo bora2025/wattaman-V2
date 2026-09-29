@@ -238,6 +238,9 @@ describe('Plugin UI v2 schema', () => {
       expect.objectContaining({ id: 'class-students-table', type: 'table', options: expect.objectContaining({ selectable: true }) }),
       expect.objectContaining({ id: 'student-actions', type: 'actions' }),
     ]));
+    const settings = parsed.pages.find((page) => page.id === 'registration-settings');
+    const createField = settings?.components.find((component) => component.id === 'custom-field-create-form');
+    expect(createField?.fields).toContainEqual(expect.objectContaining({ id: 'options', jsonShape: 'array' }));
   });
 
   it('validates bounded launch-language translations', () => {

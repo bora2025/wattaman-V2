@@ -336,6 +336,10 @@ already covers departments/memberships, student profiles, enrollment intervals, 
 and admissions. Study Years remain owned by Attendance Manager and are a dependency check, not an
 Academic Management runtime route to reclaim.
 
+Legacy deletion is separately gated by the
+[Academic legacy removal readiness audit](./academic-legacy-removal-readiness.md). Passing adoption
+or pre-switch readiness does not authorize deleting legacy code, Prisma models, routes, UI, or tables.
+
 Run these read-only ownership checkpoints from `backend/`:
 
 ```powershell
@@ -357,11 +361,11 @@ Academic Management execution order:
 
 - [x] Define a machine-readable aggregate ownership gate and focused tests.
 - [x] Bind ownership phase validation into the aggregate data/journal/backup cutover report.
-- [ ] Run the legacy-owner checkpoint on the selected hosted pilot school.
-- [ ] Create and restore-test the pilot school's final recovery set.
-- [ ] Install/activate the signed Stable Academic Management release.
-- [ ] Run aggregate and component preflight/dry-run/adoption commands.
-- [ ] Obtain exact aggregate reconciliation with all journals bound to the verified backup.
+- [x] Run the legacy-owner checkpoint on the selected hosted pilot school.
+- [x] Create and restore-test the pilot school's final recovery set.
+- [x] Install/activate the signed Stable Academic Management release.
+- [x] Run aggregate and component preflight/dry-run/adoption commands.
+- [x] Obtain exact aggregate reconciliation with all journals bound to the verified backup.
 - [ ] Pass hosted administrator/teacher/student role, browser and API parity.
 - [ ] Freeze academic legacy writes and switch the nine owner variables in a maintenance window.
 - [ ] Disable both legacy shadow-write variables and pass the plugin-owner checkpoint.
@@ -369,3 +373,12 @@ Academic Management execution order:
 - [ ] Exercise rollback, then reapply the approved plugin configuration.
 - [ ] Obtain pilot-school, operations and security/privacy acceptance.
 - [ ] Roll out through the fleet batches and begin the final school's 90-day retention window.
+
+The first five execution items were completed on 2026-09-29 for the hosted pilot installation
+`angkor-international-school`. Academic Management `0.1.12` and Attendance Manager `0.1.9` were
+active, recovery dump `wattanam-20260929T065735Z.dump` (SHA-256
+`1b1d950d7c3a5780ba0c9a246548fdcf14055d093374ba8eb3d54c4d5a7dc045`) was restored into the
+separate database `wattanam_academic_restore_20260929`, and the seven component adoptions plus the
+aggregate legacy-owner gate reconciled with no blockers in both production and the isolated restored
+copy. No ownership variable was changed. The next mandatory gate is hosted role/browser/API parity;
+do not begin the maintenance-window owner switch until that evidence is accepted.

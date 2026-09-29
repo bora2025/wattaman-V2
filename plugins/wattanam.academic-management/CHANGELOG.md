@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.13
+
+- Add a permission-gated declarative administration page for registration field modes and custom
+  admission fields, backed entirely by the Academic plugin's existing owner routes.
+- Allow administrators to create and remove custom fields without returning to the legacy
+  registration-settings screen.
+
 ## 0.1.12
 
 - Declare the operational contract and expose the standard runtime health probe.

@@ -377,6 +377,85 @@
       ]
     },
     {
+      "id": "registration-settings",
+      "title": "Registration Settings",
+      "routePath": "registration-settings",
+      "permission": "wattanam.academic-management.manage",
+      "parameters": [],
+      "dataSources": [
+        { "id": "registrationSettings", "method": "GET", "path": "admissions/settings", "permission": "wattanam.academic-management.view" },
+        { "id": "saveRegistrationSettings", "method": "PATCH", "path": "admissions/settings", "permission": "wattanam.academic-management.manage" },
+        { "id": "customFields", "method": "GET", "path": "admissions/fields", "permission": "wattanam.academic-management.view" },
+        { "id": "createCustomField", "method": "POST", "path": "admissions/fields", "permission": "wattanam.academic-management.manage" },
+        { "id": "deleteCustomField", "method": "DELETE", "path": "admissions/fields/:fieldId", "parameters": ["fieldId"], "autoload": false, "permission": "wattanam.academic-management.manage" }
+      ],
+      "components": [
+        { "id": "heading", "type": "heading", "title": "Registration Settings" },
+        {
+          "id": "registration-settings-form",
+          "type": "form",
+          "title": "Built-in registration fields",
+          "source": "saveRegistrationSettings",
+          "fields": [
+            { "id": "khmerNameMode", "type": "select", "label": "Khmer name", "required": true, "options": [{ "label": "Required", "value": "REQUIRED" }, { "label": "Optional", "value": "OPTIONAL" }, { "label": "Hidden", "value": "HIDDEN" }] },
+            { "id": "phoneMode", "type": "select", "label": "Phone", "required": true, "options": [{ "label": "Required", "value": "REQUIRED" }, { "label": "Optional", "value": "OPTIONAL" }, { "label": "Hidden", "value": "HIDDEN" }] },
+            { "id": "emailMode", "type": "select", "label": "Email", "required": true, "options": [{ "label": "Required", "value": "REQUIRED" }, { "label": "Optional", "value": "OPTIONAL" }, { "label": "Hidden", "value": "HIDDEN" }] },
+            { "id": "photoMode", "type": "select", "label": "Photo", "required": true, "options": [{ "label": "Required", "value": "REQUIRED" }, { "label": "Optional", "value": "OPTIONAL" }, { "label": "Hidden", "value": "HIDDEN" }] },
+            { "id": "passwordMode", "type": "select", "label": "Password", "required": true, "options": [{ "label": "Required", "value": "REQUIRED" }, { "label": "Optional", "value": "OPTIONAL" }, { "label": "Hidden", "value": "HIDDEN" }] },
+            { "id": "sexMode", "type": "select", "label": "Sex", "required": true, "options": [{ "label": "Required", "value": "REQUIRED" }, { "label": "Optional", "value": "OPTIONAL" }, { "label": "Hidden", "value": "HIDDEN" }] },
+            { "id": "dateOfBirthMode", "type": "select", "label": "Date of birth", "required": true, "options": [{ "label": "Required", "value": "REQUIRED" }, { "label": "Optional", "value": "OPTIONAL" }, { "label": "Hidden", "value": "HIDDEN" }] },
+            { "id": "addressMode", "type": "select", "label": "Address", "required": true, "options": [{ "label": "Required", "value": "REQUIRED" }, { "label": "Optional", "value": "OPTIONAL" }, { "label": "Hidden", "value": "HIDDEN" }] },
+            { "id": "generationMode", "type": "select", "label": "Generation", "required": true, "options": [{ "label": "Required", "value": "REQUIRED" }, { "label": "Optional", "value": "OPTIONAL" }, { "label": "Hidden", "value": "HIDDEN" }] }
+          ],
+          "options": { "initialSource": "registrationSettings", "submitLabel": "Save settings", "successMessage": "Registration settings saved" }
+        },
+        {
+          "id": "custom-fields-table",
+          "type": "table",
+          "title": "Custom registration fields",
+          "source": "customFields",
+          "fields": [
+            { "id": "label", "label": "Label", "sortable": true, "filterable": true },
+            { "id": "key", "label": "Key", "sortable": true },
+            { "id": "fieldType", "label": "Type", "sortable": true },
+            { "id": "required", "label": "Required", "format": "boolean", "sortable": true },
+            { "id": "enabled", "label": "Enabled", "format": "boolean", "sortable": true },
+            { "id": "order", "label": "Order", "format": "number", "sortable": true }
+          ],
+          "options": { "pageSize": 20, "selectable": true }
+        },
+        {
+          "id": "custom-field-actions",
+          "type": "actions",
+          "options": {
+            "actions": [{
+              "id": "delete-selected-custom-fields",
+              "label": "Delete selected fields",
+              "mode": "bulk",
+              "source": "deleteCustomField",
+              "selectionSource": "customFields",
+              "idParameter": "fieldId",
+              "confirmation": "Delete the selected custom registration fields? Existing submitted values are retained in registration records but the fields will no longer appear on the form.",
+              "destructive": true
+            }]
+          }
+        },
+        {
+          "id": "custom-field-create-form",
+          "type": "form",
+          "title": "Create custom field",
+          "source": "createCustomField",
+          "fields": [
+            { "id": "label", "type": "text", "label": "Label", "required": true, "minLength": 1, "maxLength": 120 },
+            { "id": "fieldType", "type": "select", "label": "Field type", "required": true, "options": [{ "label": "Text", "value": "TEXT" }, { "label": "Single select", "value": "SELECT" }, { "label": "Multiple select", "value": "MULTI_SELECT" }] },
+            { "id": "options", "type": "json", "label": "Options (JSON array; at least two for select fields)", "jsonShape": "array", "defaultValue": [] },
+            { "id": "required", "type": "checkbox", "label": "Required" }
+          ],
+          "options": { "submitLabel": "Create field", "successMessage": "Custom registration field created" }
+        }
+      ]
+    },
+    {
       "id": "registrations",
       "title": "Registrations",
       "routePath": "registrations",
