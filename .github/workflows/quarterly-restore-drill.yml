@@ -53,18 +53,10 @@ jobs:
       - name: Seed the source with a realistic multi-table synthetic fixture
         working-directory: backend
         env:
-          # The fixture script is fail-closed because it must never write synthetic legacy rows
-          # against an operator database accidentally. This disposable CI source is the explicit,
-          # reviewed exception.
-          ALLOW_SYNTHETIC_LEGACY_FIXTURE: 'true'
-          # Seed through the adoption-only URL while keeping DATABASE_URL pointed at the other
-          # disposable service. The fixture's target-separation guard must remain effective.
-          ADOPT_DATABASE_URL: postgresql://wattanam:drill-password@localhost:5432/wattanam_source
-          DATABASE_URL: postgresql://wattanam:drill-password@localhost:5433/wattanam_target
           PLUGIN_DIR: ${{ runner.temp }}/plugins
           PLUGIN_DATA_DIR: ${{ runner.temp }}/plugin-data
         run: |
-          node scripts/create-synthetic-legacy-fixture.js
+          npm run db:seed
           mkdir -p "$PLUGIN_DIR/sample-plugin" "$PLUGIN_DATA_DIR/sample-plugin"
           echo '{"id":"sample-plugin"}' > "$PLUGIN_DIR/sample-plugin/manifest.json"
           echo 'drill-fixture-data' > "$PLUGIN_DATA_DIR/sample-plugin/note.txt"
