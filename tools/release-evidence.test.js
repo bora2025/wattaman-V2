@@ -50,6 +50,9 @@ test('renderer refuses evidence that lacks the approved signing identity', () =>
   const generated = generate();
   try {
     assert.equal(generated.result.status, 0, generated.result.stderr);
+    const evidence = JSON.parse(fs.readFileSync(generated.output, 'utf8'));
+    delete evidence.source.repository;
+    fs.writeFileSync(generated.output, `${JSON.stringify(evidence, null, 2)}\n`);
     const output = path.join(generated.directory, 'school-release.json');
     const render = spawnSync(process.execPath, [path.join(__dirname, 'render-school-release.js'), '--evidence', generated.output, '--output', output], { cwd: root, encoding: 'utf8' });
     assert.notEqual(render.status, 0);

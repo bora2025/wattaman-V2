@@ -1,0 +1,24 @@
+title = "Wattanam V2 gitleaks config"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Env example files contain instructional placeholders, never real secrets"
+paths = ['''(^|/)\.env\.example$''']
+
+[[allowlists]]
+description = "PASSWORD_CHARS is the charset used to generate random passwords, not a secret itself"
+regexes = ['''ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789''']
+
+[[allowlists]]
+description = "Marketplace service specs contain deterministic idempotency fixtures, not credentials"
+paths = ['''^apps/marketplace-api/src/(commerce|school-billing|school-plugin-request)\.service\.spec\.ts$''']
+regexTarget = "match"
+regexes = ['''idempotencyKey:\s*['\"][a-z0-9-]+['\"]''']
+
+[[allowlists]]
+description = "JWT rotation drill uses explicit non-production test secrets"
+paths = ['''^backend/scripts/jwt-secret-rotation-live-drill\.js$''']
+regexTarget = "match"
+regexes = ['''jwt-secret-v[12]-at-least-32-characters-long''']

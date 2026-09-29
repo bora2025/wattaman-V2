@@ -13,7 +13,7 @@
     "unmatchedStaticSchoolApiConsumerCalls": 1,
     "frontendPages": 151,
     "frontendApiProxies": 3,
-    "frontendImports": 1282,
+    "frontendImports": 1281,
     "sharedComponents": 53,
     "frontendDeepLinks": 224,
     "navigationEntries": 83,
@@ -37928,12 +37928,6 @@
     {
       "file": "frontend/app/layout.tsx",
       "line": 2,
-      "specifier": "next/font/google",
-      "resolved": null
-    },
-    {
-      "file": "frontend/app/layout.tsx",
-      "line": 3,
       "specifier": "./providers",
       "resolved": "frontend/app/providers.tsx"
     },
@@ -52883,13 +52877,13 @@
     },
     {
       "file": "frontend/app/layout.tsx",
-      "line": 42,
+      "line": 34,
       "kind": "jsx-href",
       "expression": "https://fonts.googleapis.com"
     },
     {
       "file": "frontend/app/layout.tsx",
-      "line": 43,
+      "line": 35,
       "kind": "jsx-href",
       "expression": "https://fonts.gstatic.com"
     },

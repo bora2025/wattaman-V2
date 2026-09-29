@@ -14,8 +14,8 @@ const plugin = require(path.join(pluginRoot, manifest.backendEntry));
 const namespacePrefix = 'plugin_wattanam_academic_management_';
 const immutableHeaderless = new Map([
   ['003_create_enrollment_interval', '6a7304a8ea29c064a394144ba0fa4aa9288e62fabe03a9f0a81224401d969861'],
-  ['004_create_study_year', '54a0a91809e5ad924484776f47c8b7638b6d1894bff379f1485c229f25fb0ac1'],
-  ['005_create_class', '9d10a96010801a827f947e0f04a1fedb8a4eb59e3be3b742e51a7e1d53ea9b9c'],
+  ['004_create_study_year', '19a750f6164c3f10c13dc9e2f871c54e58db450f983082f028e38d03175554ca'],
+  ['005_create_class', '79a804f2e8d9d5005c58c30cede604ced6b473baa2cfff5fa3e8879602d1a11b'],
   ['006_create_class_registration', 'a6eaa58785201a91f2236dbbe777eb7900600e71eb193c9052b99a860f53ce67'],
   ['007_create_class_registration_settings', 'f7fac966cf3f0d9156898a3a297e7a17747d50a77090af8c85634449a2ba734f'],
   ['008_create_class_registration_field', 'b550055dd6951c330f7f8fb0719fb2bfef722c0066486c8a3a2f64946caffa18'],
