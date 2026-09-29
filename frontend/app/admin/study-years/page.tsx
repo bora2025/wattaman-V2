@@ -34,6 +34,9 @@ export default function StudyYearsPage() {
   const [message, setMessage] = useState('')
   const [msgType, setMsgType] = useState<'success' | 'error'>('success')
   const logoInputRef = useRef<HTMLInputElement>(null)
+  const academicApi = (path: string) => typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('source') === 'plugin'
+    ? `/api/plugin-api/wattanam.academic-management/${path}`
+    : `/api/${path}`
 
   useEffect(() => { fetchStudyYears() }, [])
 
@@ -45,7 +48,7 @@ export default function StudyYearsPage() {
 
   const fetchStudyYears = async () => {
     try {
-      const res = await apiFetch('/api/study-years')
+      const res = await apiFetch(academicApi('study-years'))
       if (res.ok) setStudyYears(await res.json())
     } catch {}
     setLoading(false)
@@ -64,8 +67,8 @@ export default function StudyYearsPage() {
       }
 
       const res = editingId
-        ? await apiFetch(`/api/study-years/${editingId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-        : await apiFetch('/api/study-years', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+        ? await apiFetch(academicApi(`study-years/${editingId}`), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+        : await apiFetch(academicApi('study-years'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
 
       if (res.ok) {
         showMsg(editingId ? 'Study year updated' : 'Study year created')
@@ -115,7 +118,7 @@ export default function StudyYearsPage() {
 
   const handleSetCurrent = async (id: string) => {
     try {
-      const res = await apiFetch(`/api/study-years/${id}/set-current`, { method: 'POST' })
+      const res = await apiFetch(academicApi(`study-years/${id}/set-current`), { method: 'POST' })
       if (res.ok) {
         showMsg('Current study year updated')
         fetchStudyYears()
@@ -128,7 +131,7 @@ export default function StudyYearsPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this study year?')) return
     try {
-      const res = await apiFetch(`/api/study-years/${id}`, { method: 'DELETE' })
+      const res = await apiFetch(academicApi(`study-years/${id}`), { method: 'DELETE' })
       if (res.ok) {
         showMsg('Study year deleted')
         fetchStudyYears()
@@ -347,7 +350,7 @@ export default function StudyYearsPage() {
                           Set Current
                         </button>
                       )}
-                      <Link href={`/admin/classes?studyYearId=${sy.id}`} className="text-xs text-slate-600 hover:text-slate-800 font-medium px-2 py-1 rounded hover:bg-slate-50 transition-colors">
+                      <Link href={`/admin/classes?studyYearId=${sy.id}${typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('source') === 'plugin' ? '&source=plugin' : ''}`} className="text-xs text-slate-600 hover:text-slate-800 font-medium px-2 py-1 rounded hover:bg-slate-50 transition-colors">
                         View Classes
                       </Link>
                       <button onClick={() => handleEdit(sy)} className="text-xs text-slate-600 hover:text-slate-800 font-medium px-2 py-1 rounded hover:bg-slate-50 transition-colors">

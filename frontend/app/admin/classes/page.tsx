@@ -225,6 +225,10 @@ function ManageClasses() {
   const { t } = useLanguage();
   const searchParams = useSearchParams();
   const urlStudyYearId = searchParams.get('studyYearId');
+  const pluginMode = searchParams.get('source') === 'plugin';
+  const academicApi = (path: string) => pluginMode
+    ? `/api/plugin-api/wattanam.academic-management/${path}`
+    : `/api/${path}`;
   const [classes, setClasses] = useState<Class[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [classAdmins, setClassAdmins] = useState<Teacher[]>([]);
@@ -409,7 +413,7 @@ function ManageClasses() {
     try {
       setLoadingClasses(true);
       const params = selectedStudyYearId ? `?studyYearId=${selectedStudyYearId}` : '';
-      const res = await apiFetch(`/api/classes${params}`);
+      const res = await apiFetch(academicApi(`classes${params}`));
       if (res.ok) {
         const data = await res.json();
         setClasses(data);
@@ -424,7 +428,7 @@ function ManageClasses() {
     const counts: Record<string, number> = {};
     await Promise.all(classList.map(async (cls) => {
       try {
-        const res = await apiFetch(`/api/classes/${cls.id}/students`);
+        const res = await apiFetch(academicApi(`classes/${cls.id}/students`));
         if (res.ok) {
           const list = await res.json();
           counts[cls.id] = Array.isArray(list) ? list.length : 0;
@@ -450,7 +454,7 @@ function ManageClasses() {
 
   const fetchStudyYears = async () => {
     try {
-      const res = await apiFetch('/api/study-years');
+      const res = await apiFetch(academicApi('study-years'));
       if (res.ok) setStudyYears(await res.json());
     } catch (err) { console.error('Failed to fetch study years'); }
   };
@@ -503,7 +507,7 @@ function ManageClasses() {
         ...formData,
         price: formData.price.trim() === '' ? null : parseFloat(formData.price),
       };
-      const res = await apiFetch(url, {
+      const res = await apiFetch(pluginMode ? url.replace('/api/classes', '/api/plugin-api/wattanam.academic-management/classes') : url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -513,7 +517,7 @@ function ManageClasses() {
         // Save weekly schedule
         const scheduleJson = showWeekly ? JSON.stringify(weeklySchedule) : null;
         if (scheduleJson || editingClass) {
-          await apiFetch(editingClass ? `/api/classes/${savedClass.id}` : `/api/classes/${savedClass.id}`, {
+          await apiFetch(academicApi(`classes/${savedClass.id}`), {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ schedule: scheduleJson }),
@@ -607,7 +611,7 @@ function ManageClasses() {
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this class?')) {
       try {
-        const res = await apiFetch(`/api/classes/${id}`, { method: 'DELETE' });
+        const res = await apiFetch(academicApi(`classes/${id}`), { method: 'DELETE' });
         if (res.ok) fetchClasses();
       } catch (err) { console.error('Failed to delete class'); }
     }
@@ -624,14 +628,14 @@ function ManageClasses() {
 
   const fetchClassStudents = async (classId: string) => {
     try {
-      const res = await apiFetch(`/api/classes/${classId}/students`);
+      const res = await apiFetch(academicApi(`classes/${classId}/students`));
       if (res.ok) setClassStudents(await res.json());
     } catch (err) { console.error('Failed to fetch class students'); }
   };
 
   const fetchAvailableStudents = async (classId: string) => {
     try {
-      const res = await apiFetch(`/api/classes/${classId}/available-students`);
+      const res = await apiFetch(academicApi(`classes/${classId}/available-students`));
       if (res.ok) setAvailableStudents(await res.json());
     } catch (err) { console.error('Failed to fetch available students'); }
   };
@@ -639,7 +643,7 @@ function ManageClasses() {
   const handleAddStudent = async (studentId: string) => {
     if (!selectedClass) return;
     try {
-      const res = await apiFetch(`/api/classes/${selectedClass.id}/students`, {
+      const res = await apiFetch(academicApi(`classes/${selectedClass.id}/students`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ studentId }),
@@ -658,7 +662,7 @@ function ManageClasses() {
     );
     if (!confirmed) return;
     try {
-      const res = await apiFetch(`/api/classes/${selectedClass.id}/students/${studentId}`, { method: 'DELETE' });
+      const res = await apiFetch(academicApi(`classes/${selectedClass.id}/students/${studentId}`), { method: 'DELETE' });
       if (res.ok) {
         await fetchClassStudents(selectedClass.id);
         await fetchAvailableStudents(selectedClass.id);
@@ -677,7 +681,7 @@ function ManageClasses() {
     setEditStudentCustomFields(student.customFieldValues || {});
     // Lazy-load parent list once
     if (parents.length === 0) {
-      apiFetch('/api/classes/parents')
+      apiFetch(academicApi('classes/parents'))
         .then(r => r.ok ? r.json() : [])
         .then((list: ParentOption[]) => setParents(Array.isArray(list) ? list : []))
         .catch(() => {});
@@ -689,7 +693,7 @@ function ManageClasses() {
     setSavingStudent(true);
     setSaveError(null);
     try {
-      const res = await apiFetch(`/api/classes/${selectedClass.id}/students/${studentId}`, {
+      const res = await apiFetch(academicApi(`classes/${selectedClass.id}/students/${studentId}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...editStudentData, parentId: editStudentData.parentId || null, customFieldValues: editStudentCustomFields }),
@@ -728,7 +732,7 @@ function ManageClasses() {
       });
       if (registerRes.ok) {
         const newStudent = await registerRes.json();
-        const addRes = await apiFetch(`/api/classes/${selectedClass.id}/students`, {
+        const addRes = await apiFetch(academicApi(`classes/${selectedClass.id}/students`), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ studentId: newStudent.user.id }),
@@ -738,7 +742,7 @@ function ManageClasses() {
           if (newStudentForm.nameKh || newStudentForm.sex || newStudentForm.photo || newStudentForm.dateOfBirth || newStudentForm.address || newStudentForm.generation || newStudentForm.studentNumber) {
             const studentId = addedStudent.id || addedStudent.student?.id;
             if (studentId) {
-              await apiFetch(`/api/classes/${selectedClass.id}/students/${studentId}`, {
+              await apiFetch(academicApi(`classes/${selectedClass.id}/students/${studentId}`), {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -781,7 +785,7 @@ function ManageClasses() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const res = await apiFetch(`/api/classes/${selectedClass.id}/students/bulk-csv`, {
+      const res = await apiFetch(academicApi(`classes/${selectedClass.id}/students/bulk-csv`), {
         method: 'POST',
         body: formData,
       });

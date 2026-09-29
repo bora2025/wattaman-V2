@@ -11,6 +11,7 @@ const FIELD = 'plugin_wattanam_academic_management_class_registration_field';
 const STUDENT_PROFILE = 'plugin_wattanam_academic_management_student_profile';
 const ENROLLMENT = 'plugin_wattanam_academic_management_enrollment_interval';
 const SUBJECT = 'plugin_wattanam_academic_management_subject';
+const STUDY_YEAR = 'plugin_wattanam_academic_management_study_year';
 
 function eventKey(prefix, payload) {
   return `${prefix}-${crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex')}`;
@@ -106,9 +107,8 @@ module.exports = {
       (await context.directory.lookupUsers(Array.from(new Set(ids.filter(Boolean))))).map((user) => [user.id, user]),
     );
     const loadStudyYearMap = async () => new Map(
-      (await context.readModels.read('wattanam.attendance-manager', 'study-year', [1]))
-        .filter((entry) => !entry.data?.deleted)
-        .map((entry) => [entry.key, entry.data]),
+      (await context.database.query(`SELECT * FROM ${STUDY_YEAR} ORDER BY "year" DESC`))
+        .map((entry) => [entry.id, entry]),
     );
     const decorateClassRows = async (rows) => {
       const [users, studyYears] = await Promise.all([
@@ -136,7 +136,7 @@ module.exports = {
     };
     const requireStudyYear = async (studyYearId) => {
       if (!studyYearId) return;
-      if (!(await loadStudyYearMap()).has(studyYearId)) throw new Error('studyYearId must reference an Attendance Manager Study Year');
+      if (!(await loadStudyYearMap()).has(studyYearId)) throw new Error('studyYearId must reference an Academic Management Study Year');
     };
     const requireClassStaffScope = async (request, classId) => {
       const principal = request?.principal || {};
@@ -182,12 +182,79 @@ module.exports = {
       { id: 'wattanam.academic-management.manage', label: 'Manage academic structures and enrollment' },
     ]);
     context.navigation.register([
+      { id: 'study-years', label: 'Study Years', href: '/plugins/wattanam.academic-management/study-years', permission: 'wattanam.academic-management.view' },
       { id: 'departments', label: 'Departments', href: '/plugins/wattanam.academic-management/departments', permission: 'wattanam.academic-management.view' },
       { id: 'subjects', label: 'Subjects', href: '/plugins/wattanam.academic-management/subjects', permission: 'wattanam.academic-management.view' },
       { id: 'classes', label: 'Classes', href: '/plugins/wattanam.academic-management/classes', permission: 'wattanam.academic-management.view', dashboard: { title: 'Academic Management', description: 'Manage classes, subjects, enrollment, and student academic profiles.', priority: 50 } },
       { id: 'teachers', label: 'Teachers', href: '/plugins/wattanam.academic-management/teachers', permission: 'wattanam.academic-management.view' },
       { id: 'registrations', label: 'Registrations', href: '/plugins/wattanam.academic-management/registrations', permission: 'wattanam.academic-management.manage' },
     ]);
+    const studyYearSelect = `SELECT y."id", y."year", y."label", y."startDate", y."endDate", y."isCurrent", y."schoolName", y."logoUrl", y."createdAt", y."updatedAt", jsonb_build_object('classes', COUNT(c."id")::int) AS "_count" FROM ${STUDY_YEAR} y LEFT JOIN ${CLASS} c ON c."studyYearId" = y."id"`;
+    context.routes.register({
+      method: 'GET', path: 'study-years', permission: 'wattanam.academic-management.view',
+      handler: () => context.database.query(`${studyYearSelect} GROUP BY y."id" ORDER BY y."year" DESC`),
+    });
+    context.routes.register({
+      method: 'GET', path: 'study-years/:id', permission: 'wattanam.academic-management.view',
+      handler: async (request) => {
+        const rows = await context.database.query(`${studyYearSelect} WHERE y."id" = $1 GROUP BY y."id" LIMIT 1`, [request?.params?.id]);
+        if (!rows.length) throw new Error('Study year not found');
+        return rows[0];
+      },
+    });
+    context.routes.register({
+      method: 'POST', path: 'study-years', permission: 'wattanam.academic-management.manage',
+      handler: async (request) => {
+        await requireAdministrativePrincipal(request);
+        const body = request?.body || {};
+        const year = Number(body.year);
+        if (!Number.isInteger(year) || year < 2020 || year > 2100) throw new Error('year must be between 2020 and 2100');
+        if (body.startDate && body.endDate && String(body.startDate) > String(body.endDate)) throw new Error('endDate must be on or after startDate');
+        const id = crypto.randomUUID();
+        await context.database.execute(`INSERT INTO ${STUDY_YEAR} ("id", "year", "label", "startDate", "endDate", "schoolName", "logoUrl") VALUES ($1,$2,$3,$4,$5,$6,$7)`, [id, year, String(body.label || '').trim() || `${year}-${year + 1}`, body.startDate || null, body.endDate || null, body.schoolName || null, body.logoUrl || null]);
+        return context.database.query(`${studyYearSelect} WHERE y."id" = $1 GROUP BY y."id" LIMIT 1`, [id]).then((rows) => rows[0]);
+      },
+    });
+    context.routes.register({
+      method: 'PUT', path: 'study-years/:id', permission: 'wattanam.academic-management.manage',
+      handler: async (request) => {
+        await requireAdministrativePrincipal(request);
+        const id = request?.params?.id;
+        const body = request?.body || {};
+        const year = Number(body.year);
+        if (!Number.isInteger(year) || year < 2020 || year > 2100) throw new Error('year must be between 2020 and 2100');
+        if (body.startDate && body.endDate && String(body.startDate) > String(body.endDate)) throw new Error('endDate must be on or after startDate');
+        const changed = await context.database.execute(`UPDATE ${STUDY_YEAR} SET "year"=$1,"label"=$2,"startDate"=$3,"endDate"=$4,"schoolName"=$5,"logoUrl"=$6,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=$7`, [year, String(body.label || '').trim() || `${year}-${year + 1}`, body.startDate || null, body.endDate || null, body.schoolName || null, body.logoUrl || null, id]);
+        if (!changed.count) throw new Error('Study year not found');
+        return context.database.query(`${studyYearSelect} WHERE y."id" = $1 GROUP BY y."id" LIMIT 1`, [id]).then((rows) => rows[0]);
+      },
+    });
+    context.routes.register({
+      method: 'POST', path: 'study-years/:id/set-current', permission: 'wattanam.academic-management.manage',
+      handler: async (request) => {
+        await requireAdministrativePrincipal(request);
+        const id = request?.params?.id;
+        return context.database.transaction(async (tx) => {
+          const exists = await tx.query(`SELECT "id" FROM ${STUDY_YEAR} WHERE "id"=$1 LIMIT 1`, [id]);
+          if (!exists.length) throw new Error('Study year not found');
+          await tx.execute(`UPDATE ${STUDY_YEAR} SET "isCurrent"=FALSE,"updatedAt"=CURRENT_TIMESTAMP WHERE "isCurrent"=TRUE`, []);
+          await tx.execute(`UPDATE ${STUDY_YEAR} SET "isCurrent"=TRUE,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=$1`, [id]);
+          return tx.query(`SELECT * FROM ${STUDY_YEAR} WHERE "id"=$1 LIMIT 1`, [id]).then((rows) => rows[0]);
+        });
+      },
+    });
+    context.routes.register({
+      method: 'DELETE', path: 'study-years/:id', permission: 'wattanam.academic-management.manage',
+      handler: async (request) => {
+        await requireAdministrativePrincipal(request);
+        const id = request?.params?.id;
+        const references = await context.database.query(`SELECT COUNT(*)::int AS "count" FROM ${CLASS} WHERE "studyYearId"=$1`, [id]);
+        if (Number(references[0]?.count || 0) > 0) throw new Error('Cannot delete a study year that still has classes');
+        const changed = await context.database.execute(`DELETE FROM ${STUDY_YEAR} WHERE "id"=$1`, [id]);
+        if (!changed.count) throw new Error('Study year not found');
+        return { success: true };
+      },
+    });
     context.routes.register({
       method: 'GET', path: 'departments', permission: 'wattanam.academic-management.view',
       handler: () => context.database.query(`SELECT "id", "name", "nameKh", "description", "createdAt", "updatedAt" FROM ${DEPARTMENT} ORDER BY "name" ASC`),

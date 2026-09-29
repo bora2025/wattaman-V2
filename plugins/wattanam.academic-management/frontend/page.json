@@ -142,6 +142,37 @@
       ]
     },
     {
+      "id": "study-years",
+      "title": "Study Years",
+      "routePath": "study-years",
+      "permission": "wattanam.academic-management.view",
+      "parameters": [],
+      "dataSources": [
+        { "id": "studyYears", "method": "GET", "path": "study-years", "permission": "wattanam.academic-management.view" },
+        { "id": "createStudyYear", "method": "POST", "path": "study-years", "permission": "wattanam.academic-management.manage" }
+      ],
+      "components": [
+        { "id": "heading", "type": "heading", "title": "Study Years" },
+        { "id": "study-years-table", "type": "table", "title": "Study Years", "source": "studyYears", "fields": [
+          { "id": "year", "label": "Year", "format": "number", "sortable": true },
+          { "id": "label", "label": "Label", "sortable": true, "filterable": true },
+          { "id": "startDate", "label": "Start date", "format": "date" },
+          { "id": "endDate", "label": "End date", "format": "date" },
+          { "id": "isCurrent", "label": "Current", "format": "boolean", "sortable": true },
+          { "id": "schoolName", "label": "School" },
+          { "id": "classCount", "label": "Classes", "path": "_count.classes", "format": "number" }
+        ], "options": { "pageSize": 20, "selectable": false } },
+        { "id": "study-year-create-form", "type": "form", "title": "Create study year", "source": "createStudyYear", "fields": [
+          { "id": "year", "type": "number", "label": "Year", "required": true, "min": 2020, "max": 2100 },
+          { "id": "label", "type": "text", "label": "Label", "maxLength": 120 },
+          { "id": "startDate", "type": "date", "label": "Start date" },
+          { "id": "endDate", "type": "date", "label": "End date" },
+          { "id": "schoolName", "type": "text", "label": "School name", "maxLength": 160 },
+          { "id": "logoUrl", "type": "text", "label": "Logo URL", "maxLength": 500 }
+        ], "options": { "submitLabel": "Create", "successMessage": "Study year created" } }
+      ]
+    },
+    {
       "id": "classes",
       "title": "Classes",
       "routePath": "classes",

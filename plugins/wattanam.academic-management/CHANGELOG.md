@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.14
+
+- Restore Study Years to the Academic Management aggregate with permission-gated list, detail,
+  create, edit, set-current, and guarded-delete routes backed by the existing immutable namespace.
+- Open the established rich Study Years and Manage Classes interfaces from Academic plugin
+  navigation, with every academic mutation routed through the plugin API namespace.
+- Keep the previous Attendance and legacy paths available during the staged production cutover and
+  rollback window; this release does not delete historical data or routes.
+
 ## 0.1.13
 
 - Add a permission-gated declarative administration page for registration field modes and custom
