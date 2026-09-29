@@ -212,6 +212,14 @@ Do not migrate all modules in one release. A failure in one plugin must not prev
 
 ## 9. Recommended implementation order
 
+Required hosted PR validation is green at commit `419eda2` (run `36524572802`), including all
+official-plugin PostgreSQL certifications, every restored-school rehearsal, the clean-core artifact,
+source-built deployment smoke, S3 artifact compatibility, frontend production build, Platform Admin
+browser/accessibility coverage and secret scanning
+([evidence](../acceptance/lean-core/wordpress-style-required-pr-validation-2026-09-29.md)). This closes
+the shared CI execution gap; it does **not** substitute for the persistent Railway clean-school,
+customer pilot or organizational approval gates described below.
+
 ### Phase 0 — Freeze architecture rules
 
 - Approve this core boundary and the plugin ownership map.
@@ -416,6 +424,9 @@ These plugins consume only permission-filtered, versioned read models from insta
   Hosted CI run `36521359176` now passes the complete source-built topology, fresh installation,
   core-only schema, recovery-set and isolated restore/reconciliation sequence
   ([automation evidence](../acceptance/lean-core/wordpress-style-core-deployment-smoke-automation-2026-09-26.md)).
+  Required validation run `36524572802` re-certified that complete source-built deployment smoke
+  together with every plugin runtime and restored-school rehearsal at commit `419eda2`
+  ([validation evidence](../acceptance/lean-core/wordpress-style-required-pr-validation-2026-09-29.md)).
   Released-image workflow run `36521972883` also verifies the retained blueprint and Cosign
   signatures, boots the exact `0.2.0` API/web/gateway digests without rebuilding, completes fresh
   installation and reconciles a full restore in hosted Docker. A persistent operator-controlled
@@ -583,3 +594,7 @@ Until every condition is evidenced, describe the reform as **in progress**, even
 6. Repeat the same pipeline for Timetable, Examination, Learning, Communication, Transportation, Finance and HR.
 7. Complete Parent Portal and Reporting after their provider contracts stabilize.
 8. Run the full new-school scenario before changing the provisioning default.
+
+The next external action is item 8 on a new, isolated Railway `core` project. Do not repurpose an
+existing `legacy-full` customer school. Because the certification project may incur Railway cost,
+create it only after explicit operator approval for that billable resource.
