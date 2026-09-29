@@ -9,7 +9,9 @@ test('marketplace operator creates a school and rotates a lost enrollment token'
   await page.getByRole('button', { name: 'Create customer school' }).click();
   await page.locator('#field-school-name').fill('Siem Reap Browser School');
   await page.getByLabel('Slug').fill('siem-reap-browser-school');
-  await page.getByLabel('Contact email').fill('principal@siem-reap.e2e');
+  // Zod's current e-mail validator intentionally rejects reserved pseudo-TLDs such as `.e2e`.
+  // `example.com` is reserved for documentation/testing and still exercises the real create DTO.
+  await page.getByLabel('Contact email').fill('principal@siem-reap.example.com');
   await page.getByLabel('Internal reason').fill('Create the browser acceptance school');
   await page.getByRole('button', { name: 'Create school', exact: true }).click();
 
