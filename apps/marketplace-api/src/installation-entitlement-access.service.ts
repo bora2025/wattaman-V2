@@ -1,6 +1,7 @@
 import { Prisma, PrismaClient } from '@prisma/client';
-import { createHash, verify } from 'node:crypto';
+import { verify } from 'node:crypto';
 import { z } from 'zod';
+import { schoolPaymentSignedPayload } from '@wattanam/marketplace-contracts';
 import { HttpError } from './http-error';
 import { canonicalJson } from './signing';
 import { MarketplaceConfig } from './config';
@@ -113,13 +114,4 @@ export class InstallationEntitlementAccessService {
  * without canonicalising a couple of hundred kilobytes into the signed bytes. Every field signs as a
  * string, so the two apps' canonical-JSON implementations cannot disagree about nulls or numbers.
  */
-export function schoolPaymentSignedPayload(installationId: string, ts: string, body: Record<string, unknown>) {
-  const text = (value: unknown) => (value === undefined || value === null ? '' : String(value));
-  return {
-    purpose: 'school-payment-submission', installationId, ts,
-    invoiceId: text(body.invoiceId), provider: text(body.provider), providerReference: text(body.providerReference),
-    amountMinor: text(body.amountMinor), paymentMethodId: text(body.paymentMethodId), note: text(body.note),
-    submittedBy: text(body.submittedBy),
-    receiptSha256: typeof body.receiptImage === 'string' ? createHash('sha256').update(body.receiptImage).digest('hex') : '',
-  };
-}
+export { schoolPaymentSignedPayload } from '@wattanam/marketplace-contracts';

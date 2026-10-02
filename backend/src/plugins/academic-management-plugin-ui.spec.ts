@@ -10,7 +10,7 @@ describe('Academic Management declarative administration UI', () => {
   const bundle = parsePluginUiBundle(descriptor, manifest.id, new Set(manifest.permissions));
 
   it('exposes registration settings through the plugin navigation', () => {
-    expect(manifest.version).toBe('0.1.14');
+    expect(manifest.version).toBe('0.1.15');
     expect(manifest.navigation).toContainEqual(expect.objectContaining({
       id: 'registration-settings',
       href: '/plugins/wattanam.academic-management/registration-settings',
@@ -27,10 +27,17 @@ describe('Academic Management declarative administration UI', () => {
     expect(page?.dataSources).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: 'studyYears', method: 'GET', path: 'study-years' }),
       expect.objectContaining({ id: 'createStudyYear', method: 'POST', path: 'study-years' }),
+      expect.objectContaining({ id: 'setCurrentStudyYear', method: 'POST', path: 'study-years/:studyYearId/set-current', autoload: false }),
+      expect.objectContaining({ id: 'deleteStudyYear', method: 'DELETE', path: 'study-years/:studyYearId', autoload: false }),
     ]));
     expect(page?.components.map((component) => component.id)).toEqual(expect.arrayContaining([
-      'study-years-table', 'study-year-create-form',
+      'study-years-table', 'study-year-actions', 'study-year-create-form',
     ]));
+    expect(bundle.pages).toContainEqual(expect.objectContaining({ id: 'study-year-edit', routePath: 'study-years/edit/:id' }));
+    const classes = bundle.pages.find((candidate) => candidate.id === 'classes');
+    expect(classes?.components.find((component) => component.id === 'classes-table')?.options).toMatchObject({
+      rowRoute: 'classes/:id', rowParameterMap: { id: 'id' },
+    });
     for (const route of [
       "path: 'study-years'",
       "path: 'study-years/:id'",

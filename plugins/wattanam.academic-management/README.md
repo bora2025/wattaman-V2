@@ -1,10 +1,11 @@
 # Wattanam Academic Management
 
 Academic Management owns study years, departments, subjects, classes, student profiles, enrollment
-intervals, and admissions. Version 0.1.14 restores Study Years to the academic aggregate and exposes
-the existing rich Study Years and Manage Classes workflows through plugin navigation. Attendance
-Manager remains supported during the staged ownership transition; its historical study-year routes
-must not be removed until production adoption and rollback gates pass.
+intervals, and admissions. Version 0.1.15 serves Study Years and Classes through the signed plugin UI
+host instead of redirecting into legacy administrator pages. Study Years includes create, edit,
+set-current and guarded-delete workflows; Classes links into plugin-owned detail and roster pages.
+Attendance Manager remains supported during the staged ownership transition; historical routes must
+not be removed until production adoption and rollback gates pass.
 
 Official Academic Management plugin. Version 0.1.0 establishes the department and account
 membership namespace required for the MP-2 adoption toolkit. Classes, study years, admissions,

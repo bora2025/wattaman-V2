@@ -53,12 +53,14 @@ const CORE_ADMIN_NAVIGATION_HREFS = new Set([
   '/admin',
   '/admin/users',
   '/admin/plugins',
-  '/marketplace',
   '/admin/settings',
   '/admin/backup',
   '/admin/system',
   '/admin/platform-billing',
   '/admin/audit',
+  '/admin/profile',
+  '/admin/licensing',
+  '/admin/appearance',
 ]);
 
 export function isCoreNavigationHref(href: string): boolean {

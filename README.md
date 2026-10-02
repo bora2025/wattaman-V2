@@ -1,7 +1,18 @@
 
 # Wattanam V2
 
-Wattanam V2 is a self-hosted education platform with a NestJS API, Next.js web application, PostgreSQL, signed plugins, and a separate official release repository.
+> **Repository transition:** the deployable self-hosted school now lives in
+> [`bora2025/Customer-School`](https://github.com/bora2025/Customer-School). This repository is being
+> reduced to the Marketplace control plane, Platform Admin, shared Marketplace contracts, publisher
+> tooling, and official free/paid plugin development. The existing school backend/frontend remain
+> temporarily only while cross-repository contracts, Marketplace web pages, plugin conformance tests,
+> and legacy module references are extracted. Do not delete them before their cleanup gates pass.
+
+See the [Marketplace and Plugin Workspace Cleanup Plan](./docs/architecture/marketplace-plugin-workspace-cleanup-plan.md)
+for the ordered split and deletion gates.
+
+Wattanam V2 currently contains the Marketplace and plugin ecosystem plus temporary customer-school
+extraction dependencies.
 
 Planning and delivery documentation:
 

@@ -41,7 +41,9 @@ services:
       PLUGIN_STORAGE_PROVIDER: ${PLUGIN_STORAGE_PROVIDER:-local}
       REQUIRE_PLUGIN_BACKUP_CONTRACTS: ${REQUIRE_PLUGIN_BACKUP_CONTRACTS:-false}
       PLUGIN_TRUSTED_KEYS: ${PLUGIN_TRUSTED_KEYS:?PLUGIN_TRUSTED_KEYS is required}
-      MARKETPLACE_URL: ${MARKETPLACE_URL:?MARKETPLACE_URL is required}
+      # Optional: leave empty for a standalone school. Set only to a trusted HTTPS Marketplace
+      # origin when the school owner chooses to connect this installation.
+      MARKETPLACE_URL: ${MARKETPLACE_URL:-}
       UPDATE_CHANNEL: ${UPDATE_CHANNEL:-stable}
       UPDATE_REPOSITORY_KEY_ID: ${UPDATE_REPOSITORY_KEY_ID:?UPDATE_REPOSITORY_KEY_ID is required}
       UPDATE_REPOSITORY_PUBLIC_KEY: ${UPDATE_REPOSITORY_PUBLIC_KEY:?UPDATE_REPOSITORY_PUBLIC_KEY is required}

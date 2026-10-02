@@ -188,6 +188,7 @@ module.exports = {
       { id: 'classes', label: 'Classes', href: '/plugins/wattanam.academic-management/classes', permission: 'wattanam.academic-management.view', dashboard: { title: 'Academic Management', description: 'Manage classes, subjects, enrollment, and student academic profiles.', priority: 50 } },
       { id: 'teachers', label: 'Teachers', href: '/plugins/wattanam.academic-management/teachers', permission: 'wattanam.academic-management.view' },
       { id: 'registrations', label: 'Registrations', href: '/plugins/wattanam.academic-management/registrations', permission: 'wattanam.academic-management.manage' },
+      { id: 'registration-settings', label: 'Registration Settings', href: '/plugins/wattanam.academic-management/registration-settings', permission: 'wattanam.academic-management.manage' },
     ]);
     const studyYearSelect = `SELECT y."id", y."year", y."label", y."startDate", y."endDate", y."isCurrent", y."schoolName", y."logoUrl", y."createdAt", y."updatedAt", jsonb_build_object('classes', COUNT(c."id")::int) AS "_count" FROM ${STUDY_YEAR} y LEFT JOIN ${CLASS} c ON c."studyYearId" = y."id"`;
     context.routes.register({

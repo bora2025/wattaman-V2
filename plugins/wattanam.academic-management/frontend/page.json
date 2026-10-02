@@ -149,7 +149,9 @@
       "parameters": [],
       "dataSources": [
         { "id": "studyYears", "method": "GET", "path": "study-years", "permission": "wattanam.academic-management.view" },
-        { "id": "createStudyYear", "method": "POST", "path": "study-years", "permission": "wattanam.academic-management.manage" }
+        { "id": "createStudyYear", "method": "POST", "path": "study-years", "permission": "wattanam.academic-management.manage" },
+        { "id": "setCurrentStudyYear", "method": "POST", "path": "study-years/:studyYearId/set-current", "parameters": ["studyYearId"], "autoload": false, "permission": "wattanam.academic-management.manage" },
+        { "id": "deleteStudyYear", "method": "DELETE", "path": "study-years/:studyYearId", "parameters": ["studyYearId"], "autoload": false, "permission": "wattanam.academic-management.manage" }
       ],
       "components": [
         { "id": "heading", "type": "heading", "title": "Study Years" },
@@ -161,7 +163,11 @@
           { "id": "isCurrent", "label": "Current", "format": "boolean", "sortable": true },
           { "id": "schoolName", "label": "School" },
           { "id": "classCount", "label": "Classes", "path": "_count.classes", "format": "number" }
-        ], "options": { "pageSize": 20, "selectable": false } },
+        ], "options": { "pageSize": 20, "selectable": true, "rowRoute": "study-years/edit/:id", "rowParameterMap": { "id": "id" } } },
+        { "id": "study-year-actions", "type": "actions", "options": { "actions": [
+          { "id": "set-current-study-year", "label": "Set selected as current", "mode": "bulk", "source": "setCurrentStudyYear", "selectionSource": "studyYears", "idParameter": "studyYearId", "confirmation": "Set the selected study year as current? Select exactly one study year." },
+          { "id": "delete-study-years", "label": "Delete selected study years", "mode": "bulk", "source": "deleteStudyYear", "selectionSource": "studyYears", "idParameter": "studyYearId", "confirmation": "Delete the selected study years? Study years with classes cannot be deleted.", "destructive": true }
+        ] } },
         { "id": "study-year-create-form", "type": "form", "title": "Create study year", "source": "createStudyYear", "fields": [
           { "id": "year", "type": "number", "label": "Year", "required": true, "min": 2020, "max": 2100 },
           { "id": "label", "type": "text", "label": "Label", "maxLength": 120 },
@@ -170,6 +176,28 @@
           { "id": "schoolName", "type": "text", "label": "School name", "maxLength": 160 },
           { "id": "logoUrl", "type": "text", "label": "Logo URL", "maxLength": 500 }
         ], "options": { "submitLabel": "Create", "successMessage": "Study year created" } }
+      ]
+    },
+    {
+      "id": "study-year-edit",
+      "title": "Edit Study Year",
+      "routePath": "study-years/edit/:id",
+      "permission": "wattanam.academic-management.manage",
+      "parameters": [{ "name": "id", "type": "uuid", "maximumLength": 36 }],
+      "dataSources": [
+        { "id": "studyYear", "method": "GET", "path": "study-years/:id", "permission": "wattanam.academic-management.view" },
+        { "id": "saveStudyYear", "method": "PUT", "path": "study-years/:id", "permission": "wattanam.academic-management.manage" }
+      ],
+      "components": [
+        { "id": "heading", "type": "heading", "title": "Edit Study Year" },
+        { "id": "study-year-edit-form", "type": "form", "title": "Study year details", "source": "saveStudyYear", "fields": [
+          { "id": "year", "type": "number", "label": "Year", "required": true, "min": 2020, "max": 2100 },
+          { "id": "label", "type": "text", "label": "Label", "maxLength": 120 },
+          { "id": "startDate", "type": "date", "label": "Start date" },
+          { "id": "endDate", "type": "date", "label": "End date" },
+          { "id": "schoolName", "type": "text", "label": "School name", "maxLength": 160 },
+          { "id": "logoUrl", "type": "text", "label": "Logo URL", "maxLength": 500 }
+        ], "options": { "initialSource": "studyYear", "submitLabel": "Save", "successMessage": "Study year saved" } }
       ]
     },
     {
@@ -197,7 +225,7 @@
             { "id": "studyYear.label", "label": "Study year", "path": "studyYear.label" },
             { "id": "price", "label": "Price", "sortable": true }
           ],
-          "options": { "pageSize": 20, "selectable": false }
+          "options": { "pageSize": 20, "selectable": false, "rowRoute": "classes/:id", "rowParameterMap": { "id": "id" } }
         },
         {
           "id": "class-create-form",

@@ -11,6 +11,7 @@
     "build:marketplace": "cd apps/marketplace-api && npm run build",
     "build:core": "npm --prefix backend run build:core && npm --prefix frontend run build:core",
     "test:marketplace": "cd apps/marketplace-api && npm test",
+    "test:marketplace-contracts": "npm --prefix packages/marketplace-contracts test",
     "provision:railway:school": "node tools/provision-railway-school.js",
     "certify:railway:core-preflight": "node tools/railway-core-hosted-preflight.js",
     "domain:custom": "node tools/manage-custom-domain.js",

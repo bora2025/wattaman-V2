@@ -19,11 +19,11 @@ describe('root module registry', () => {
   });
 
   it('uses only the four accepted classifications and never labels business ownership as core', () => {
-    expect(ROOT_MODULE_REGISTRY).toHaveLength(37);
+    expect(ROOT_MODULE_REGISTRY).toHaveLength(16);
     expect(rootModulesByClassification('core')).toHaveLength(12);
     expect(rootModulesByClassification('shared')).toHaveLength(2);
     expect(rootModulesByClassification('proxy')).toHaveLength(1);
-    expect(rootModulesByClassification('business')).toHaveLength(22);
+    expect(rootModulesByClassification('business')).toHaveLength(1);
     expect(ROOT_MODULE_REGISTRY.filter((entry) => entry.classification === 'business' && entry.owner === 'lean-core')).toEqual([]);
   });
 
@@ -32,7 +32,7 @@ describe('root module registry', () => {
     const legacy = rootModuleNamesForDistribution('legacy-full');
 
     expect(core).toHaveLength(14);
-    expect(legacy).toHaveLength(37);
+    expect(legacy).toHaveLength(16);
     expect(core).toEqual(ROOT_MODULE_REGISTRY.filter((entry) => ['core', 'shared'].includes(entry.classification)).map((entry) => entry.module));
     expect(legacy).toEqual(ROOT_MODULE_REGISTRY.map((entry) => entry.module));
     expect(core).not.toContain('AttendanceModule');
@@ -65,7 +65,7 @@ describe('root module registry', () => {
     });
 
     expect(classified.filter((item) => item.kind === 'job')).toHaveLength(7);
-    expect(classified.filter((item) => item.kind === 'gateway')).toHaveLength(4);
+    expect(classified.filter((item) => item.kind === 'gateway')).toHaveLength(1);
     expect(classified.filter((item) => item.kind === 'gateway' && item.selectedInCore)).toEqual([
       expect.objectContaining({ file: 'plugins/plugin-realtime.gateway.ts', classification: 'core' }),
     ]);

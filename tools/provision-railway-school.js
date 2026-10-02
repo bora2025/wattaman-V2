@@ -14,7 +14,9 @@ const blueprintPath = arg('blueprint');
 const slug = arg('school-slug');
 const schoolName = arg('school-name');
 const workspace = arg('workspace');
-const distribution = arg('distribution') || 'legacy-full';
+// Every newly provisioned school starts as a lean core. Existing schools that still need the
+// compatibility bundle must opt in explicitly with --distribution legacy-full while they migrate.
+const distribution = arg('distribution') || 'core';
 const execute = process.argv.includes('--execute');
 if (!blueprintPath || !slug || !schoolName) throw new Error('--blueprint, --school-slug, and --school-name are required');
 if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) throw new Error('school slug must be lowercase kebab-case');
@@ -77,8 +79,7 @@ try {
   setSecret('api', 'JWT_SECRET', crypto.randomBytes(48).toString('base64url'));
   setVariables('api', {
     NODE_ENV: 'production', PORT: '3001', APP_VERSION: blueprint.release.version, GIT_COMMIT: blueprint.release.commit,
-    // The production default remains legacy-full until final approval. Core certification must be
-    // requested explicitly and match the signed release blueprint.
+    // New schools are core-first. legacy-full is an explicit migration/rollback compatibility mode.
     WATTANAM_DISTRIBUTION: distribution,
     DATABASE_URL: '${{Postgres.DATABASE_URL}}', CORS_ORIGINS: `https://${domain}`, PUBLIC_APP_URL: `https://${domain}`, COOKIE_SECURE: 'true',
     BACKUP_DIR: '/data/backups', PLUGIN_DIR: '/data/plugins', PLUGIN_DATA_DIR: '/data/plugin-data',

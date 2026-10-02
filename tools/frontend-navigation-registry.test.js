@@ -60,12 +60,14 @@ test('LC2-009: administrator core navigation is the exact approved surface set',
     '/admin',
     '/admin/users',
     '/admin/plugins',
-    '/marketplace',
     '/admin/settings',
     '/admin/backup',
     '/admin/system',
     '/admin/platform-billing',
     '/admin/audit',
+    '/admin/profile',
+    '/admin/licensing',
+    '/admin/appearance',
   ];
   assert.ok(hrefs.every(isCoreNavigationHref));
   assert.equal(isCoreNavigationHref('/admin/attendance'), false);
@@ -83,9 +85,14 @@ test('LC2-009: Sidebar resolves distribution at runtime and fails closed before 
 test('LC2-010: core route policy admits core and plugin-host surfaces', async () => {
   const { isRouteAvailable } = await routePolicy();
   for (const pathname of [
-    '/', '/login', '/admin', '/admin/users', '/admin/system', '/marketplace',
-    '/marketplace/link/request-id', '/plugins/example/page', '/api/version', '/teacher', '/student',
+    '/', '/login', '/admin', '/admin/users', '/admin/system', '/admin/profile',
+    '/admin/licensing', '/admin/appearance', '/plugins/example/page', '/api/version', '/teacher', '/student',
   ]) assert.equal(isRouteAvailable(pathname, 'core'), true, pathname);
+  assert.equal(isRouteAvailable('/marketplace', 'core'), false);
+  assert.equal(isRouteAvailable('/marketplace/link/request-id', 'core'), false);
+  assert.equal(isRouteAvailable('/marketplace/publisher', 'core'), false);
+  assert.equal(isRouteAvailable('/marketplace/reviewer', 'core'), false);
+  assert.equal(isRouteAvailable('/admin/appearance/about', 'core'), false);
 });
 
 test('LC2-010: core route policy rejects legacy business pages while legacy-full preserves them', async () => {

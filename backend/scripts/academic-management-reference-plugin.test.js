@@ -14,6 +14,7 @@ const SETTINGS = 'plugin_wattanam_academic_management_class_registration_setting
 const FIELD = 'plugin_wattanam_academic_management_class_registration_field';
 const STUDENT_PROFILE = 'plugin_wattanam_academic_management_student_profile';
 const ENROLLMENT = 'plugin_wattanam_academic_management_enrollment_interval';
+const STUDY_YEAR = 'plugin_wattanam_academic_management_study_year';
 
 function json(relative) {
   return JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', '..', relative), 'utf8'));
@@ -55,6 +56,12 @@ async function activate(database = { query: async () => [], execute: async () =>
 test('registers the initial department routes, permissions, and navigation', async () => {
   const result = await activate();
   assert.deepEqual(result.routes.map((route) => `${route.method}:${route.path}`), [
+    'GET:study-years',
+    'GET:study-years/:id',
+    'POST:study-years',
+    'PUT:study-years/:id',
+    'POST:study-years/:id/set-current',
+    'DELETE:study-years/:id',
     'GET:departments',
     'GET:departments/:id',
     'POST:departments',
@@ -110,11 +117,15 @@ test('registers the initial department routes, permissions, and navigation', asy
   assert.deepEqual(result.permissions.map((permission) => permission.id), [
     'wattanam.academic-management.view', 'wattanam.academic-management.manage',
   ]);
-  assert.equal(result.navigation[0].href, '/plugins/wattanam.academic-management/departments');
-  assert.equal(result.navigation[1].href, '/plugins/wattanam.academic-management/subjects');
-  assert.equal(result.navigation[2].href, '/plugins/wattanam.academic-management/classes');
-  assert.equal(result.navigation[3].href, '/plugins/wattanam.academic-management/teachers');
-  assert.equal(result.navigation[4].href, '/plugins/wattanam.academic-management/registrations');
+  assert.deepEqual(result.navigation.map((entry) => entry.href), [
+    '/plugins/wattanam.academic-management/study-years',
+    '/plugins/wattanam.academic-management/departments',
+    '/plugins/wattanam.academic-management/subjects',
+    '/plugins/wattanam.academic-management/classes',
+    '/plugins/wattanam.academic-management/teachers',
+    '/plugins/wattanam.academic-management/registrations',
+    '/plugins/wattanam.academic-management/registration-settings',
+  ]);
 });
 
 test('exposes read-only routes without database writes', async () => {
@@ -241,7 +252,7 @@ test('class compatibility reads use plugin-owned rosters with bounded authorizat
   assert.equal(calls.some((call) => /FROM\s+"(?:Student|Class|User)"/.test(call.sql)), false);
 });
 
-test('Academic Management registers no Study Year routes while class handlers publish lifecycle events', async () => {
+test('Academic Management owns Study Year routes while class handlers publish lifecycle events', async () => {
   const events = [];
   const durableEvents = [];
   const timestamp = '2026-09-22T00:00:00.000Z';
@@ -267,7 +278,10 @@ test('Academic Management registers no Study Year routes while class handlers pu
   const updateClass = result.routes.find((r) => r.method === 'PUT' && r.path === 'classes/:id');
   const deleteClass = result.routes.find((r) => r.method === 'DELETE' && r.path === 'classes/:id');
 
-  assert.equal(result.routes.some((route) => route.path.startsWith('study-years')), false);
+  assert.deepEqual(result.routes.filter((route) => route.path.startsWith('study-years')).map((route) => `${route.method}:${route.path}`), [
+    'GET:study-years', 'GET:study-years/:id', 'POST:study-years', 'PUT:study-years/:id',
+    'POST:study-years/:id/set-current', 'DELETE:study-years/:id',
+  ]);
   assert.equal(events.some((event) => event.event.startsWith('academic.study-year.')), false);
 
   events.length = 0;
@@ -289,25 +303,17 @@ test('Academic Management registers no Study Year routes while class handlers pu
   assert.ok(events.some((e) => e.event === 'academic.class.deleted.v1'));
 });
 
-test('class responses consume Attendance Manager Study Year read model', async () => {
+test('class responses resolve the Academic-owned Study Year namespace', async () => {
   const db = {
     query: async (sql, params = []) => {
       if (sql.includes(`FROM ${CLASS} c`)) return [{ id: params[0] || 'c1', name: 'Class A', teacherId: 't1', classAdminId: null, studyYearId: 'year-1' }];
+      if (sql.includes(`FROM ${STUDY_YEAR}`)) return [{ id: 'year-1', year: 2026, label: '2026-2027', isCurrent: true }];
       return [];
     },
     execute: async () => ({ count: 1 }),
     transaction: async (fn) => fn({ query: db.query, execute: db.execute, publish: () => undefined }),
   };
-  const readModels = {
-    read: async (owner, model, versions) => {
-      assert.equal(owner, 'wattanam.attendance-manager');
-      assert.equal(model, 'study-year');
-      assert.deepEqual(versions, [1]);
-      return [{ key: 'year-1', version: 1, data: { id: 'year-1', year: 2026, label: '2026-2027', isCurrent: true } }];
-    },
-    publish: async () => undefined,
-  };
-  const result = await activate(db, { readModels });
+  const result = await activate(db);
   const getClass = result.routes.find((route) => route.method === 'GET' && route.path === 'classes/:id');
   const value = await getClass.handler({ params: { id: 'c1' }, principal: { userId: 'admin-1', role: 'ADMIN' } });
   assert.equal(value.studyYear.id, 'year-1');
@@ -682,7 +688,8 @@ test('manifest, UI, and additive namespaced migrations align with the preflight 
   assert.equal(page.pages[0].dataSources.length, 2);
   assert.equal(page.pages[0].dataSources[0].method, 'GET');
   const pageIds = page.pages.map((p) => p.id);
-  assert.equal(pageIds.some((id) => id.startsWith('study-year')), false);
+  assert.ok(pageIds.includes('study-years'));
+  assert.ok(pageIds.includes('study-year-edit'));
   assert.ok(pageIds.includes('classes'));
   assert.ok(pageIds.includes('subjects'));
   assert.ok(pageIds.includes('department-edit'));
@@ -719,7 +726,7 @@ test('manifest, UI, and additive namespaced migrations align with the preflight 
   assert.ok(studentEditPage.dataSources.some((source) => source.id === 'student' && source.method === 'GET'));
   assert.ok(studentEditPage.dataSources.some((source) => source.id === 'saveStudent' && source.method === 'PATCH'));
   const navIds = manifest.navigation.map((n) => n.id);
-  assert.equal(navIds.includes('study-years'), false);
+  assert.ok(navIds.includes('study-years'));
   assert.ok(navIds.includes('classes'));
   assert.ok(navIds.includes('subjects'));
   assert.ok(navIds.includes('registrations'));

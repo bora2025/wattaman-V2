@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.15
+
+- Replace the Study Years and Classes legacy-page redirects with signed declarative plugin pages.
+- Add Study Year edit, set-current and guarded-delete controls and connect Class rows to their
+  plugin-owned detail/roster workflow.
+- Align runtime and manifest navigation for Teachers and Registration Settings.
+
 ## 0.1.14
 
 - Restore Study Years to the Academic Management aggregate with permission-gated list, detail,

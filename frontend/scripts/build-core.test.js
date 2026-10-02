@@ -14,6 +14,12 @@ test('maps app directories to public routes', () => {
 
 test('allows only core and dynamic plugin route entries', () => {
   assert.equal(routeAllowed('/admin/plugins'), true);
+  assert.equal(routeAllowed('/marketplace'), false);
+  assert.equal(routeAllowed('/marketplace/link/[requestId]'), false);
+  assert.equal(routeAllowed('/marketplace/publisher'), false);
+  assert.equal(routeAllowed('/marketplace/reviewer/submissions/[submissionId]'), false);
+  assert.equal(routeAllowed('/api/marketplace/[...path]'), false);
+  assert.equal(routeAllowed('/api/[...path]'), true);
   assert.equal(routeAllowed('/plugins/[pluginId]/[[...path]]'), true);
   assert.equal(routeAllowed('/plugins/wattanam.timetable/classes'), false);
   assert.equal(routeAllowed('/admin/attendance'), false);

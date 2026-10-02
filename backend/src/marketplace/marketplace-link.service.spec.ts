@@ -1,4 +1,4 @@
-import { MarketplaceLinkService } from './marketplace-link.service';
+import { marketplaceApprovalUrl, MarketplaceLinkService } from './marketplace-link.service';
 
 const REQUEST_ID = '3684fa6c-dfe8-449e-ae55-88f7631f7da4';
 
@@ -30,11 +30,21 @@ describe('MarketplaceLinkService pending link', () => {
 
   it('records the request before returning it, so a reload cannot strand an approval', async () => {
     const prisma = prismaDouble();
-    respond(201, { requestId: REQUEST_ID, approvalUrl: 'http://marketplace.test/link', expiresAt: '2099-01-01T00:00:00.000Z' });
+    respond(201, { requestId: REQUEST_ID, approvalUrl: `http://marketplace.test/marketplace/link/${REQUEST_ID}`, expiresAt: '2099-01-01T00:00:00.000Z' });
 
     await new MarketplaceLinkService(prisma, keys, tokenStore).start('Bora School');
 
     expect(prisma.marketplacePendingLink.upsert.mock.calls[0][0].create).toMatchObject({ id: 'singleton', requestId: REQUEST_ID });
+  });
+
+  it('rejects approval pages outside the configured marketplace origin', () => {
+    expect(() => marketplaceApprovalUrl('https://marketplace.example', REQUEST_ID, `https://evil.example/marketplace/link/${REQUEST_ID}`)).toThrow('untrusted');
+    expect(() => marketplaceApprovalUrl('https://marketplace.example', REQUEST_ID, `https://marketplace.example/marketplace/link/${REQUEST_ID}?token=leak`)).toThrow('untrusted');
+  });
+
+  it('accepts only the exact marketplace approval route', () => {
+    expect(marketplaceApprovalUrl('https://marketplace.example', REQUEST_ID, `https://marketplace.example/marketplace/link/${REQUEST_ID}`))
+      .toBe(`https://marketplace.example/marketplace/link/${REQUEST_ID}`);
   });
 
   it('resumes the recorded request when polled without one', async () => {
@@ -87,6 +97,6 @@ describe('MarketplaceLinkService pending link', () => {
 
     const status = await new MarketplaceLinkService(prisma, keys, tokenStore).status();
 
-    expect(status).toMatchObject({ linked: false, pending: { requestId: REQUEST_ID } });
+    expect(status).toMatchObject({ linked: false, pending: { requestId: REQUEST_ID, approvalUrl: `http://marketplace.test/marketplace/link/${REQUEST_ID}` } });
   });
 });

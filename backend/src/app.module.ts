@@ -8,33 +8,12 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
-import { AttendanceModule } from './attendance/attendance.module';
 import { NotificationModule } from './notification/notification.module';
-import { ReportsModule } from './reports/reports.module';
-import { ClassesModule } from './classes/classes.module';
-import { SessionConfigModule } from './session-config/session-config.module';
-import { HolidaysModule } from './holidays/holidays.module';
-import { DepartmentsModule } from './departments/departments.module';
-import { StudyYearsModule } from './study-years/study-years.module';
-import { CardTemplatesModule } from './card-templates/card-templates.module';
-import { TimetableModule } from './timetable/timetable.module';
-import { ScoringModule } from './scoring/scoring.module';
-import { FeesModule } from './fees/fees.module';
-import { SalaryModule } from './salary/salary.module';
-import { BusModule } from './bus/bus.module';
-import { ExamModule } from './exam/exam.module';
-import { AssignmentsModule } from './assignments/assignments.module';
-import { CoursesModule } from './courses/courses.module';
-import { ParentModule } from './parent/parent.module';
 import { BackupModule } from './backup/backup.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
 import { NotificationPreferenceModule } from './notification-preference/notification-preference.module';
 import { AuditModule } from './audit/audit.module';
-import { CardAliasesModule } from './card-aliases/card-aliases.module';
 import { SiteSettingsModule } from './site-settings/site-settings.module';
-import { PostsModule } from './posts/posts.module';
-import { ClassRegistrationsModule } from './class-registrations/class-registrations.module';
-import { StaffCvModule } from './staff-cv/staff-cv.module';
 import { HealthModule } from './health/health.module';
 import { InstallationModule } from './installation/installation.module';
 import { PluginsModule } from './plugins/plugins.module';
@@ -49,10 +28,7 @@ const LOCAL_ROOT_MODULES: Record<string, Type<unknown>> = {
   DatabaseModule, SchoolAccessModule, AuditModule, AuthModule, BackupModule, HealthModule,
   InstallationModule, PluginsModule, UpdatesModule, MarketplaceModule, ObservabilityModule,
   DataExportModule, SiteSettingsModule, NotificationModule, NotificationPreferenceModule,
-  AnnouncementsModule, AttendanceModule, ReportsModule, ClassesModule, SessionConfigModule,
-  HolidaysModule, DepartmentsModule, StudyYearsModule, CardTemplatesModule, TimetableModule,
-  ScoringModule, FeesModule, SalaryModule, BusModule, ExamModule, AssignmentsModule, CoursesModule,
-  ParentModule, CardAliasesModule, PostsModule, ClassRegistrationsModule, StaffCvModule,
+  AnnouncementsModule,
 };
 
 export function localModulesForDistribution(distribution: Distribution): Type<unknown>[] {

@@ -27,6 +27,9 @@ function routeForDirectory(relativeDirectory) {
 }
 
 function routeAllowed(route) {
+  // Marketplace account authentication/commerce belongs to the separately deployed control-plane
+  // web app. The school core talks to Marketplace only through its authenticated backend connector.
+  if (route.startsWith('/api/marketplace')) return false;
   if (route.startsWith('/plugins/')) return allowedArtifactDynamic.has(route);
   return allowedExact.has(route) || allowedPrefixes.some((prefix) => route.startsWith(prefix));
 }

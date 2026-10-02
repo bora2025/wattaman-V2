@@ -34,27 +34,6 @@ export const ROOT_MODULE_REGISTRY: readonly RootModuleRegistration[] = [
 
   { module: 'AnnouncementsModule', importPath: './announcements/announcements.module', classification: 'proxy', owner: 'wattanam.announcements', note: 'Legacy URL compatibility proxy for the extracted official plugin.' },
 
-  { module: 'AttendanceModule', importPath: './attendance/attendance.module', classification: 'business', owner: 'wattanam.attendance' },
-  { module: 'ReportsModule', importPath: './reports/reports.module', classification: 'business', owner: 'split:domain-reports' },
-  { module: 'ClassesModule', importPath: './classes/classes.module', classification: 'business', owner: 'wattanam.academic-management' },
-  { module: 'SessionConfigModule', importPath: './session-config/session-config.module', classification: 'business', owner: 'split:wattanam.attendance+wattanam.human-resources' },
-  { module: 'HolidaysModule', importPath: './holidays/holidays.module', classification: 'business', owner: 'wattanam.attendance' },
-  { module: 'DepartmentsModule', importPath: './departments/departments.module', classification: 'business', owner: 'wattanam.academic-management' },
-  { module: 'StudyYearsModule', importPath: './study-years/study-years.module', classification: 'business', owner: 'wattanam.attendance-manager' },
-  { module: 'CardTemplatesModule', importPath: './card-templates/card-templates.module', classification: 'business', owner: 'wattanam.document-designer' },
-  { module: 'TimetableModule', importPath: './timetable/timetable.module', classification: 'business', owner: 'wattanam.timetable' },
-  { module: 'ScoringModule', importPath: './scoring/scoring.module', classification: 'business', owner: 'wattanam.examination' },
-  { module: 'FeesModule', importPath: './fees/fees.module', classification: 'business', owner: 'wattanam.finance' },
-  { module: 'SalaryModule', importPath: './salary/salary.module', classification: 'business', owner: 'wattanam.human-resources' },
-  { module: 'BusModule', importPath: './bus/bus.module', classification: 'business', owner: 'wattanam.transportation' },
-  { module: 'ExamModule', importPath: './exam/exam.module', classification: 'business', owner: 'wattanam.examination' },
-  { module: 'AssignmentsModule', importPath: './assignments/assignments.module', classification: 'business', owner: 'wattanam.learning' },
-  { module: 'CoursesModule', importPath: './courses/courses.module', classification: 'business', owner: 'wattanam.learning' },
-  { module: 'ParentModule', importPath: './parent/parent.module', classification: 'business', owner: 'split:wattanam.parent-portal+wattanam.communication' },
-  { module: 'CardAliasesModule', importPath: './card-aliases/card-aliases.module', classification: 'business', owner: 'wattanam.attendance' },
-  { module: 'PostsModule', importPath: './posts/posts.module', classification: 'business', owner: 'wattanam.communication' },
-  { module: 'ClassRegistrationsModule', importPath: './class-registrations/class-registrations.module', classification: 'business', owner: 'wattanam.academic-management' },
-  { module: 'StaffCvModule', importPath: './staff-cv/staff-cv.module', classification: 'business', owner: 'wattanam.human-resources' },
 ] as const;
 
 export function rootModulesByClassification(classification: RootModuleClassification) {

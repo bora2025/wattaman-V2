@@ -19,14 +19,12 @@
     "/admin/notifications",
     "/admin/licensing",
     "/admin/appearance",
-    "/admin/appearance/about",
     "/teacher",
     "/student",
     "/settings/notifications"
   ],
   "prefixes": [
     "/api/",
-    "/marketplace",
     "/plugins/",
     "/_next/"
   ],

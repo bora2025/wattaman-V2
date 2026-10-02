@@ -7,6 +7,20 @@ import { MarketplaceIdentityConfig, readMarketplaceIdentityConfig } from './mark
 const REQUESTED_SCOPE = 'catalog:browse purchase:create download:artifact';
 const REFRESH_THRESHOLD_MS = 2 * 24 * 60 * 60 * 1000;
 
+export function marketplaceApprovalUrl(configuredOrigin: string, requestId: string, supplied?: unknown): string {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId)) {
+    throw new BadGatewayException('Marketplace returned an invalid link request');
+  }
+  let url: URL;
+  try { url = new URL(String(supplied || '')); }
+  catch { throw new BadGatewayException('Marketplace returned an invalid approval URL'); }
+  const origin = new URL(configuredOrigin);
+  if (url.origin !== origin.origin || url.username || url.password || url.search || url.hash || url.pathname !== `/marketplace/link/${requestId}`) {
+    throw new BadGatewayException('Marketplace returned an untrusted approval URL');
+  }
+  return url.toString();
+}
+
 function maskEmail(email?: string): string | undefined {
   if (!email) return undefined;
   const [local, domain] = email.split('@');
@@ -32,12 +46,13 @@ export class MarketplaceLinkService {
     if (result.status !== 201) throw new BadGatewayException(errorMessage(result.body));
     // Persisted before the browser is told about it, so an approval can still be claimed if the
     // admin page is reloaded or closed while the owner is deciding.
+    const approvalUrl = marketplaceApprovalUrl(config.marketplaceUrl, result.body.requestId, result.body.approvalUrl);
     await this.prisma.marketplacePendingLink.upsert({
       where: { id: 'singleton' },
       create: { id: 'singleton', requestId: result.body.requestId, scope: REQUESTED_SCOPE, expiresAt: new Date(result.body.expiresAt) },
       update: { requestId: result.body.requestId, scope: REQUESTED_SCOPE, startedAt: new Date(), expiresAt: new Date(result.body.expiresAt) },
     });
-    return { requestId: result.body.requestId, approvalUrl: result.body.approvalUrl, expiresAt: result.body.expiresAt };
+    return { requestId: result.body.requestId, approvalUrl, expiresAt: result.body.expiresAt };
   }
 
   /** `requestId` is optional: with none, the pending request recorded by `start()` is resumed. */
@@ -84,7 +99,13 @@ export class MarketplaceLinkService {
     ]);
     // Reported even once linked, so a stale record left by an interrupted relink is visible rather
     // than silently absent.
-    const awaiting = pending ? { requestId: pending.requestId, startedAt: pending.startedAt, expiresAt: pending.expiresAt } : null;
+    const config = readMarketplaceIdentityConfig();
+    const awaiting = pending ? {
+      requestId: pending.requestId,
+      startedAt: pending.startedAt,
+      expiresAt: pending.expiresAt,
+      approvalUrl: config ? new URL(`/marketplace/link/${pending.requestId}`, config.marketplaceUrl).toString() : undefined,
+    } : null;
     if (!link || link.revokedAt) return { linked: false as const, pending: awaiting };
     return { linked: true as const, accountEmailMasked: link.accountEmailMasked, scope: link.scope, linkedAt: link.linkedAt, expiresAt: link.expiresAt, pending: awaiting };
   }

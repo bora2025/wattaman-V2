@@ -46,7 +46,7 @@ interface UpdateStatus {
 }
 
 interface PluginExtensions { navigation: Array<{ pluginId: string; id: string; label: string; href: string; permission?: string }>; pages?: Array<{ pluginId: string; id: string; title: string; routePath: string; kind: string }> }
-interface MarketplaceLinkStatus { linked: boolean; accountEmailMasked?: string; scope?: string; expiresAt?: string; pending?: { requestId: string; startedAt: string; expiresAt: string } | null }
+interface MarketplaceLinkStatus { linked: boolean; accountEmailMasked?: string; scope?: string; expiresAt?: string; pending?: { requestId: string; startedAt: string; expiresAt: string; approvalUrl?: string } | null }
 interface CatalogProduct {
   id: string; name: string; description: string; license: string; paid: boolean;
   publisher: { slug: string; displayName: string };
@@ -234,13 +234,10 @@ export default function PluginsPage() {
       const response = await apiFetch('/api/admin/marketplace/link/start', { method: 'POST' });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.message || `Could not start linking (${response.status})`);
-      // The approval UI belongs to this school frontend. The marketplace service returns an API
-      // origin for machine-to-machine calls and intentionally has no browser page at this path.
-      // Keeping this same-origin also ensures account credentials/session cookies only pass
-      // through the frontend's allowlisted server-side marketplace proxy.
       const requestId = String(result.requestId || '');
       if (!/^[0-9a-f-]{36}$/i.test(requestId)) throw new Error('Marketplace returned an invalid link request');
-      const approvalUrl = `/marketplace/link/${encodeURIComponent(requestId)}`;
+      const approvalUrl = String(result.approvalUrl || '');
+      if (!/^https:\/\//i.test(approvalUrl) && window.location.protocol === 'https:') throw new Error('Marketplace returned an insecure approval URL');
       if (approvalTab) { approvalTab.opener = null; approvalTab.location.href = approvalUrl; }
       else {
         setError('Your browser blocked the approval tab. Use the Open approval page link below, then choose Finish linking.');
@@ -449,7 +446,7 @@ export default function PluginsPage() {
                     <>
                       <div className="flex flex-wrap items-center gap-2">
                         <button className="btn btn-primary" disabled={linking} onClick={resumeLink}>{linking ? 'Checking…' : 'Finish linking'}</button>
-                        <a className="btn btn-secondary" href={`/marketplace/link/${encodeURIComponent(linkStatus.pending.requestId)}`} target="_blank" rel="noopener noreferrer">Open approval page ↗</a>
+                        {linkStatus.pending.approvalUrl && <a className="btn btn-secondary" href={linkStatus.pending.approvalUrl} target="_blank" rel="noopener noreferrer">Open approval page ↗</a>}
                         <button className="btn" disabled={linking} onClick={startLink}>Start over</button>
                       </div>
                       <p className="mt-2 text-xs text-slate-500">A link request from {new Date(linkStatus.pending.startedAt).toLocaleString()} is still waiting. If the account owner has approved it, finishing completes the link without asking them again.</p>
