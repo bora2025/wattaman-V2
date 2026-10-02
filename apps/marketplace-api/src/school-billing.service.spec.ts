@@ -422,6 +422,14 @@ describe('SchoolBillingService recurring billing cycle', () => {
 });
 
 describe('SchoolBillingService billing anchor', () => {
+  beforeEach(() => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-09-15T00:00:00.000Z'));
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   function harness(school: Record<string, unknown>) {
     const tx = {
       schoolBillingPlan: { findUnique: jest.fn().mockResolvedValue({ id: 'plan-1', slug: 'standard', currency: 'USD', billingInterval: 'MONTHLY', active: true }) },

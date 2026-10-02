@@ -5,6 +5,7 @@ yarn-debug.log*
 yarn-error.log*
 
 # Build and test outputs
+artifacts/
 dist/
 dist-core/
 .core-build/
@@ -75,6 +76,3 @@ Thumbs.db
 tmp/
 temp_settings.txt
 tools/create-customer-school-bora3.ps1
-backend/.tmp-mp1/
-backend/.tmp-mp1-seed.sql
-frontend/test-results/
