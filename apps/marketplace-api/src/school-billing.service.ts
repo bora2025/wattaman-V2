@@ -606,6 +606,18 @@ export class SchoolBillingService {
   private async deliverPending(invoiceId: string, now: Date) {
     const rows = await this.prisma.schoolBillingNotification.findMany({ where: { invoiceId, status: { in: ['PENDING', 'FAILED'] } }, orderBy: { createdAt: 'asc' } });
     for (const row of rows) {
+      // The durable notification is the primary delivery channel: customer schools receive it in
+      // the installation-signed school-control payload and store/show it in their own dashboard.
+      // Email is only an optional secondary channel. A marketplace intentionally configured for
+      // MFA-only operation must therefore not label a successfully published in-app alert as a
+      // failure merely because no third-party mail provider is configured.
+      if (this.config?.transactionalEmail.provider === 'disabled') {
+        await this.prisma.schoolBillingNotification.update({
+          where: { id: row.id },
+          data: { status: 'SENT', attemptedAt: now, sentAt: now, failureMessage: null },
+        });
+        continue;
+      }
       if (!row.recipientEmail) {
         await this.prisma.schoolBillingNotification.update({ where: { id: row.id }, data: { status: 'SKIPPED', attemptedAt: now, failureMessage: 'School contact email is not configured' } });
         continue;

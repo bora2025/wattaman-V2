@@ -57,6 +57,24 @@ describe('SchoolBillingService', () => {
     expect(result[0].notifications[0]).not.toHaveProperty('failureMessage');
   });
 
+  it('delivers billing alerts directly in app when third-party email is disabled', async () => {
+    const notice = { id: 'notice-1', recipientEmail: 'owner@school.example', subject: 'Invoice', message: 'Invoice issued' };
+    const prisma = {
+      schoolBillingNotification: {
+        findMany: jest.fn().mockResolvedValue([notice]),
+        update: jest.fn().mockResolvedValue({ ...notice, status: 'SENT' }),
+      },
+    } as any;
+    const email = { send: jest.fn() };
+    const config = { transactionalEmail: { provider: 'disabled' } } as any;
+    await (new SchoolBillingService(prisma, email, config) as any).deliverPending('invoice-1', now);
+    expect(email.send).not.toHaveBeenCalled();
+    expect(prisma.schoolBillingNotification.update).toHaveBeenCalledWith({
+      where: { id: 'notice-1' },
+      data: { status: 'SENT', attemptedAt: now, sentAt: now, failureMessage: null },
+    });
+  });
+
   it('suspends only three days after the final overdue notice was created', async () => {
     const invoice = {
       id: 'invoice-1', invoiceNumber: 'WTN-2026-OVERDUE', currency: 'USD', amountMinor: 10000, paidMinor: 0,
