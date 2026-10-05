@@ -127,7 +127,7 @@ export class InstallationRegistrationService {
       // Redeemed only after the signature verifies, so a forged or malformed attempt cannot burn a
       // customer's one-time token on its way to being rejected.
       const school = input.enrollmentToken
-        ? await this.redeemEnrollmentToken(tx, { token: input.enrollmentToken, registrationId: registration.id, installationId: input.installationId, now })
+        ? await this.redeemEnrollmentToken(tx, { token: input.enrollmentToken, registrationId: registration.id, installationId: input.installationId, accountId: registration.accountId, now })
         : null;
 
       const autoLink = input.enrollmentToken && registration.accountId
@@ -259,7 +259,7 @@ export class InstallationRegistrationService {
    */
   private async redeemEnrollmentToken(
     tx: Prisma.TransactionClient,
-    input: { token: string; registrationId: string; installationId: string; now: Date },
+    input: { token: string; registrationId: string; installationId: string; accountId: string | null; now: Date },
   ) {
     const invalid = () => new HttpError(400, 'Enrollment token is not valid');
     const record = await tx.schoolEnrollmentToken.findUnique({
@@ -270,9 +270,13 @@ export class InstallationRegistrationService {
 
     const school = await tx.customerSchool.findUnique({
       where: { id: record.customerSchoolId },
-      select: { id: true, name: true, slug: true, status: true, installation: { select: { id: true } } },
+      select: { id: true, name: true, slug: true, status: true, ownerAccountId: true, installation: { select: { id: true } } },
     });
     if (!school || school.status === 'TERMINATED' || school.status === 'SUSPENDED') throw invalid();
+    // A school created from an approved account request belongs to that owner before it has an
+    // installation. Possession of the enrollment token alone must not let another marketplace
+    // account claim it; the owner still proves password + MFA and supplies their account id.
+    if (school.ownerAccountId && school.ownerAccountId !== input.accountId) throw invalid();
     // A token is minted only when the school has no installation, but a second deployment could
     // still race in behind the first; the unique column would reject it, less legibly than this.
     if (school.installation && school.installation.id !== input.registrationId) throw invalid();

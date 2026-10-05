@@ -55,7 +55,7 @@ export class PlatformDirectoryService {
       select: {
         id: true, displayName: true, email: true, emailVerifiedAt: true, mfaEnabled: true,
         lockedUntil: true, createdAt: true,
-        _count: { select: { installations: true, orders: true } },
+        _count: { select: { customerSchools: true, orders: true } },
       },
     });
     return paginate(rows.map((row) => ({ ...row, email: maskEmail(row.email) })), input.limit, (row) => row.id);
@@ -72,6 +72,10 @@ export class PlatformDirectoryService {
         mfaRecoveryCodes: { select: { usedAt: true } },
         installations: {
           select: { id: true, installationId: true, label: true, lastSeenAt: true, createdAt: true },
+          orderBy: { createdAt: 'desc' }, take: 50,
+        },
+        customerSchools: {
+          select: { id: true, name: true, slug: true, status: true, createdAt: true, installation: { select: { installationId: true, lastSeenAt: true } } },
           orderBy: { createdAt: 'desc' }, take: 50,
         },
         orders: {

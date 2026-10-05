@@ -15,6 +15,11 @@ const submitInput = z.object({
 const listInput = pageInput.extend({ status: z.enum(['PENDING', 'APPROVED', 'REJECTED']).optional() });
 const decisionInput = z.object({ internalReason: z.string().trim().min(3).max(5000) }).strict();
 
+function schoolSlug(name: string, requestId: string): string {
+  const base = name.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'customer-school';
+  return `${base}-${requestId.replace(/-/g, '').slice(0, 8)}`;
+}
+
 export class MarketplaceAccountRequestService {
   constructor(private readonly prisma: PrismaClient) {}
 
@@ -61,6 +66,7 @@ export class MarketplaceAccountRequestService {
       if (request.status !== 'PENDING') throw new HttpError(409, 'Marketplace account request was already decided');
       let accountId: string | null = null;
       let reusedExistingAccount = false;
+      let customerSchool: { id: string; name: string; slug: string; status: string } | null = null;
       if (approved) {
         const existingAccount = await tx.marketplaceAccount.findUnique({ where: { email: request.email }, select: { id: true } });
         if (existingAccount) {
@@ -75,6 +81,21 @@ export class MarketplaceAccountRequestService {
           const account = await tx.marketplaceAccount.create({ data: { email: request.email, displayName: request.displayName, passwordHash: request.passwordHash }, select: { id: true } });
           accountId = account.id;
         }
+        if (request.schoolName && accountId) {
+          customerSchool = await tx.customerSchool.create({
+            data: {
+              name: request.schoolName,
+              slug: schoolSlug(request.schoolName, request.id),
+              status: 'PROSPECT',
+              contactName: request.displayName,
+              contactEmail: request.email,
+              ownerAccountId: accountId,
+              createdByOperatorId: operatorId,
+              notes: `Created from approved marketplace account request ${request.id}.`,
+            },
+            select: { id: true, name: true, slug: true, status: true },
+          });
+        }
       }
       const decided = await tx.marketplaceAccountRequest.update({
         where: { id }, data: { status: approved ? 'APPROVED' : 'REJECTED', reviewedByOperatorId: operatorId, reviewReason: input.internalReason, reviewedAt: now, createdAccountId: accountId, passwordHash: null },
@@ -83,9 +104,9 @@ export class MarketplaceAccountRequestService {
       await tx.platformAuditEvent.create({ data: {
         operatorId, action: approved ? 'marketplace_account_request_approved' : 'marketplace_account_request_rejected', success: true,
         targetType: 'MarketplaceAccountRequest', targetId: id, reason: input.internalReason,
-        metadata: accountId ? { accountId, reusedExistingAccount } : Prisma.JsonNull, correlationId: context.correlationId, ip: context.ip, userAgent: context.userAgent,
+        metadata: accountId ? { accountId, reusedExistingAccount, customerSchoolId: customerSchool?.id ?? null } : Prisma.JsonNull, correlationId: context.correlationId, ip: context.ip, userAgent: context.userAgent,
       } });
-      return decided;
+      return { ...decided, customerSchool };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 }

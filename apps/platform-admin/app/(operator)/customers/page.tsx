@@ -5,7 +5,7 @@ import Link from 'next/link';
 
 interface CustomerRow {
   id: string; displayName: string; email: string; emailVerifiedAt: string | null;
-  mfaEnabled: boolean; createdAt: string; _count: { installations: number; orders: number };
+  mfaEnabled: boolean; createdAt: string; _count: { customerSchools: number; orders: number };
 }
 
 export default function CustomersPage() {
@@ -18,7 +18,7 @@ export default function CustomersPage() {
       { header: 'Customer', render: row => <div><Link className="font-medium text-indigo-700 hover:underline" href={`/customers/${row.id}`}>{row.displayName}</Link><div className="text-xs text-slate-500">{row.email}</div></div> },
       { header: 'Verified', render: row => row.emailVerifiedAt ? 'Yes' : 'No' },
       { header: 'MFA', render: row => row.mfaEnabled ? 'Enabled' : 'Not enabled' },
-      { header: 'Schools', render: row => row._count.installations },
+      { header: 'Schools', render: row => row._count.customerSchools },
       { header: 'Orders', render: row => row._count.orders },
       { header: 'Created', render: row => new Date(row.createdAt).toLocaleDateString() },
     ]} />

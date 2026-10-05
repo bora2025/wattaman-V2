@@ -77,6 +77,27 @@ describe('MarketplaceAccountRequestService', () => {
     expect(tx.platformAuditEvent.create.mock.calls[0][0].data.metadata).toMatchObject({ accountId: 'account-1', reusedExistingAccount: true });
   });
 
+  it('creates an owned prospect school and returns it after approving a school account request', async () => {
+    const tx = {
+      marketplaceAccountRequest: {
+        findUnique: jest.fn().mockResolvedValue({ id: '12345678-1234-4000-8000-123456789abc', status: 'PENDING', email: 'owner@example.com', displayName: 'School Owner', schoolName: 'Angkor International School', passwordHash: 'hash' }),
+        update: jest.fn().mockResolvedValue({ id: 'request-3', status: 'APPROVED', createdAccountId: 'account-1', reviewedAt: new Date() }),
+      },
+      marketplaceAccount: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'account-1' }) },
+      customerSchool: { create: jest.fn().mockResolvedValue({ id: 'school-1', name: 'Angkor International School', slug: 'angkor-international-school-12345678', status: 'PROSPECT' }) },
+      platformAuditEvent: { create: jest.fn().mockResolvedValue({}) },
+    };
+    const result = await new MarketplaceAccountRequestService(prismaWith(tx)).decide(
+      '12345678-1234-4000-8000-123456789abc', 'operator-1', true, { internalReason: 'Owner and school verified.' }, context,
+    );
+    expect(tx.customerSchool.create.mock.calls[0][0].data).toMatchObject({
+      name: 'Angkor International School', slug: 'angkor-international-school-12345678', status: 'PROSPECT',
+      ownerAccountId: 'account-1', contactEmail: 'owner@example.com', createdByOperatorId: 'operator-1',
+    });
+    expect(result.customerSchool).toMatchObject({ id: 'school-1', status: 'PROSPECT' });
+    expect(tx.platformAuditEvent.create.mock.calls[0][0].data.metadata).toMatchObject({ customerSchoolId: 'school-1' });
+  });
+
   it('rejects without creating an account', async () => {
     const tx = {
       marketplaceAccountRequest: {

@@ -298,6 +298,7 @@ model MarketplaceAccount {
   schoolPluginRequests  SchoolPluginRequest[]
   pluginRequestMessages SchoolPluginRequestMessage[]
   accountRequests       MarketplaceAccountRequest[]
+  customerSchools       CustomerSchool[]
 }
 
 model MarketplaceAccountRequest {
@@ -630,6 +631,7 @@ model CustomerSchool {
   gatewayOrigin       String?                   @unique
   notes               String?
   createdByOperatorId String?
+  ownerAccountId      String?
   createdAt           DateTime                  @default(now())
   updatedAt           DateTime                  @updatedAt
   suspendedAt         DateTime?
@@ -637,6 +639,7 @@ model CustomerSchool {
   terminatedAt        DateTime?
   terminatedReason    String?
   createdBy           PlatformOperator?         @relation("CustomerSchoolCreator", fields: [createdByOperatorId], references: [id], onDelete: SetNull)
+  owner               MarketplaceAccount?       @relation(fields: [ownerAccountId], references: [id], onDelete: SetNull)
   enrollmentTokens    SchoolEnrollmentToken[]
   installation        InstallationRegistration?
   provisioningRequests SchoolProvisioningRequest[]
@@ -651,6 +654,7 @@ model CustomerSchool {
   billingNotifications SchoolBillingNotification[]
 
   @@index([status, createdAt])
+  @@index([ownerAccountId, createdAt])
 }
 
 /// Central pricing catalog for the Wattanam service itself. Invoice prices are snapshotted so a

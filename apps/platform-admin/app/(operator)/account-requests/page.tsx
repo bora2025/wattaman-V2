@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { OperatorProfile, platformJson } from '../../../lib/api';
 
 type RequestRow = {
@@ -10,6 +11,7 @@ type RequestRow = {
 };
 
 export default function AccountRequestsPage() {
+  const router = useRouter();
   const [items, setItems] = useState<RequestRow[]>([]);
   const [status, setStatus] = useState('PENDING');
   const [reason, setReason] = useState('');
@@ -44,7 +46,11 @@ export default function AccountRequestsPage() {
     }
     setBusy(id); setError('');
     try {
-      await platformJson(`account-requests/${id}/${action}`, { method: 'POST', body: JSON.stringify({ internalReason: decisionReason }) });
+      const result = await platformJson<{ customerSchool?: { id: string } | null }>(`account-requests/${id}/${action}`, { method: 'POST', body: JSON.stringify({ internalReason: decisionReason }) });
+      if (action === 'approve' && result.customerSchool?.id) {
+        router.push(`/schools/${result.customerSchool.id}?notice=account-approved`);
+        return;
+      }
       await load();
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Decision failed'); }
     finally { setBusy(''); }
