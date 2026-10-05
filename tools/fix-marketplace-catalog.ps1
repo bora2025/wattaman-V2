@@ -71,7 +71,7 @@ if (-not (Test-Path $envFile)) {
     Copy-Item -Path $example -Destination $envFile
   } else {
     Set-Content -Path $envFile -Value @(
-      'MARKETPLACE_URL=https://marketplace-api-production-f821.up.railway.app',
+      'MARKETPLACE_URL=https://marketplace-api-production-4843.up.railway.app',
       'MARKETPLACE_ADMIN_TOKEN=',
       'PLUGIN_SIGNING_PRIVATE_KEY=C:/secure/wattanam-publisher/plugin-signing-private.pem',
       'PLUGIN_SIGNING_KEY_ID=official-plugin-2026'
@@ -80,7 +80,7 @@ if (-not (Test-Path $envFile)) {
 }
 
 $envMap = Read-EnvFile -Path $envFile
-Ensure-Value -EnvMap $envMap -Key 'MARKETPLACE_URL' -Value 'https://marketplace-api-production-f821.up.railway.app'
+Ensure-Value -EnvMap $envMap -Key 'MARKETPLACE_URL' -Value 'https://marketplace-api-production-4843.up.railway.app'
 Ensure-Value -EnvMap $envMap -Key 'PLUGIN_SIGNING_KEY_ID' -Value 'official-plugin-2026'
 Ensure-Value -EnvMap $envMap -Key 'CHANNEL' -Value 'STABLE'
 Ensure-Value -EnvMap $envMap -Key 'PAID' -Value 'false'

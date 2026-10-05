@@ -1,0 +1,62 @@
+import { MarketplaceAccountRequestService } from './marketplace-account-request.service';
+
+const context = { correlationId: 'corr-account-request', ip: '127.0.0.1', userAgent: 'jest' };
+
+function prismaWith(tx: Record<string, any>) {
+  return { $transaction: jest.fn(async (callback: any) => callback(tx)) } as any;
+}
+
+describe('MarketplaceAccountRequestService', () => {
+  it('stores a password hash and returns no credential when a request is submitted', async () => {
+    const tx = {
+      marketplaceAccount: { findUnique: jest.fn().mockResolvedValue(null) },
+      marketplaceAccountRequest: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({ id: 'request-1', status: 'PENDING', createdAt: new Date() }),
+      },
+    };
+    const result = await new MarketplaceAccountRequestService(prismaWith(tx)).submit({
+      email: 'OWNER@EXAMPLE.COM', password: 'safe-password-123', displayName: 'School Owner', schoolName: 'Angkor School',
+    });
+    const data = tx.marketplaceAccountRequest.create.mock.calls[0][0].data;
+    expect(data.email).toBe('owner@example.com');
+    expect(data.passwordHash).not.toBe('safe-password-123');
+    expect(JSON.stringify(result)).not.toContain('password');
+  });
+
+  it('approves exactly one pending request and audits the created account', async () => {
+    const tx = {
+      marketplaceAccountRequest: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'request-1', status: 'PENDING', email: 'owner@example.com', displayName: 'Owner', passwordHash: 'hash' }),
+        update: jest.fn().mockResolvedValue({ id: 'request-1', status: 'APPROVED', createdAccountId: 'account-1', reviewedAt: new Date() }),
+      },
+      marketplaceAccount: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({ id: 'account-1' }),
+      },
+      platformAuditEvent: { create: jest.fn().mockResolvedValue({}) },
+    };
+    const result = await new MarketplaceAccountRequestService(prismaWith(tx)).decide(
+      'request-1', 'operator-1', true, { internalReason: 'Customer identity checked.' }, context,
+    );
+    expect(result.status).toBe('APPROVED');
+    expect(tx.marketplaceAccount.create).toHaveBeenCalledWith({ data: { email: 'owner@example.com', displayName: 'Owner', passwordHash: 'hash' }, select: { id: true } });
+    expect(tx.platformAuditEvent.create.mock.calls[0][0].data.action).toBe('marketplace_account_request_approved');
+  });
+
+  it('rejects without creating an account', async () => {
+    const tx = {
+      marketplaceAccountRequest: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'request-1', status: 'PENDING', email: 'owner@example.com', displayName: 'Owner', passwordHash: 'hash' }),
+        update: jest.fn().mockResolvedValue({ id: 'request-1', status: 'REJECTED', createdAccountId: null, reviewedAt: new Date() }),
+      },
+      marketplaceAccount: { findUnique: jest.fn(), create: jest.fn() },
+      platformAuditEvent: { create: jest.fn().mockResolvedValue({}) },
+    };
+    const result = await new MarketplaceAccountRequestService(prismaWith(tx)).decide(
+      'request-1', 'operator-1', false, { internalReason: 'Identity could not be confirmed.' }, context,
+    );
+    expect(result.status).toBe('REJECTED');
+    expect(tx.marketplaceAccount.create).not.toHaveBeenCalled();
+  });
+});

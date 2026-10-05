@@ -12,6 +12,7 @@ const NAV: Array<{ href: string; label: string; permission: string }> = [
   { href: '/dashboard', label: 'Dashboard', permission: 'platform.dashboard.read' },
   { href: '/operators', label: 'Operators', permission: 'operators.read' },
   { href: '/customers', label: 'Customers', permission: 'customers.read' },
+  { href: '/account-requests', label: 'Account requests', permission: 'customers.read' },
   { href: '/schools', label: 'Customer schools', permission: 'schools.read' },
   { href: '/billing-plans', label: 'School billing plans', permission: 'school_billing.read' },
   { href: '/schools/provisioning', label: 'School provisioning', permission: 'schools.read' },

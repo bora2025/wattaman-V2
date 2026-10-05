@@ -12,6 +12,12 @@ enum PlatformOperatorStatus {
   SUSPENDED
 }
 
+enum MarketplaceAccountRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum SchoolPluginRequestType {
   FREE_APPROVAL
   PURCHASE_ASSISTANCE
@@ -291,6 +297,26 @@ model MarketplaceAccount {
   submissionReviews     SubmissionReview[]
   schoolPluginRequests  SchoolPluginRequest[]
   pluginRequestMessages SchoolPluginRequestMessage[]
+  accountRequests       MarketplaceAccountRequest[]
+}
+
+model MarketplaceAccountRequest {
+  id                  String                          @id @default(uuid())
+  email               String
+  displayName         String
+  passwordHash        String?
+  schoolName          String?
+  status              MarketplaceAccountRequestStatus @default(PENDING)
+  reviewedByOperatorId String?
+  reviewReason        String?
+  createdAccountId    String?                         @unique
+  createdAt           DateTime                        @default(now())
+  reviewedAt          DateTime?
+  reviewedBy          PlatformOperator?               @relation(fields: [reviewedByOperatorId], references: [id], onDelete: Restrict)
+  createdAccount      MarketplaceAccount?             @relation(fields: [createdAccountId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([email, status])
 }
 
 model MarketplaceSession {
@@ -1291,6 +1317,7 @@ model PlatformOperator {
   mintedEnrollmentTokens    SchoolEnrollmentToken[]                @relation("SchoolEnrollmentTokenCreator")
   requestedSchoolProvisioning SchoolProvisioningRequest[]           @relation("SchoolProvisioningRequester")
   approvedSchoolProvisioning  SchoolProvisioningRequest[]           @relation("SchoolProvisioningApprover")
+  reviewedAccountRequests     MarketplaceAccountRequest[]
 }
 
 // ─── Platform Admin (PA-3): school plugin-request workflow ───────────────

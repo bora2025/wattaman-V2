@@ -160,8 +160,8 @@ export default function SchoolDetail({ schoolId, notice }: { schoolId: string; n
       <ol className="list-decimal space-y-2 pl-5 text-sm text-slate-700">
         <li>Deploy and install this school in its own Railway project. Record its public gateway above.</li>
         <li>{school.installation ? <span className="text-emerald-700">Installation registered and claimed.</span> : liveToken ? 'A one-time enrollment token is ready. Enter it in the school’s Licensing page.' : 'Create a one-time enrollment token in the Installation enrollment section below.'}</li>
-        <li>In the school admin panel, open <strong>Licensing</strong> and register with the token. The school signs its registration; the token alone cannot claim another installation.</li>
-        <li>Then open <strong>Plugin Manager</strong> in the school admin panel and approve the marketplace account link with the account owner’s MFA. This enables browsing and installing plugins.</li>
+        <li>In the school admin panel, open <strong>Licensing</strong>, enter the token, and sign in as the marketplace owner with MFA. The school signs its registration; the token alone cannot claim another installation.</li>
+        <li>A successful token claim links Plugin Manager to that owner automatically. Use the separate Plugin Manager approval flow only for a legacy installation that was registered without an enrollment token.</li>
       </ol>
       <div className="flex flex-wrap gap-2">
         {school.gatewayOrigin && <a className="pa-btn-secondary" href={`${school.gatewayOrigin.replace(/\/$/, '')}/admin/licensing`} target="_blank" rel="noopener noreferrer">Open school Licensing ↗</a>}

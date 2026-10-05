@@ -24,6 +24,7 @@ import { PlatformOperatorReadService } from './platform-operator-read.service';
 import { CustomerSchoolService } from './customer-school.service';
 import { SchoolDiscoveryService } from './school-discovery.service';
 import { CustomerAccountService } from './customer-account.service';
+import { MarketplaceAccountRequestService } from './marketplace-account-request.service';
 import { platformOpenApi } from './platform-openapi';
 import { SchoolPluginRequestService } from './school-plugin-request.service';
 import { SchoolProvisioningService } from './school-provisioning.service';
@@ -88,6 +89,7 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   const customerSchools = new CustomerSchoolService(prisma);
   const schoolDiscovery = new SchoolDiscoveryService(prisma);
   const customerAccounts = new CustomerAccountService(prisma, config);
+  const accountRequests = new MarketplaceAccountRequestService(prisma);
   const schoolPluginRequests = new SchoolPluginRequestService(prisma, config, commerce);
   const schoolProvisioning = new SchoolProvisioningService(prisma);
   const schoolBilling = new SchoolBillingService(prisma, transactionalEmail, config);
@@ -178,6 +180,12 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
 
   app.post('/v1/accounts', async (request, response, next) => {
     try { response.status(201).json(await identity.register(request.body)); } catch (error) { next(error); }
+  });
+  app.post('/v1/account-requests', async (request, response, next) => {
+    try { response.status(202).json(await accountRequests.submit(request.body)); } catch (error) { next(error); }
+  });
+  app.get('/v1/account-requests/:requestId', async (request, response, next) => {
+    try { response.json(await accountRequests.status(String(request.params.requestId))); } catch (error) { next(error); }
   });
   app.post('/v1/accounts/email-verifications/confirm', async (request, response, next) => {
     try { response.json(await identity.confirmEmail(request.body)); } catch (error) { next(error); }
@@ -429,6 +437,15 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
 
   app.get('/platform/v1/customers', requirePlatformOperator, P('customers.read'), async (request, response, next) => {
     try { response.json(await platformDirectory.customers(request.query)); } catch (error) { next(error); }
+  });
+  app.get('/platform/v1/account-requests', requirePlatformOperator, P('customers.read'), async (request, response, next) => {
+    try { response.json(await accountRequests.list(request.query)); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/account-requests/:requestId/approve', requirePlatformOperator, P('customers.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await accountRequests.decide(String(request.params.requestId), request.operatorId!, true, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/account-requests/:requestId/reject', requirePlatformOperator, P('customers.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await accountRequests.decide(String(request.params.requestId), request.operatorId!, false, request.body, actionContext(request))); } catch (error) { next(error); }
   });
   // Clears a customer's second factor so its owner can enrol a new one. It returns no secret --
   // the owner sees the replacement and the operator never does (see CustomerAccountService).

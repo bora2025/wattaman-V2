@@ -14,7 +14,7 @@ function verify() {
   const admin = readJson('infrastructure/railway/platform-admin.railway.json');
   const root = readJson('railway.json');
 
-  const expectedProjectId = '6be51398-fec2-481c-84b8-86e6a978fad8';
+  const expectedProjectId = '1c5b1561-512d-44bd-b6ae-b2486b8d18a4';
   if (contract.canonicalProject?.railwayProjectId !== expectedProjectId) {
     errors.push('canonical production Railway project id changed without updating the deployment guard');
   }

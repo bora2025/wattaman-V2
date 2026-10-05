@@ -3,7 +3,7 @@
   "environment": "production",
   "canonicalProject": {
     "name": "Wattanam Marketplace Production",
-    "railwayProjectId": "6be51398-fec2-481c-84b8-86e6a978fad8"
+    "railwayProjectId": "1c5b1561-512d-44bd-b6ae-b2486b8d18a4"
   },
   "databaseService": "Postgres",
   "services": {
