@@ -309,7 +309,7 @@ model MarketplaceAccountRequest {
   status              MarketplaceAccountRequestStatus @default(PENDING)
   reviewedByOperatorId String?
   reviewReason        String?
-  createdAccountId    String?                         @unique
+  createdAccountId    String?
   createdAt           DateTime                        @default(now())
   reviewedAt          DateTime?
   reviewedBy          PlatformOperator?               @relation(fields: [reviewedByOperatorId], references: [id], onDelete: Restrict)
@@ -317,6 +317,7 @@ model MarketplaceAccountRequest {
 
   @@index([status, createdAt])
   @@index([email, status])
+  @@index([createdAccountId])
 }
 
 model MarketplaceSession {

@@ -60,13 +60,21 @@ export class MarketplaceAccountRequestService {
       if (!request) throw new HttpError(404, 'Marketplace account request not found');
       if (request.status !== 'PENDING') throw new HttpError(409, 'Marketplace account request was already decided');
       let accountId: string | null = null;
+      let reusedExistingAccount = false;
       if (approved) {
-        if (!request.passwordHash) throw new HttpError(409, 'Marketplace account request no longer contains an activation credential');
-        if (await tx.marketplaceAccount.findUnique({ where: { email: request.email }, select: { id: true } })) {
-          throw new HttpError(409, 'This email already has a Marketplace account. Reject this duplicate request and let the owner claim the school with the existing account.');
+        const existingAccount = await tx.marketplaceAccount.findUnique({ where: { email: request.email }, select: { id: true } });
+        if (existingAccount) {
+          // An account belongs to a person, not one school. Reusing it does not authenticate or
+          // claim the installation: the owner must still prove its password + MFA while redeeming
+          // the new school's enrollment token. Never replace the existing password from this
+          // request, because an untrusted duplicate request must not rotate account credentials.
+          accountId = existingAccount.id;
+          reusedExistingAccount = true;
+        } else {
+          if (!request.passwordHash) throw new HttpError(409, 'Marketplace account request no longer contains an activation credential');
+          const account = await tx.marketplaceAccount.create({ data: { email: request.email, displayName: request.displayName, passwordHash: request.passwordHash }, select: { id: true } });
+          accountId = account.id;
         }
-        const account = await tx.marketplaceAccount.create({ data: { email: request.email, displayName: request.displayName, passwordHash: request.passwordHash }, select: { id: true } });
-        accountId = account.id;
       }
       const decided = await tx.marketplaceAccountRequest.update({
         where: { id }, data: { status: approved ? 'APPROVED' : 'REJECTED', reviewedByOperatorId: operatorId, reviewReason: input.internalReason, reviewedAt: now, createdAccountId: accountId, passwordHash: null },
@@ -75,7 +83,7 @@ export class MarketplaceAccountRequestService {
       await tx.platformAuditEvent.create({ data: {
         operatorId, action: approved ? 'marketplace_account_request_approved' : 'marketplace_account_request_rejected', success: true,
         targetType: 'MarketplaceAccountRequest', targetId: id, reason: input.internalReason,
-        metadata: accountId ? { accountId } : Prisma.JsonNull, correlationId: context.correlationId, ip: context.ip, userAgent: context.userAgent,
+        metadata: accountId ? { accountId, reusedExistingAccount } : Prisma.JsonNull, correlationId: context.correlationId, ip: context.ip, userAgent: context.userAgent,
       } });
       return decided;
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });

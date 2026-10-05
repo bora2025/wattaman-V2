@@ -53,6 +53,28 @@ describe('MarketplaceAccountRequestService', () => {
     expect(result.status).toBe('APPROVED');
     expect(tx.marketplaceAccount.create).toHaveBeenCalledWith({ data: { email: 'owner@example.com', displayName: 'Owner', passwordHash: 'hash' }, select: { id: true } });
     expect(tx.platformAuditEvent.create.mock.calls[0][0].data.action).toBe('marketplace_account_request_approved');
+    expect(tx.platformAuditEvent.create.mock.calls[0][0].data.metadata).toMatchObject({ reusedExistingAccount: false });
+  });
+
+  it('approves a request by reusing an existing account without replacing its credentials', async () => {
+    const tx = {
+      marketplaceAccountRequest: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'request-2', status: 'PENDING', email: 'owner@example.com', displayName: 'Owner', passwordHash: 'untrusted-new-hash' }),
+        update: jest.fn().mockResolvedValue({ id: 'request-2', status: 'APPROVED', createdAccountId: 'account-1', reviewedAt: new Date() }),
+      },
+      marketplaceAccount: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'account-1' }),
+        create: jest.fn(),
+      },
+      platformAuditEvent: { create: jest.fn().mockResolvedValue({}) },
+    };
+    const result = await new MarketplaceAccountRequestService(prismaWith(tx)).decide(
+      'request-2', 'operator-1', true, { internalReason: 'Existing owner verified for another school.' }, context,
+    );
+    expect(result).toMatchObject({ status: 'APPROVED', createdAccountId: 'account-1' });
+    expect(tx.marketplaceAccount.create).not.toHaveBeenCalled();
+    expect(tx.marketplaceAccountRequest.update.mock.calls[0][0].data).toMatchObject({ createdAccountId: 'account-1', passwordHash: null });
+    expect(tx.platformAuditEvent.create.mock.calls[0][0].data.metadata).toMatchObject({ accountId: 'account-1', reusedExistingAccount: true });
   });
 
   it('rejects without creating an account', async () => {
