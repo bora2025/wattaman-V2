@@ -7,6 +7,17 @@ function prismaWith(tx: Record<string, any>) {
 }
 
 describe('MarketplaceAccountRequestService', () => {
+  it('directs an existing owner to reuse their account for the new school claim', async () => {
+    const tx = {
+      marketplaceAccount: { findUnique: jest.fn().mockResolvedValue({ id: 'account-1' }) },
+      marketplaceAccountRequest: { findFirst: jest.fn(), create: jest.fn() },
+    };
+    await expect(new MarketplaceAccountRequestService(prismaWith(tx)).submit({
+      email: 'owner@example.com', password: 'safe-password-123', displayName: 'School Owner', schoolName: 'Replacement School',
+    })).rejects.toThrow('use the existing email, password, and MFA code with the new school enrollment token');
+    expect(tx.marketplaceAccountRequest.create).not.toHaveBeenCalled();
+  });
+
   it('stores a password hash and returns no credential when a request is submitted', async () => {
     const tx = {
       marketplaceAccount: { findUnique: jest.fn().mockResolvedValue(null) },

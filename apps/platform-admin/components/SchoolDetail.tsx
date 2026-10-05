@@ -149,7 +149,7 @@ export default function SchoolDetail({ schoolId, notice }: { schoolId: string; n
 
   async function permanentlyDeleteSchool() {
     if (!school) return;
-    const confirmation = window.prompt(`Permanently delete ${school.name}?\n\nThis cannot be undone. Type the exact slug to continue:\n${school.slug}`);
+    const confirmation = window.prompt(`Permanently delete ${school.name}?\n\nThis removes only the unused school directory record. The owner's Marketplace account is preserved and can claim another school. Railway resources are not deleted.\n\nType the exact slug to continue:\n${school.slug}`);
     if (confirmation === null) return;
     if (confirmation.trim() !== school.slug) { setError('The confirmation slug did not match. Nothing was deleted.'); return; }
     setBusy(true); setError('');

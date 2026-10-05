@@ -23,7 +23,7 @@ export class MarketplaceAccountRequestService {
     const passwordHash = await hashPassword(input.password);
     return this.prisma.$transaction(async (tx) => {
       if (await tx.marketplaceAccount.findUnique({ where: { email: input.email }, select: { id: true } })) {
-        throw new HttpError(409, 'A marketplace account with this email already exists');
+        throw new HttpError(409, 'This email already has a Marketplace account. Do not create another account; use the existing email, password, and MFA code with the new school enrollment token.');
       }
       const pending = await tx.marketplaceAccountRequest.findFirst({ where: { email: input.email, status: 'PENDING' }, select: { id: true } });
       if (pending) throw new HttpError(409, 'A pending marketplace account request already exists for this email');
@@ -63,7 +63,7 @@ export class MarketplaceAccountRequestService {
       if (approved) {
         if (!request.passwordHash) throw new HttpError(409, 'Marketplace account request no longer contains an activation credential');
         if (await tx.marketplaceAccount.findUnique({ where: { email: request.email }, select: { id: true } })) {
-          throw new HttpError(409, 'A marketplace account with this email already exists');
+          throw new HttpError(409, 'This email already has a Marketplace account. Reject this duplicate request and let the owner claim the school with the existing account.');
         }
         const account = await tx.marketplaceAccount.create({ data: { email: request.email, displayName: request.displayName, passwordHash: request.passwordHash }, select: { id: true } });
         accountId = account.id;
