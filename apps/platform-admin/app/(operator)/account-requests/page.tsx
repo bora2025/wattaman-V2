@@ -28,13 +28,23 @@ export default function AccountRequestsPage() {
   }, []);
 
   async function decide(id: string, action: 'approve' | 'reject') {
-    if (reason.trim().length < 3) {
-      setError('Enter an internal decision reason of at least 3 characters before approving or rejecting.');
-      return;
+    let decisionReason = reason.trim();
+    if (decisionReason.length < 3) {
+      const prompted = window.prompt(
+        `${action === 'approve' ? 'Approve' : 'Reject'} this marketplace account request?\n\nEnter the internal audit reason:`,
+        action === 'approve' ? 'Owner identity and school account request verified.' : 'Account request rejected after operator review.',
+      );
+      if (prompted === null) return;
+      decisionReason = prompted.trim();
+      if (decisionReason.length < 3) {
+        setError('The internal decision reason must contain at least 3 characters.');
+        return;
+      }
+      setReason(decisionReason);
     }
     setBusy(id); setError('');
     try {
-      await platformJson(`account-requests/${id}/${action}`, { method: 'POST', body: JSON.stringify({ internalReason: reason }) });
+      await platformJson(`account-requests/${id}/${action}`, { method: 'POST', body: JSON.stringify({ internalReason: decisionReason }) });
       await load();
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Decision failed'); }
     finally { setBusy(''); }
