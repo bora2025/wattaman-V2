@@ -81,6 +81,7 @@ export function platformOpenApi(baseUrl: string) {
       '/platform/v1/schools/{schoolId}/suspend': path('post', { summary: 'Directory suspend active school', permission: 'schools.manage' }),
       '/platform/v1/schools/{schoolId}/reactivate': path('post', { summary: 'Directory reactivate suspended school', permission: 'schools.manage' }),
       '/platform/v1/schools/{schoolId}/terminate': path('post', { summary: 'Directory soft-delete school', permission: 'schools.manage' }),
+      '/platform/v1/schools/{schoolId}/delete': path('post', { summary: 'Permanently delete an unused unclaimed school', permission: 'schools.manage' }),
       '/platform/v1/schools/{schoolId}/railway-deleted': path('post', { summary: 'Directory archive school after confirmed Railway project deletion', permission: 'schools.manage' }),
       '/platform/v1/schools/{schoolId}/domains': path('post', { summary: 'Directory add school domain', permission: 'schools.manage' }),
       '/platform/v1/schools/{schoolId}/domains/{domainId}/verify': path('post', { summary: 'Directory update domain verification', permission: 'schools.manage' }),

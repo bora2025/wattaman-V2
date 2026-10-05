@@ -67,6 +67,10 @@ const infrastructureInput = z.object({
 }).strict();
 
 const lifecycleInput = z.object({ internalReason: reason }).strict();
+const permanentDeleteInput = z.object({
+  confirmSlug: z.string().trim().min(2).max(80),
+  internalReason: reason,
+}).strict();
 
 const domainInput = z.object({
   hostname: z.string().trim().toLowerCase().max(253).regex(
@@ -410,6 +414,37 @@ export class CustomerSchoolService {
         metadata: { revokedEnrollmentTokens: revoked.count },
       });
       return { ...school, contactEmail: maskEmail(school.contactEmail) };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
+  /** Permanently removes only an unused directory placeholder. A claimed installation, invoice,
+   * or provisioning history is retained through termination because those records form the
+   * commercial and operational audit chain. */
+  async permanentlyDelete(schoolId: string, operatorId: string, value: unknown, context: PlatformActionContext) {
+    const input = permanentDeleteInput.parse(value);
+    return this.prisma.$transaction(async (tx) => {
+      const school = await tx.customerSchool.findUnique({
+        where: { id: schoolId },
+        select: {
+          id: true, name: true, slug: true, status: true,
+          installation: { select: { id: true } },
+          _count: { select: { invoices: true, provisioningRequests: true } },
+        },
+      });
+      if (!school) throw new HttpError(404, 'Customer school not found');
+      if (input.confirmSlug !== school.slug) throw new HttpError(400, 'The confirmation slug does not match this school');
+      if (school.installation) throw new HttpError(409, 'A claimed school cannot be permanently deleted; terminate it instead');
+      if (school._count.invoices > 0) throw new HttpError(409, 'A school with invoice history cannot be permanently deleted; terminate it instead');
+      if (school._count.provisioningRequests > 0) throw new HttpError(409, 'A school with provisioning history cannot be permanently deleted; terminate it instead');
+      if (!['PROSPECT', 'AWAITING_CLAIM'].includes(school.status)) {
+        throw new HttpError(409, 'Only an unused prospect or awaiting-claim school can be permanently deleted');
+      }
+      await this.audit(tx, operatorId, context, {
+        action: 'customer_school_permanently_deleted', targetId: schoolId, reason: input.internalReason,
+        metadata: { name: school.name, slug: school.slug, previousStatus: school.status },
+      });
+      await tx.customerSchool.delete({ where: { id: schoolId } });
+      return { deleted: true, id: schoolId, slug: school.slug };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 

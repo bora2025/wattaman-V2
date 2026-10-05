@@ -47,7 +47,7 @@ const sessionPostPatterns = [
   /^school-billing-alerts\/dispatch$/,
   /^school-billing-cycle\/run$/,
   new RegExp(`^schools/${ID}/(update|enrollment-tokens|adopt-installation|infrastructure)$`),
-  new RegExp(`^schools/${ID}/(suspend|reactivate|terminate|restore|domains)$`),
+  new RegExp(`^schools/${ID}/(suspend|reactivate|terminate|restore|delete|domains)$`),
   new RegExp(`^schools/${ID}/domains/${ID}/(verify|remove)$`),
   new RegExp(`^schools/${ID}/invoices$`),
   new RegExp(`^schools/${ID}/(billing-plan|plan-invoices)$`),

@@ -526,6 +526,9 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   app.post('/platform/v1/schools/:schoolId/terminate', requirePlatformOperator, P('schools.manage'), async (request: PlatformRequest, response, next) => {
     try { response.json(await customerSchools.terminate(String(request.params.schoolId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
   });
+  app.post('/platform/v1/schools/:schoolId/delete', requirePlatformOperator, P('schools.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await customerSchools.permanentlyDelete(String(request.params.schoolId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
   app.post('/platform/v1/schools/:schoolId/railway-deleted', requirePlatformOperator, P('schools.manage'), async (request: PlatformRequest, response, next) => {
     try { response.json(await customerSchools.recordRailwayDeleted(String(request.params.schoolId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
   });

@@ -180,6 +180,38 @@ describe('CustomerSchoolService', () => {
     expect(tx.platformAuditEvent.create.mock.calls[0][0].data.metadata).toEqual({ revokedEnrollmentTokens: 2 });
   });
 
+  it('permanently deletes an unused unclaimed school after exact slug confirmation', async () => {
+    const tx = {
+      customerSchool: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'school-1', name: 'Unused School', slug: 'unused-school', status: 'AWAITING_CLAIM', installation: null, _count: { invoices: 0, provisioningRequests: 0 } }),
+        delete: jest.fn().mockResolvedValue({}),
+      },
+      platformAuditEvent: { create: jest.fn().mockResolvedValue({}) },
+    };
+    const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
+    const result = await new CustomerSchoolService(prisma).permanentlyDelete('school-1', 'operator-1', {
+      confirmSlug: 'unused-school', internalReason: 'Duplicate placeholder created by mistake.',
+    }, context);
+    expect(result).toEqual({ deleted: true, id: 'school-1', slug: 'unused-school' });
+    expect(tx.platformAuditEvent.create.mock.calls[0][0].data.action).toBe('customer_school_permanently_deleted');
+    expect(tx.customerSchool.delete).toHaveBeenCalledWith({ where: { id: 'school-1' } });
+  });
+
+  it('refuses permanent deletion when commercial history exists', async () => {
+    const tx = {
+      customerSchool: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'school-1', name: 'Billed School', slug: 'billed-school', status: 'PROSPECT', installation: null, _count: { invoices: 1, provisioningRequests: 0 } }),
+        delete: jest.fn(),
+      },
+      platformAuditEvent: { create: jest.fn() },
+    };
+    const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
+    await expect(new CustomerSchoolService(prisma).permanentlyDelete('school-1', 'operator-1', {
+      confirmSlug: 'billed-school', internalReason: 'Requested cleanup.',
+    }, context)).rejects.toMatchObject({ status: 409 });
+    expect(tx.customerSchool.delete).not.toHaveBeenCalled();
+  });
+
   it('archives a school whose Railway project was deleted and clears stale infrastructure', async () => {
     const tx = {
       customerSchool: {
