@@ -57,6 +57,7 @@ const paymentInput = z.object({
 }).strict();
 
 const voidInput = z.object({ internalReason: reason }).strict();
+const notifyInput = z.object({ internalReason: reason }).strict();
 const planInput = z.object({
   slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(80), name: z.string().trim().min(2).max(120),
   currency: z.string().regex(/^[A-Z]{3}$/), amountMinor: z.number().int().positive().max(2_000_000_000),
@@ -193,6 +194,25 @@ export class SchoolBillingService {
       const plan = await tx.schoolBillingPlan.update({ where: { id: planId }, data });
       await this.audit(tx, operatorId, context, 'school_billing_plan_updated', plan.id, internalReason, { before: existing, after: plan });
       return plan;
+    });
+  }
+
+  async deletePlan(planId: string, operatorId: string, value: unknown, context: PlatformActionContext) {
+    const input = notifyInput.parse(value);
+    return this.prisma.$transaction(async (tx) => {
+      const plan = await tx.schoolBillingPlan.findUnique({
+        where: { id: planId },
+        include: { _count: { select: { schools: true, invoices: true, invoiceLines: true } } },
+      });
+      if (!plan) throw new HttpError(404, 'Billing plan not found');
+      if (plan._count.schools || plan._count.invoices || plan._count.invoiceLines) {
+        throw new HttpError(409, 'This billing plan is assigned or has financial history; archive it instead of deleting it');
+      }
+      await this.audit(tx, operatorId, context, 'school_billing_plan_deleted', plan.id, input.internalReason, {
+        slug: plan.slug, name: plan.name, currency: plan.currency, amountMinor: plan.amountMinor,
+      }, 'SchoolBillingPlan');
+      await tx.schoolBillingPlan.delete({ where: { id: plan.id } });
+      return { deleted: true, id: plan.id };
     });
   }
 
@@ -601,6 +621,34 @@ export class SchoolBillingService {
       await this.deliverPending(invoice.id, now);
     }
     return { inspected: invoices.length };
+  }
+
+  async resendInvoiceNotification(schoolId: string, invoiceId: string, operatorId: string, value: unknown, context: PlatformActionContext, now = new Date()) {
+    const input = notifyInput.parse(value);
+    const notification = await this.prisma.$transaction(async (tx) => {
+      const invoice = await tx.schoolInvoice.findFirst({
+        where: { id: invoiceId, customerSchoolId: schoolId },
+        include: { school: { select: { name: true, contactEmail: true } } },
+      });
+      if (!invoice) throw new HttpError(404, 'School invoice not found');
+      if (invoice.status === 'VOID') throw new HttpError(409, 'A void invoice cannot be notified');
+      const subject = `Wattanam invoice ${invoice.invoiceNumber}`;
+      const message = `${invoice.school.name}: invoice ${invoice.invoiceNumber} for ${(invoice.amountMinor / 100).toFixed(2)} ${invoice.currency} is due ${invoice.dueAt.toISOString().slice(0, 10)}.`;
+      const row = await tx.schoolBillingNotification.upsert({
+        where: { deduplicationKey: `invoice-issued:${invoice.id}` },
+        update: { status: 'PENDING', recipientEmail: invoice.school.contactEmail, subject, message, attemptedAt: null, sentAt: null, failureMessage: null },
+        create: {
+          customerSchoolId: schoolId, invoiceId: invoice.id, type: 'INVOICE_ISSUED', recipientEmail: invoice.school.contactEmail,
+          subject, message, deduplicationKey: `invoice-issued:${invoice.id}`,
+        },
+      });
+      await this.audit(tx, operatorId, context, 'school_invoice_notification_sent', schoolId, input.internalReason, {
+        invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber, notificationId: row.id,
+      });
+      return row;
+    });
+    await this.deliverPending(invoiceId, now);
+    return this.prisma.schoolBillingNotification.findUnique({ where: { id: notification.id } });
   }
 
   private async deliverPending(invoiceId: string, now: Date) {

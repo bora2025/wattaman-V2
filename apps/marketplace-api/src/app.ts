@@ -556,6 +556,9 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   app.patch('/platform/v1/school-billing-plans/:planId', requirePlatformOperator, P('school_billing.manage'), async (request: PlatformRequest, response, next) => {
     try { response.json(await schoolBilling.updatePlan(String(request.params.planId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
   });
+  app.post('/platform/v1/school-billing-plans/:planId/delete', requirePlatformOperator, P('school_billing.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await schoolBilling.deletePlan(String(request.params.planId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
   // Where Wattanam receives manual payments. Reading needs school_billing.read; changing where money
   // goes needs school_billing.manage and is audited, QR changes included.
   app.get('/platform/v1/school-payment-methods', requirePlatformOperator, P('school_billing.read'), async (_request, response, next) => {
@@ -584,6 +587,9 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   });
   app.post('/platform/v1/schools/:schoolId/invoices/:invoiceId/payments', requirePlatformOperator, P('school_billing.manage'), async (request: PlatformRequest, response, next) => {
     try { response.status(201).json(await schoolBilling.recordPayment(String(request.params.schoolId), String(request.params.invoiceId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+  app.post('/platform/v1/schools/:schoolId/invoices/:invoiceId/notify', requirePlatformOperator, P('school_billing.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await schoolBilling.resendInvoiceNotification(String(request.params.schoolId), String(request.params.invoiceId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
   });
   app.post('/platform/v1/schools/:schoolId/payment-submissions/:submissionId/approve', requirePlatformOperator, P('school_billing.manage'), async (request: PlatformRequest, response, next) => {
     try { response.json(await schoolBilling.decidePaymentSubmission(String(request.params.schoolId), String(request.params.submissionId), request.operatorId!, true, request.body, actionContext(request))); } catch (error) { next(error); }

@@ -42,6 +42,7 @@ const sessionPostPatterns = [
   /^schools\/adoptions\/discover$/,
   /^school-billing-plans$/,
   new RegExp(`^school-billing-plans/${ID}$`),
+  new RegExp(`^school-billing-plans/${ID}/delete$`),
   /^school-payment-methods$/,
   new RegExp(`^school-payment-methods/${ID}$`),
   /^school-billing-alerts\/dispatch$/,
@@ -51,7 +52,7 @@ const sessionPostPatterns = [
   new RegExp(`^schools/${ID}/domains/${ID}/(verify|remove)$`),
   new RegExp(`^schools/${ID}/invoices$`),
   new RegExp(`^schools/${ID}/(billing-plan|plan-invoices)$`),
-  new RegExp(`^schools/${ID}/invoices/${ID}/(payments|void)$`),
+  new RegExp(`^schools/${ID}/invoices/${ID}/(payments|void|notify)$`),
   new RegExp(`^schools/${ID}/payment-submissions/${ID}/(approve|reject)$`),
   new RegExp(`^schools/${ID}/enrollment-tokens/${ID}/revoke$`),
 ];

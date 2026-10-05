@@ -27,6 +27,23 @@ describe('SchoolBillingService', () => {
     expect(tx.platformAuditEvent.create.mock.calls[0][0].data.action).toBe('school_billing_plan_updated');
   });
 
+  it('deletes only an unused billing plan and audits the deletion', async () => {
+    const plan = { id: 'plan-1', slug: 'trial', name: 'Trial', currency: 'USD', amountMinor: 100, _count: { schools: 0, invoices: 0, invoiceLines: 0 } };
+    const tx = { schoolBillingPlan: { findUnique: jest.fn().mockResolvedValue(plan), delete: jest.fn().mockResolvedValue(plan) }, platformAuditEvent: { create: jest.fn() } };
+    const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
+    await expect(new SchoolBillingService(prisma).deletePlan('plan-1', 'operator-1', { internalReason: 'Unused test plan.' }, context)).resolves.toEqual({ deleted: true, id: 'plan-1' });
+    expect(tx.platformAuditEvent.create.mock.calls[0][0].data.action).toBe('school_billing_plan_deleted');
+    expect(tx.schoolBillingPlan.delete).toHaveBeenCalledWith({ where: { id: 'plan-1' } });
+  });
+
+  it('protects an assigned billing plan from deletion', async () => {
+    const plan = { id: 'plan-1', slug: 'standard', name: 'Standard', currency: 'USD', amountMinor: 5000, _count: { schools: 1, invoices: 0, invoiceLines: 0 } };
+    const tx = { schoolBillingPlan: { findUnique: jest.fn().mockResolvedValue(plan), delete: jest.fn() }, platformAuditEvent: { create: jest.fn() } };
+    const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
+    await expect(new SchoolBillingService(prisma).deletePlan('plan-1', 'operator-1', { internalReason: 'Remove plan.' }, context)).rejects.toThrow('archive it instead');
+    expect(tx.schoolBillingPlan.delete).not.toHaveBeenCalled();
+  });
+
   it('calculates outstanding balance from non-void invoices', async () => {
     const prisma = { customerSchool: { findUnique: jest.fn().mockResolvedValue({
       id: 'school-1', name: 'Bora School', status: 'ACTIVE', currency: 'USD',
@@ -73,6 +90,23 @@ describe('SchoolBillingService', () => {
       where: { id: 'notice-1' },
       data: { status: 'SENT', attemptedAt: now, sentAt: now, failureMessage: null },
     });
+  });
+
+  it('lets finance resend an invoice notification to the customer-school feed', async () => {
+    const invoice = { id: 'invoice-1', invoiceNumber: 'WTN-1', status: 'ISSUED', currency: 'USD', amountMinor: 5000, dueAt: new Date('2026-10-19'), school: { name: 'Bora School', contactEmail: 'owner@example.com' } };
+    const notice = { id: 'notice-1', invoiceId: invoice.id, status: 'PENDING' };
+    const tx = { schoolInvoice: { findFirst: jest.fn().mockResolvedValue(invoice) }, schoolBillingNotification: { upsert: jest.fn().mockResolvedValue(notice) }, platformAuditEvent: { create: jest.fn() } };
+    const prisma = {
+      $transaction: jest.fn((work: any) => work(tx)),
+      schoolBillingNotification: {
+        findMany: jest.fn().mockResolvedValue([notice]), update: jest.fn(),
+        findUnique: jest.fn().mockResolvedValue({ ...notice, status: 'SENT' }),
+      },
+    } as any;
+    const config = { transactionalEmail: { provider: 'disabled' } } as any;
+    await expect(new SchoolBillingService(prisma, undefined, config).resendInvoiceNotification('school-1', invoice.id, 'operator-1', { internalReason: 'Customer requested another notice.' }, context, now)).resolves.toMatchObject({ status: 'SENT' });
+    expect(tx.platformAuditEvent.create.mock.calls[0][0].data.action).toBe('school_invoice_notification_sent');
+    expect(prisma.schoolBillingNotification.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'SENT' }) }));
   });
 
   it('suspends only three days after the final overdue notice was created', async () => {
