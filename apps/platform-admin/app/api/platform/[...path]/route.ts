@@ -16,7 +16,7 @@ const SESSION_COOKIE = 'wattanam_platform_session';
 const publicPost = new Set(['auth/sessions', 'auth/sessions/refresh']);
 const sessionPost = new Set(['auth/sessions/revoke', 'auth/mfa/enroll', 'auth/mfa/enroll/confirm', 'auth/password']);
 const sessionGet = new Set([
-  'me', 'dashboard', 'operators', 'roles', 'customers', 'schools', 'installations', 'publishers', 'plugins', 'submissions',
+  'me', 'dashboard', 'operators', 'roles', 'customers', 'account-requests', 'schools', 'installations', 'publishers', 'plugins', 'submissions',
   'starter-bundles',
   'orders', 'entitlements', 'advisories', 'audit-events', 'operations/health', 'exports', 'plugin-requests',
   'schools/provisioning-requests',
@@ -35,6 +35,7 @@ const sessionPostPatterns = [
   /^starter-bundles$/,
   new RegExp(`^starter-bundles/${ID}/(publish|withdraw)$`),
   new RegExp(`^customers/${ID}/(mfa/(reset|issue)|password/reset)$`),
+  new RegExp(`^account-requests/${ID}/(approve|reject)$`),
   /^schools$/,
   /^schools\/provisioning-requests$/,
   new RegExp(`^schools/provisioning-requests/${ID}/(submit|approve|cancel|retry)$`),
