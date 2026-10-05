@@ -441,10 +441,10 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   app.get('/platform/v1/account-requests', requirePlatformOperator, P('customers.read'), async (request, response, next) => {
     try { response.json(await accountRequests.list(request.query)); } catch (error) { next(error); }
   });
-  app.post('/platform/v1/account-requests/:requestId/approve', requirePlatformOperator, P('customers.manage'), async (request: PlatformRequest, response, next) => {
+  app.post('/platform/v1/account-requests/:requestId/approve', requirePlatformOperator, P('account_requests.review'), async (request: PlatformRequest, response, next) => {
     try { response.json(await accountRequests.decide(String(request.params.requestId), request.operatorId!, true, request.body, actionContext(request))); } catch (error) { next(error); }
   });
-  app.post('/platform/v1/account-requests/:requestId/reject', requirePlatformOperator, P('customers.manage'), async (request: PlatformRequest, response, next) => {
+  app.post('/platform/v1/account-requests/:requestId/reject', requirePlatformOperator, P('account_requests.review'), async (request: PlatformRequest, response, next) => {
     try { response.json(await accountRequests.decide(String(request.params.requestId), request.operatorId!, false, request.body, actionContext(request))); } catch (error) { next(error); }
   });
   // Clears a customer's second factor so its owner can enrol a new one. It returns no secret --

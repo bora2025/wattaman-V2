@@ -23,7 +23,7 @@ export default function AccountRequestsPage() {
   }
   useEffect(() => {
     Promise.all([platformJson<OperatorProfile>('me'), platformJson<{ items: RequestRow[] }>('account-requests?status=PENDING')])
-      .then(([profile, page]) => { setCanManage(profile.permissions.includes('customers.manage')); setItems(page.items); })
+      .then(([profile, page]) => { setCanManage(profile.permissions.includes('account_requests.review')); setItems(page.items); })
       .catch(cause => setError(cause instanceof Error ? cause.message : 'Could not load account requests'));
   }, []);
 

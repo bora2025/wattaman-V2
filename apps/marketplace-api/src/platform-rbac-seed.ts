@@ -11,6 +11,7 @@ export const PLATFORM_PERMISSIONS: Array<{ key: string; description: string }> =
   { key: 'operators.manage', description: 'Create, suspend, and change role grants for platform operators' },
   { key: 'customers.read', description: 'View marketplace customer accounts' },
   { key: 'customers.manage', description: 'Suspend or correct marketplace customer accounts' },
+  { key: 'account_requests.review', description: 'Approve or reject marketplace account requests' },
   { key: 'schools.read', description: 'View school installations' },
   { key: 'schools.manage', description: 'Correct or unlink school installation records' },
   { key: 'schools.entitlements.manage', description: 'Issue, revoke, or correct a school installation entitlement' },
@@ -63,7 +64,7 @@ export const PLATFORM_ROLES: Array<{ key: string; displayName: string; descripti
   {
     key: 'marketplace_operator', displayName: 'Marketplace Operator',
     description: 'Catalog, schools, plugin requests, and manual entitlements. No key custody or payout approval.',
-    permissions: ['platform.dashboard.read', 'customers.read', 'schools.read', 'schools.manage', 'schools.entitlements.manage', 'school_billing.read', 'plugin_requests.read', 'plugin_requests.review', 'plugins.read', 'starter_bundles.read', 'starter_bundles.manage', 'starter_bundles.publish'],
+    permissions: ['platform.dashboard.read', 'customers.read', 'account_requests.review', 'schools.read', 'schools.manage', 'schools.entitlements.manage', 'school_billing.read', 'plugin_requests.read', 'plugin_requests.review', 'plugins.read', 'starter_bundles.read', 'starter_bundles.manage', 'starter_bundles.publish'],
   },
   {
     key: 'plugin_reviewer', displayName: 'Plugin Reviewer',
