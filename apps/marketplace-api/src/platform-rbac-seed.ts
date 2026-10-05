@@ -87,6 +87,11 @@ export const PLATFORM_ROLES: Array<{ key: string; displayName: string; descripti
     permissions: ['platform.dashboard.read', 'orders.read', 'refunds.create', 'entitlements.manage', 'revenue.read', 'school_billing.read', 'school_billing.manage'],
   },
   {
+    key: 'school_billing_manager', displayName: 'School Billing Manager',
+    description: 'Manage customer-school plans, invoices, payments, and direct billing notifications without broader finance access.',
+    permissions: ['platform.dashboard.read', 'schools.read', 'school_billing.read', 'school_billing.manage'],
+  },
+  {
     key: 'payout_approver', displayName: 'Payout Approver',
     description: 'Payout approval and completion. Requester cannot approve own payout.',
     permissions: ['platform.dashboard.read', 'revenue.read', 'payouts.approve', 'payouts.mark_paid'],
