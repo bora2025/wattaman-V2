@@ -38,16 +38,26 @@ test('Academic Management exposes administration and full attendance workflows',
     'GET reports/summary', 'GET reports/print-data',
     'GET sessions', 'POST sessions', 'GET holidays', 'POST holidays',
     'GET identifiers', 'POST identifiers', 'GET alerts',
+    'GET attendance-windows', 'POST attendance-windows',
+    'POST attendance-windows/:id/rotate', 'POST attendance-windows/:id/close',
+    'GET attendance-windows/:id/live', 'POST student/self-scan',
+    'GET student/attendance-history', 'GET attendance-self-review',
+    'POST attendance-self-review/:id/decide',
+    'GET student/attendance-devices', 'POST student/attendance-devices',
+    'GET staff-attendance/records', 'POST staff-attendance/scan',
+    'PATCH staff-attendance/records/:id/correct',
+    'GET staff-attendance/reports', 'GET staff-attendance/reports/summary',
   ]) assert.ok(routes.has(route), `missing route ${route}`);
   assert.ok(permissions.some((permission) => permission.id === 'wattanam.academic-management.attendance'));
   assert.ok(permissions.some((permission) => permission.id === 'wattanam.academic-management.attendance.scan'));
+  assert.ok(permissions.some((permission) => permission.id === 'wattanam.academic-management.attendance.self.scan'));
   assert.deepEqual(
     navigation.filter((item) => ['study-years', 'classes', 'officers', 'officer-attendance', 'attendance-records', 'attendance-scanner', 'attendance-reports'].includes(item.id)).map((item) => item.id),
     ['study-years', 'classes', 'officers', 'officer-attendance', 'attendance-records', 'attendance-scanner', 'attendance-reports'],
   );
 
   const ui = JSON.parse(fs.readFileSync(path.join(root, 'frontend', 'page.json'), 'utf8'));
-  for (const page of ['study-years', 'classes', 'officers', 'officer-edit', 'officer-attendance', 'attendance-records', 'attendance-scanner', 'attendance-corrections', 'attendance-reports', 'attendance-settings']) {
+  for (const page of ['study-years', 'classes', 'officers', 'officer-edit', 'officer-attendance', 'attendance-records', 'attendance-scanner', 'attendance-corrections', 'attendance-reports', 'attendance-settings', 'attendance-windows', 'student-attendance-scan', 'attendance-self-review', 'staff-attendance-scanner', 'staff-attendance-reports']) {
     assert.ok(ui.pages.some((candidate) => candidate.id === page), `missing UI page ${page}`);
   }
 });

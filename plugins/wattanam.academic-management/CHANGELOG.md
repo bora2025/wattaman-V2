@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.17
+
+- Add short-lived Ed25519-signed student attendance windows with automatic token rotation,
+  class/session binding, server-side enrollment checks, and check-in/check-out support.
+- Add student self-scan, personal attendance history, registered-device policy, offline evidence,
+  geofence validation, idempotency, rate limiting, full accepted/rejected audit records, and
+  staff review for exceptional submissions.
+- Add four-session staff card scanning with camera/USB input, server-authoritative timing,
+  location capture, correction, daily records, summary/detail reports, and print/CSV/PDF UI.
+- Add declarative administration pages for attendance windows, student scanning, review,
+  staff scanning, and staff reporting.
+
 ## 0.1.16
 
 - Add plugin-owned officer employment profiles linked to existing Customer School directory accounts.

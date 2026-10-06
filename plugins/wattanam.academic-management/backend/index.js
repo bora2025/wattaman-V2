@@ -2,6 +2,8 @@
 
 const crypto = require('crypto');
 const attendanceRuntime = require('./attendance-runtime');
+const { registerSelfAttendance } = require('./self-attendance');
+const { registerStaffAttendance } = require('./staff-attendance');
 
 const DEPARTMENT = 'plugin_wattanam_academic_management_department';
 const USER_DEPARTMENT = 'plugin_wattanam_academic_management_user_department';
@@ -1860,5 +1862,7 @@ module.exports = {
       },
     });
     await attendanceRuntime.activate(attendanceContext(context));
+    registerSelfAttendance(context);
+    registerStaffAttendance(context);
   },
 };

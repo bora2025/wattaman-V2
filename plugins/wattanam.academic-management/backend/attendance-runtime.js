@@ -289,7 +289,7 @@ module.exports = {
     };
     const reportRows = async (request) => {
       const { params, conditions } = await reportFilter(request);
-      return context.database.query(`SELECT "id", "personId", "personNameSnapshot", "personNumberSnapshot", "classId", "classNameSnapshot", "studyYearId", "studyYearLabelSnapshot", "date", "session", "status", "permissionType", "checkInTime", "scanMode" FROM ${RECORD} WHERE ${conditions.join(' AND ')} ORDER BY "date" DESC, "classNameSnapshot", "personNameSnapshot", "session" LIMIT 10000`, params);
+      return context.database.query(`SELECT "id", "personId", "personNameSnapshot", "personNumberSnapshot", "classId", "classNameSnapshot", "studyYearId", "studyYearLabelSnapshot", "date", "session", "status", "permissionType", "checkInTime", "checkOutTime", "scanMode", "source", "attendanceWindowId", "originalScanAt", "synchronizedAt", "reviewStatus" FROM ${RECORD} WHERE ${conditions.join(' AND ')} ORDER BY "date" DESC, "classNameSnapshot", "personNameSnapshot", "session" LIMIT 10000`, params);
     };
     const reportSummary = async (request) => {
       const { params, conditions } = await reportFilter(request);

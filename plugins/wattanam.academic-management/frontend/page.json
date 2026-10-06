@@ -3023,8 +3023,24 @@
               "path": "status"
             },
             {
-              "label": "Source",
+              "label": "Capture mode",
               "path": "scanMode"
+            },
+            {
+              "label": "Attendance source",
+              "path": "source"
+            },
+            {
+              "label": "Original scan",
+              "path": "originalScanAt"
+            },
+            {
+              "label": "Synchronized",
+              "path": "synchronizedAt"
+            },
+            {
+              "label": "Review",
+              "path": "reviewStatus"
             }
           ],
           "options": {
@@ -3153,6 +3169,10 @@
                 {
                   "label": "Student",
                   "value": "STUDENT"
+                },
+                {
+                  "label": "Staff",
+                  "value": "STAFF"
                 }
               ]
             }
@@ -3209,6 +3229,10 @@
                 {
                   "label": "Student",
                   "value": "STUDENT"
+                },
+                {
+                  "label": "Staff",
+                  "value": "STAFF"
                 }
               ]
             },
@@ -3380,6 +3404,878 @@
           "options": {
             "submitLabel": "Save alert rule",
             "successMessage": "Alert rule saved"
+          }
+        }
+      ]
+    },
+    {
+      "id": "attendance-windows",
+      "title": "Student Self-Attendance Windows",
+      "routePath": "attendance-windows",
+      "permission": "wattanam.academic-management.attendance.windows.manage",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "windows",
+          "method": "GET",
+          "path": "attendance-windows",
+          "permission": "wattanam.academic-management.attendance.windows.manage"
+        },
+        {
+          "id": "openWindow",
+          "method": "POST",
+          "path": "attendance-windows",
+          "permission": "wattanam.academic-management.attendance.windows.manage"
+        },
+        {
+          "id": "rotateWindow",
+          "method": "POST",
+          "path": "attendance-windows/:id/rotate",
+          "parameters": [
+            "id"
+          ],
+          "autoload": false,
+          "permission": "wattanam.academic-management.attendance.windows.manage"
+        },
+        {
+          "id": "closeWindow",
+          "method": "POST",
+          "path": "attendance-windows/:id/close",
+          "parameters": [
+            "id"
+          ],
+          "autoload": false,
+          "permission": "wattanam.academic-management.attendance.windows.manage"
+        }
+      ],
+      "components": [
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Secure student self-attendance"
+        },
+        {
+          "id": "windows-table",
+          "type": "table",
+          "title": "Attendance windows and rotating QR tokens",
+          "source": "windows",
+          "fields": [
+            {
+              "id": "classId",
+              "label": "Class",
+              "filterable": true
+            },
+            {
+              "id": "session",
+              "label": "Session"
+            },
+            {
+              "id": "sessionType",
+              "label": "Type"
+            },
+            {
+              "id": "status",
+              "label": "Status",
+              "filterable": true
+            },
+            {
+              "id": "startsAt",
+              "label": "Starts",
+              "format": "datetime"
+            },
+            {
+              "id": "endsAt",
+              "label": "Ends",
+              "format": "datetime"
+            },
+            {
+              "id": "attendanceToken",
+              "label": "Current signed QR token"
+            },
+            {
+              "id": "expiresAt",
+              "label": "Token expires",
+              "format": "datetime"
+            }
+          ],
+          "options": {
+            "pageSize": 20,
+            "selectable": true
+          }
+        },
+        {
+          "id": "window-actions",
+          "type": "actions",
+          "options": {
+            "actions": [
+              {
+                "id": "rotate-window",
+                "label": "Rotate selected QR",
+                "mode": "bulk",
+                "source": "rotateWindow",
+                "selectionSource": "windows",
+                "idParameter": "id",
+                "confirmation": "Generate a fresh short-lived QR token for the selected window?"
+              },
+              {
+                "id": "close-window",
+                "label": "Close selected windows",
+                "mode": "bulk",
+                "source": "closeWindow",
+                "selectionSource": "windows",
+                "idParameter": "id",
+                "confirmation": "Close the selected attendance windows?",
+                "destructive": true
+              }
+            ]
+          }
+        },
+        {
+          "id": "open-window-form",
+          "type": "form",
+          "title": "Open attendance window",
+          "source": "openWindow",
+          "fields": [
+            {
+              "id": "classId",
+              "type": "text",
+              "label": "Class ID",
+              "required": true
+            },
+            {
+              "id": "session",
+              "type": "number",
+              "label": "Session",
+              "required": true,
+              "min": 1,
+              "max": 4
+            },
+            {
+              "id": "sessionType",
+              "type": "select",
+              "label": "Action",
+              "required": true,
+              "options": [
+                {
+                  "label": "Check in",
+                  "value": "CHECK_IN"
+                },
+                {
+                  "label": "Check out",
+                  "value": "CHECK_OUT"
+                }
+              ]
+            },
+            {
+              "id": "startsAt",
+              "type": "text",
+              "label": "Starts at (ISO date/time)",
+              "required": true
+            },
+            {
+              "id": "endsAt",
+              "type": "text",
+              "label": "Ends at (ISO date/time)",
+              "required": true
+            },
+            {
+              "id": "qrValiditySeconds",
+              "type": "number",
+              "label": "QR validity seconds",
+              "required": true,
+              "min": 15,
+              "max": 300,
+              "defaultValue": 45
+            },
+            {
+              "id": "locationRequired",
+              "type": "checkbox",
+              "label": "Require campus location"
+            },
+            {
+              "id": "latitude",
+              "type": "number",
+              "label": "Campus latitude",
+              "visibleWhen": {
+                "field": "locationRequired",
+                "equals": true
+              }
+            },
+            {
+              "id": "longitude",
+              "type": "number",
+              "label": "Campus longitude",
+              "visibleWhen": {
+                "field": "locationRequired",
+                "equals": true
+              }
+            },
+            {
+              "id": "radiusMeters",
+              "type": "number",
+              "label": "Campus radius (meters)",
+              "min": 10,
+              "max": 10000,
+              "visibleWhen": {
+                "field": "locationRequired",
+                "equals": true
+              }
+            },
+            {
+              "id": "maxAccuracyMeters",
+              "type": "number",
+              "label": "Maximum GPS accuracy (meters)",
+              "min": 5,
+              "max": 5000,
+              "defaultValue": 100
+            },
+            {
+              "id": "registeredDeviceRequired",
+              "type": "checkbox",
+              "label": "Require registered student device"
+            },
+            {
+              "id": "maxOfflineMinutes",
+              "type": "number",
+              "label": "Maximum offline age (minutes)",
+              "min": 0,
+              "max": 10080,
+              "defaultValue": 1440
+            }
+          ],
+          "options": {
+            "submitLabel": "Open and create signed QR",
+            "confirmation": "Open this attendance window?",
+            "successMessage": "Attendance window opened"
+          }
+        }
+      ]
+    },
+    {
+      "id": "student-attendance-scan",
+      "title": "Scan Attendance",
+      "routePath": "student/attendance-scan",
+      "permission": "wattanam.academic-management.attendance.self.scan",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "selfScan",
+          "method": "POST",
+          "path": "student/self-scan",
+          "permission": "wattanam.academic-management.attendance.self.scan"
+        },
+        {
+          "id": "history",
+          "method": "GET",
+          "path": "student/attendance-history",
+          "permission": "wattanam.academic-management.attendance.self.scan"
+        },
+        {
+          "id": "devices",
+          "method": "GET",
+          "path": "student/attendance-devices",
+          "permission": "wattanam.academic-management.attendance.self.scan"
+        },
+        {
+          "id": "registerDevice",
+          "method": "POST",
+          "path": "student/attendance-devices",
+          "permission": "wattanam.academic-management.attendance.self.scan"
+        }
+      ],
+      "components": [
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Scan the classroom attendance QR"
+        },
+        {
+          "id": "self-scanner",
+          "type": "scanner",
+          "title": "Student self-attendance scanner",
+          "source": "selfScan",
+          "options": {
+            "modes": [
+              "camera",
+              "keyboard"
+            ],
+            "field": "attendanceToken",
+            "minLength": 40,
+            "maxLength": 1000,
+            "debounceMs": 1000,
+            "contextFields": [
+              {
+                "id": "deviceId",
+                "type": "text",
+                "label": "Registered device ID"
+              },
+              {
+                "id": "networkQuality",
+                "type": "select",
+                "label": "Network quality",
+                "options": [
+                  {
+                    "label": "Online",
+                    "value": "ONLINE"
+                  },
+                  {
+                    "label": "Slow",
+                    "value": "SLOW"
+                  },
+                  {
+                    "label": "Offline sync",
+                    "value": "OFFLINE"
+                  }
+                ]
+              },
+              {
+                "id": "latitude",
+                "type": "number",
+                "label": "Latitude"
+              },
+              {
+                "id": "longitude",
+                "type": "number",
+                "label": "Longitude"
+              },
+              {
+                "id": "accuracyMeters",
+                "type": "number",
+                "label": "GPS accuracy (meters)"
+              }
+            ]
+          }
+        },
+        {
+          "id": "student-history",
+          "type": "table",
+          "title": "My recent attendance",
+          "source": "history",
+          "fields": [
+            {
+              "id": "date",
+              "label": "Date",
+              "format": "date"
+            },
+            {
+              "id": "classNameSnapshot",
+              "label": "Class"
+            },
+            {
+              "id": "session",
+              "label": "Session"
+            },
+            {
+              "id": "status",
+              "label": "Status"
+            },
+            {
+              "id": "source",
+              "label": "Source"
+            },
+            {
+              "id": "reviewStatus",
+              "label": "Review"
+            }
+          ],
+          "options": {
+            "pageSize": 20,
+            "selectable": false
+          }
+        },
+        {
+          "id": "devices-table",
+          "type": "table",
+          "title": "My registered attendance devices",
+          "source": "devices",
+          "fields": [
+            {
+              "id": "label",
+              "label": "Device"
+            },
+            {
+              "id": "active",
+              "label": "Active",
+              "format": "boolean"
+            },
+            {
+              "id": "registeredAt",
+              "label": "Registered",
+              "format": "datetime"
+            },
+            {
+              "id": "lastUsedAt",
+              "label": "Last used",
+              "format": "datetime"
+            }
+          ],
+          "options": {
+            "pageSize": 10,
+            "selectable": false
+          }
+        },
+        {
+          "id": "register-device-form",
+          "type": "form",
+          "title": "Register this device",
+          "source": "registerDevice",
+          "fields": [
+            {
+              "id": "deviceId",
+              "type": "text",
+              "label": "Persistent device ID",
+              "required": true,
+              "minLength": 8,
+              "maxLength": 500
+            },
+            {
+              "id": "label",
+              "type": "text",
+              "label": "Device label",
+              "maxLength": 100
+            }
+          ],
+          "options": {
+            "submitLabel": "Register device",
+            "successMessage": "Device registered"
+          }
+        }
+      ]
+    },
+    {
+      "id": "attendance-self-review",
+      "title": "Self-Attendance Review",
+      "routePath": "attendance-self-review",
+      "permission": "wattanam.academic-management.attendance.self.review",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "attempts",
+          "method": "GET",
+          "path": "attendance-self-review",
+          "permission": "wattanam.academic-management.attendance.self.review"
+        },
+        {
+          "id": "decide",
+          "method": "POST",
+          "path": "attendance-self-review/:id/decide",
+          "parameters": [
+            "id"
+          ],
+          "autoload": false,
+          "permission": "wattanam.academic-management.attendance.self.review"
+        }
+      ],
+      "components": [
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Review offline and location exceptions"
+        },
+        {
+          "id": "attempts-table",
+          "type": "table",
+          "title": "Pending self-attendance attempts",
+          "source": "attempts",
+          "fields": [
+            {
+              "id": "receivedAt",
+              "label": "Received",
+              "format": "datetime"
+            },
+            {
+              "id": "studentProfileId",
+              "label": "Student"
+            },
+            {
+              "id": "classId",
+              "label": "Class"
+            },
+            {
+              "id": "session",
+              "label": "Session"
+            },
+            {
+              "id": "result",
+              "label": "Result"
+            },
+            {
+              "id": "rejectionReason",
+              "label": "Reason"
+            },
+            {
+              "id": "locationDecision",
+              "label": "Location"
+            },
+            {
+              "id": "networkQuality",
+              "label": "Network"
+            }
+          ],
+          "options": {
+            "pageSize": 25,
+            "selectable": true
+          }
+        },
+        {
+          "id": "review-actions",
+          "type": "actions",
+          "options": {
+            "actions": [
+              {
+                "id": "approve-attempt",
+                "label": "Approve selected",
+                "mode": "bulk",
+                "source": "decide",
+                "selectionSource": "attempts",
+                "idParameter": "id",
+                "body": {
+                  "decision": "APPROVED",
+                  "reason": "Approved after staff review"
+                },
+                "confirmation": "Approve selected self-attendance attempts?"
+              },
+              {
+                "id": "reject-attempt",
+                "label": "Reject selected",
+                "mode": "bulk",
+                "source": "decide",
+                "selectionSource": "attempts",
+                "idParameter": "id",
+                "body": {
+                  "decision": "REJECTED",
+                  "reason": "Rejected after staff review"
+                },
+                "confirmation": "Reject selected self-attendance attempts?",
+                "destructive": true
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "staff-attendance-scanner",
+      "title": "Staff Attendance",
+      "routePath": "staff-attendance",
+      "permission": "wattanam.academic-management.attendance.staff.scan",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "scanStaff",
+          "method": "POST",
+          "path": "staff-attendance/scan",
+          "permission": "wattanam.academic-management.attendance.staff.scan"
+        },
+        {
+          "id": "staffRecords",
+          "method": "GET",
+          "path": "staff-attendance/records",
+          "permission": "wattanam.academic-management.attendance.staff.scan"
+        }
+      ],
+      "components": [
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Camera / USB staff attendance scanner"
+        },
+        {
+          "id": "staff-scanner",
+          "type": "scanner",
+          "title": "Scan staff card",
+          "source": "scanStaff",
+          "options": {
+            "modes": [
+              "camera",
+              "keyboard"
+            ],
+            "field": "code",
+            "minLength": 4,
+            "maxLength": 1000,
+            "debounceMs": 1000,
+            "contextFields": [
+              {
+                "id": "session",
+                "type": "select",
+                "label": "Session (leave blank for automatic)",
+                "options": [
+                  {
+                    "label": "Session 1",
+                    "value": 1
+                  },
+                  {
+                    "label": "Session 2",
+                    "value": 2
+                  },
+                  {
+                    "label": "Session 3",
+                    "value": 3
+                  },
+                  {
+                    "label": "Session 4",
+                    "value": 4
+                  }
+                ]
+              },
+              {
+                "id": "latitude",
+                "type": "number",
+                "label": "Latitude"
+              },
+              {
+                "id": "longitude",
+                "type": "number",
+                "label": "Longitude"
+              },
+              {
+                "id": "location",
+                "type": "text",
+                "label": "Location label"
+              }
+            ]
+          }
+        },
+        {
+          "id": "staff-records",
+          "type": "table",
+          "title": "Today's staff attendance",
+          "source": "staffRecords",
+          "fields": [
+            {
+              "id": "personNameSnapshot",
+              "label": "Officer"
+            },
+            {
+              "id": "personNumberSnapshot",
+              "label": "Officer ID"
+            },
+            {
+              "id": "classNameSnapshot",
+              "label": "Department"
+            },
+            {
+              "id": "session",
+              "label": "Session"
+            },
+            {
+              "id": "status",
+              "label": "Status"
+            },
+            {
+              "id": "checkInTime",
+              "label": "Check in",
+              "format": "datetime"
+            },
+            {
+              "id": "checkOutTime",
+              "label": "Check out",
+              "format": "datetime"
+            },
+            {
+              "id": "scanLocation",
+              "label": "Location"
+            }
+          ],
+          "options": {
+            "pageSize": 30,
+            "selectable": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "staff-attendance-reports",
+      "title": "Staff Attendance Reports",
+      "routePath": "staff-attendance-reports",
+      "permission": "wattanam.academic-management.attendance.staff.report",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "staffReport",
+          "method": "GET",
+          "path": "staff-attendance/reports",
+          "permission": "wattanam.academic-management.attendance.staff.report"
+        },
+        {
+          "id": "staffSummary",
+          "method": "GET",
+          "path": "staff-attendance/reports/summary",
+          "permission": "wattanam.academic-management.attendance.staff.report"
+        }
+      ],
+      "components": [
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Staff attendance reports"
+        },
+        {
+          "id": "staff-report-filters",
+          "type": "filter",
+          "fields": [
+            {
+              "id": "startDate",
+              "type": "date",
+              "label": "Start date"
+            },
+            {
+              "id": "endDate",
+              "type": "date",
+              "label": "End date"
+            }
+          ],
+          "options": {
+            "sources": [
+              "staffReport",
+              "staffSummary"
+            ],
+            "applyLabel": "Apply report period",
+            "clearLabel": "Clear period"
+          }
+        },
+        {
+          "id": "staff-summary",
+          "type": "table",
+          "title": "Staff totals",
+          "source": "staffSummary",
+          "fields": [
+            {
+              "id": "personNameSnapshot",
+              "label": "Officer"
+            },
+            {
+              "id": "personNumberSnapshot",
+              "label": "Officer ID"
+            },
+            {
+              "id": "sessions",
+              "label": "Sessions"
+            },
+            {
+              "id": "present",
+              "label": "Present"
+            },
+            {
+              "id": "late",
+              "label": "Late"
+            },
+            {
+              "id": "absent",
+              "label": "Absent"
+            },
+            {
+              "id": "permission",
+              "label": "Permission"
+            }
+          ],
+          "options": {
+            "pageSize": 50,
+            "selectable": false
+          }
+        },
+        {
+          "id": "staff-grid",
+          "type": "table",
+          "title": "Daily session detail",
+          "source": "staffReport",
+          "fields": [
+            {
+              "id": "date",
+              "label": "Date",
+              "format": "date"
+            },
+            {
+              "id": "personNameSnapshot",
+              "label": "Officer"
+            },
+            {
+              "id": "personNumberSnapshot",
+              "label": "Officer ID"
+            },
+            {
+              "id": "classNameSnapshot",
+              "label": "Department"
+            },
+            {
+              "id": "session",
+              "label": "Session"
+            },
+            {
+              "id": "status",
+              "label": "Status"
+            },
+            {
+              "id": "checkInTime",
+              "label": "Check in",
+              "format": "datetime"
+            },
+            {
+              "id": "checkOutTime",
+              "label": "Check out",
+              "format": "datetime"
+            },
+            {
+              "id": "scanLocation",
+              "label": "Location"
+            }
+          ],
+          "options": {
+            "pageSize": 50,
+            "selectable": false
+          }
+        },
+        {
+          "id": "staff-print",
+          "type": "print",
+          "title": "Print or export staff attendance",
+          "source": "staffReport",
+          "fields": [
+            {
+              "path": "date",
+              "label": "Date"
+            },
+            {
+              "path": "personNameSnapshot",
+              "label": "Officer"
+            },
+            {
+              "path": "personNumberSnapshot",
+              "label": "Officer ID"
+            },
+            {
+              "path": "classNameSnapshot",
+              "label": "Department"
+            },
+            {
+              "path": "session",
+              "label": "Session"
+            },
+            {
+              "path": "status",
+              "label": "Status"
+            },
+            {
+              "path": "checkInTime",
+              "label": "Check in"
+            },
+            {
+              "path": "checkOutTime",
+              "label": "Check out"
+            },
+            {
+              "path": "scanLocation",
+              "label": "Location"
+            }
+          ],
+          "options": {
+            "formats": [
+              "print",
+              "csv",
+              "pdf"
+            ],
+            "filename": "staff-attendance-report",
+            "maximumRows": 10000
           }
         }
       ]

@@ -3,7 +3,7 @@
   "id": "wattanam.academic-management",
   "name": "Academic Management",
   "description": "Official Wattanam academic structures, profiles, admissions, enrollment, and roster contracts.",
-  "version": "0.1.16",
+  "version": "0.1.17",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -25,7 +25,13 @@
     "wattanam.academic-management.attendance.configure",
     "wattanam.academic-management.attendance.devices.manage",
     "wattanam.academic-management.attendance.manage",
-    "wattanam.academic-management.attendance.export"
+    "wattanam.academic-management.attendance.export",
+    "wattanam.academic-management.attendance.windows.manage",
+    "wattanam.academic-management.attendance.self.scan",
+    "wattanam.academic-management.attendance.self.review",
+    "wattanam.academic-management.attendance.staff.scan",
+    "wattanam.academic-management.attendance.staff.report",
+    "wattanam.academic-management.attendance.staff.correct"
   ],
   "dependencies": {},
   "optionalDependencies": {},
@@ -131,6 +137,12 @@
       "path": "migrations/017_add_attendance_legacy_adoption_fields.sql",
       "checksum": "7a6711cecf5abb7698cc65c7c74bd25b864cfae21556f91f8720871df8be8869",
       "destructive": false
+    },
+    {
+      "id": "018_create_self_attendance",
+      "path": "migrations/018_create_self_attendance.sql",
+      "checksum": "8c312a2713a68fa2e36319e3f2044da840107d2e1924273d11c3e29c56655fff",
+      "destructive": false
     }
   ],
   "navigation": [
@@ -148,6 +160,11 @@
     { "id": "attendance-alerts", "label": "Attendance Alerts", "href": "/plugins/wattanam.academic-management/alerts", "permission": "wattanam.academic-management.attendance.view" },
     { "id": "attendance-reports", "label": "Attendance Reports", "href": "/plugins/wattanam.academic-management/reports", "permission": "wattanam.academic-management.attendance.report" },
     { "id": "attendance-settings", "label": "Attendance Settings", "href": "/plugins/wattanam.academic-management/settings", "permission": "wattanam.academic-management.attendance.configure" },
+    { "id": "attendance-windows", "label": "Self-attendance QR", "href": "/plugins/wattanam.academic-management/attendance-windows", "permission": "wattanam.academic-management.attendance.windows.manage" },
+    { "id": "student-attendance-scan", "label": "Scan Attendance", "href": "/plugins/wattanam.academic-management/student/attendance-scan", "permission": "wattanam.academic-management.attendance.self.scan" },
+    { "id": "attendance-self-review", "label": "Self-attendance Review", "href": "/plugins/wattanam.academic-management/attendance-self-review", "permission": "wattanam.academic-management.attendance.self.review" },
+    { "id": "staff-attendance-scanner", "label": "Staff Attendance", "href": "/plugins/wattanam.academic-management/staff-attendance", "permission": "wattanam.academic-management.attendance.staff.scan" },
+    { "id": "staff-attendance-reports", "label": "Staff Attendance Reports", "href": "/plugins/wattanam.academic-management/staff-attendance-reports", "permission": "wattanam.academic-management.attendance.staff.report" },
     { "id": "registrations", "label": "Registrations", "href": "/plugins/wattanam.academic-management/registrations", "permission": "wattanam.academic-management.manage" },
     { "id": "registration-settings", "label": "Registration Settings", "href": "/plugins/wattanam.academic-management/registration-settings", "permission": "wattanam.academic-management.manage" }
   ],
