@@ -35,6 +35,7 @@ import { actionContext } from './platform-context';
 import { createMetricsRegistry } from './observability/metrics';
 import { requestLoggingMiddleware } from './observability/request-logging';
 import { matchesAnyToken, readMetricsTokens } from './observability/metrics-config';
+import { marketplaceLinkCss, marketplaceLinkPage, marketplaceLinkScript } from './marketplace-link-page';
 
 /** Accepts any currently-valid admin token (the active one plus any still-trusted retiring ones
  * from MARKETPLACE_SECONDARY_ADMIN_TOKENS_JSON), so rotating doesn't instantly 401 every caller
@@ -126,6 +127,18 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   }));
   app.get('/health/live', (_request, response) => response.json({ status: 'alive' }));
   app.get('/health/ready', async (_request, response, next) => { try { response.json(await repository.health()); } catch (error) { next(error); } });
+  app.get('/marketplace/link/approval.css', (_request, response) => {
+    response.set('Cache-Control', 'public, max-age=3600');
+    response.type('text/css').send(marketplaceLinkCss);
+  });
+  app.get('/marketplace/link/approval.js', (_request, response) => {
+    response.set('Cache-Control', 'no-store');
+    response.type('application/javascript').send(marketplaceLinkScript);
+  });
+  app.get('/marketplace/link/:requestId', (_request, response) => {
+    response.set('Cache-Control', 'no-store');
+    response.type('html').send(marketplaceLinkPage);
+  });
   app.get('/v1/repository-key', (_request, response) => response.json(repository.keyDocument()));
   app.get('/v1/publisher-policies', async (_request, response, next) => {
     try { response.json(await publisherGovernance.listCurrentPolicies()); } catch (error) { next(error); }

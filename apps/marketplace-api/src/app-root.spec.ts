@@ -18,4 +18,17 @@ describe('marketplace API discovery root', () => {
     }));
     expect(response.headers['x-powered-by']).toBeUndefined();
   });
+
+  it('serves the customer-facing school link approval page and its same-origin assets', async () => {
+    const app = createApp({} as never, {} as never);
+    const page = await request(app).get('/marketplace/link/7763e38e-e984-461a-b6dd-5b2775102500').expect(200);
+    expect(page.headers['content-type']).toMatch(/^text\/html/);
+    expect(page.text).toContain('Approve school connection');
+    expect(page.text).toContain('/marketplace/link/approval.js');
+    expect(page.headers['cache-control']).toBe('no-store');
+
+    const script = await request(app).get('/marketplace/link/approval.js').expect(200);
+    expect(script.headers['content-type']).toMatch(/^application\/javascript/);
+    expect(script.text).toContain('/v1/marketplace-links/');
+  });
 });
