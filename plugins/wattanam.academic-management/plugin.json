@@ -3,7 +3,7 @@
   "id": "wattanam.academic-management",
   "name": "Academic Management",
   "description": "Official Wattanam academic structures, profiles, admissions, enrollment, and roster contracts.",
-  "version": "0.1.17",
+  "version": "0.1.18",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -99,49 +99,49 @@
     {
       "id": "011_create_officer_attendance",
       "path": "migrations/011_create_officer_attendance.sql",
-      "checksum": "453c893047264834fcf3e016cf2098d399800faacffcc34372d4769fb302da2b",
+      "checksum": "45109b813ca8ef1c05556cd34dc4e78ba4d404aed05e2c3393bcdc3acf0965c8",
       "destructive": false
     },
     {
       "id": "012_create_attendance_runtime",
       "path": "migrations/012_create_attendance_runtime.sql",
-      "checksum": "389697d1320d047c7c3bda4c308deb9f8205383915130d82e47f7cebeeec9ce6",
+      "checksum": "40d841705168ac589a8fb77767aa75e2f02f4845738e26fc7a2f131936aff93d",
       "destructive": false
     },
     {
       "id": "013_add_attendance_study_year_branding",
       "path": "migrations/013_add_attendance_study_year_branding.sql",
-      "checksum": "0892ba77497a775b5bcf807e032767eeedf3c17e2382f8b6d87982ff9532666b",
+      "checksum": "5961b4cfa5dd27190184681b95595b0785765ce0080d4b3427f8c8e95cbae5e3",
       "destructive": false
     },
     {
       "id": "014_enforce_attendance_student_boundary",
       "path": "migrations/014_enforce_attendance_student_boundary.sql",
-      "checksum": "0625f0f5bec58cfe4e101b491b8fa02b0e742fde3e796d6ba670b3c789098825",
+      "checksum": "d599d6aaf273a50ea510156dd459778b3db45460017ba7c98b86e87f16e94995",
       "destructive": false
     },
     {
       "id": "015_add_attendance_corrections_scans_alerts",
       "path": "migrations/015_add_attendance_corrections_scans_alerts.sql",
-      "checksum": "6340300f96cc2ec67e9573ceca87f4d60270abda22c89474778e76bcb2e02b4c",
+      "checksum": "7c999318088f95e57d9b74a32759ba68bc00191fa1fe2ff8aa2f361accb44010",
       "destructive": false
     },
     {
       "id": "016_add_attendance_alert_delivery_ledger",
       "path": "migrations/016_add_attendance_alert_delivery_ledger.sql",
-      "checksum": "411bf9bd7b417ff100ce0762011621ce58fbd0e46c074f3cb20d627afac3264e",
+      "checksum": "63515a6451db27ab3ceb88579cbfc97ff555597fcf2f744d0de5e09d66333b64",
       "destructive": false
     },
     {
       "id": "017_add_attendance_legacy_adoption_fields",
       "path": "migrations/017_add_attendance_legacy_adoption_fields.sql",
-      "checksum": "7a6711cecf5abb7698cc65c7c74bd25b864cfae21556f91f8720871df8be8869",
+      "checksum": "1076fcda7eeaac006a3272800074bffe30d672ec26004d9e33bf26d7fcaa4dd7",
       "destructive": false
     },
     {
       "id": "018_create_self_attendance",
       "path": "migrations/018_create_self_attendance.sql",
-      "checksum": "8c312a2713a68fa2e36319e3f2044da840107d2e1924273d11c3e29c56655fff",
+      "checksum": "e1e8ec689252824070a8045df26c3f3cdebd7b6738d84efccf2534a56d1285e1",
       "destructive": false
     }
   ],

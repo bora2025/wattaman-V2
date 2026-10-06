@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.18
+
+- Correct the migration identity headers for officer attendance and secure self-attendance so
+  Customer School can verify and apply the 0.1.16+ schema during marketplace upgrades.
+
 ## 0.1.17
 
 - Add short-lived Ed25519-signed student attendance windows with automatic token rotation,

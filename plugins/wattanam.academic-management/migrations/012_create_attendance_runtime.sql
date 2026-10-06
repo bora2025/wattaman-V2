@@ -1,3 +1,5 @@
+-- wattanam-plugin-migration: 012_create_attendance_runtime
+
 CREATE TABLE IF NOT EXISTS plugin_wattanam_academic_management_study_year (
   "id" TEXT PRIMARY KEY,
   "year" INTEGER NOT NULL UNIQUE,

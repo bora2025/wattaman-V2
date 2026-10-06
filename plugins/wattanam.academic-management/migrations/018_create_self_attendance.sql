@@ -1,5 +1,4 @@
--- plugin: wattanam.academic-management
--- migration: 018_create_self_attendance
+-- wattanam-plugin-migration: 018_create_self_attendance
 
 ALTER TABLE plugin_wattanam_academic_management_attendance_record
   ADD COLUMN IF NOT EXISTS "source" TEXT NOT NULL DEFAULT 'TEACHER_MANUAL',

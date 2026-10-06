@@ -1,4 +1,4 @@
--- wattanam-plugin-migration: 005_add_alert_delivery_ledger
+-- wattanam-plugin-migration: 016_add_attendance_alert_delivery_ledger
 CREATE TABLE IF NOT EXISTS "plugin_wattanam_academic_management_attendance_alert_delivery" (
   "id" TEXT PRIMARY KEY,
   "alertId" TEXT NOT NULL REFERENCES "plugin_wattanam_academic_management_attendance_alert"("id") ON DELETE RESTRICT,

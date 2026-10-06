@@ -1,4 +1,4 @@
--- wattanam-plugin-migration: 004_add_corrections_scans_alerts_snapshots
+-- wattanam-plugin-migration: 015_add_attendance_corrections_scans_alerts
 ALTER TABLE "plugin_wattanam_academic_management_attendance_record"
   ADD COLUMN IF NOT EXISTS "personNameSnapshot" TEXT,
   ADD COLUMN IF NOT EXISTS "personNumberSnapshot" TEXT,

@@ -1,4 +1,4 @@
--- wattanam-plugin-migration: 003_enforce_student_boundary
+-- wattanam-plugin-migration: 014_enforce_attendance_student_boundary
 -- Preserve any excluded legacy rows for export/rollback, but reject new or modified rows that
 -- violate ADR-0019. NOT VALID deliberately avoids mutating or deleting historical data.
 ALTER TABLE "plugin_wattanam_academic_management_attendance_record"

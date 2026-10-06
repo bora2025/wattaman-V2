@@ -62,6 +62,14 @@ test('Academic Management exposes administration and full attendance workflows',
   }
 });
 
+test('every Academic Management migration carries its immutable identity header', () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, 'plugin.json'), 'utf8'));
+  for (const migration of manifest.migrations.filter((item) => Number(item.id.slice(0, 3)) >= 11)) {
+    const source = fs.readFileSync(path.join(root, migration.path), 'utf8');
+    assert.match(source, new RegExp(`^-- wattanam-plugin-migration: ${migration.id}(?:\\r?\\n|$)`), `missing identity header for ${migration.id}`);
+  }
+});
+
 test('officer workflow rejects student identities before storing a profile', async () => {
   const directory = {
     lookupUsers: async (ids) => ids.map((id) => ({ id, name: 'Student', role: 'STUDENT' })),

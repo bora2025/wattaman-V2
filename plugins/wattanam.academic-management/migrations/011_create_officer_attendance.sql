@@ -1,5 +1,4 @@
--- plugin: wattanam.academic-management
--- migration: 011_create_officer_attendance
+-- wattanam-plugin-migration: 011_create_officer_attendance
 
 CREATE TABLE IF NOT EXISTS plugin_wattanam_academic_management_officer_profile (
   "id" UUID PRIMARY KEY,

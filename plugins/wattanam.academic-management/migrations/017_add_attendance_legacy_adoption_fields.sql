@@ -1,4 +1,4 @@
--- wattanam-plugin-migration: 006_add_legacy_adoption_fields
+-- wattanam-plugin-migration: 017_add_attendance_legacy_adoption_fields
 ALTER TABLE "plugin_wattanam_academic_management_attendance_record"
   ADD COLUMN IF NOT EXISTS "permissionStartDate" DATE,
   ADD COLUMN IF NOT EXISTS "permissionEndDate" DATE;
