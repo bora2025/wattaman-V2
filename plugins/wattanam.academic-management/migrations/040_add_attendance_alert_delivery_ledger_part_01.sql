@@ -1,4 +1,4 @@
--- wattanam-plugin-migration: 016_add_attendance_alert_delivery_ledger
+-- wattanam-plugin-migration: 040_add_attendance_alert_delivery_ledger_part_01
 CREATE TABLE IF NOT EXISTS "plugin_wattanam_academic_management_attendance_alert_delivery" (
   "id" TEXT PRIMARY KEY,
   "alertId" TEXT NOT NULL REFERENCES "plugin_wattanam_academic_management_attendance_alert"("id") ON DELETE RESTRICT,
@@ -11,9 +11,6 @@ CREATE TABLE IF NOT EXISTS "plugin_wattanam_academic_management_attendance_alert
   "createdAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE ("alertId", "userId", "channel")
-);
-
-CREATE INDEX IF NOT EXISTS "academic_management_attendance_alert_delivery_status"
-  ON "plugin_wattanam_academic_management_attendance_alert_delivery" ("status", "updatedAt");
-
+)
+;
 

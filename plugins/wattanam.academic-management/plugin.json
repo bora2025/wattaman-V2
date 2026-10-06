@@ -3,7 +3,7 @@
   "id": "wattanam.academic-management",
   "name": "Academic Management",
   "description": "Official Wattanam academic structures, profiles, admissions, enrollment, and roster contracts.",
-  "version": "0.1.18",
+  "version": "0.1.19",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -11,7 +11,26 @@
   "frontendEntry": "frontend/page.json",
   "sdkVersion": "1.1.0",
   "runtimeVersion": "1.0.0",
-  "capabilities": ["accounts.student.create", "accounts.student.update", "api.routes", "crypto.hash", "database.read", "database.write", "directory.read", "events.durable", "events.publish", "jobs.schedule", "navigation.register", "notifications.send", "permissions.register", "readmodels.publish", "readmodels.read", "realtime.notify", "settings.read", "ui.pages"],
+  "capabilities": [
+    "accounts.student.create",
+    "accounts.student.update",
+    "api.routes",
+    "crypto.hash",
+    "database.read",
+    "database.write",
+    "directory.read",
+    "events.durable",
+    "events.publish",
+    "jobs.schedule",
+    "navigation.register",
+    "notifications.send",
+    "permissions.register",
+    "readmodels.publish",
+    "readmodels.read",
+    "realtime.notify",
+    "settings.read",
+    "ui.pages"
+  ],
   "permissions": [
     "wattanam.academic-management.view",
     "wattanam.academic-management.manage",
@@ -97,79 +116,424 @@
       "destructive": false
     },
     {
-      "id": "011_create_officer_attendance",
-      "path": "migrations/011_create_officer_attendance.sql",
-      "checksum": "45109b813ca8ef1c05556cd34dc4e78ba4d404aed05e2c3393bcdc3acf0965c8",
+      "id": "011_create_officer_attendance_part_01",
+      "path": "migrations/011_create_officer_attendance_part_01.sql",
+      "checksum": "404527065d164a409b5639a5c39baa17e092c6224068e3540f18de1f7fb7cbcd",
       "destructive": false
     },
     {
-      "id": "012_create_attendance_runtime",
-      "path": "migrations/012_create_attendance_runtime.sql",
-      "checksum": "40d841705168ac589a8fb77767aa75e2f02f4845738e26fc7a2f131936aff93d",
+      "id": "012_create_officer_attendance_part_02",
+      "path": "migrations/012_create_officer_attendance_part_02.sql",
+      "checksum": "2e0c58881c6d7c69029d3e448ec022106ab351d88b51567002ec08fdb8e090a0",
       "destructive": false
     },
     {
-      "id": "013_add_attendance_study_year_branding",
-      "path": "migrations/013_add_attendance_study_year_branding.sql",
-      "checksum": "5961b4cfa5dd27190184681b95595b0785765ce0080d4b3427f8c8e95cbae5e3",
+      "id": "013_create_officer_attendance_part_03",
+      "path": "migrations/013_create_officer_attendance_part_03.sql",
+      "checksum": "61cbdcf50f5fd17dc3cc54e2ec9bb54655d9213ae6e0357ac846a738e1970c7c",
       "destructive": false
     },
     {
-      "id": "014_enforce_attendance_student_boundary",
-      "path": "migrations/014_enforce_attendance_student_boundary.sql",
-      "checksum": "d599d6aaf273a50ea510156dd459778b3db45460017ba7c98b86e87f16e94995",
+      "id": "014_create_officer_attendance_part_04",
+      "path": "migrations/014_create_officer_attendance_part_04.sql",
+      "checksum": "1be2651554bd1e8f6524e4edb8dbc0568084cd99b89184b00f991669375baa1f",
       "destructive": false
     },
     {
-      "id": "015_add_attendance_corrections_scans_alerts",
-      "path": "migrations/015_add_attendance_corrections_scans_alerts.sql",
-      "checksum": "7c999318088f95e57d9b74a32759ba68bc00191fa1fe2ff8aa2f361accb44010",
+      "id": "015_create_officer_attendance_part_05",
+      "path": "migrations/015_create_officer_attendance_part_05.sql",
+      "checksum": "8f82e878d69cb99a4e1a84d3bec2717bf9bd54b3148442578366d658f8c66931",
       "destructive": false
     },
     {
-      "id": "016_add_attendance_alert_delivery_ledger",
-      "path": "migrations/016_add_attendance_alert_delivery_ledger.sql",
-      "checksum": "63515a6451db27ab3ceb88579cbfc97ff555597fcf2f744d0de5e09d66333b64",
+      "id": "016_create_attendance_runtime_part_01",
+      "path": "migrations/016_create_attendance_runtime_part_01.sql",
+      "checksum": "802dbbdde5a4152407a7018b10446c99715ec54c48c34bb6a2f6cd5e492a8a05",
       "destructive": false
     },
     {
-      "id": "017_add_attendance_legacy_adoption_fields",
-      "path": "migrations/017_add_attendance_legacy_adoption_fields.sql",
-      "checksum": "1076fcda7eeaac006a3272800074bffe30d672ec26004d9e33bf26d7fcaa4dd7",
+      "id": "017_create_attendance_runtime_part_02",
+      "path": "migrations/017_create_attendance_runtime_part_02.sql",
+      "checksum": "7f234c92a36993e723ca1a3f3467a143533906159f36f3e076c9cb8ef4ea9c30",
       "destructive": false
     },
     {
-      "id": "018_create_self_attendance",
-      "path": "migrations/018_create_self_attendance.sql",
-      "checksum": "e1e8ec689252824070a8045df26c3f3cdebd7b6738d84efccf2534a56d1285e1",
+      "id": "018_create_attendance_runtime_part_03",
+      "path": "migrations/018_create_attendance_runtime_part_03.sql",
+      "checksum": "0561f334af14bbfa46fb97fa395c9f5e7ca7e04b3cb1b064790443710f81e2c6",
+      "destructive": false
+    },
+    {
+      "id": "019_create_attendance_runtime_part_04",
+      "path": "migrations/019_create_attendance_runtime_part_04.sql",
+      "checksum": "ff428b77db07a0ed3740840b5feae8f7cb2f261089c47d2ecb85de72bfa4e6bb",
+      "destructive": false
+    },
+    {
+      "id": "020_create_attendance_runtime_part_05",
+      "path": "migrations/020_create_attendance_runtime_part_05.sql",
+      "checksum": "f48760107542a24de77105a4477ba863a43f5e153f92a0052fed38cdb0e1d1c9",
+      "destructive": false
+    },
+    {
+      "id": "021_create_attendance_runtime_part_06",
+      "path": "migrations/021_create_attendance_runtime_part_06.sql",
+      "checksum": "9d722c9cd5fb4d508951d0ef010692ed863bb2bd4de2ecf72213a6f984ed9577",
+      "destructive": false
+    },
+    {
+      "id": "022_create_attendance_runtime_part_07",
+      "path": "migrations/022_create_attendance_runtime_part_07.sql",
+      "checksum": "ba8b49821a19dc92daae175f9b0fc601b7ac6c9fbf9df92a2bd97cc9e30578a8",
+      "destructive": false
+    },
+    {
+      "id": "023_create_attendance_runtime_part_08",
+      "path": "migrations/023_create_attendance_runtime_part_08.sql",
+      "checksum": "55e942f0915544058f26665625bbe049d3159dfc90b3a252da2323a5af2a4ed9",
+      "destructive": false
+    },
+    {
+      "id": "024_create_attendance_runtime_part_09",
+      "path": "migrations/024_create_attendance_runtime_part_09.sql",
+      "checksum": "7c35915c4155895afc06beb8a99c613367febcad47aa70f2a3fc5e34c1cdb5ba",
+      "destructive": false
+    },
+    {
+      "id": "025_create_attendance_runtime_part_10",
+      "path": "migrations/025_create_attendance_runtime_part_10.sql",
+      "checksum": "ed23b6ea1e8a8cecc3607c4bba4c7925bccf83c833bd259a4e74d1d2fa8c3436",
+      "destructive": false
+    },
+    {
+      "id": "026_add_attendance_study_year_branding",
+      "path": "migrations/026_add_attendance_study_year_branding.sql",
+      "checksum": "fd7132e476cf2108271c86d0c50c4f5860a116fc364befad3c212a631905b790",
+      "destructive": false
+    },
+    {
+      "id": "027_enforce_attendance_student_boundary_part_01",
+      "path": "migrations/027_enforce_attendance_student_boundary_part_01.sql",
+      "checksum": "462232dbd329ceabf6c2ae04f4d27f43ece1546f512b7b90f79bc6d48b5e662d",
+      "destructive": false
+    },
+    {
+      "id": "028_enforce_attendance_student_boundary_part_02",
+      "path": "migrations/028_enforce_attendance_student_boundary_part_02.sql",
+      "checksum": "438dd867b81ff64aa01b0180b3e574d4a2963c9037b733f47bc0c2d27b96f9a2",
+      "destructive": false
+    },
+    {
+      "id": "029_enforce_attendance_student_boundary_part_03",
+      "path": "migrations/029_enforce_attendance_student_boundary_part_03.sql",
+      "checksum": "739c0ad7b27dab2238aa10e1c11f3f5ddbc57ab407d231d5ae8c475a11d905b1",
+      "destructive": false
+    },
+    {
+      "id": "030_add_attendance_corrections_scans_alerts_part_01",
+      "path": "migrations/030_add_attendance_corrections_scans_alerts_part_01.sql",
+      "checksum": "3aba6962196a79879a0d2c13c5a4a58a39f8882730a8fdb96bbb93cac2b93f12",
+      "destructive": false
+    },
+    {
+      "id": "031_add_attendance_corrections_scans_alerts_part_02",
+      "path": "migrations/031_add_attendance_corrections_scans_alerts_part_02.sql",
+      "checksum": "49af3e01a20e09ef1f539a17241b51e4eec0999bf275c0be91c8510e21f643ed",
+      "destructive": false
+    },
+    {
+      "id": "032_add_attendance_corrections_scans_alerts_part_03",
+      "path": "migrations/032_add_attendance_corrections_scans_alerts_part_03.sql",
+      "checksum": "964b57d1de754bf9e8cc49a74650d5ddfdf3ece23afd56c3220522e820df71cf",
+      "destructive": false
+    },
+    {
+      "id": "033_add_attendance_corrections_scans_alerts_part_04",
+      "path": "migrations/033_add_attendance_corrections_scans_alerts_part_04.sql",
+      "checksum": "c2b3d8a6bed3d1b74a9b9a752b246f23e7e9cf4d7909697bfb30c3d266787480",
+      "destructive": false
+    },
+    {
+      "id": "034_add_attendance_corrections_scans_alerts_part_05",
+      "path": "migrations/034_add_attendance_corrections_scans_alerts_part_05.sql",
+      "checksum": "5ed45b209c614d1f40722d67c860b61c2f51b74e5c4f5b3069918fc4a3e780f0",
+      "destructive": false
+    },
+    {
+      "id": "035_add_attendance_corrections_scans_alerts_part_06",
+      "path": "migrations/035_add_attendance_corrections_scans_alerts_part_06.sql",
+      "checksum": "3e87e80cda8b4b3fc92c19883d96089cf4500dbb0576c51b7e875f9695c6e44d",
+      "destructive": false
+    },
+    {
+      "id": "036_add_attendance_corrections_scans_alerts_part_07",
+      "path": "migrations/036_add_attendance_corrections_scans_alerts_part_07.sql",
+      "checksum": "f351a6aa8d1e1d8c79ddb5728c479e890c11a9c53a414db7f91644c0e49aabd5",
+      "destructive": false
+    },
+    {
+      "id": "037_add_attendance_corrections_scans_alerts_part_08",
+      "path": "migrations/037_add_attendance_corrections_scans_alerts_part_08.sql",
+      "checksum": "1b0e5cf12df55cc2fc17ea3c96d40cd1cb15589bdcb8ddc78e048007e357d5fb",
+      "destructive": false
+    },
+    {
+      "id": "038_add_attendance_corrections_scans_alerts_part_09",
+      "path": "migrations/038_add_attendance_corrections_scans_alerts_part_09.sql",
+      "checksum": "2391c9ff097cc5aeba57ea50df406d8540ce695ae557802579d41aa3978630a6",
+      "destructive": false
+    },
+    {
+      "id": "039_add_attendance_corrections_scans_alerts_part_10",
+      "path": "migrations/039_add_attendance_corrections_scans_alerts_part_10.sql",
+      "checksum": "a1ed426cca0d741ec08454c69cb285e612e5470a54885ad1579e2669da3a10a2",
+      "destructive": false
+    },
+    {
+      "id": "040_add_attendance_alert_delivery_ledger_part_01",
+      "path": "migrations/040_add_attendance_alert_delivery_ledger_part_01.sql",
+      "checksum": "dfbbd395aae5c8dfc32f862f85669d7123aa915991ea6e1e56075391a9c1bb90",
+      "destructive": false
+    },
+    {
+      "id": "041_add_attendance_alert_delivery_ledger_part_02",
+      "path": "migrations/041_add_attendance_alert_delivery_ledger_part_02.sql",
+      "checksum": "805816e44d6b3556bef9cf45552c7a6a5c86a22af5db5fa2642e78f6f46ba0e6",
+      "destructive": false
+    },
+    {
+      "id": "042_add_attendance_legacy_adoption_fields_part_01",
+      "path": "migrations/042_add_attendance_legacy_adoption_fields_part_01.sql",
+      "checksum": "ebc9b9519f1f3d2e84dcc414ba58229160613c974cdc4b3c72232d82bb032135",
+      "destructive": false
+    },
+    {
+      "id": "043_add_attendance_legacy_adoption_fields_part_02",
+      "path": "migrations/043_add_attendance_legacy_adoption_fields_part_02.sql",
+      "checksum": "fcbce18bba7b1e13a29e5d1419c1dacdaae78418b89f1e4bc563cbfaae21460f",
+      "destructive": false
+    },
+    {
+      "id": "044_add_attendance_legacy_adoption_fields_part_03",
+      "path": "migrations/044_add_attendance_legacy_adoption_fields_part_03.sql",
+      "checksum": "c6043386128dc4169c42d144108289e9b0e4136500694c0527827bda5b18cdf6",
+      "destructive": false
+    },
+    {
+      "id": "045_add_attendance_legacy_adoption_fields_part_04",
+      "path": "migrations/045_add_attendance_legacy_adoption_fields_part_04.sql",
+      "checksum": "5dea60ee66476fa13a6f10d1b87c45a48bf239e71a34d35eb6b1ad112fc5d8c5",
+      "destructive": false
+    },
+    {
+      "id": "046_create_self_attendance_part_01",
+      "path": "migrations/046_create_self_attendance_part_01.sql",
+      "checksum": "200dcf5ba47132af4d64afbd42864b7f7e7859e1ecbb842d91beb7a6e41eaa16",
+      "destructive": false
+    },
+    {
+      "id": "047_create_self_attendance_part_02",
+      "path": "migrations/047_create_self_attendance_part_02.sql",
+      "checksum": "4b66253f122f36cfe27b19d0a2cc5e8a17b7e671b7305dc2cdb422e475e26e8b",
+      "destructive": false
+    },
+    {
+      "id": "048_create_self_attendance_part_03",
+      "path": "migrations/048_create_self_attendance_part_03.sql",
+      "checksum": "d29459fd6b7fe478f79114e554eb04fced7b684e1ff4b0496ce08f7030a93d2f",
+      "destructive": false
+    },
+    {
+      "id": "049_create_self_attendance_part_04",
+      "path": "migrations/049_create_self_attendance_part_04.sql",
+      "checksum": "a059cec8f62105c53d690b71a22279198cfd64003864809b0e170b0c9cf1c40a",
+      "destructive": false
+    },
+    {
+      "id": "050_create_self_attendance_part_05",
+      "path": "migrations/050_create_self_attendance_part_05.sql",
+      "checksum": "b47a09f1d3d4e62016a59d73311b7c0a8cb6922b4212986fcaeeb7a7fc8418ab",
+      "destructive": false
+    },
+    {
+      "id": "051_create_self_attendance_part_06",
+      "path": "migrations/051_create_self_attendance_part_06.sql",
+      "checksum": "20245e516e6f88280a61eb367509870505c30da94d8ae7a5d6da5f0097be70c7",
+      "destructive": false
+    },
+    {
+      "id": "052_create_self_attendance_part_07",
+      "path": "migrations/052_create_self_attendance_part_07.sql",
+      "checksum": "7112ee6a32888257aaae09a4489566ed997a7af8eb6e4317f47ea0847b38bdcc",
+      "destructive": false
+    },
+    {
+      "id": "053_create_self_attendance_part_08",
+      "path": "migrations/053_create_self_attendance_part_08.sql",
+      "checksum": "8fabd60c336aea26fa83f7846974406dd09424d163eecd618853dbd0a12e9b5b",
+      "destructive": false
+    },
+    {
+      "id": "054_create_self_attendance_part_09",
+      "path": "migrations/054_create_self_attendance_part_09.sql",
+      "checksum": "a0b04a4e4cd97f60260a06db366efe1ce5d67ef143e878f3531b30b41d46814a",
+      "destructive": false
+    },
+    {
+      "id": "055_create_self_attendance_part_10",
+      "path": "migrations/055_create_self_attendance_part_10.sql",
+      "checksum": "48e9ed89caa5694906494788bc9a9907f89aff08a834b88598b478c2c8d7f1d0",
       "destructive": false
     }
   ],
   "navigation": [
-    { "id": "study-years", "label": "Study Years", "href": "/plugins/wattanam.academic-management/study-years", "permission": "wattanam.academic-management.view" },
-    { "id": "departments", "label": "Departments", "href": "/plugins/wattanam.academic-management/departments", "permission": "wattanam.academic-management.view" },
-    { "id": "subjects", "label": "Subjects", "href": "/plugins/wattanam.academic-management/subjects", "permission": "wattanam.academic-management.view" },
-    { "id": "classes", "label": "Classes", "href": "/plugins/wattanam.academic-management/classes", "permission": "wattanam.academic-management.view" },
-    { "id": "teachers", "label": "Teachers", "href": "/plugins/wattanam.academic-management/teachers", "permission": "wattanam.academic-management.view" },
-    { "id": "officers", "label": "Manage Officers", "href": "/plugins/wattanam.academic-management/officers", "permission": "wattanam.academic-management.view" },
-    { "id": "officer-attendance", "label": "Officer Attendance", "href": "/plugins/wattanam.academic-management/officer-attendance", "permission": "wattanam.academic-management.attendance" },
-    { "id": "officer-attendance-reports", "label": "Officer Attendance Reports", "href": "/plugins/wattanam.academic-management/officer-attendance-reports", "permission": "wattanam.academic-management.view" },
-    { "id": "attendance-records", "label": "Attendance", "href": "/plugins/wattanam.academic-management/attendance", "permission": "wattanam.academic-management.attendance.view" },
-    { "id": "attendance-scanner", "label": "Attendance Scanner", "href": "/plugins/wattanam.academic-management/scanner", "permission": "wattanam.academic-management.attendance.scan" },
-    { "id": "attendance-corrections", "label": "Attendance Corrections", "href": "/plugins/wattanam.academic-management/corrections", "permission": "wattanam.academic-management.attendance.correct" },
-    { "id": "attendance-alerts", "label": "Attendance Alerts", "href": "/plugins/wattanam.academic-management/alerts", "permission": "wattanam.academic-management.attendance.view" },
-    { "id": "attendance-reports", "label": "Attendance Reports", "href": "/plugins/wattanam.academic-management/reports", "permission": "wattanam.academic-management.attendance.report" },
-    { "id": "attendance-settings", "label": "Attendance Settings", "href": "/plugins/wattanam.academic-management/settings", "permission": "wattanam.academic-management.attendance.configure" },
-    { "id": "attendance-windows", "label": "Self-attendance QR", "href": "/plugins/wattanam.academic-management/attendance-windows", "permission": "wattanam.academic-management.attendance.windows.manage" },
-    { "id": "student-attendance-scan", "label": "Scan Attendance", "href": "/plugins/wattanam.academic-management/student/attendance-scan", "permission": "wattanam.academic-management.attendance.self.scan" },
-    { "id": "attendance-self-review", "label": "Self-attendance Review", "href": "/plugins/wattanam.academic-management/attendance-self-review", "permission": "wattanam.academic-management.attendance.self.review" },
-    { "id": "staff-attendance-scanner", "label": "Staff Attendance", "href": "/plugins/wattanam.academic-management/staff-attendance", "permission": "wattanam.academic-management.attendance.staff.scan" },
-    { "id": "staff-attendance-reports", "label": "Staff Attendance Reports", "href": "/plugins/wattanam.academic-management/staff-attendance-reports", "permission": "wattanam.academic-management.attendance.staff.report" },
-    { "id": "registrations", "label": "Registrations", "href": "/plugins/wattanam.academic-management/registrations", "permission": "wattanam.academic-management.manage" },
-    { "id": "registration-settings", "label": "Registration Settings", "href": "/plugins/wattanam.academic-management/registration-settings", "permission": "wattanam.academic-management.manage" }
+    {
+      "id": "study-years",
+      "label": "Study Years",
+      "href": "/plugins/wattanam.academic-management/study-years",
+      "permission": "wattanam.academic-management.view"
+    },
+    {
+      "id": "departments",
+      "label": "Departments",
+      "href": "/plugins/wattanam.academic-management/departments",
+      "permission": "wattanam.academic-management.view"
+    },
+    {
+      "id": "subjects",
+      "label": "Subjects",
+      "href": "/plugins/wattanam.academic-management/subjects",
+      "permission": "wattanam.academic-management.view"
+    },
+    {
+      "id": "classes",
+      "label": "Classes",
+      "href": "/plugins/wattanam.academic-management/classes",
+      "permission": "wattanam.academic-management.view"
+    },
+    {
+      "id": "teachers",
+      "label": "Teachers",
+      "href": "/plugins/wattanam.academic-management/teachers",
+      "permission": "wattanam.academic-management.view"
+    },
+    {
+      "id": "officers",
+      "label": "Manage Officers",
+      "href": "/plugins/wattanam.academic-management/officers",
+      "permission": "wattanam.academic-management.view"
+    },
+    {
+      "id": "officer-attendance",
+      "label": "Officer Attendance",
+      "href": "/plugins/wattanam.academic-management/officer-attendance",
+      "permission": "wattanam.academic-management.attendance"
+    },
+    {
+      "id": "officer-attendance-reports",
+      "label": "Officer Attendance Reports",
+      "href": "/plugins/wattanam.academic-management/officer-attendance-reports",
+      "permission": "wattanam.academic-management.view"
+    },
+    {
+      "id": "attendance-records",
+      "label": "Attendance",
+      "href": "/plugins/wattanam.academic-management/attendance",
+      "permission": "wattanam.academic-management.attendance.view"
+    },
+    {
+      "id": "attendance-scanner",
+      "label": "Attendance Scanner",
+      "href": "/plugins/wattanam.academic-management/scanner",
+      "permission": "wattanam.academic-management.attendance.scan"
+    },
+    {
+      "id": "attendance-corrections",
+      "label": "Attendance Corrections",
+      "href": "/plugins/wattanam.academic-management/corrections",
+      "permission": "wattanam.academic-management.attendance.correct"
+    },
+    {
+      "id": "attendance-alerts",
+      "label": "Attendance Alerts",
+      "href": "/plugins/wattanam.academic-management/alerts",
+      "permission": "wattanam.academic-management.attendance.view"
+    },
+    {
+      "id": "attendance-reports",
+      "label": "Attendance Reports",
+      "href": "/plugins/wattanam.academic-management/reports",
+      "permission": "wattanam.academic-management.attendance.report"
+    },
+    {
+      "id": "attendance-settings",
+      "label": "Attendance Settings",
+      "href": "/plugins/wattanam.academic-management/settings",
+      "permission": "wattanam.academic-management.attendance.configure"
+    },
+    {
+      "id": "attendance-windows",
+      "label": "Self-attendance QR",
+      "href": "/plugins/wattanam.academic-management/attendance-windows",
+      "permission": "wattanam.academic-management.attendance.windows.manage"
+    },
+    {
+      "id": "student-attendance-scan",
+      "label": "Scan Attendance",
+      "href": "/plugins/wattanam.academic-management/student/attendance-scan",
+      "permission": "wattanam.academic-management.attendance.self.scan"
+    },
+    {
+      "id": "attendance-self-review",
+      "label": "Self-attendance Review",
+      "href": "/plugins/wattanam.academic-management/attendance-self-review",
+      "permission": "wattanam.academic-management.attendance.self.review"
+    },
+    {
+      "id": "staff-attendance-scanner",
+      "label": "Staff Attendance",
+      "href": "/plugins/wattanam.academic-management/staff-attendance",
+      "permission": "wattanam.academic-management.attendance.staff.scan"
+    },
+    {
+      "id": "staff-attendance-reports",
+      "label": "Staff Attendance Reports",
+      "href": "/plugins/wattanam.academic-management/staff-attendance-reports",
+      "permission": "wattanam.academic-management.attendance.staff.report"
+    },
+    {
+      "id": "registrations",
+      "label": "Registrations",
+      "href": "/plugins/wattanam.academic-management/registrations",
+      "permission": "wattanam.academic-management.manage"
+    },
+    {
+      "id": "registration-settings",
+      "label": "Registration Settings",
+      "href": "/plugins/wattanam.academic-management/registration-settings",
+      "permission": "wattanam.academic-management.manage"
+    }
   ],
-  "supportedLanguages": ["en", "km"],
+  "supportedLanguages": [
+    "en",
+    "km"
+  ],
   "supportUrl": "https://wattanam.example/support/academic-management",
   "privacyUrl": "https://wattanam.example/privacy/plugins/academic-management",
-  "operational": { "healthCheck": "runtime", "dataClassification": ["education-records", "personal-data"], "backup": { "database": "required", "files": "none", "restore": "required" }, "uninstall": { "dataRetention": "preserve" }, "pricing": "marketplace" }
+  "operational": {
+    "healthCheck": "runtime",
+    "dataClassification": [
+      "education-records",
+      "personal-data"
+    ],
+    "backup": {
+      "database": "required",
+      "files": "none",
+      "restore": "required"
+    },
+    "uninstall": {
+      "dataRetention": "preserve"
+    },
+    "pricing": "marketplace"
+  }
 }

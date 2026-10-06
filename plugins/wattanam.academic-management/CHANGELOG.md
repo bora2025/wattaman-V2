@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.19
+
+- Split the pending attendance schema into one SQL statement per migration so Customer School's
+  migration verifier can safely apply upgrades from Academic Management 0.1.15.
+- Add regression coverage for both migration identity headers and the single-statement contract.
+
 ## 0.1.18
 
 - Correct the migration identity headers for officer attendance and secure self-attendance so

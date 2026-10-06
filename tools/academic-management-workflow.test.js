@@ -62,11 +62,12 @@ test('Academic Management exposes administration and full attendance workflows',
   }
 });
 
-test('every Academic Management migration carries its immutable identity header', () => {
+test('every Academic Management migration uses the verified single-statement format', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'plugin.json'), 'utf8'));
   for (const migration of manifest.migrations.filter((item) => Number(item.id.slice(0, 3)) >= 11)) {
     const source = fs.readFileSync(path.join(root, migration.path), 'utf8');
     assert.match(source, new RegExp(`^-- wattanam-plugin-migration: ${migration.id}(?:\\r?\\n|$)`), `missing identity header for ${migration.id}`);
+    assert.ok((source.match(/;/g) || []).length <= 1, `${migration.id} contains more than one SQL statement`);
   }
 });
 
