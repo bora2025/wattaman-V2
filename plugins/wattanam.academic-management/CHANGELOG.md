@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.16
+
+- Add plugin-owned officer employment profiles linked to existing Customer School directory accounts.
+- Merge the production Attendance Manager runtime and declarative UI into Academic Management,
+  including manual attendance, camera/QR and USB scanning, correction review, sessions, holidays,
+  identifiers, alerts, reports, printing, and CSV export.
+- Map attendance tables, permissions, events, routes, jobs, navigation, and read models into the
+  Academic Management namespace while sharing its canonical Study Year records.
+- Add daily officer attendance and monthly officer summaries alongside the student attendance workflow.
+- Preserve the core identity boundary: the plugin does not store passwords or create parallel user accounts.
+
 ## 0.1.15
 
 - Replace the Study Years and Classes legacy-page redirects with signed declarative plugin pages.

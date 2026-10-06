@@ -9,21 +9,88 @@
       "permission": "wattanam.academic-management.view",
       "parameters": [],
       "dataSources": [
-        { "id": "departments", "method": "GET", "path": "departments", "permission": "wattanam.academic-management.view" },
-        { "id": "createDepartment", "method": "POST", "path": "departments", "permission": "wattanam.academic-management.manage" }
+        {
+          "id": "departments",
+          "method": "GET",
+          "path": "departments",
+          "permission": "wattanam.academic-management.view"
+        },
+        {
+          "id": "createDepartment",
+          "method": "POST",
+          "path": "departments",
+          "permission": "wattanam.academic-management.manage"
+        }
       ],
       "components": [
-        { "id": "heading", "type": "heading", "title": "Departments" },
-        { "id": "departments-table", "type": "table", "title": "Departments", "source": "departments", "fields": [
-          { "id": "name", "label": "Name", "sortable": true, "filterable": true },
-          { "id": "nameKh", "label": "Khmer name", "sortable": true },
-          { "id": "description", "label": "Description" }
-        ], "options": { "pageSize": 20, "selectable": false, "rowRoute": "departments/edit/:id", "rowParameterMap": { "id": "id" } } },
-        { "id": "department-create-form", "type": "form", "title": "Create department", "source": "createDepartment", "fields": [
-          { "id": "name", "type": "text", "label": "Name", "required": true, "minLength": 1, "maxLength": 120 },
-          { "id": "nameKh", "type": "text", "label": "Khmer name", "maxLength": 120 },
-          { "id": "description", "type": "textarea", "label": "Description", "maxLength": 2000 }
-        ], "options": { "submitLabel": "Create", "successMessage": "Department created" } }
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Departments"
+        },
+        {
+          "id": "departments-table",
+          "type": "table",
+          "title": "Departments",
+          "source": "departments",
+          "fields": [
+            {
+              "id": "name",
+              "label": "Name",
+              "sortable": true,
+              "filterable": true
+            },
+            {
+              "id": "nameKh",
+              "label": "Khmer name",
+              "sortable": true
+            },
+            {
+              "id": "description",
+              "label": "Description"
+            }
+          ],
+          "options": {
+            "pageSize": 20,
+            "selectable": false,
+            "rowRoute": "departments/edit/:id",
+            "rowParameterMap": {
+              "id": "id"
+            }
+          }
+        },
+        {
+          "id": "department-create-form",
+          "type": "form",
+          "title": "Create department",
+          "source": "createDepartment",
+          "fields": [
+            {
+              "id": "name",
+              "type": "text",
+              "label": "Name",
+              "required": true,
+              "minLength": 1,
+              "maxLength": 120
+            },
+            {
+              "id": "nameKh",
+              "type": "text",
+              "label": "Khmer name",
+              "maxLength": 120
+            },
+            {
+              "id": "description",
+              "type": "textarea",
+              "label": "Description",
+              "maxLength": 2000
+            }
+          ],
+          "options": {
+            "submitLabel": "Create",
+            "successMessage": "Department created"
+          }
+        }
       ]
     },
     {
@@ -31,18 +98,66 @@
       "title": "Edit Department",
       "routePath": "departments/edit/:id",
       "permission": "wattanam.academic-management.manage",
-      "parameters": [{ "name": "id", "type": "string", "maximumLength": 64 }],
+      "parameters": [
+        {
+          "name": "id",
+          "type": "string",
+          "maximumLength": 64
+        }
+      ],
       "dataSources": [
-        { "id": "department", "method": "GET", "path": "departments/:id", "permission": "wattanam.academic-management.view" },
-        { "id": "saveDepartment", "method": "PUT", "path": "departments/:id", "permission": "wattanam.academic-management.manage" }
+        {
+          "id": "department",
+          "method": "GET",
+          "path": "departments/:id",
+          "permission": "wattanam.academic-management.view"
+        },
+        {
+          "id": "saveDepartment",
+          "method": "PUT",
+          "path": "departments/:id",
+          "permission": "wattanam.academic-management.manage"
+        }
       ],
       "components": [
-        { "id": "heading", "type": "heading", "title": "Edit department" },
-        { "id": "department-edit-form", "type": "form", "title": "Department details", "source": "saveDepartment", "fields": [
-          { "id": "name", "type": "text", "label": "Name", "required": true, "minLength": 1, "maxLength": 120 },
-          { "id": "nameKh", "type": "text", "label": "Khmer name", "maxLength": 120 },
-          { "id": "description", "type": "textarea", "label": "Description", "maxLength": 2000 }
-        ], "options": { "initialSource": "department", "submitLabel": "Save", "successMessage": "Department saved" } }
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Edit department"
+        },
+        {
+          "id": "department-edit-form",
+          "type": "form",
+          "title": "Department details",
+          "source": "saveDepartment",
+          "fields": [
+            {
+              "id": "name",
+              "type": "text",
+              "label": "Name",
+              "required": true,
+              "minLength": 1,
+              "maxLength": 120
+            },
+            {
+              "id": "nameKh",
+              "type": "text",
+              "label": "Khmer name",
+              "maxLength": 120
+            },
+            {
+              "id": "description",
+              "type": "textarea",
+              "label": "Description",
+              "maxLength": 2000
+            }
+          ],
+          "options": {
+            "initialSource": "department",
+            "submitLabel": "Save",
+            "successMessage": "Department saved"
+          }
+        }
       ]
     },
     {
@@ -52,24 +167,67 @@
       "permission": "wattanam.academic-management.view",
       "parameters": [],
       "dataSources": [
-        { "id": "subjects", "method": "GET", "path": "subjects", "permission": "wattanam.academic-management.view" },
-        { "id": "createSubject", "method": "POST", "path": "subjects", "permission": "wattanam.academic-management.manage" }
+        {
+          "id": "subjects",
+          "method": "GET",
+          "path": "subjects",
+          "permission": "wattanam.academic-management.view"
+        },
+        {
+          "id": "createSubject",
+          "method": "POST",
+          "path": "subjects",
+          "permission": "wattanam.academic-management.manage"
+        }
       ],
       "components": [
-        { "id": "heading", "type": "heading", "title": "Teaching subjects" },
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Teaching subjects"
+        },
         {
           "id": "subjects-table",
           "type": "table",
           "title": "Subjects",
           "source": "subjects",
           "fields": [
-            { "id": "code", "label": "Code", "sortable": true, "filterable": true },
-            { "id": "name", "label": "Name", "sortable": true, "filterable": true },
-            { "id": "nameKh", "label": "Khmer name", "sortable": true },
-            { "id": "description", "label": "Description" },
-            { "id": "active", "label": "Active", "format": "boolean", "sortable": true }
+            {
+              "id": "code",
+              "label": "Code",
+              "sortable": true,
+              "filterable": true
+            },
+            {
+              "id": "name",
+              "label": "Name",
+              "sortable": true,
+              "filterable": true
+            },
+            {
+              "id": "nameKh",
+              "label": "Khmer name",
+              "sortable": true
+            },
+            {
+              "id": "description",
+              "label": "Description"
+            },
+            {
+              "id": "active",
+              "label": "Active",
+              "format": "boolean",
+              "sortable": true
+            }
           ],
-          "options": { "pageSize": 20, "selectable": false, "rowRoute": "subjects/edit/:id", "rowParameterMap": { "id": "id" } }
+          "options": {
+            "pageSize": 20,
+            "selectable": false,
+            "rowRoute": "subjects/edit/:id",
+            "rowParameterMap": {
+              "id": "id"
+            }
+          }
         },
         {
           "id": "subject-create-form",
@@ -77,12 +235,39 @@
           "title": "Create subject",
           "source": "createSubject",
           "fields": [
-            { "id": "code", "type": "text", "label": "Code", "required": true, "minLength": 1, "maxLength": 32 },
-            { "id": "name", "type": "text", "label": "Name", "required": true, "minLength": 1, "maxLength": 120 },
-            { "id": "nameKh", "type": "text", "label": "Khmer name", "maxLength": 120 },
-            { "id": "description", "type": "textarea", "label": "Description", "maxLength": 2000 }
+            {
+              "id": "code",
+              "type": "text",
+              "label": "Code",
+              "required": true,
+              "minLength": 1,
+              "maxLength": 32
+            },
+            {
+              "id": "name",
+              "type": "text",
+              "label": "Name",
+              "required": true,
+              "minLength": 1,
+              "maxLength": 120
+            },
+            {
+              "id": "nameKh",
+              "type": "text",
+              "label": "Khmer name",
+              "maxLength": 120
+            },
+            {
+              "id": "description",
+              "type": "textarea",
+              "label": "Description",
+              "maxLength": 2000
+            }
           ],
-          "options": { "submitLabel": "Create", "successMessage": "Subject created" }
+          "options": {
+            "submitLabel": "Create",
+            "successMessage": "Subject created"
+          }
         }
       ]
     },
@@ -91,26 +276,78 @@
       "title": "Edit Subject",
       "routePath": "subjects/edit/:id",
       "permission": "wattanam.academic-management.manage",
-      "parameters": [{ "name": "id", "type": "string", "maximumLength": 64 }],
+      "parameters": [
+        {
+          "name": "id",
+          "type": "string",
+          "maximumLength": 64
+        }
+      ],
       "dataSources": [
-        { "id": "subject", "method": "GET", "path": "subjects/:id", "permission": "wattanam.academic-management.view" },
-        { "id": "saveSubject", "method": "PUT", "path": "subjects/:id", "permission": "wattanam.academic-management.manage" }
+        {
+          "id": "subject",
+          "method": "GET",
+          "path": "subjects/:id",
+          "permission": "wattanam.academic-management.view"
+        },
+        {
+          "id": "saveSubject",
+          "method": "PUT",
+          "path": "subjects/:id",
+          "permission": "wattanam.academic-management.manage"
+        }
       ],
       "components": [
-        { "id": "heading", "type": "heading", "title": "Edit teaching subject" },
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Edit teaching subject"
+        },
         {
           "id": "subject-edit-form",
           "type": "form",
           "title": "Subject details",
           "source": "saveSubject",
           "fields": [
-            { "id": "code", "type": "text", "label": "Code", "required": true, "minLength": 1, "maxLength": 32 },
-            { "id": "name", "type": "text", "label": "Name", "required": true, "minLength": 1, "maxLength": 120 },
-            { "id": "nameKh", "type": "text", "label": "Khmer name", "maxLength": 120 },
-            { "id": "description", "type": "textarea", "label": "Description", "maxLength": 2000 },
-            { "id": "active", "type": "checkbox", "label": "Active" }
+            {
+              "id": "code",
+              "type": "text",
+              "label": "Code",
+              "required": true,
+              "minLength": 1,
+              "maxLength": 32
+            },
+            {
+              "id": "name",
+              "type": "text",
+              "label": "Name",
+              "required": true,
+              "minLength": 1,
+              "maxLength": 120
+            },
+            {
+              "id": "nameKh",
+              "type": "text",
+              "label": "Khmer name",
+              "maxLength": 120
+            },
+            {
+              "id": "description",
+              "type": "textarea",
+              "label": "Description",
+              "maxLength": 2000
+            },
+            {
+              "id": "active",
+              "type": "checkbox",
+              "label": "Active"
+            }
           ],
-          "options": { "initialSource": "subject", "submitLabel": "Save", "successMessage": "Subject saved" }
+          "options": {
+            "initialSource": "subject",
+            "submitLabel": "Save",
+            "successMessage": "Subject saved"
+          }
         }
       ]
     },
@@ -121,23 +358,624 @@
       "permission": "wattanam.academic-management.view",
       "parameters": [],
       "dataSources": [
-        { "id": "teachers", "method": "GET", "path": "teachers", "permission": "wattanam.academic-management.view" },
-        { "id": "departments", "method": "GET", "path": "departments", "permission": "wattanam.academic-management.view" }
+        {
+          "id": "teachers",
+          "method": "GET",
+          "path": "teachers",
+          "permission": "wattanam.academic-management.view"
+        },
+        {
+          "id": "departments",
+          "method": "GET",
+          "path": "departments",
+          "permission": "wattanam.academic-management.view"
+        }
       ],
       "components": [
-        { "id": "heading", "type": "heading", "title": "Teachers" },
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Teachers"
+        },
         {
           "id": "teachers-table",
           "type": "table",
           "title": "Teachers",
           "source": "teachers",
           "fields": [
-            { "id": "name", "label": "Name", "sortable": true, "filterable": true },
-            { "id": "email", "label": "Email", "sortable": true },
-            { "id": "phone", "label": "Phone", "sortable": true },
-            { "id": "department.name", "label": "Department", "path": "department.name" }
+            {
+              "id": "name",
+              "label": "Name",
+              "sortable": true,
+              "filterable": true
+            },
+            {
+              "id": "email",
+              "label": "Email",
+              "sortable": true
+            },
+            {
+              "id": "phone",
+              "label": "Phone",
+              "sortable": true
+            },
+            {
+              "id": "department.name",
+              "label": "Department",
+              "path": "department.name"
+            }
           ],
-          "options": { "pageSize": 20, "selectable": false }
+          "options": {
+            "pageSize": 20,
+            "selectable": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "officers",
+      "title": "Manage Officers",
+      "routePath": "officers",
+      "permission": "wattanam.academic-management.view",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "officers",
+          "method": "GET",
+          "path": "officers",
+          "permission": "wattanam.academic-management.view"
+        },
+        {
+          "id": "createOfficer",
+          "method": "POST",
+          "path": "officers",
+          "permission": "wattanam.academic-management.manage"
+        }
+      ],
+      "components": [
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Manage Officers"
+        },
+        {
+          "id": "officers-table",
+          "type": "table",
+          "title": "Officer directory",
+          "source": "officers",
+          "fields": [
+            {
+              "id": "employeeNumber",
+              "label": "Employee number",
+              "sortable": true,
+              "filterable": true
+            },
+            {
+              "id": "name",
+              "label": "Name",
+              "sortable": true,
+              "filterable": true
+            },
+            {
+              "id": "position",
+              "label": "Position",
+              "sortable": true,
+              "filterable": true
+            },
+            {
+              "id": "department.name",
+              "label": "Department",
+              "path": "department.name",
+              "sortable": true
+            },
+            {
+              "id": "email",
+              "label": "Email"
+            },
+            {
+              "id": "phone",
+              "label": "Phone"
+            },
+            {
+              "id": "employmentStatus",
+              "label": "Status",
+              "sortable": true
+            },
+            {
+              "id": "startedAt",
+              "label": "Started",
+              "format": "date"
+            }
+          ],
+          "options": {
+            "pageSize": 25,
+            "selectable": false,
+            "rowRoute": "officers/edit/:id",
+            "rowParameterMap": {
+              "id": "id"
+            }
+          }
+        },
+        {
+          "id": "officer-create-form",
+          "type": "form",
+          "title": "Add an existing directory account as an officer",
+          "source": "createOfficer",
+          "fields": [
+            {
+              "id": "userId",
+              "type": "text",
+              "label": "Directory user ID",
+              "required": true,
+              "maxLength": 36
+            },
+            {
+              "id": "employeeNumber",
+              "type": "text",
+              "label": "Employee number",
+              "maxLength": 64
+            },
+            {
+              "id": "position",
+              "type": "text",
+              "label": "Position",
+              "maxLength": 120
+            },
+            {
+              "id": "departmentId",
+              "type": "text",
+              "label": "Department ID",
+              "maxLength": 36
+            },
+            {
+              "id": "employmentStatus",
+              "type": "select",
+              "label": "Employment status",
+              "required": true,
+              "options": [
+                {
+                  "label": "Active",
+                  "value": "ACTIVE"
+                },
+                {
+                  "label": "Inactive",
+                  "value": "INACTIVE"
+                },
+                {
+                  "label": "Suspended",
+                  "value": "SUSPENDED"
+                }
+              ]
+            },
+            {
+              "id": "startedAt",
+              "type": "date",
+              "label": "Start date"
+            },
+            {
+              "id": "endedAt",
+              "type": "date",
+              "label": "End date"
+            },
+            {
+              "id": "notes",
+              "type": "textarea",
+              "label": "Notes",
+              "maxLength": 2000
+            }
+          ],
+          "options": {
+            "submitLabel": "Add officer",
+            "successMessage": "Officer profile created"
+          }
+        }
+      ]
+    },
+    {
+      "id": "officer-edit",
+      "title": "Edit Officer",
+      "routePath": "officers/edit/:id",
+      "permission": "wattanam.academic-management.manage",
+      "parameters": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "maximumLength": 36
+        }
+      ],
+      "dataSources": [
+        {
+          "id": "officer",
+          "method": "GET",
+          "path": "officers/:id",
+          "permission": "wattanam.academic-management.view"
+        },
+        {
+          "id": "saveOfficer",
+          "method": "PATCH",
+          "path": "officers/:id",
+          "permission": "wattanam.academic-management.manage"
+        }
+      ],
+      "components": [
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Edit Officer"
+        },
+        {
+          "id": "officer-edit-form",
+          "type": "form",
+          "title": "Officer employment profile",
+          "source": "saveOfficer",
+          "fields": [
+            {
+              "id": "employeeNumber",
+              "type": "text",
+              "label": "Employee number",
+              "maxLength": 64
+            },
+            {
+              "id": "position",
+              "type": "text",
+              "label": "Position",
+              "maxLength": 120
+            },
+            {
+              "id": "departmentId",
+              "type": "text",
+              "label": "Department ID",
+              "maxLength": 36
+            },
+            {
+              "id": "employmentStatus",
+              "type": "select",
+              "label": "Employment status",
+              "required": true,
+              "options": [
+                {
+                  "label": "Active",
+                  "value": "ACTIVE"
+                },
+                {
+                  "label": "Inactive",
+                  "value": "INACTIVE"
+                },
+                {
+                  "label": "Suspended",
+                  "value": "SUSPENDED"
+                }
+              ]
+            },
+            {
+              "id": "startedAt",
+              "type": "date",
+              "label": "Start date"
+            },
+            {
+              "id": "endedAt",
+              "type": "date",
+              "label": "End date"
+            },
+            {
+              "id": "notes",
+              "type": "textarea",
+              "label": "Notes",
+              "maxLength": 2000
+            }
+          ],
+          "options": {
+            "initialSource": "officer",
+            "submitLabel": "Save",
+            "successMessage": "Officer profile saved"
+          }
+        }
+      ]
+    },
+    {
+      "id": "officer-attendance",
+      "title": "Officer Attendance",
+      "routePath": "officer-attendance",
+      "permission": "wattanam.academic-management.attendance",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "attendance",
+          "method": "GET",
+          "path": "attendance",
+          "permission": "wattanam.academic-management.attendance"
+        },
+        {
+          "id": "recordAttendance",
+          "method": "POST",
+          "path": "attendance",
+          "permission": "wattanam.academic-management.attendance"
+        }
+      ],
+      "components": [
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Officer Attendance"
+        },
+        {
+          "id": "attendance-table",
+          "type": "table",
+          "title": "Today's attendance",
+          "source": "attendance",
+          "fields": [
+            {
+              "id": "attendanceDate",
+              "label": "Date",
+              "format": "date",
+              "sortable": true
+            },
+            {
+              "id": "employeeNumber",
+              "label": "Employee number",
+              "filterable": true
+            },
+            {
+              "id": "name",
+              "label": "Officer",
+              "sortable": true,
+              "filterable": true
+            },
+            {
+              "id": "position",
+              "label": "Position"
+            },
+            {
+              "id": "status",
+              "label": "Status",
+              "sortable": true,
+              "filterable": true
+            },
+            {
+              "id": "checkInAt",
+              "label": "Check in",
+              "format": "datetime"
+            },
+            {
+              "id": "checkOutAt",
+              "label": "Check out",
+              "format": "datetime"
+            },
+            {
+              "id": "note",
+              "label": "Note"
+            }
+          ],
+          "options": {
+            "pageSize": 30,
+            "selectable": false
+          }
+        },
+        {
+          "id": "attendance-form",
+          "type": "form",
+          "title": "Record or correct attendance",
+          "source": "recordAttendance",
+          "fields": [
+            {
+              "id": "officerId",
+              "type": "text",
+              "label": "Officer profile ID",
+              "required": true,
+              "maxLength": 36
+            },
+            {
+              "id": "attendanceDate",
+              "type": "date",
+              "label": "Attendance date",
+              "required": true
+            },
+            {
+              "id": "status",
+              "type": "select",
+              "label": "Status",
+              "required": true,
+              "options": [
+                {
+                  "label": "Present",
+                  "value": "PRESENT"
+                },
+                {
+                  "label": "Absent",
+                  "value": "ABSENT"
+                },
+                {
+                  "label": "Late",
+                  "value": "LATE"
+                },
+                {
+                  "label": "Leave",
+                  "value": "LEAVE"
+                },
+                {
+                  "label": "Excused",
+                  "value": "EXCUSED"
+                }
+              ]
+            },
+            {
+              "id": "checkInAt",
+              "type": "text",
+              "label": "Check-in date/time (ISO)"
+            },
+            {
+              "id": "checkOutAt",
+              "type": "text",
+              "label": "Check-out date/time (ISO)"
+            },
+            {
+              "id": "note",
+              "type": "textarea",
+              "label": "Note",
+              "maxLength": 1000
+            }
+          ],
+          "options": {
+            "submitLabel": "Save attendance",
+            "successMessage": "Attendance saved"
+          }
+        }
+      ]
+    },
+    {
+      "id": "officer-attendance-reports",
+      "title": "Officer Attendance Reports",
+      "routePath": "officer-attendance-reports",
+      "permission": "wattanam.academic-management.view",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "attendanceReport",
+          "method": "GET",
+          "path": "attendance/reports",
+          "permission": "wattanam.academic-management.view"
+        }
+      ],
+      "components": [
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Monthly Officer Attendance Report"
+        },
+        {
+          "id": "attendance-report-table",
+          "type": "table",
+          "title": "Attendance summary",
+          "source": "attendanceReport",
+          "fields": [
+            {
+              "id": "employeeNumber",
+              "label": "Employee number",
+              "sortable": true,
+              "filterable": true
+            },
+            {
+              "id": "name",
+              "label": "Officer",
+              "sortable": true,
+              "filterable": true
+            },
+            {
+              "id": "position",
+              "label": "Position",
+              "filterable": true
+            },
+            {
+              "id": "department.name",
+              "label": "Department",
+              "path": "department.name"
+            },
+            {
+              "id": "recordedDays",
+              "label": "Recorded",
+              "format": "number",
+              "sortable": true
+            },
+            {
+              "id": "presentDays",
+              "label": "Present",
+              "format": "number",
+              "sortable": true
+            },
+            {
+              "id": "lateDays",
+              "label": "Late",
+              "format": "number",
+              "sortable": true
+            },
+            {
+              "id": "absentDays",
+              "label": "Absent",
+              "format": "number",
+              "sortable": true
+            },
+            {
+              "id": "leaveDays",
+              "label": "Leave",
+              "format": "number"
+            },
+            {
+              "id": "excusedDays",
+              "label": "Excused",
+              "format": "number"
+            },
+            {
+              "id": "attendanceRate",
+              "label": "Attendance %",
+              "format": "number",
+              "sortable": true
+            }
+          ],
+          "options": {
+            "pageSize": 30,
+            "selectable": false
+          }
+        },
+        {
+          "id": "attendance-report-print",
+          "type": "print",
+          "title": "Print or export officer attendance report",
+          "source": "attendanceReport",
+          "fields": [
+            {
+              "label": "Employee number",
+              "path": "employeeNumber"
+            },
+            {
+              "label": "Officer",
+              "path": "name"
+            },
+            {
+              "label": "Position",
+              "path": "position"
+            },
+            {
+              "label": "Department",
+              "path": "department.name"
+            },
+            {
+              "label": "Recorded",
+              "path": "recordedDays"
+            },
+            {
+              "label": "Present",
+              "path": "presentDays"
+            },
+            {
+              "label": "Late",
+              "path": "lateDays"
+            },
+            {
+              "label": "Absent",
+              "path": "absentDays"
+            },
+            {
+              "label": "Leave",
+              "path": "leaveDays"
+            },
+            {
+              "label": "Excused",
+              "path": "excusedDays"
+            },
+            {
+              "label": "Attendance %",
+              "path": "attendanceRate"
+            }
+          ],
+          "options": {
+            "formats": [
+              "print",
+              "csv",
+              "pdf"
+            ],
+            "filename": "officer-attendance-report",
+            "maximumRows": 10000
+          }
         }
       ]
     },
@@ -148,34 +986,174 @@
       "permission": "wattanam.academic-management.view",
       "parameters": [],
       "dataSources": [
-        { "id": "studyYears", "method": "GET", "path": "study-years", "permission": "wattanam.academic-management.view" },
-        { "id": "createStudyYear", "method": "POST", "path": "study-years", "permission": "wattanam.academic-management.manage" },
-        { "id": "setCurrentStudyYear", "method": "POST", "path": "study-years/:studyYearId/set-current", "parameters": ["studyYearId"], "autoload": false, "permission": "wattanam.academic-management.manage" },
-        { "id": "deleteStudyYear", "method": "DELETE", "path": "study-years/:studyYearId", "parameters": ["studyYearId"], "autoload": false, "permission": "wattanam.academic-management.manage" }
+        {
+          "id": "studyYears",
+          "method": "GET",
+          "path": "study-years",
+          "permission": "wattanam.academic-management.view"
+        },
+        {
+          "id": "createStudyYear",
+          "method": "POST",
+          "path": "study-years",
+          "permission": "wattanam.academic-management.manage"
+        },
+        {
+          "id": "setCurrentStudyYear",
+          "method": "POST",
+          "path": "study-years/:studyYearId/set-current",
+          "parameters": [
+            "studyYearId"
+          ],
+          "autoload": false,
+          "permission": "wattanam.academic-management.manage"
+        },
+        {
+          "id": "deleteStudyYear",
+          "method": "DELETE",
+          "path": "study-years/:studyYearId",
+          "parameters": [
+            "studyYearId"
+          ],
+          "autoload": false,
+          "permission": "wattanam.academic-management.manage"
+        }
       ],
       "components": [
-        { "id": "heading", "type": "heading", "title": "Study Years" },
-        { "id": "study-years-table", "type": "table", "title": "Study Years", "source": "studyYears", "fields": [
-          { "id": "year", "label": "Year", "format": "number", "sortable": true },
-          { "id": "label", "label": "Label", "sortable": true, "filterable": true },
-          { "id": "startDate", "label": "Start date", "format": "date" },
-          { "id": "endDate", "label": "End date", "format": "date" },
-          { "id": "isCurrent", "label": "Current", "format": "boolean", "sortable": true },
-          { "id": "schoolName", "label": "School" },
-          { "id": "classCount", "label": "Classes", "path": "_count.classes", "format": "number" }
-        ], "options": { "pageSize": 20, "selectable": true, "rowRoute": "study-years/edit/:id", "rowParameterMap": { "id": "id" } } },
-        { "id": "study-year-actions", "type": "actions", "options": { "actions": [
-          { "id": "set-current-study-year", "label": "Set selected as current", "mode": "bulk", "source": "setCurrentStudyYear", "selectionSource": "studyYears", "idParameter": "studyYearId", "confirmation": "Set the selected study year as current? Select exactly one study year." },
-          { "id": "delete-study-years", "label": "Delete selected study years", "mode": "bulk", "source": "deleteStudyYear", "selectionSource": "studyYears", "idParameter": "studyYearId", "confirmation": "Delete the selected study years? Study years with classes cannot be deleted.", "destructive": true }
-        ] } },
-        { "id": "study-year-create-form", "type": "form", "title": "Create study year", "source": "createStudyYear", "fields": [
-          { "id": "year", "type": "number", "label": "Year", "required": true, "min": 2020, "max": 2100 },
-          { "id": "label", "type": "text", "label": "Label", "maxLength": 120 },
-          { "id": "startDate", "type": "date", "label": "Start date" },
-          { "id": "endDate", "type": "date", "label": "End date" },
-          { "id": "schoolName", "type": "text", "label": "School name", "maxLength": 160 },
-          { "id": "logoUrl", "type": "text", "label": "Logo URL", "maxLength": 500 }
-        ], "options": { "submitLabel": "Create", "successMessage": "Study year created" } }
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Study Years"
+        },
+        {
+          "id": "study-years-table",
+          "type": "table",
+          "title": "Study Years",
+          "source": "studyYears",
+          "fields": [
+            {
+              "id": "year",
+              "label": "Year",
+              "format": "number",
+              "sortable": true
+            },
+            {
+              "id": "label",
+              "label": "Label",
+              "sortable": true,
+              "filterable": true
+            },
+            {
+              "id": "startDate",
+              "label": "Start date",
+              "format": "date"
+            },
+            {
+              "id": "endDate",
+              "label": "End date",
+              "format": "date"
+            },
+            {
+              "id": "isCurrent",
+              "label": "Current",
+              "format": "boolean",
+              "sortable": true
+            },
+            {
+              "id": "schoolName",
+              "label": "School"
+            },
+            {
+              "id": "classCount",
+              "label": "Classes",
+              "path": "_count.classes",
+              "format": "number"
+            }
+          ],
+          "options": {
+            "pageSize": 20,
+            "selectable": true,
+            "rowRoute": "study-years/edit/:id",
+            "rowParameterMap": {
+              "id": "id"
+            }
+          }
+        },
+        {
+          "id": "study-year-actions",
+          "type": "actions",
+          "options": {
+            "actions": [
+              {
+                "id": "set-current-study-year",
+                "label": "Set selected as current",
+                "mode": "bulk",
+                "source": "setCurrentStudyYear",
+                "selectionSource": "studyYears",
+                "idParameter": "studyYearId",
+                "confirmation": "Set the selected study year as current? Select exactly one study year."
+              },
+              {
+                "id": "delete-study-years",
+                "label": "Delete selected study years",
+                "mode": "bulk",
+                "source": "deleteStudyYear",
+                "selectionSource": "studyYears",
+                "idParameter": "studyYearId",
+                "confirmation": "Delete the selected study years? Study years with classes cannot be deleted.",
+                "destructive": true
+              }
+            ]
+          }
+        },
+        {
+          "id": "study-year-create-form",
+          "type": "form",
+          "title": "Create study year",
+          "source": "createStudyYear",
+          "fields": [
+            {
+              "id": "year",
+              "type": "number",
+              "label": "Year",
+              "required": true,
+              "min": 2020,
+              "max": 2100
+            },
+            {
+              "id": "label",
+              "type": "text",
+              "label": "Label",
+              "maxLength": 120
+            },
+            {
+              "id": "startDate",
+              "type": "date",
+              "label": "Start date"
+            },
+            {
+              "id": "endDate",
+              "type": "date",
+              "label": "End date"
+            },
+            {
+              "id": "schoolName",
+              "type": "text",
+              "label": "School name",
+              "maxLength": 160
+            },
+            {
+              "id": "logoUrl",
+              "type": "text",
+              "label": "Logo URL",
+              "maxLength": 500
+            }
+          ],
+          "options": {
+            "submitLabel": "Create",
+            "successMessage": "Study year created"
+          }
+        }
       ]
     },
     {
@@ -183,21 +1161,82 @@
       "title": "Edit Study Year",
       "routePath": "study-years/edit/:id",
       "permission": "wattanam.academic-management.manage",
-      "parameters": [{ "name": "id", "type": "uuid", "maximumLength": 36 }],
+      "parameters": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "maximumLength": 36
+        }
+      ],
       "dataSources": [
-        { "id": "studyYear", "method": "GET", "path": "study-years/:id", "permission": "wattanam.academic-management.view" },
-        { "id": "saveStudyYear", "method": "PUT", "path": "study-years/:id", "permission": "wattanam.academic-management.manage" }
+        {
+          "id": "studyYear",
+          "method": "GET",
+          "path": "study-years/:id",
+          "permission": "wattanam.academic-management.view"
+        },
+        {
+          "id": "saveStudyYear",
+          "method": "PUT",
+          "path": "study-years/:id",
+          "permission": "wattanam.academic-management.manage"
+        }
       ],
       "components": [
-        { "id": "heading", "type": "heading", "title": "Edit Study Year" },
-        { "id": "study-year-edit-form", "type": "form", "title": "Study year details", "source": "saveStudyYear", "fields": [
-          { "id": "year", "type": "number", "label": "Year", "required": true, "min": 2020, "max": 2100 },
-          { "id": "label", "type": "text", "label": "Label", "maxLength": 120 },
-          { "id": "startDate", "type": "date", "label": "Start date" },
-          { "id": "endDate", "type": "date", "label": "End date" },
-          { "id": "schoolName", "type": "text", "label": "School name", "maxLength": 160 },
-          { "id": "logoUrl", "type": "text", "label": "Logo URL", "maxLength": 500 }
-        ], "options": { "initialSource": "studyYear", "submitLabel": "Save", "successMessage": "Study year saved" } }
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Edit Study Year"
+        },
+        {
+          "id": "study-year-edit-form",
+          "type": "form",
+          "title": "Study year details",
+          "source": "saveStudyYear",
+          "fields": [
+            {
+              "id": "year",
+              "type": "number",
+              "label": "Year",
+              "required": true,
+              "min": 2020,
+              "max": 2100
+            },
+            {
+              "id": "label",
+              "type": "text",
+              "label": "Label",
+              "maxLength": 120
+            },
+            {
+              "id": "startDate",
+              "type": "date",
+              "label": "Start date"
+            },
+            {
+              "id": "endDate",
+              "type": "date",
+              "label": "End date"
+            },
+            {
+              "id": "schoolName",
+              "type": "text",
+              "label": "School name",
+              "maxLength": 160
+            },
+            {
+              "id": "logoUrl",
+              "type": "text",
+              "label": "Logo URL",
+              "maxLength": 500
+            }
+          ],
+          "options": {
+            "initialSource": "studyYear",
+            "submitLabel": "Save",
+            "successMessage": "Study year saved"
+          }
+        }
       ]
     },
     {
@@ -207,25 +1246,71 @@
       "permission": "wattanam.academic-management.view",
       "parameters": [],
       "dataSources": [
-        { "id": "classes", "method": "GET", "path": "classes", "permission": "wattanam.academic-management.view" },
-        { "id": "createClass", "method": "POST", "path": "classes", "permission": "wattanam.academic-management.manage" }
+        {
+          "id": "classes",
+          "method": "GET",
+          "path": "classes",
+          "permission": "wattanam.academic-management.view"
+        },
+        {
+          "id": "createClass",
+          "method": "POST",
+          "path": "classes",
+          "permission": "wattanam.academic-management.manage"
+        }
       ],
       "components": [
-        { "id": "heading", "type": "heading", "title": "Classes" },
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Classes"
+        },
         {
           "id": "classes-table",
           "type": "table",
           "title": "Classes",
           "source": "classes",
           "fields": [
-            { "id": "name", "label": "Name", "sortable": true, "filterable": true },
-            { "id": "subject", "label": "Subject", "sortable": true },
-            { "id": "registrationStatus", "label": "Registration", "sortable": true },
-            { "id": "teacher.name", "label": "Teacher", "path": "teacher.name" },
-            { "id": "studyYear.label", "label": "Study year", "path": "studyYear.label" },
-            { "id": "price", "label": "Price", "sortable": true }
+            {
+              "id": "name",
+              "label": "Name",
+              "sortable": true,
+              "filterable": true
+            },
+            {
+              "id": "subject",
+              "label": "Subject",
+              "sortable": true
+            },
+            {
+              "id": "registrationStatus",
+              "label": "Registration",
+              "sortable": true
+            },
+            {
+              "id": "teacher.name",
+              "label": "Teacher",
+              "path": "teacher.name"
+            },
+            {
+              "id": "studyYear.label",
+              "label": "Study year",
+              "path": "studyYear.label"
+            },
+            {
+              "id": "price",
+              "label": "Price",
+              "sortable": true
+            }
           ],
-          "options": { "pageSize": 20, "selectable": false, "rowRoute": "classes/:id", "rowParameterMap": { "id": "id" } }
+          "options": {
+            "pageSize": 20,
+            "selectable": false,
+            "rowRoute": "classes/:id",
+            "rowParameterMap": {
+              "id": "id"
+            }
+          }
         },
         {
           "id": "class-create-form",
@@ -233,23 +1318,93 @@
           "title": "Create class",
           "source": "createClass",
           "fields": [
-            { "id": "name", "type": "text", "label": "Name", "required": true, "minLength": 1, "maxLength": 120 },
-            { "id": "subject", "type": "text", "label": "Subject", "maxLength": 120 },
-            { "id": "teacherId", "type": "text", "label": "Teacher ID", "required": true, "maxLength": 36 },
-            { "id": "classAdminId", "type": "text", "label": "Class admin ID", "maxLength": 36 },
-            { "id": "studyYearId", "type": "text", "label": "Study year ID", "maxLength": 36 },
-            { "id": "schedule", "type": "textarea", "label": "Schedule", "maxLength": 2000 },
-            { "id": "registrationStatus", "type": "select", "label": "Registration status", "required": true, "options": [
-              { "label": "Available", "value": "AVAILABLE" },
-              { "label": "Unavailable", "value": "UNAVAILABLE" },
-              { "label": "Hidden", "value": "HIDDEN" }
-            ] },
-            { "id": "thumbnail", "type": "text", "label": "Thumbnail URL", "maxLength": 500 },
-            { "id": "description", "type": "textarea", "label": "Description", "maxLength": 4000 },
-            { "id": "price", "type": "number", "label": "Price", "min": 0 },
-            { "id": "showPrice", "type": "checkbox", "label": "Show price" }
+            {
+              "id": "name",
+              "type": "text",
+              "label": "Name",
+              "required": true,
+              "minLength": 1,
+              "maxLength": 120
+            },
+            {
+              "id": "subject",
+              "type": "text",
+              "label": "Subject",
+              "maxLength": 120
+            },
+            {
+              "id": "teacherId",
+              "type": "text",
+              "label": "Teacher ID",
+              "required": true,
+              "maxLength": 36
+            },
+            {
+              "id": "classAdminId",
+              "type": "text",
+              "label": "Class admin ID",
+              "maxLength": 36
+            },
+            {
+              "id": "studyYearId",
+              "type": "text",
+              "label": "Study year ID",
+              "maxLength": 36
+            },
+            {
+              "id": "schedule",
+              "type": "textarea",
+              "label": "Schedule",
+              "maxLength": 2000
+            },
+            {
+              "id": "registrationStatus",
+              "type": "select",
+              "label": "Registration status",
+              "required": true,
+              "options": [
+                {
+                  "label": "Available",
+                  "value": "AVAILABLE"
+                },
+                {
+                  "label": "Unavailable",
+                  "value": "UNAVAILABLE"
+                },
+                {
+                  "label": "Hidden",
+                  "value": "HIDDEN"
+                }
+              ]
+            },
+            {
+              "id": "thumbnail",
+              "type": "text",
+              "label": "Thumbnail URL",
+              "maxLength": 500
+            },
+            {
+              "id": "description",
+              "type": "textarea",
+              "label": "Description",
+              "maxLength": 4000
+            },
+            {
+              "id": "price",
+              "type": "number",
+              "label": "Price",
+              "min": 0
+            },
+            {
+              "id": "showPrice",
+              "type": "checkbox",
+              "label": "Show price"
+            }
           ],
-          "options": { "submitLabel": "Create", "successMessage": "Class created" }
+          "options": {
+            "submitLabel": "Create",
+            "successMessage": "Class created"
+          }
         }
       ]
     },
@@ -258,29 +1413,78 @@
       "title": "Class",
       "routePath": "classes/:id",
       "permission": "wattanam.academic-management.view",
-      "parameters": [{ "name": "id", "type": "uuid", "maximumLength": 36 }],
+      "parameters": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "maximumLength": 36
+        }
+      ],
       "dataSources": [
-        { "id": "class", "method": "GET", "path": "classes/:id", "permission": "wattanam.academic-management.view" }
+        {
+          "id": "class",
+          "method": "GET",
+          "path": "classes/:id",
+          "permission": "wattanam.academic-management.view"
+        }
       ],
       "components": [
-        { "id": "heading", "type": "heading", "title": "Class" },
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Class"
+        },
         {
           "id": "class-detail-card",
           "type": "detail",
           "title": "Details",
           "source": "class",
           "fields": [
-            { "label": "Name", "path": "name" },
-            { "label": "Subject", "path": "subject" },
-            { "label": "Teacher", "path": "teacher.name" },
-            { "label": "Class admin", "path": "classAdmin.name" },
-            { "label": "Study year", "path": "studyYear.label" },
-            { "label": "Schedule", "path": "schedule" },
-            { "label": "Registration", "path": "registrationStatus" },
-            { "label": "Thumbnail", "path": "thumbnail" },
-            { "label": "Description", "path": "description" },
-            { "label": "Price", "path": "price" },
-            { "label": "Show price", "path": "showPrice", "format": "boolean" }
+            {
+              "label": "Name",
+              "path": "name"
+            },
+            {
+              "label": "Subject",
+              "path": "subject"
+            },
+            {
+              "label": "Teacher",
+              "path": "teacher.name"
+            },
+            {
+              "label": "Class admin",
+              "path": "classAdmin.name"
+            },
+            {
+              "label": "Study year",
+              "path": "studyYear.label"
+            },
+            {
+              "label": "Schedule",
+              "path": "schedule"
+            },
+            {
+              "label": "Registration",
+              "path": "registrationStatus"
+            },
+            {
+              "label": "Thumbnail",
+              "path": "thumbnail"
+            },
+            {
+              "label": "Description",
+              "path": "description"
+            },
+            {
+              "label": "Price",
+              "path": "price"
+            },
+            {
+              "label": "Show price",
+              "path": "showPrice",
+              "format": "boolean"
+            }
           ]
         }
       ]
@@ -290,36 +1494,127 @@
       "title": "Edit Class",
       "routePath": "classes/edit/:id",
       "permission": "wattanam.academic-management.manage",
-      "parameters": [{ "name": "id", "type": "uuid", "maximumLength": 36 }],
+      "parameters": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "maximumLength": 36
+        }
+      ],
       "dataSources": [
-        { "id": "class", "method": "GET", "path": "classes/:id", "permission": "wattanam.academic-management.view" },
-        { "id": "saveClass", "method": "PUT", "path": "classes/:id", "permission": "wattanam.academic-management.manage" }
+        {
+          "id": "class",
+          "method": "GET",
+          "path": "classes/:id",
+          "permission": "wattanam.academic-management.view"
+        },
+        {
+          "id": "saveClass",
+          "method": "PUT",
+          "path": "classes/:id",
+          "permission": "wattanam.academic-management.manage"
+        }
       ],
       "components": [
-        { "id": "heading", "type": "heading", "title": "Edit Class" },
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Edit Class"
+        },
         {
           "id": "class-edit-form",
           "type": "form",
           "title": "Edit class",
           "source": "saveClass",
           "fields": [
-            { "id": "name", "type": "text", "label": "Name", "required": true, "minLength": 1, "maxLength": 120 },
-            { "id": "subject", "type": "text", "label": "Subject", "maxLength": 120 },
-            { "id": "teacherId", "type": "text", "label": "Teacher ID", "required": true, "maxLength": 36 },
-            { "id": "classAdminId", "type": "text", "label": "Class admin ID", "maxLength": 36 },
-            { "id": "studyYearId", "type": "text", "label": "Study year ID", "maxLength": 36 },
-            { "id": "schedule", "type": "textarea", "label": "Schedule", "maxLength": 2000 },
-            { "id": "registrationStatus", "type": "select", "label": "Registration status", "required": true, "options": [
-              { "label": "Available", "value": "AVAILABLE" },
-              { "label": "Unavailable", "value": "UNAVAILABLE" },
-              { "label": "Hidden", "value": "HIDDEN" }
-            ] },
-            { "id": "thumbnail", "type": "text", "label": "Thumbnail URL", "maxLength": 500 },
-            { "id": "description", "type": "textarea", "label": "Description", "maxLength": 4000 },
-            { "id": "price", "type": "number", "label": "Price", "min": 0 },
-            { "id": "showPrice", "type": "checkbox", "label": "Show price" }
+            {
+              "id": "name",
+              "type": "text",
+              "label": "Name",
+              "required": true,
+              "minLength": 1,
+              "maxLength": 120
+            },
+            {
+              "id": "subject",
+              "type": "text",
+              "label": "Subject",
+              "maxLength": 120
+            },
+            {
+              "id": "teacherId",
+              "type": "text",
+              "label": "Teacher ID",
+              "required": true,
+              "maxLength": 36
+            },
+            {
+              "id": "classAdminId",
+              "type": "text",
+              "label": "Class admin ID",
+              "maxLength": 36
+            },
+            {
+              "id": "studyYearId",
+              "type": "text",
+              "label": "Study year ID",
+              "maxLength": 36
+            },
+            {
+              "id": "schedule",
+              "type": "textarea",
+              "label": "Schedule",
+              "maxLength": 2000
+            },
+            {
+              "id": "registrationStatus",
+              "type": "select",
+              "label": "Registration status",
+              "required": true,
+              "options": [
+                {
+                  "label": "Available",
+                  "value": "AVAILABLE"
+                },
+                {
+                  "label": "Unavailable",
+                  "value": "UNAVAILABLE"
+                },
+                {
+                  "label": "Hidden",
+                  "value": "HIDDEN"
+                }
+              ]
+            },
+            {
+              "id": "thumbnail",
+              "type": "text",
+              "label": "Thumbnail URL",
+              "maxLength": 500
+            },
+            {
+              "id": "description",
+              "type": "textarea",
+              "label": "Description",
+              "maxLength": 4000
+            },
+            {
+              "id": "price",
+              "type": "number",
+              "label": "Price",
+              "min": 0
+            },
+            {
+              "id": "showPrice",
+              "type": "checkbox",
+              "label": "Show price"
+            }
           ],
-          "options": { "initialSource": "class", "submitLabel": "Save", "successMessage": "Class saved" }
+          "options": {
+            "initialSource": "class",
+            "submitLabel": "Save",
+            "successMessage": "Class saved"
+          }
         }
       ]
     },
@@ -328,33 +1623,93 @@
       "title": "Class Students",
       "routePath": "classes/:id/students",
       "permission": "wattanam.academic-management.view",
-      "parameters": [{ "name": "id", "type": "uuid", "maximumLength": 36 }],
+      "parameters": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "maximumLength": 36
+        }
+      ],
       "dataSources": [
-        { "id": "class", "method": "GET", "path": "classes/:id", "permission": "wattanam.academic-management.view" },
-        { "id": "students", "method": "GET", "path": "classes/:id/students", "permission": "wattanam.academic-management.view" },
-        { "id": "addStudent", "method": "POST", "path": "classes/:id/students", "permission": "wattanam.academic-management.manage" },
-        { "id": "removeStudent", "method": "DELETE", "path": "classes/:id/students/:studentId", "parameters": ["studentId"], "autoload": false, "permission": "wattanam.academic-management.manage" },
-        { "id": "cleanupOrphanedStudents", "method": "POST", "path": "classes/cleanup-orphaned-students", "permission": "wattanam.academic-management.manage" }
+        {
+          "id": "class",
+          "method": "GET",
+          "path": "classes/:id",
+          "permission": "wattanam.academic-management.view"
+        },
+        {
+          "id": "students",
+          "method": "GET",
+          "path": "classes/:id/students",
+          "permission": "wattanam.academic-management.view"
+        },
+        {
+          "id": "addStudent",
+          "method": "POST",
+          "path": "classes/:id/students",
+          "permission": "wattanam.academic-management.manage"
+        },
+        {
+          "id": "removeStudent",
+          "method": "DELETE",
+          "path": "classes/:id/students/:studentId",
+          "parameters": [
+            "studentId"
+          ],
+          "autoload": false,
+          "permission": "wattanam.academic-management.manage"
+        },
+        {
+          "id": "cleanupOrphanedStudents",
+          "method": "POST",
+          "path": "classes/cleanup-orphaned-students",
+          "permission": "wattanam.academic-management.manage"
+        }
       ],
       "components": [
-        { "id": "heading", "type": "heading", "title": "Class Students" },
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Class Students"
+        },
         {
           "id": "class-students-table",
           "type": "table",
           "title": "Students",
           "source": "students",
           "fields": [
-            { "id": "studentNumber", "label": "Student number", "sortable": true },
-            { "id": "user.name", "label": "Name", "path": "user.name" },
-            { "id": "user.email", "label": "Email", "path": "user.email" },
-            { "id": "user.phone", "label": "Phone", "path": "user.phone" },
-            { "id": "nameKh", "label": "Khmer name" }
+            {
+              "id": "studentNumber",
+              "label": "Student number",
+              "sortable": true
+            },
+            {
+              "id": "user.name",
+              "label": "Name",
+              "path": "user.name"
+            },
+            {
+              "id": "user.email",
+              "label": "Email",
+              "path": "user.email"
+            },
+            {
+              "id": "user.phone",
+              "label": "Phone",
+              "path": "user.phone"
+            },
+            {
+              "id": "nameKh",
+              "label": "Khmer name"
+            }
           ],
           "options": {
             "pageSize": 20,
             "selectable": true,
             "rowRoute": "classes/:id/students/:studentId",
-            "rowParameterMap": { "studentId": "id" }
+            "rowParameterMap": {
+              "studentId": "id"
+            }
           }
         },
         {
@@ -389,9 +1744,18 @@
           "title": "Add student to class",
           "source": "addStudent",
           "fields": [
-            { "id": "studentId", "type": "text", "label": "Student user ID", "required": true, "maxLength": 36 }
+            {
+              "id": "studentId",
+              "type": "text",
+              "label": "Student user ID",
+              "required": true,
+              "maxLength": 36
+            }
           ],
-          "options": { "submitLabel": "Add", "successMessage": "Student added" }
+          "options": {
+            "submitLabel": "Add",
+            "successMessage": "Student added"
+          }
         }
       ]
     },
@@ -401,37 +1765,118 @@
       "routePath": "classes/:id/students/:studentId",
       "permission": "wattanam.academic-management.manage",
       "parameters": [
-        { "name": "id", "type": "uuid", "maximumLength": 36 },
-        { "name": "studentId", "type": "uuid", "maximumLength": 36 }
+        {
+          "name": "id",
+          "type": "uuid",
+          "maximumLength": 36
+        },
+        {
+          "name": "studentId",
+          "type": "uuid",
+          "maximumLength": 36
+        }
       ],
       "dataSources": [
-        { "id": "student", "method": "GET", "path": "classes/:id/students/:studentId", "permission": "wattanam.academic-management.view" },
-        { "id": "saveStudent", "method": "PATCH", "path": "classes/:id/students/:studentId", "permission": "wattanam.academic-management.manage" }
+        {
+          "id": "student",
+          "method": "GET",
+          "path": "classes/:id/students/:studentId",
+          "permission": "wattanam.academic-management.view"
+        },
+        {
+          "id": "saveStudent",
+          "method": "PATCH",
+          "path": "classes/:id/students/:studentId",
+          "permission": "wattanam.academic-management.manage"
+        }
       ],
       "components": [
-        { "id": "heading", "type": "heading", "title": "Edit Student" },
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Edit Student"
+        },
         {
           "id": "student-editor",
           "type": "form",
           "title": "Student profile",
           "source": "saveStudent",
           "fields": [
-            { "id": "nameKh", "type": "text", "label": "Khmer name", "maxLength": 160 },
-            { "id": "studentNumber", "type": "text", "label": "Student number", "maxLength": 80 },
-            { "id": "sex", "type": "select", "label": "Sex", "options": [
-              { "label": "Not specified", "value": "" },
-              { "label": "Male", "value": "MALE" },
-              { "label": "Female", "value": "FEMALE" },
-              { "label": "Other", "value": "OTHER" }
-            ] },
-            { "id": "dateOfBirth", "type": "date", "label": "Date of birth" },
-            { "id": "address", "type": "textarea", "label": "Address", "maxLength": 1000 },
-            { "id": "generation", "type": "text", "label": "Generation", "maxLength": 120 },
-            { "id": "photo", "type": "text", "label": "Photo URL", "maxLength": 500 },
-            { "id": "parentId", "type": "text", "label": "Parent user ID", "maxLength": 36 },
-            { "id": "customFieldValues", "type": "json", "label": "Custom fields" }
+            {
+              "id": "nameKh",
+              "type": "text",
+              "label": "Khmer name",
+              "maxLength": 160
+            },
+            {
+              "id": "studentNumber",
+              "type": "text",
+              "label": "Student number",
+              "maxLength": 80
+            },
+            {
+              "id": "sex",
+              "type": "select",
+              "label": "Sex",
+              "options": [
+                {
+                  "label": "Not specified",
+                  "value": ""
+                },
+                {
+                  "label": "Male",
+                  "value": "MALE"
+                },
+                {
+                  "label": "Female",
+                  "value": "FEMALE"
+                },
+                {
+                  "label": "Other",
+                  "value": "OTHER"
+                }
+              ]
+            },
+            {
+              "id": "dateOfBirth",
+              "type": "date",
+              "label": "Date of birth"
+            },
+            {
+              "id": "address",
+              "type": "textarea",
+              "label": "Address",
+              "maxLength": 1000
+            },
+            {
+              "id": "generation",
+              "type": "text",
+              "label": "Generation",
+              "maxLength": 120
+            },
+            {
+              "id": "photo",
+              "type": "text",
+              "label": "Photo URL",
+              "maxLength": 500
+            },
+            {
+              "id": "parentId",
+              "type": "text",
+              "label": "Parent user ID",
+              "maxLength": 36
+            },
+            {
+              "id": "customFieldValues",
+              "type": "json",
+              "label": "Custom fields"
+            }
           ],
-          "options": { "initialSource": "student", "submitLabel": "Save student", "successMessage": "Student updated" }
+          "options": {
+            "initialSource": "student",
+            "submitLabel": "Save student",
+            "successMessage": "Student updated"
+          }
         }
       ]
     },
@@ -442,31 +1887,239 @@
       "permission": "wattanam.academic-management.manage",
       "parameters": [],
       "dataSources": [
-        { "id": "registrationSettings", "method": "GET", "path": "admissions/settings", "permission": "wattanam.academic-management.view" },
-        { "id": "saveRegistrationSettings", "method": "PATCH", "path": "admissions/settings", "permission": "wattanam.academic-management.manage" },
-        { "id": "customFields", "method": "GET", "path": "admissions/fields", "permission": "wattanam.academic-management.view" },
-        { "id": "createCustomField", "method": "POST", "path": "admissions/fields", "permission": "wattanam.academic-management.manage" },
-        { "id": "deleteCustomField", "method": "DELETE", "path": "admissions/fields/:fieldId", "parameters": ["fieldId"], "autoload": false, "permission": "wattanam.academic-management.manage" }
+        {
+          "id": "registrationSettings",
+          "method": "GET",
+          "path": "admissions/settings",
+          "permission": "wattanam.academic-management.view"
+        },
+        {
+          "id": "saveRegistrationSettings",
+          "method": "PATCH",
+          "path": "admissions/settings",
+          "permission": "wattanam.academic-management.manage"
+        },
+        {
+          "id": "customFields",
+          "method": "GET",
+          "path": "admissions/fields",
+          "permission": "wattanam.academic-management.view"
+        },
+        {
+          "id": "createCustomField",
+          "method": "POST",
+          "path": "admissions/fields",
+          "permission": "wattanam.academic-management.manage"
+        },
+        {
+          "id": "deleteCustomField",
+          "method": "DELETE",
+          "path": "admissions/fields/:fieldId",
+          "parameters": [
+            "fieldId"
+          ],
+          "autoload": false,
+          "permission": "wattanam.academic-management.manage"
+        }
       ],
       "components": [
-        { "id": "heading", "type": "heading", "title": "Registration Settings" },
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Registration Settings"
+        },
         {
           "id": "registration-settings-form",
           "type": "form",
           "title": "Built-in registration fields",
           "source": "saveRegistrationSettings",
           "fields": [
-            { "id": "khmerNameMode", "type": "select", "label": "Khmer name", "required": true, "options": [{ "label": "Required", "value": "REQUIRED" }, { "label": "Optional", "value": "OPTIONAL" }, { "label": "Hidden", "value": "HIDDEN" }] },
-            { "id": "phoneMode", "type": "select", "label": "Phone", "required": true, "options": [{ "label": "Required", "value": "REQUIRED" }, { "label": "Optional", "value": "OPTIONAL" }, { "label": "Hidden", "value": "HIDDEN" }] },
-            { "id": "emailMode", "type": "select", "label": "Email", "required": true, "options": [{ "label": "Required", "value": "REQUIRED" }, { "label": "Optional", "value": "OPTIONAL" }, { "label": "Hidden", "value": "HIDDEN" }] },
-            { "id": "photoMode", "type": "select", "label": "Photo", "required": true, "options": [{ "label": "Required", "value": "REQUIRED" }, { "label": "Optional", "value": "OPTIONAL" }, { "label": "Hidden", "value": "HIDDEN" }] },
-            { "id": "passwordMode", "type": "select", "label": "Password", "required": true, "options": [{ "label": "Required", "value": "REQUIRED" }, { "label": "Optional", "value": "OPTIONAL" }, { "label": "Hidden", "value": "HIDDEN" }] },
-            { "id": "sexMode", "type": "select", "label": "Sex", "required": true, "options": [{ "label": "Required", "value": "REQUIRED" }, { "label": "Optional", "value": "OPTIONAL" }, { "label": "Hidden", "value": "HIDDEN" }] },
-            { "id": "dateOfBirthMode", "type": "select", "label": "Date of birth", "required": true, "options": [{ "label": "Required", "value": "REQUIRED" }, { "label": "Optional", "value": "OPTIONAL" }, { "label": "Hidden", "value": "HIDDEN" }] },
-            { "id": "addressMode", "type": "select", "label": "Address", "required": true, "options": [{ "label": "Required", "value": "REQUIRED" }, { "label": "Optional", "value": "OPTIONAL" }, { "label": "Hidden", "value": "HIDDEN" }] },
-            { "id": "generationMode", "type": "select", "label": "Generation", "required": true, "options": [{ "label": "Required", "value": "REQUIRED" }, { "label": "Optional", "value": "OPTIONAL" }, { "label": "Hidden", "value": "HIDDEN" }] }
+            {
+              "id": "khmerNameMode",
+              "type": "select",
+              "label": "Khmer name",
+              "required": true,
+              "options": [
+                {
+                  "label": "Required",
+                  "value": "REQUIRED"
+                },
+                {
+                  "label": "Optional",
+                  "value": "OPTIONAL"
+                },
+                {
+                  "label": "Hidden",
+                  "value": "HIDDEN"
+                }
+              ]
+            },
+            {
+              "id": "phoneMode",
+              "type": "select",
+              "label": "Phone",
+              "required": true,
+              "options": [
+                {
+                  "label": "Required",
+                  "value": "REQUIRED"
+                },
+                {
+                  "label": "Optional",
+                  "value": "OPTIONAL"
+                },
+                {
+                  "label": "Hidden",
+                  "value": "HIDDEN"
+                }
+              ]
+            },
+            {
+              "id": "emailMode",
+              "type": "select",
+              "label": "Email",
+              "required": true,
+              "options": [
+                {
+                  "label": "Required",
+                  "value": "REQUIRED"
+                },
+                {
+                  "label": "Optional",
+                  "value": "OPTIONAL"
+                },
+                {
+                  "label": "Hidden",
+                  "value": "HIDDEN"
+                }
+              ]
+            },
+            {
+              "id": "photoMode",
+              "type": "select",
+              "label": "Photo",
+              "required": true,
+              "options": [
+                {
+                  "label": "Required",
+                  "value": "REQUIRED"
+                },
+                {
+                  "label": "Optional",
+                  "value": "OPTIONAL"
+                },
+                {
+                  "label": "Hidden",
+                  "value": "HIDDEN"
+                }
+              ]
+            },
+            {
+              "id": "passwordMode",
+              "type": "select",
+              "label": "Password",
+              "required": true,
+              "options": [
+                {
+                  "label": "Required",
+                  "value": "REQUIRED"
+                },
+                {
+                  "label": "Optional",
+                  "value": "OPTIONAL"
+                },
+                {
+                  "label": "Hidden",
+                  "value": "HIDDEN"
+                }
+              ]
+            },
+            {
+              "id": "sexMode",
+              "type": "select",
+              "label": "Sex",
+              "required": true,
+              "options": [
+                {
+                  "label": "Required",
+                  "value": "REQUIRED"
+                },
+                {
+                  "label": "Optional",
+                  "value": "OPTIONAL"
+                },
+                {
+                  "label": "Hidden",
+                  "value": "HIDDEN"
+                }
+              ]
+            },
+            {
+              "id": "dateOfBirthMode",
+              "type": "select",
+              "label": "Date of birth",
+              "required": true,
+              "options": [
+                {
+                  "label": "Required",
+                  "value": "REQUIRED"
+                },
+                {
+                  "label": "Optional",
+                  "value": "OPTIONAL"
+                },
+                {
+                  "label": "Hidden",
+                  "value": "HIDDEN"
+                }
+              ]
+            },
+            {
+              "id": "addressMode",
+              "type": "select",
+              "label": "Address",
+              "required": true,
+              "options": [
+                {
+                  "label": "Required",
+                  "value": "REQUIRED"
+                },
+                {
+                  "label": "Optional",
+                  "value": "OPTIONAL"
+                },
+                {
+                  "label": "Hidden",
+                  "value": "HIDDEN"
+                }
+              ]
+            },
+            {
+              "id": "generationMode",
+              "type": "select",
+              "label": "Generation",
+              "required": true,
+              "options": [
+                {
+                  "label": "Required",
+                  "value": "REQUIRED"
+                },
+                {
+                  "label": "Optional",
+                  "value": "OPTIONAL"
+                },
+                {
+                  "label": "Hidden",
+                  "value": "HIDDEN"
+                }
+              ]
+            }
           ],
-          "options": { "initialSource": "registrationSettings", "submitLabel": "Save settings", "successMessage": "Registration settings saved" }
+          "options": {
+            "initialSource": "registrationSettings",
+            "submitLabel": "Save settings",
+            "successMessage": "Registration settings saved"
+          }
         },
         {
           "id": "custom-fields-table",
@@ -474,29 +2127,62 @@
           "title": "Custom registration fields",
           "source": "customFields",
           "fields": [
-            { "id": "label", "label": "Label", "sortable": true, "filterable": true },
-            { "id": "key", "label": "Key", "sortable": true },
-            { "id": "fieldType", "label": "Type", "sortable": true },
-            { "id": "required", "label": "Required", "format": "boolean", "sortable": true },
-            { "id": "enabled", "label": "Enabled", "format": "boolean", "sortable": true },
-            { "id": "order", "label": "Order", "format": "number", "sortable": true }
+            {
+              "id": "label",
+              "label": "Label",
+              "sortable": true,
+              "filterable": true
+            },
+            {
+              "id": "key",
+              "label": "Key",
+              "sortable": true
+            },
+            {
+              "id": "fieldType",
+              "label": "Type",
+              "sortable": true
+            },
+            {
+              "id": "required",
+              "label": "Required",
+              "format": "boolean",
+              "sortable": true
+            },
+            {
+              "id": "enabled",
+              "label": "Enabled",
+              "format": "boolean",
+              "sortable": true
+            },
+            {
+              "id": "order",
+              "label": "Order",
+              "format": "number",
+              "sortable": true
+            }
           ],
-          "options": { "pageSize": 20, "selectable": true }
+          "options": {
+            "pageSize": 20,
+            "selectable": true
+          }
         },
         {
           "id": "custom-field-actions",
           "type": "actions",
           "options": {
-            "actions": [{
-              "id": "delete-selected-custom-fields",
-              "label": "Delete selected fields",
-              "mode": "bulk",
-              "source": "deleteCustomField",
-              "selectionSource": "customFields",
-              "idParameter": "fieldId",
-              "confirmation": "Delete the selected custom registration fields? Existing submitted values are retained in registration records but the fields will no longer appear on the form.",
-              "destructive": true
-            }]
+            "actions": [
+              {
+                "id": "delete-selected-custom-fields",
+                "label": "Delete selected fields",
+                "mode": "bulk",
+                "source": "deleteCustomField",
+                "selectionSource": "customFields",
+                "idParameter": "fieldId",
+                "confirmation": "Delete the selected custom registration fields? Existing submitted values are retained in registration records but the fields will no longer appear on the form.",
+                "destructive": true
+              }
+            ]
           }
         },
         {
@@ -505,12 +2191,51 @@
           "title": "Create custom field",
           "source": "createCustomField",
           "fields": [
-            { "id": "label", "type": "text", "label": "Label", "required": true, "minLength": 1, "maxLength": 120 },
-            { "id": "fieldType", "type": "select", "label": "Field type", "required": true, "options": [{ "label": "Text", "value": "TEXT" }, { "label": "Single select", "value": "SELECT" }, { "label": "Multiple select", "value": "MULTI_SELECT" }] },
-            { "id": "options", "type": "json", "label": "Options (JSON array; at least two for select fields)", "jsonShape": "array", "defaultValue": [] },
-            { "id": "required", "type": "checkbox", "label": "Required" }
+            {
+              "id": "label",
+              "type": "text",
+              "label": "Label",
+              "required": true,
+              "minLength": 1,
+              "maxLength": 120
+            },
+            {
+              "id": "fieldType",
+              "type": "select",
+              "label": "Field type",
+              "required": true,
+              "options": [
+                {
+                  "label": "Text",
+                  "value": "TEXT"
+                },
+                {
+                  "label": "Single select",
+                  "value": "SELECT"
+                },
+                {
+                  "label": "Multiple select",
+                  "value": "MULTI_SELECT"
+                }
+              ]
+            },
+            {
+              "id": "options",
+              "type": "json",
+              "label": "Options (JSON array; at least two for select fields)",
+              "jsonShape": "array",
+              "defaultValue": []
+            },
+            {
+              "id": "required",
+              "type": "checkbox",
+              "label": "Required"
+            }
           ],
-          "options": { "submitLabel": "Create field", "successMessage": "Custom registration field created" }
+          "options": {
+            "submitLabel": "Create field",
+            "successMessage": "Custom registration field created"
+          }
         }
       ]
     },
@@ -521,25 +2246,67 @@
       "permission": "wattanam.academic-management.manage",
       "parameters": [],
       "dataSources": [
-        { "id": "registrations", "method": "GET", "path": "admissions/registrations", "permission": "wattanam.academic-management.manage" }
+        {
+          "id": "registrations",
+          "method": "GET",
+          "path": "admissions/registrations",
+          "permission": "wattanam.academic-management.manage"
+        }
       ],
       "components": [
-        { "id": "heading", "type": "heading", "title": "Class Registrations" },
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Class Registrations"
+        },
         {
           "id": "registrations-table",
           "type": "table",
           "title": "Registrations",
           "source": "registrations",
           "fields": [
-            { "id": "nameEn", "label": "English name", "sortable": true, "filterable": true },
-            { "id": "nameKh", "label": "Khmer name", "sortable": true },
-            { "id": "email", "label": "Email", "sortable": true },
-            { "id": "phone", "label": "Phone", "sortable": true },
-            { "id": "status", "label": "Status", "sortable": true },
-            { "id": "class.name", "label": "Class", "path": "class.name" },
-            { "id": "createdAt", "label": "Submitted", "sortable": true, "format": "datetime" }
+            {
+              "id": "nameEn",
+              "label": "English name",
+              "sortable": true,
+              "filterable": true
+            },
+            {
+              "id": "nameKh",
+              "label": "Khmer name",
+              "sortable": true
+            },
+            {
+              "id": "email",
+              "label": "Email",
+              "sortable": true
+            },
+            {
+              "id": "phone",
+              "label": "Phone",
+              "sortable": true
+            },
+            {
+              "id": "status",
+              "label": "Status",
+              "sortable": true
+            },
+            {
+              "id": "class.name",
+              "label": "Class",
+              "path": "class.name"
+            },
+            {
+              "id": "createdAt",
+              "label": "Submitted",
+              "sortable": true,
+              "format": "datetime"
+            }
           ],
-          "options": { "pageSize": 20, "selectable": false }
+          "options": {
+            "pageSize": 20,
+            "selectable": false
+          }
         }
       ]
     },
@@ -548,33 +2315,98 @@
       "title": "Registration",
       "routePath": "registrations/:id",
       "permission": "wattanam.academic-management.manage",
-      "parameters": [{ "name": "id", "type": "uuid", "maximumLength": 36 }],
+      "parameters": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "maximumLength": 36
+        }
+      ],
       "dataSources": [
-        { "id": "registration", "method": "GET", "path": "admissions/registrations/:id", "permission": "wattanam.academic-management.manage" },
-        { "id": "resolveRegistration", "method": "PATCH", "path": "admissions/registrations/:id/resolve", "permission": "wattanam.academic-management.manage" }
+        {
+          "id": "registration",
+          "method": "GET",
+          "path": "admissions/registrations/:id",
+          "permission": "wattanam.academic-management.manage"
+        },
+        {
+          "id": "resolveRegistration",
+          "method": "PATCH",
+          "path": "admissions/registrations/:id/resolve",
+          "permission": "wattanam.academic-management.manage"
+        }
       ],
       "components": [
-        { "id": "heading", "type": "heading", "title": "Registration" },
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Registration"
+        },
         {
           "id": "registration-detail-card",
           "type": "detail",
           "title": "Details",
           "source": "registration",
           "fields": [
-            { "label": "English name", "path": "nameEn" },
-            { "label": "Khmer name", "path": "nameKh" },
-            { "label": "Email", "path": "email" },
-            { "label": "Phone", "path": "phone" },
-            { "label": "Class", "path": "class.name" },
-            { "label": "Status", "path": "status" },
-            { "label": "Sex", "path": "sex" },
-            { "label": "Date of birth", "path": "dateOfBirth", "format": "date" },
-            { "label": "Address", "path": "address" },
-            { "label": "Generation", "path": "generation" },
-            { "label": "Submitted", "path": "createdAt", "format": "datetime" },
-            { "label": "Resolved at", "path": "resolvedAt", "format": "datetime" },
-            { "label": "Resolved by", "path": "resolvedBy" },
-            { "label": "Reject reason", "path": "rejectReason" }
+            {
+              "label": "English name",
+              "path": "nameEn"
+            },
+            {
+              "label": "Khmer name",
+              "path": "nameKh"
+            },
+            {
+              "label": "Email",
+              "path": "email"
+            },
+            {
+              "label": "Phone",
+              "path": "phone"
+            },
+            {
+              "label": "Class",
+              "path": "class.name"
+            },
+            {
+              "label": "Status",
+              "path": "status"
+            },
+            {
+              "label": "Sex",
+              "path": "sex"
+            },
+            {
+              "label": "Date of birth",
+              "path": "dateOfBirth",
+              "format": "date"
+            },
+            {
+              "label": "Address",
+              "path": "address"
+            },
+            {
+              "label": "Generation",
+              "path": "generation"
+            },
+            {
+              "label": "Submitted",
+              "path": "createdAt",
+              "format": "datetime"
+            },
+            {
+              "label": "Resolved at",
+              "path": "resolvedAt",
+              "format": "datetime"
+            },
+            {
+              "label": "Resolved by",
+              "path": "resolvedBy"
+            },
+            {
+              "label": "Reject reason",
+              "path": "rejectReason"
+            }
           ]
         },
         {
@@ -583,13 +2415,972 @@
           "title": "Resolve registration",
           "source": "resolveRegistration",
           "fields": [
-            { "id": "action", "type": "select", "label": "Action", "required": true, "options": [
-              { "label": "Approve", "value": "APPROVE" },
-              { "label": "Reject", "value": "REJECT" }
-            ] },
-            { "id": "rejectReason", "type": "textarea", "label": "Reject reason", "maxLength": 500, "visibleWhen": { "field": "action", "equals": "REJECT" } }
+            {
+              "id": "action",
+              "type": "select",
+              "label": "Action",
+              "required": true,
+              "options": [
+                {
+                  "label": "Approve",
+                  "value": "APPROVE"
+                },
+                {
+                  "label": "Reject",
+                  "value": "REJECT"
+                }
+              ]
+            },
+            {
+              "id": "rejectReason",
+              "type": "textarea",
+              "label": "Reject reason",
+              "maxLength": 500,
+              "visibleWhen": {
+                "field": "action",
+                "equals": "REJECT"
+              }
+            }
           ],
-          "options": { "submitLabel": "Resolve", "successMessage": "Registration resolved" }
+          "options": {
+            "submitLabel": "Resolve",
+            "successMessage": "Registration resolved"
+          }
+        }
+      ]
+    },
+    {
+      "id": "attendance-records",
+      "title": "Attendance Manager",
+      "routePath": "attendance",
+      "permission": "wattanam.academic-management.attendance.view",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "records",
+          "method": "GET",
+          "path": "records",
+          "permission": "wattanam.academic-management.attendance.view"
+        }
+      ],
+      "components": [
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Attendance"
+        },
+        {
+          "id": "records",
+          "type": "table",
+          "title": "Recent attendance",
+          "source": "records",
+          "fields": [
+            {
+              "id": "date",
+              "label": "Date",
+              "format": "date",
+              "sortable": true
+            },
+            {
+              "id": "personType",
+              "label": "Type",
+              "filterable": true
+            },
+            {
+              "id": "personId",
+              "label": "Person ID",
+              "filterable": true
+            },
+            {
+              "id": "session",
+              "label": "Session"
+            },
+            {
+              "id": "status",
+              "label": "Status",
+              "filterable": true
+            },
+            {
+              "id": "scanMode",
+              "label": "Source"
+            }
+          ],
+          "options": {
+            "pageSize": 25,
+            "selectable": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "attendance-scanner",
+      "title": "Attendance Scanner",
+      "routePath": "scanner",
+      "permission": "wattanam.academic-management.attendance.scan",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "scan",
+          "method": "POST",
+          "path": "scan",
+          "permission": "wattanam.academic-management.attendance.scan"
+        }
+      ],
+      "components": [
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Camera / USB attendance scanner"
+        },
+        {
+          "id": "scanner",
+          "type": "scanner",
+          "title": "Scan ID",
+          "source": "scan",
+          "options": {
+            "modes": [
+              "camera",
+              "keyboard"
+            ],
+            "field": "code",
+            "minLength": 4,
+            "maxLength": 100,
+            "debounceMs": 1000,
+            "contextFields": [
+              {
+                "id": "classId",
+                "type": "text",
+                "label": "Class ID",
+                "required": true
+              },
+              {
+                "id": "session",
+                "type": "select",
+                "label": "Session",
+                "required": true,
+                "options": [
+                  {
+                    "label": "Session 1",
+                    "value": 1
+                  },
+                  {
+                    "label": "Session 2",
+                    "value": 2
+                  },
+                  {
+                    "label": "Session 3",
+                    "value": 3
+                  },
+                  {
+                    "label": "Session 4",
+                    "value": 4
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "attendance-corrections",
+      "title": "Attendance Corrections",
+      "routePath": "corrections",
+      "permission": "wattanam.academic-management.attendance.correct",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "records",
+          "method": "GET",
+          "path": "records",
+          "permission": "wattanam.academic-management.attendance.view"
+        }
+      ],
+      "components": [
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Correct student attendance"
+        },
+        {
+          "id": "records",
+          "type": "table",
+          "title": "Recent student records",
+          "source": "records",
+          "fields": [
+            {
+              "id": "date",
+              "label": "Date",
+              "format": "date"
+            },
+            {
+              "id": "personNameSnapshot",
+              "label": "Student"
+            },
+            {
+              "id": "classNameSnapshot",
+              "label": "Class"
+            },
+            {
+              "id": "session",
+              "label": "Session"
+            },
+            {
+              "id": "status",
+              "label": "Status"
+            }
+          ],
+          "options": {
+            "pageSize": 25,
+            "selectable": false,
+            "rowRoute": "corrections/:id",
+            "rowParameterMap": {
+              "id": "id"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "attendance-correction-edit",
+      "title": "Correct Attendance",
+      "routePath": "corrections/:id",
+      "permission": "wattanam.academic-management.attendance.correct",
+      "parameters": [
+        {
+          "name": "id",
+          "type": "uuid"
+        }
+      ],
+      "dataSources": [
+        {
+          "id": "record",
+          "method": "GET",
+          "path": "records/:id",
+          "permission": "wattanam.academic-management.attendance.view"
+        },
+        {
+          "id": "correct",
+          "method": "PATCH",
+          "path": "records/:id/correct",
+          "permission": "wattanam.academic-management.attendance.correct"
+        }
+      ],
+      "components": [
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Attendance correction"
+        },
+        {
+          "id": "record",
+          "type": "detail",
+          "title": "Recorded attendance",
+          "source": "record",
+          "fields": [
+            {
+              "label": "Student",
+              "path": "personNameSnapshot"
+            },
+            {
+              "label": "Student number",
+              "path": "personNumberSnapshot"
+            },
+            {
+              "label": "Class",
+              "path": "classNameSnapshot"
+            },
+            {
+              "label": "Date",
+              "path": "date",
+              "format": "date"
+            },
+            {
+              "label": "Session",
+              "path": "session"
+            },
+            {
+              "label": "Current status",
+              "path": "status"
+            }
+          ]
+        },
+        {
+          "id": "correction",
+          "type": "form",
+          "title": "Save correction",
+          "source": "correct",
+          "fields": [
+            {
+              "id": "status",
+              "type": "select",
+              "label": "Status",
+              "required": true,
+              "options": [
+                {
+                  "label": "Present",
+                  "value": "PRESENT"
+                },
+                {
+                  "label": "Late",
+                  "value": "LATE"
+                },
+                {
+                  "label": "Absent",
+                  "value": "ABSENT"
+                },
+                {
+                  "label": "Permission",
+                  "value": "PERMISSION"
+                }
+              ]
+            },
+            {
+              "id": "permissionType",
+              "type": "text",
+              "label": "Permission type",
+              "visibleWhen": {
+                "field": "status",
+                "equals": "PERMISSION"
+              }
+            },
+            {
+              "id": "reason",
+              "type": "textarea",
+              "label": "Correction reason",
+              "required": true,
+              "minLength": 3,
+              "maxLength": 500
+            }
+          ],
+          "options": {
+            "initialSource": "record",
+            "confirmation": "Save this attendance correction?",
+            "submitLabel": "Save correction",
+            "successMessage": "Attendance correction saved"
+          }
+        }
+      ]
+    },
+    {
+      "id": "attendance-alerts",
+      "title": "Attendance Alerts",
+      "routePath": "alerts",
+      "permission": "wattanam.academic-management.attendance.view",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "alerts",
+          "method": "GET",
+          "path": "alerts",
+          "permission": "wattanam.academic-management.attendance.view"
+        },
+        {
+          "id": "acknowledge",
+          "method": "POST",
+          "path": "alerts/:id/acknowledge",
+          "parameters": [
+            "id"
+          ],
+          "autoload": false,
+          "permission": "wattanam.academic-management.attendance.configure"
+        }
+      ],
+      "components": [
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Student absence alerts"
+        },
+        {
+          "id": "alerts",
+          "type": "table",
+          "title": "Alert history",
+          "source": "alerts",
+          "fields": [
+            {
+              "id": "windowStart",
+              "label": "From",
+              "format": "date"
+            },
+            {
+              "id": "windowEnd",
+              "label": "To",
+              "format": "date"
+            },
+            {
+              "id": "personId",
+              "label": "Student ID"
+            },
+            {
+              "id": "classId",
+              "label": "Class ID"
+            },
+            {
+              "id": "status",
+              "label": "Status"
+            },
+            {
+              "id": "attempts",
+              "label": "Attempts"
+            },
+            {
+              "id": "lastError",
+              "label": "Last error"
+            }
+          ],
+          "options": {
+            "pageSize": 50,
+            "selectable": true
+          }
+        },
+        {
+          "id": "alert-actions",
+          "type": "actions",
+          "options": {
+            "actions": [
+              {
+                "id": "acknowledge",
+                "label": "Acknowledge selected",
+                "mode": "bulk",
+                "source": "acknowledge",
+                "selectionSource": "alerts",
+                "idField": "id",
+                "idParameter": "id",
+                "confirmation": "Acknowledge the selected attendance alerts?"
+              }
+            ]
+          }
+        }
+      ],
+      "realtime": [
+        {
+          "event": "attendance:alert",
+          "refreshSources": [
+            "alerts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "attendance-reports",
+      "title": "Attendance Reports",
+      "routePath": "reports",
+      "permission": "wattanam.academic-management.attendance.report",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "summary",
+          "method": "GET",
+          "path": "reports/summary",
+          "permission": "wattanam.academic-management.attendance.report"
+        },
+        {
+          "id": "printSummary",
+          "method": "GET",
+          "path": "reports/print-data",
+          "permission": "wattanam.academic-management.attendance.print"
+        }
+      ],
+      "components": [
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Student attendance reports"
+        },
+        {
+          "id": "filters",
+          "type": "filter",
+          "fields": [
+            {
+              "id": "classId",
+              "type": "text",
+              "label": "Class ID"
+            },
+            {
+              "id": "personId",
+              "type": "text",
+              "label": "Student ID"
+            },
+            {
+              "id": "startDate",
+              "type": "date",
+              "label": "Start date"
+            },
+            {
+              "id": "endDate",
+              "type": "date",
+              "label": "End date"
+            },
+            {
+              "id": "session",
+              "type": "select",
+              "label": "Session",
+              "options": [
+                {
+                  "label": "Session 1",
+                  "value": 1
+                },
+                {
+                  "label": "Session 2",
+                  "value": 2
+                },
+                {
+                  "label": "Session 3",
+                  "value": 3
+                },
+                {
+                  "label": "Session 4",
+                  "value": 4
+                }
+              ]
+            },
+            {
+              "id": "status",
+              "type": "select",
+              "label": "Status",
+              "options": [
+                {
+                  "label": "Present",
+                  "value": "PRESENT"
+                },
+                {
+                  "label": "Late",
+                  "value": "LATE"
+                },
+                {
+                  "label": "Absent",
+                  "value": "ABSENT"
+                },
+                {
+                  "label": "Permission",
+                  "value": "PERMISSION"
+                }
+              ]
+            }
+          ],
+          "options": {
+            "sources": [
+              "summary",
+              "printSummary"
+            ],
+            "applyLabel": "Apply report filters",
+            "clearLabel": "Clear filters"
+          }
+        },
+        {
+          "id": "summary",
+          "type": "table",
+          "title": "Attendance summary",
+          "source": "summary",
+          "fields": [
+            {
+              "id": "personType",
+              "label": "People"
+            },
+            {
+              "id": "status",
+              "label": "Status"
+            },
+            {
+              "id": "count",
+              "label": "Records"
+            }
+          ],
+          "options": {
+            "pageSize": 30,
+            "selectable": false
+          }
+        },
+        {
+          "id": "print-summary",
+          "type": "print",
+          "title": "Print or export student attendance",
+          "source": "printSummary",
+          "fields": [
+            {
+              "label": "Date",
+              "path": "date"
+            },
+            {
+              "label": "Student number",
+              "path": "personNumberSnapshot"
+            },
+            {
+              "label": "Student",
+              "path": "personNameSnapshot"
+            },
+            {
+              "label": "Class",
+              "path": "classNameSnapshot"
+            },
+            {
+              "label": "Session",
+              "path": "session"
+            },
+            {
+              "label": "Status",
+              "path": "status"
+            },
+            {
+              "label": "Source",
+              "path": "scanMode"
+            }
+          ],
+          "options": {
+            "formats": [
+              "print",
+              "csv",
+              "pdf"
+            ],
+            "filename": "student-attendance",
+            "maximumRows": 10000
+          }
+        }
+      ]
+    },
+    {
+      "id": "attendance-settings",
+      "title": "Attendance Settings",
+      "routePath": "settings",
+      "permission": "wattanam.academic-management.attendance.configure",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "identifiers",
+          "method": "GET",
+          "path": "identifiers",
+          "permission": "wattanam.academic-management.attendance.devices.manage"
+        },
+        {
+          "id": "createIdentifier",
+          "method": "POST",
+          "path": "identifiers",
+          "permission": "wattanam.academic-management.attendance.devices.manage"
+        },
+        {
+          "id": "sessions",
+          "method": "GET",
+          "path": "sessions",
+          "permission": "wattanam.academic-management.attendance.view"
+        },
+        {
+          "id": "saveSession",
+          "method": "POST",
+          "path": "sessions",
+          "permission": "wattanam.academic-management.attendance.configure"
+        },
+        {
+          "id": "holidays",
+          "method": "GET",
+          "path": "holidays",
+          "permission": "wattanam.academic-management.attendance.view"
+        },
+        {
+          "id": "createHoliday",
+          "method": "POST",
+          "path": "holidays",
+          "permission": "wattanam.academic-management.attendance.configure"
+        },
+        {
+          "id": "alertRules",
+          "method": "GET",
+          "path": "alert-rules",
+          "permission": "wattanam.academic-management.attendance.configure"
+        },
+        {
+          "id": "saveAlertRule",
+          "method": "POST",
+          "path": "alert-rules",
+          "permission": "wattanam.academic-management.attendance.configure"
+        }
+      ],
+      "components": [
+        {
+          "id": "identifiers",
+          "type": "table",
+          "title": "Camera / card / USB identifiers",
+          "source": "identifiers",
+          "fields": [
+            {
+              "id": "code",
+              "label": "Code",
+              "filterable": true
+            },
+            {
+              "id": "personType",
+              "label": "Type"
+            },
+            {
+              "id": "personId",
+              "label": "Person ID"
+            },
+            {
+              "id": "active",
+              "label": "Active",
+              "format": "boolean"
+            }
+          ],
+          "options": {
+            "pageSize": 20,
+            "selectable": false
+          }
+        },
+        {
+          "id": "identifier-form",
+          "type": "form",
+          "title": "Add identifier",
+          "source": "createIdentifier",
+          "fields": [
+            {
+              "id": "code",
+              "type": "text",
+              "label": "Card / QR / USB code",
+              "required": true
+            },
+            {
+              "id": "personId",
+              "type": "text",
+              "label": "Person ID",
+              "required": true
+            },
+            {
+              "id": "personType",
+              "type": "select",
+              "label": "Person type",
+              "required": true,
+              "options": [
+                {
+                  "label": "Student",
+                  "value": "STUDENT"
+                }
+              ]
+            }
+          ],
+          "options": {
+            "submitLabel": "Add identifier",
+            "successMessage": "Identifier added"
+          }
+        },
+        {
+          "id": "sessions",
+          "type": "table",
+          "title": "Attendance sessions",
+          "source": "sessions",
+          "fields": [
+            {
+              "id": "scope",
+              "label": "People"
+            },
+            {
+              "id": "session",
+              "label": "Session"
+            },
+            {
+              "id": "type",
+              "label": "Type"
+            },
+            {
+              "id": "startTime",
+              "label": "Start"
+            },
+            {
+              "id": "endTime",
+              "label": "End"
+            }
+          ],
+          "options": {
+            "pageSize": 20,
+            "selectable": false
+          }
+        },
+        {
+          "id": "session-form",
+          "type": "form",
+          "title": "Configure session",
+          "source": "saveSession",
+          "fields": [
+            {
+              "id": "scope",
+              "type": "select",
+              "label": "People",
+              "required": true,
+              "options": [
+                {
+                  "label": "Student",
+                  "value": "STUDENT"
+                }
+              ]
+            },
+            {
+              "id": "session",
+              "type": "number",
+              "label": "Session",
+              "required": true,
+              "min": 1,
+              "max": 4
+            },
+            {
+              "id": "type",
+              "type": "select",
+              "label": "Type",
+              "required": true,
+              "options": [
+                {
+                  "label": "Check in",
+                  "value": "CHECK_IN"
+                },
+                {
+                  "label": "Check out",
+                  "value": "CHECK_OUT"
+                }
+              ]
+            },
+            {
+              "id": "startTime",
+              "type": "text",
+              "label": "Start time (HH:mm)",
+              "required": true
+            },
+            {
+              "id": "endTime",
+              "type": "text",
+              "label": "End time (HH:mm)",
+              "required": true
+            }
+          ],
+          "options": {
+            "submitLabel": "Save session",
+            "successMessage": "Session saved"
+          }
+        },
+        {
+          "id": "holidays",
+          "type": "table",
+          "title": "Holidays",
+          "source": "holidays",
+          "fields": [
+            {
+              "id": "date",
+              "label": "Date",
+              "format": "date"
+            },
+            {
+              "id": "name",
+              "label": "Name"
+            },
+            {
+              "id": "type",
+              "label": "Type"
+            }
+          ],
+          "options": {
+            "pageSize": 20,
+            "selectable": false
+          }
+        },
+        {
+          "id": "holiday-form",
+          "type": "form",
+          "title": "Add holiday",
+          "source": "createHoliday",
+          "fields": [
+            {
+              "id": "date",
+              "type": "date",
+              "label": "Date",
+              "required": true
+            },
+            {
+              "id": "name",
+              "type": "text",
+              "label": "Name",
+              "required": true
+            },
+            {
+              "id": "description",
+              "type": "textarea",
+              "label": "Description"
+            }
+          ],
+          "options": {
+            "submitLabel": "Add holiday",
+            "successMessage": "Holiday added"
+          }
+        },
+        {
+          "id": "alert-rules",
+          "type": "table",
+          "title": "Absence alert rules",
+          "source": "alertRules",
+          "fields": [
+            {
+              "id": "code",
+              "label": "Code"
+            },
+            {
+              "id": "enabled",
+              "label": "Enabled",
+              "format": "boolean"
+            },
+            {
+              "id": "threshold",
+              "label": "Absences"
+            },
+            {
+              "id": "windowDays",
+              "label": "Window days"
+            },
+            {
+              "id": "channels",
+              "label": "Channels"
+            }
+          ],
+          "options": {
+            "pageSize": 20,
+            "selectable": false
+          }
+        },
+        {
+          "id": "alert-rule-form",
+          "type": "form",
+          "title": "Create or update absence alert rule",
+          "source": "saveAlertRule",
+          "fields": [
+            {
+              "id": "code",
+              "type": "text",
+              "label": "Rule code",
+              "required": true,
+              "minLength": 3,
+              "maxLength": 100
+            },
+            {
+              "id": "threshold",
+              "type": "number",
+              "label": "Absence threshold",
+              "required": true,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "id": "windowDays",
+              "type": "number",
+              "label": "Window days",
+              "required": true,
+              "min": 1,
+              "max": 365
+            },
+            {
+              "id": "enabled",
+              "type": "checkbox",
+              "label": "Enabled"
+            }
+          ],
+          "options": {
+            "submitLabel": "Save alert rule",
+            "successMessage": "Alert rule saved"
+          }
         }
       ]
     }

@@ -1,6 +1,7 @@
 'use strict';
 
 const crypto = require('crypto');
+const attendanceRuntime = require('./attendance-runtime');
 
 const DEPARTMENT = 'plugin_wattanam_academic_management_department';
 const USER_DEPARTMENT = 'plugin_wattanam_academic_management_user_department';
@@ -12,6 +13,8 @@ const STUDENT_PROFILE = 'plugin_wattanam_academic_management_student_profile';
 const ENROLLMENT = 'plugin_wattanam_academic_management_enrollment_interval';
 const SUBJECT = 'plugin_wattanam_academic_management_subject';
 const STUDY_YEAR = 'plugin_wattanam_academic_management_study_year';
+const OFFICER = 'plugin_wattanam_academic_management_officer_profile';
+const OFFICER_ATTENDANCE = 'plugin_wattanam_academic_management_officer_attendance';
 
 function eventKey(prefix, payload) {
   return `${prefix}-${crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex')}`;
@@ -22,6 +25,63 @@ const FIELD_MODES = ['REQUIRED', 'OPTIONAL', 'HIDDEN'];
 const CUSTOM_FIELD_TYPES = ['TEXT', 'SELECT', 'MULTI_SELECT'];
 const CUSTOM_FIELD_TYPES_WITH_OPTIONS = ['SELECT', 'MULTI_SELECT'];
 const ROSTER_CONTRACT = Object.freeze({ id: 'wattanam.academic-management.roster', version: '1.0.0' });
+const OFFICER_EMPLOYMENT_STATUSES = ['ACTIVE', 'INACTIVE', 'SUSPENDED'];
+const ATTENDANCE_STATUSES = ['PRESENT', 'ABSENT', 'LATE', 'LEAVE', 'EXCUSED'];
+
+function requireDate(value, label = 'date') {
+  const date = String(value || '');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error(`${label} must be a valid ISO date (YYYY-MM-DD)`);
+  const parsed = new Date(`${date}T00:00:00.000Z`);
+  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date) {
+    throw new Error(`${label} must be a valid ISO date (YYYY-MM-DD)`);
+  }
+  return date;
+}
+
+function attendanceSql(sql) {
+  return String(sql)
+    .replaceAll('plugin_wattanam_attendance_manager_study_year', STUDY_YEAR)
+    .replaceAll('plugin_wattanam_attendance_manager_', 'plugin_wattanam_academic_management_attendance_');
+}
+
+function attendancePermission(value) {
+  if (!value) return value;
+  return String(value).replace('wattanam.attendance-manager.', 'wattanam.academic-management.attendance.');
+}
+
+function attendanceContext(context) {
+  const database = {
+    query: (sql, params) => context.database.query(attendanceSql(sql), params),
+    execute: (sql, params) => context.database.execute(attendanceSql(sql), params),
+    transaction: (work) => context.database.transaction((tx) => work({
+      query: (sql, params) => tx.query(attendanceSql(sql), params),
+      execute: (sql, params) => tx.execute(attendanceSql(sql), params),
+      publish: (event) => tx.publish({ ...event, event: attendancePermission(event.event) }),
+    })),
+  };
+  return {
+    ...context,
+    database,
+    permissions: { register: (items) => context.permissions.register(items.map((item) => ({ ...item, id: attendancePermission(item.id) }))) },
+    navigation: { register: (items) => context.navigation.register(items
+      .filter((item) => item.id !== 'study-years')
+      .map((item) => ({
+        ...item,
+        id: item.id === 'attendance' ? 'attendance-records' : `attendance-${item.id}`,
+        href: item.href.replace('/wattanam.attendance-manager/', '/wattanam.academic-management/'),
+        permission: attendancePermission(item.permission),
+        dashboard: item.dashboard ? { ...item.dashboard, title: 'Academic Attendance' } : undefined,
+      }))) },
+    routes: { register: (route) => {
+      if (route.path === 'study-years' || route.path.startsWith('study-years/')) return () => {};
+      return context.routes.register({ ...route, permission: attendancePermission(route.permission) });
+    } },
+    events: {
+      ...context.events,
+      publish: (event, payload) => context.events.publish(attendancePermission(event), payload),
+    },
+  };
+}
 
 function requireIsoDate(value) {
   const date = String(value || '');
@@ -180,6 +240,7 @@ module.exports = {
     context.permissions.register([
       { id: 'wattanam.academic-management.view', label: 'View academic structures and rosters' },
       { id: 'wattanam.academic-management.manage', label: 'Manage academic structures and enrollment' },
+      { id: 'wattanam.academic-management.attendance', label: 'Record and correct officer attendance' },
     ]);
     context.navigation.register([
       { id: 'study-years', label: 'Study Years', href: '/plugins/wattanam.academic-management/study-years', permission: 'wattanam.academic-management.view' },
@@ -187,6 +248,9 @@ module.exports = {
       { id: 'subjects', label: 'Subjects', href: '/plugins/wattanam.academic-management/subjects', permission: 'wattanam.academic-management.view' },
       { id: 'classes', label: 'Classes', href: '/plugins/wattanam.academic-management/classes', permission: 'wattanam.academic-management.view', dashboard: { title: 'Academic Management', description: 'Manage classes, subjects, enrollment, and student academic profiles.', priority: 50 } },
       { id: 'teachers', label: 'Teachers', href: '/plugins/wattanam.academic-management/teachers', permission: 'wattanam.academic-management.view' },
+      { id: 'officers', label: 'Manage Officers', href: '/plugins/wattanam.academic-management/officers', permission: 'wattanam.academic-management.view' },
+      { id: 'officer-attendance', label: 'Officer Attendance', href: '/plugins/wattanam.academic-management/officer-attendance', permission: 'wattanam.academic-management.attendance' },
+      { id: 'officer-attendance-reports', label: 'Officer Attendance Reports', href: '/plugins/wattanam.academic-management/officer-attendance-reports', permission: 'wattanam.academic-management.view' },
       { id: 'registrations', label: 'Registrations', href: '/plugins/wattanam.academic-management/registrations', permission: 'wattanam.academic-management.manage' },
       { id: 'registration-settings', label: 'Registration Settings', href: '/plugins/wattanam.academic-management/registration-settings', permission: 'wattanam.academic-management.manage' },
     ]);
@@ -1556,6 +1620,130 @@ module.exports = {
         return context.database.query(`SELECT * FROM ${REGISTRATION} WHERE "id" = $1 LIMIT 1`, [id]).then((rows) => rows[0]);
       },
     });
+    const decorateOfficerRows = async (rows) => {
+      const [users, departments] = await Promise.all([
+        lookupUserMap(rows.map((row) => row.userId)),
+        context.database.query(`SELECT "id", "name", "nameKh" FROM ${DEPARTMENT}`),
+      ]);
+      const departmentMap = new Map(departments.map((department) => [department.id, department]));
+      return rows.map((row) => {
+        const user = users.get(row.userId) || null;
+        return {
+          ...row,
+          user,
+          name: user?.name || null,
+          email: user?.email || null,
+          phone: user?.phone || null,
+          role: user?.role || null,
+          department: row.departmentId ? departmentMap.get(row.departmentId) || null : null,
+        };
+      });
+    };
+    const officerSelect = `SELECT o."id", o."userId", o."employeeNumber", o."position", o."departmentId", o."employmentStatus", o."startedAt", o."endedAt", o."notes", o."createdAt", o."updatedAt" FROM ${OFFICER} o`;
+    context.routes.register({
+      method: 'GET', path: 'officers', permission: 'wattanam.academic-management.view',
+      handler: async (request) => {
+        const status = String(request?.query?.status || '').toUpperCase();
+        if (status && !OFFICER_EMPLOYMENT_STATUSES.includes(status)) throw new Error('Invalid employment status');
+        const rows = await context.database.query(`${officerSelect}${status ? ' WHERE o."employmentStatus" = $1' : ''} ORDER BY o."createdAt" DESC`, status ? [status] : []);
+        return decorateOfficerRows(rows);
+      },
+    });
+    context.routes.register({
+      method: 'GET', path: 'officers/:id', permission: 'wattanam.academic-management.view',
+      handler: async (request) => {
+        const rows = await context.database.query(`${officerSelect} WHERE o."id" = $1 LIMIT 1`, [request?.params?.id]);
+        if (!rows.length) throw new Error('Officer profile not found');
+        return decorateOfficerRows(rows).then((items) => items[0]);
+      },
+    });
+    context.routes.register({
+      method: 'POST', path: 'officers', permission: 'wattanam.academic-management.manage',
+      handler: async (request) => {
+        await requireAdministrativePrincipal(request);
+        const body = request?.body || {};
+        const userId = String(body.userId || '').trim();
+        if (!userId) throw new Error('userId is required');
+        const user = (await context.directory.lookupUsers([userId]))[0];
+        if (!user) throw new Error('Directory user not found');
+        if (['STUDENT', 'PARENT'].includes(user.role)) throw new Error('Officer profiles cannot be assigned to student or parent accounts');
+        const employmentStatus = String(body.employmentStatus || 'ACTIVE').toUpperCase();
+        if (!OFFICER_EMPLOYMENT_STATUSES.includes(employmentStatus)) throw new Error('Invalid employment status');
+        if (body.departmentId) {
+          const department = await context.database.query(`SELECT "id" FROM ${DEPARTMENT} WHERE "id" = $1 LIMIT 1`, [body.departmentId]);
+          if (!department.length) throw new Error('Department not found');
+        }
+        const startedAt = body.startedAt ? requireDate(body.startedAt, 'startedAt') : null;
+        const endedAt = body.endedAt ? requireDate(body.endedAt, 'endedAt') : null;
+        if (startedAt && endedAt && endedAt < startedAt) throw new Error('endedAt must be on or after startedAt');
+        const id = crypto.randomUUID();
+        await context.database.execute(`INSERT INTO ${OFFICER} ("id", "userId", "employeeNumber", "position", "departmentId", "employmentStatus", "startedAt", "endedAt", "notes") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`, [id, userId, String(body.employeeNumber || '').trim() || null, String(body.position || '').trim() || null, body.departmentId || null, employmentStatus, startedAt, endedAt, String(body.notes || '').trim() || null]);
+        context.events.publish('wattanam.academic-management.officer.created', { officerId: id, userId, employmentStatus });
+        return context.database.query(`${officerSelect} WHERE o."id" = $1 LIMIT 1`, [id]).then(decorateOfficerRows).then((items) => items[0]);
+      },
+    });
+    context.routes.register({
+      method: 'PATCH', path: 'officers/:id', permission: 'wattanam.academic-management.manage',
+      handler: async (request) => {
+        await requireAdministrativePrincipal(request);
+        const id = request?.params?.id;
+        const body = request?.body || {};
+        const existing = await context.database.query(`${officerSelect} WHERE o."id" = $1 LIMIT 1`, [id]);
+        if (!existing.length) throw new Error('Officer profile not found');
+        const employmentStatus = String(body.employmentStatus || existing[0].employmentStatus).toUpperCase();
+        if (!OFFICER_EMPLOYMENT_STATUSES.includes(employmentStatus)) throw new Error('Invalid employment status');
+        const startedAt = body.startedAt ? requireDate(body.startedAt, 'startedAt') : existing[0].startedAt;
+        const endedAt = body.endedAt ? requireDate(body.endedAt, 'endedAt') : (body.endedAt === null ? null : existing[0].endedAt);
+        if (startedAt && endedAt && String(endedAt).slice(0, 10) < String(startedAt).slice(0, 10)) throw new Error('endedAt must be on or after startedAt');
+        await context.database.execute(`UPDATE ${OFFICER} SET "employeeNumber"=$2, "position"=$3, "departmentId"=$4, "employmentStatus"=$5, "startedAt"=$6, "endedAt"=$7, "notes"=$8, "updatedAt"=CURRENT_TIMESTAMP WHERE "id"=$1`, [id, body.employeeNumber === undefined ? existing[0].employeeNumber : (String(body.employeeNumber || '').trim() || null), body.position === undefined ? existing[0].position : (String(body.position || '').trim() || null), body.departmentId === undefined ? existing[0].departmentId : (body.departmentId || null), employmentStatus, startedAt, endedAt, body.notes === undefined ? existing[0].notes : (String(body.notes || '').trim() || null)]);
+        context.events.publish('wattanam.academic-management.officer.updated', { officerId: id, employmentStatus });
+        return context.database.query(`${officerSelect} WHERE o."id" = $1 LIMIT 1`, [id]).then(decorateOfficerRows).then((items) => items[0]);
+      },
+    });
+    const attendanceRows = async (date) => {
+      const rows = await context.database.query(`SELECT a."id", a."officerId", a."attendanceDate", a."status", a."checkInAt", a."checkOutAt", a."note", a."recordedBy", a."correctedBy", a."correctedAt", a."createdAt", a."updatedAt", o."userId", o."employeeNumber", o."position", o."departmentId", o."employmentStatus" FROM ${OFFICER_ATTENDANCE} a JOIN ${OFFICER} o ON o."id" = a."officerId" WHERE a."attendanceDate" = $1 ORDER BY a."createdAt" DESC`, [date]);
+      return decorateOfficerRows(rows);
+    };
+    context.routes.register({
+      method: 'GET', path: 'attendance', permission: 'wattanam.academic-management.attendance',
+      handler: (request) => attendanceRows(requireDate(request?.query?.date || new Date().toISOString().slice(0, 10), 'date')),
+    });
+    context.routes.register({
+      method: 'POST', path: 'attendance', permission: 'wattanam.academic-management.attendance',
+      handler: async (request) => {
+        const principal = request?.principal || {};
+        if (!principal.userId) throw new Error('Authenticated principal is required');
+        const body = request?.body || {};
+        const officerId = String(body.officerId || '').trim();
+        const attendanceDate = requireDate(body.attendanceDate || new Date().toISOString().slice(0, 10), 'attendanceDate');
+        const status = String(body.status || '').toUpperCase();
+        if (!ATTENDANCE_STATUSES.includes(status)) throw new Error('Invalid attendance status');
+        const officer = await context.database.query(`SELECT "id" FROM ${OFFICER} WHERE "id" = $1 AND "employmentStatus" = 'ACTIVE' LIMIT 1`, [officerId]);
+        if (!officer.length) throw new Error('Active officer profile not found');
+        const checkInAt = body.checkInAt ? new Date(body.checkInAt) : null;
+        const checkOutAt = body.checkOutAt ? new Date(body.checkOutAt) : null;
+        if (checkInAt && Number.isNaN(checkInAt.getTime())) throw new Error('checkInAt must be a valid date and time');
+        if (checkOutAt && Number.isNaN(checkOutAt.getTime())) throw new Error('checkOutAt must be a valid date and time');
+        if (checkInAt && checkOutAt && checkOutAt < checkInAt) throw new Error('checkOutAt must be on or after checkInAt');
+        const existing = await context.database.query(`SELECT "id" FROM ${OFFICER_ATTENDANCE} WHERE "officerId"=$1 AND "attendanceDate"=$2 LIMIT 1`, [officerId, attendanceDate]);
+        const id = existing[0]?.id || crypto.randomUUID();
+        await context.database.execute(`INSERT INTO ${OFFICER_ATTENDANCE} ("id", "officerId", "attendanceDate", "status", "checkInAt", "checkOutAt", "note", "recordedBy") VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT ("officerId", "attendanceDate") DO UPDATE SET "status"=EXCLUDED."status", "checkInAt"=EXCLUDED."checkInAt", "checkOutAt"=EXCLUDED."checkOutAt", "note"=EXCLUDED."note", "correctedBy"=EXCLUDED."recordedBy", "correctedAt"=CURRENT_TIMESTAMP, "updatedAt"=CURRENT_TIMESTAMP`, [id, officerId, attendanceDate, status, checkInAt?.toISOString() || null, checkOutAt?.toISOString() || null, String(body.note || '').trim() || null, principal.userId]);
+        context.events.publish(existing.length ? 'wattanam.academic-management.attendance.corrected' : 'wattanam.academic-management.attendance.recorded', { attendanceId: id, officerId, attendanceDate, status });
+        return attendanceRows(attendanceDate).then((items) => items.find((item) => item.id === id));
+      },
+    });
+    context.routes.register({
+      method: 'GET', path: 'attendance/reports', permission: 'wattanam.academic-management.view',
+      handler: async (request) => {
+        const today = new Date().toISOString().slice(0, 10);
+        const startDate = requireDate(request?.query?.startDate || `${today.slice(0, 8)}01`, 'startDate');
+        const endDate = requireDate(request?.query?.endDate || today, 'endDate');
+        if (endDate < startDate) throw new Error('endDate must be on or after startDate');
+        const rows = await context.database.query(`SELECT o."id" AS "officerId", o."userId", o."employeeNumber", o."position", o."departmentId", o."employmentStatus", COUNT(a."id")::int AS "recordedDays", COUNT(a."id") FILTER (WHERE a."status"='PRESENT')::int AS "presentDays", COUNT(a."id") FILTER (WHERE a."status"='ABSENT')::int AS "absentDays", COUNT(a."id") FILTER (WHERE a."status"='LATE')::int AS "lateDays", COUNT(a."id") FILTER (WHERE a."status"='LEAVE')::int AS "leaveDays", COUNT(a."id") FILTER (WHERE a."status"='EXCUSED')::int AS "excusedDays" FROM ${OFFICER} o LEFT JOIN ${OFFICER_ATTENDANCE} a ON a."officerId"=o."id" AND a."attendanceDate" BETWEEN $1 AND $2 GROUP BY o."id" ORDER BY o."createdAt" DESC`, [startDate, endDate]);
+        const decorated = await decorateOfficerRows(rows);
+        return decorated.map((row) => ({ ...row, startDate, endDate, attendanceRate: row.recordedDays ? Math.round(((row.presentDays + row.lateDays) / row.recordedDays) * 10000) / 100 : 0 }));
+      },
+    });
     context.routes.register({
       method: 'POST', path: 'admissions/public/submit', permission: 'wattanam.academic-management.manage',
       handler: async (request) => {
@@ -1671,5 +1859,6 @@ module.exports = {
         return context.database.query(`SELECT * FROM ${REGISTRATION} WHERE "id" = $1 LIMIT 1`, [id]).then((rows) => rows[0]);
       },
     });
+    await attendanceRuntime.activate(attendanceContext(context));
   },
 };

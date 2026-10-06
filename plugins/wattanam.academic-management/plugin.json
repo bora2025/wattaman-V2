@@ -3,7 +3,7 @@
   "id": "wattanam.academic-management",
   "name": "Academic Management",
   "description": "Official Wattanam academic structures, profiles, admissions, enrollment, and roster contracts.",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -11,8 +11,22 @@
   "frontendEntry": "frontend/page.json",
   "sdkVersion": "1.1.0",
   "runtimeVersion": "1.0.0",
-  "capabilities": ["accounts.student.create", "accounts.student.update", "api.routes", "crypto.hash", "database.read", "database.write", "directory.read", "events.durable", "events.publish", "navigation.register", "notifications.send", "permissions.register", "readmodels.read", "ui.pages"],
-  "permissions": ["wattanam.academic-management.view", "wattanam.academic-management.manage"],
+  "capabilities": ["accounts.student.create", "accounts.student.update", "api.routes", "crypto.hash", "database.read", "database.write", "directory.read", "events.durable", "events.publish", "jobs.schedule", "navigation.register", "notifications.send", "permissions.register", "readmodels.publish", "readmodels.read", "realtime.notify", "settings.read", "ui.pages"],
+  "permissions": [
+    "wattanam.academic-management.view",
+    "wattanam.academic-management.manage",
+    "wattanam.academic-management.attendance",
+    "wattanam.academic-management.attendance.view",
+    "wattanam.academic-management.attendance.scan",
+    "wattanam.academic-management.attendance.mark",
+    "wattanam.academic-management.attendance.correct",
+    "wattanam.academic-management.attendance.report",
+    "wattanam.academic-management.attendance.print",
+    "wattanam.academic-management.attendance.configure",
+    "wattanam.academic-management.attendance.devices.manage",
+    "wattanam.academic-management.attendance.manage",
+    "wattanam.academic-management.attendance.export"
+  ],
   "dependencies": {},
   "optionalDependencies": {},
   "migrations": [
@@ -75,6 +89,48 @@
       "path": "migrations/010_create_subject.sql",
       "checksum": "7c93085d4455fd9e0c30f8ceeec06689c8166108be1776415d576d4be47af10d",
       "destructive": false
+    },
+    {
+      "id": "011_create_officer_attendance",
+      "path": "migrations/011_create_officer_attendance.sql",
+      "checksum": "453c893047264834fcf3e016cf2098d399800faacffcc34372d4769fb302da2b",
+      "destructive": false
+    },
+    {
+      "id": "012_create_attendance_runtime",
+      "path": "migrations/012_create_attendance_runtime.sql",
+      "checksum": "389697d1320d047c7c3bda4c308deb9f8205383915130d82e47f7cebeeec9ce6",
+      "destructive": false
+    },
+    {
+      "id": "013_add_attendance_study_year_branding",
+      "path": "migrations/013_add_attendance_study_year_branding.sql",
+      "checksum": "0892ba77497a775b5bcf807e032767eeedf3c17e2382f8b6d87982ff9532666b",
+      "destructive": false
+    },
+    {
+      "id": "014_enforce_attendance_student_boundary",
+      "path": "migrations/014_enforce_attendance_student_boundary.sql",
+      "checksum": "0625f0f5bec58cfe4e101b491b8fa02b0e742fde3e796d6ba670b3c789098825",
+      "destructive": false
+    },
+    {
+      "id": "015_add_attendance_corrections_scans_alerts",
+      "path": "migrations/015_add_attendance_corrections_scans_alerts.sql",
+      "checksum": "6340300f96cc2ec67e9573ceca87f4d60270abda22c89474778e76bcb2e02b4c",
+      "destructive": false
+    },
+    {
+      "id": "016_add_attendance_alert_delivery_ledger",
+      "path": "migrations/016_add_attendance_alert_delivery_ledger.sql",
+      "checksum": "411bf9bd7b417ff100ce0762011621ce58fbd0e46c074f3cb20d627afac3264e",
+      "destructive": false
+    },
+    {
+      "id": "017_add_attendance_legacy_adoption_fields",
+      "path": "migrations/017_add_attendance_legacy_adoption_fields.sql",
+      "checksum": "7a6711cecf5abb7698cc65c7c74bd25b864cfae21556f91f8720871df8be8869",
+      "destructive": false
     }
   ],
   "navigation": [
@@ -83,6 +139,15 @@
     { "id": "subjects", "label": "Subjects", "href": "/plugins/wattanam.academic-management/subjects", "permission": "wattanam.academic-management.view" },
     { "id": "classes", "label": "Classes", "href": "/plugins/wattanam.academic-management/classes", "permission": "wattanam.academic-management.view" },
     { "id": "teachers", "label": "Teachers", "href": "/plugins/wattanam.academic-management/teachers", "permission": "wattanam.academic-management.view" },
+    { "id": "officers", "label": "Manage Officers", "href": "/plugins/wattanam.academic-management/officers", "permission": "wattanam.academic-management.view" },
+    { "id": "officer-attendance", "label": "Officer Attendance", "href": "/plugins/wattanam.academic-management/officer-attendance", "permission": "wattanam.academic-management.attendance" },
+    { "id": "officer-attendance-reports", "label": "Officer Attendance Reports", "href": "/plugins/wattanam.academic-management/officer-attendance-reports", "permission": "wattanam.academic-management.view" },
+    { "id": "attendance-records", "label": "Attendance", "href": "/plugins/wattanam.academic-management/attendance", "permission": "wattanam.academic-management.attendance.view" },
+    { "id": "attendance-scanner", "label": "Attendance Scanner", "href": "/plugins/wattanam.academic-management/scanner", "permission": "wattanam.academic-management.attendance.scan" },
+    { "id": "attendance-corrections", "label": "Attendance Corrections", "href": "/plugins/wattanam.academic-management/corrections", "permission": "wattanam.academic-management.attendance.correct" },
+    { "id": "attendance-alerts", "label": "Attendance Alerts", "href": "/plugins/wattanam.academic-management/alerts", "permission": "wattanam.academic-management.attendance.view" },
+    { "id": "attendance-reports", "label": "Attendance Reports", "href": "/plugins/wattanam.academic-management/reports", "permission": "wattanam.academic-management.attendance.report" },
+    { "id": "attendance-settings", "label": "Attendance Settings", "href": "/plugins/wattanam.academic-management/settings", "permission": "wattanam.academic-management.attendance.configure" },
     { "id": "registrations", "label": "Registrations", "href": "/plugins/wattanam.academic-management/registrations", "permission": "wattanam.academic-management.manage" },
     { "id": "registration-settings", "label": "Registration Settings", "href": "/plugins/wattanam.academic-management/registration-settings", "permission": "wattanam.academic-management.manage" }
   ],
