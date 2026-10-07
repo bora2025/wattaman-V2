@@ -48,7 +48,7 @@ export function createTestContext(overrides: ContextOverrides = {}): TestHarness
   const storageStore = new Map<string, string>();
 
   const context: PluginRuntimeContext = {
-    sdkVersion: '1.1.0',
+    sdkVersion: '1.2.0',
     pluginId: 'local-test-plugin',
     logger: { log: () => undefined },
     dependencies: { required: {}, optional: {}, isAvailable: async () => false },
@@ -104,6 +104,7 @@ export function createTestContext(overrides: ContextOverrides = {}): TestHarness
     },
     crypto: { hashBcrypt: async (plaintext) => `bcrypt:${plaintext}` },
     accounts: {
+      createStaff: async (input) => ({ id: `staff-${input.commandKey}`, name: input.name, role: input.role, email: input.email, phone: input.phone ?? null }),
       createStudent: async (input) => ({ id: `student-${input.commandKey}`, name: input.name, role: 'STUDENT', email: input.email ?? null, phone: input.phone ?? null }),
       updateStudent: async (input) => ({ id: input.userId, name: input.name, role: 'STUDENT', email: input.email ?? null, phone: input.phone ?? null }),
       resolveParent: async (input) => ({ id: `parent-${input.commandKey}`, name: input.name, role: 'PARENT', email: input.email, phone: input.phone ?? null, created: true }),

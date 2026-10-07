@@ -82,13 +82,13 @@ function distanceMeters(aLat, aLon, bLat, bLon) {
   return 6371000 * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
 }
 
-function resultFromAudit(row) {
+function resultFromAudit(row, idempotentReplay = false) {
   return {
     result: row.result,
     recordId: row.recordId || null,
     reviewStatus: row.reviewStatus,
     rejectionReason: row.rejectionReason || null,
-    idempotentReplay: true,
+    idempotentReplay,
   };
 }
 
@@ -306,7 +306,7 @@ function registerSelfAttendance(context) {
       const existing = (await context.database.query(`SELECT * FROM ${AUDIT} WHERE "clientRequestId"=$1 LIMIT 1`, [clientRequestId]))[0];
       if (existing) {
         if (!safeEqual(existing.directoryUserId, userId)) throw new Error('clientRequestId belongs to another user');
-        return resultFromAudit(existing);
+        return resultFromAudit(existing, true);
       }
       if (String(principal.role || '').toUpperCase() !== 'STUDENT') {
         const attempt = await recordAttempt(context.database, { clientRequestId, tokenHash, userId, result: 'UNAUTHORIZED', reason: 'Only an authenticated student may self-scan' });

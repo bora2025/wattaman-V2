@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const attendanceRuntime = require('./attendance-runtime');
 const { registerSelfAttendance } = require('./self-attendance');
 const { registerStaffAttendance } = require('./staff-attendance');
+const { registerAuthoritativeReports } = require('./authoritative-reports');
 
 const DEPARTMENT = 'plugin_wattanam_academic_management_department';
 const USER_DEPARTMENT = 'plugin_wattanam_academic_management_user_department';
@@ -17,6 +18,11 @@ const SUBJECT = 'plugin_wattanam_academic_management_subject';
 const STUDY_YEAR = 'plugin_wattanam_academic_management_study_year';
 const OFFICER = 'plugin_wattanam_academic_management_officer_profile';
 const OFFICER_ATTENDANCE = 'plugin_wattanam_academic_management_officer_attendance';
+const ATTENDANCE_IDENTIFIER = 'plugin_wattanam_academic_management_attendance_identifier';
+
+function newCardCode(scope) {
+  return `wtn_${scope}_${crypto.randomBytes(24).toString('hex')}`;
+}
 
 function eventKey(prefix, payload) {
   return `${prefix}-${crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex')}`;
@@ -64,6 +70,16 @@ function attendanceContext(context) {
   return {
     ...context,
     database,
+    directory: {
+      ...context.directory,
+      resolveAttendanceIdentifier: async (code) => {
+        const rows = await context.database.query(
+          `SELECT "id" AS "personId", 'STUDENT' AS "personType" FROM ${STUDENT_PROFILE} WHERE "qrCode" = $1 LIMIT 1`,
+          [String(code || '')],
+        );
+        return rows[0] || null;
+      },
+    },
     permissions: { register: (items) => context.permissions.register(items.map((item) => ({ ...item, id: attendancePermission(item.id) }))) },
     navigation: { register: (items) => context.navigation.register(items
       .filter((item) => item.id !== 'study-years')
@@ -496,6 +512,16 @@ module.exports = {
           .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
       },
     });
+    context.routes.register({
+      method: 'GET', path: 'class-admins', permission: 'wattanam.academic-management.view',
+      handler: async () => {
+        const recipients = await context.directory.resolveAudience({ audience: 'ROLE', targetRole: 'CLASS_ADMIN' });
+        const identities = await lookupUserMap(recipients.map((recipient) => recipient.id));
+        return recipients
+          .map((recipient) => ({ ...recipient, ...identities.get(recipient.id) }))
+          .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+      },
+    });
     // Migration 004 remains immutable because it was already published. Attendance Manager is
     // the sole runtime owner for Study Years; Academic Management consumes its versioned read model.
     context.routes.register({
@@ -661,7 +687,7 @@ module.exports = {
         }
         const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
         const rows = await context.database.query(
-          `SELECT c."id", c."name", c."subject", c."teacherId", c."classAdminId", c."studyYearId", c."schedule", c."registrationStatus", c."thumbnail", c."description", c."price", c."showPrice", c."createdAt", c."updatedAt" FROM ${CLASS} c ${where} ORDER BY c."name" ASC`,
+          `SELECT c."id", c."name", c."subject", c."teacherId", c."classAdminId", c."studyYearId", c."schedule", c."registrationStatus", c."thumbnail", c."description", c."price", c."showPrice", c."createdAt", c."updatedAt", COALESCE((SELECT COUNT(*)::int FROM ${ENROLLMENT} e WHERE e."classId" = c."id" AND e."validTo" IS NULL), 0) AS "studentCount" FROM ${CLASS} c ${where} ORDER BY c."name" ASC`,
           params,
         );
         return decorateClassRows(rows);
@@ -747,8 +773,8 @@ module.exports = {
               const today = new Date().toISOString().slice(0, 10);
               await context.database.transaction(async (tx) => {
                 await tx.execute(
-                  `INSERT INTO ${STUDENT_PROFILE} ("id", "userId", "studentNumber", "nameKh", "photo", "sex", "dateOfBirth", "address", "generation", "source", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'plugin', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT ("userId") DO NOTHING`,
-                  [profileId, account.id, studentNumber, value(indexes.nameKh) || null, value(indexes.photo) || null, normalizedCsvSex(value(indexes.sex)), dateOfBirth || null, value(indexes.address) || null, value(indexes.generation) || null],
+                  `INSERT INTO ${STUDENT_PROFILE} ("id", "userId", "studentNumber", "nameKh", "qrCode", "photo", "sex", "dateOfBirth", "address", "generation", "source", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'plugin', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT ("userId") DO NOTHING`,
+                  [profileId, account.id, studentNumber, value(indexes.nameKh) || null, newCardCode('stu'), value(indexes.photo) || null, normalizedCsvSex(value(indexes.sex)), dateOfBirth || null, value(indexes.address) || null, value(indexes.generation) || null],
                 );
                 const profiles = await tx.query(`SELECT "id" FROM ${STUDENT_PROFILE} WHERE "userId" = $1 LIMIT 1`, [account.id]);
                 if (!profiles.length) throw new Error('Student profile materialization failed');
@@ -1142,6 +1168,45 @@ module.exports = {
       return url;
     }
     context.routes.register({
+      method: 'POST', path: 'classes/:id/students/create', permission: 'wattanam.academic-management.manage',
+      handler: async (request) => {
+        await requireAdministrativePrincipal(request);
+        const classId = String(request?.params?.id || '').trim();
+        const body = request?.body || {};
+        const name = String(body.name || '').trim();
+        const email = String(body.email || '').trim().toLowerCase();
+        const phone = String(body.phone || '').trim();
+        const password = String(body.password || '');
+        const commandKey = String(body.commandKey || '').trim();
+        const studentNumber = String(body.studentNumber || '').trim();
+        if (!classId) throw new Error('classId is required');
+        if (!name || name.length > 160) throw new Error('name is required');
+        if (email && !isValidEmail(email)) throw new Error('email is invalid');
+        if (password.length < 6 || password.length > 200) throw new Error('password must contain 6-200 characters');
+        if (!/^[a-zA-Z0-9][a-zA-Z0-9:._-]{0,199}$/.test(commandKey)) throw new Error('commandKey is required');
+        if (studentNumber.length > 100) throw new Error('studentNumber exceeds 100 characters');
+        const classRows = await context.database.query(`SELECT "id" FROM ${CLASS} WHERE "id"=$1 LIMIT 1`, [classId]);
+        if (!classRows.length) throw new Error('Class not found');
+        if (studentNumber) {
+          const clash = await context.database.query(`SELECT "id" FROM ${STUDENT_PROFILE} WHERE "studentNumber"=$1 LIMIT 1`, [studentNumber]);
+          if (clash.length) throw new Error('Student number is already used');
+        }
+        const account = await context.accounts.createStudent({ commandKey, name, email: email || null, phone: phone || null, passwordHash: await context.crypto.hashBcrypt(password, 12) });
+        const profileId = crypto.randomUUID();
+        const resolvedNumber = studentNumber || String((await context.database.query(`SELECT COUNT(*)::int AS "count" FROM ${ENROLLMENT} WHERE "classId"=$1 AND "validTo" IS NULL`, [classId]))[0].count + 1).padStart(4, '0');
+        const materializedId = await context.database.transaction(async (tx) => {
+          await tx.execute(`INSERT INTO ${STUDENT_PROFILE} ("id","userId","studentNumber","nameKh","qrCode","photo","sex","dateOfBirth","address","generation","source") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'plugin') ON CONFLICT ("userId") DO NOTHING`, [profileId, account.id, resolvedNumber, String(body.nameKh || '').trim() || null, newCardCode('stu'), convertGoogleDriveUrl(String(body.photo || '').trim()) || null, normalizedCsvSex(String(body.sex || '')), body.dateOfBirth || null, String(body.address || '').trim() || null, String(body.generation || '').trim() || null]);
+          const profile = (await tx.query(`SELECT "id" FROM ${STUDENT_PROFILE} WHERE "userId"=$1 LIMIT 1`, [account.id]))[0];
+          if (!profile) throw new Error('Student profile materialization failed');
+          await tx.execute(`INSERT INTO ${ENROLLMENT} ("id","studentId","classId","validFrom","source") VALUES ($1,$2,$3,CURRENT_DATE,'plugin') ON CONFLICT ("studentId","classId","validFrom") DO NOTHING`, [crypto.randomUUID(), profile.id, classId]);
+          await tx.publish({ event: 'wattanam.academic-management.student.created', version: 1, subjectKey: profile.id, payload: { studentId: profile.id, userId: account.id, classId, studentNumber: resolvedNumber }, idempotencyKey: `academic-student-created-${profile.id}-${classId}` });
+          return profile.id;
+        });
+        context.events.publish('academic.student.added-to-class.v1', { studentId: materializedId, classId, principal: request?.principal });
+        return { id: materializedId, userId: account.id, studentNumber: resolvedNumber, name: account.name, email: account.email, phone: account.phone, classId };
+      },
+    });
+    context.routes.register({
       method: 'POST', path: 'classes/:id/students', permission: 'wattanam.academic-management.manage',
       handler: async (request) => {
         const classId = request?.params?.id;
@@ -1171,7 +1236,7 @@ module.exports = {
           const added = await context.database.transaction(async (tx) => {
             await tx.execute(`DELETE FROM ${ENROLLMENT} WHERE "studentId" = $1 AND "validTo" IS NULL AND "validFrom" = CURRENT_DATE`, [existing.id]);
             await tx.execute(`UPDATE ${ENROLLMENT} SET "validTo" = CURRENT_DATE - INTERVAL '1 day', "updatedAt" = CURRENT_TIMESTAMP WHERE "studentId" = $1 AND "validTo" IS NULL AND "validFrom" < CURRENT_DATE`, [existing.id]);
-            await tx.execute(`UPDATE ${STUDENT_PROFILE} SET "studentNumber" = $1, "updatedAt" = CURRENT_TIMESTAMP WHERE "id" = $2`, [studentNumber, existing.id]);
+            await tx.execute(`UPDATE ${STUDENT_PROFILE} SET "studentNumber" = $1, "qrCode" = COALESCE("qrCode", $2), "updatedAt" = CURRENT_TIMESTAMP WHERE "id" = $3`, [studentNumber, newCardCode('stu'), existing.id]);
             await tx.execute(`INSERT INTO ${ENROLLMENT} ("id","studentId","classId","validFrom","source") VALUES ($1,$2,$3,CURRENT_DATE,'plugin')`, [crypto.randomUUID(), existing.id, classId]);
             const row = await tx.query(
               `SELECT s."id", s."userId", s."studentNumber", e."classId", jsonb_build_object('id', c."id", 'name', c."name") AS class FROM ${STUDENT_PROFILE} s JOIN ${ENROLLMENT} e ON e."studentId" = s."id" AND e."validTo" IS NULL LEFT JOIN ${CLASS} c ON c."id" = e."classId" WHERE s."id" = $1 LIMIT 1`,
@@ -1196,8 +1261,8 @@ module.exports = {
           const studentNumber = String(countRowsInner[0].count + 1).padStart(4, '0');
           const sid = crypto.randomUUID();
           await tx.execute(
-            `INSERT INTO ${STUDENT_PROFILE} ("id", "userId", "studentNumber", "source") VALUES ($1, $2, $3, 'plugin')`,
-            [sid, studentId, studentNumber],
+            `INSERT INTO ${STUDENT_PROFILE} ("id", "userId", "studentNumber", "qrCode", "source") VALUES ($1, $2, $3, $4, 'plugin')`,
+            [sid, studentId, studentNumber, newCardCode('stu')],
           );
           await tx.execute(`INSERT INTO ${ENROLLMENT} ("id","studentId","classId","validFrom","source") VALUES ($1,$2,$3,CURRENT_DATE,'plugin')`, [crypto.randomUUID(), sid, classId]);
           const row = await tx.query(
@@ -1596,8 +1661,8 @@ module.exports = {
           const countRows = await tx.query(`SELECT COUNT(*)::int AS "count" FROM ${STUDENT_PROFILE}`);
           const studentNumber = String(Number(countRows[0]?.count || 0) + 1).padStart(4, '0');
           await tx.execute(
-            `INSERT INTO ${STUDENT_PROFILE} ("id", "userId", "studentNumber", "photo", "sex", "dateOfBirth", "address", "generation", "nameKh", "customFieldValues", "source", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'registration', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT ("userId") DO NOTHING`,
-            [profileId, account.id, studentNumber, reg.photo || null, reg.sex || null, reg.dateOfBirth || null, reg.address || null, reg.generation || null, reg.nameKh || null, reg.customFieldValues || {}],
+            `INSERT INTO ${STUDENT_PROFILE} ("id", "userId", "studentNumber", "qrCode", "photo", "sex", "dateOfBirth", "address", "generation", "nameKh", "customFieldValues", "source", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'registration', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT ("userId") DO NOTHING`,
+            [profileId, account.id, studentNumber, newCardCode('stu'), reg.photo || null, reg.sex || null, reg.dateOfBirth || null, reg.address || null, reg.generation || null, reg.nameKh || null, reg.customFieldValues || {}],
           );
           const profiles = await tx.query(`SELECT "id" FROM ${STUDENT_PROFILE} WHERE "userId" = $1 LIMIT 1`, [account.id]);
           if (!profiles.length) throw new Error('Student profile materialization failed');
@@ -1664,9 +1729,21 @@ module.exports = {
       handler: async (request) => {
         await requireAdministrativePrincipal(request);
         const body = request?.body || {};
-        const userId = String(body.userId || '').trim();
-        if (!userId) throw new Error('userId is required');
-        const user = (await context.directory.lookupUsers([userId]))[0];
+        let userId = String(body.userId || '').trim();
+        let user;
+        if (!userId) {
+          const name = String(body.name || '').trim();
+          const email = String(body.email || '').trim().toLowerCase();
+          const password = String(body.password || '');
+          const commandKey = String(body.commandKey || '').trim();
+          if (!name || name.length > 160) throw new Error('name is required');
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('email is invalid');
+          if (password.length < 8 || password.length > 200) throw new Error('password must contain 8-200 characters');
+          if (!/^[a-zA-Z0-9][a-zA-Z0-9:._-]{0,199}$/.test(commandKey)) throw new Error('commandKey is required');
+          const account = await context.accounts.createStaff({ commandKey, name, email, phone: String(body.phone || '').trim() || null, photo: String(body.photo || '').trim() || null, passwordHash: await context.crypto.hashBcrypt(password), role: String(body.position || '').toUpperCase() === 'TEACHER' ? 'TEACHER' : 'STAFF' });
+          userId = account.id;
+          user = account;
+        } else user = (await context.directory.lookupUsers([userId]))[0];
         if (!user) throw new Error('Directory user not found');
         if (['STUDENT', 'PARENT'].includes(user.role)) throw new Error('Officer profiles cannot be assigned to student or parent accounts');
         const employmentStatus = String(body.employmentStatus || 'ACTIVE').toUpperCase();
@@ -1679,9 +1756,36 @@ module.exports = {
         const endedAt = body.endedAt ? requireDate(body.endedAt, 'endedAt') : null;
         if (startedAt && endedAt && endedAt < startedAt) throw new Error('endedAt must be on or after startedAt');
         const id = crypto.randomUUID();
-        await context.database.execute(`INSERT INTO ${OFFICER} ("id", "userId", "employeeNumber", "position", "departmentId", "employmentStatus", "startedAt", "endedAt", "notes") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`, [id, userId, String(body.employeeNumber || '').trim() || null, String(body.position || '').trim() || null, body.departmentId || null, employmentStatus, startedAt, endedAt, String(body.notes || '').trim() || null]);
+        await context.database.transaction(async (tx) => {
+          await tx.execute(`INSERT INTO ${OFFICER} ("id", "userId", "employeeNumber", "position", "departmentId", "employmentStatus", "startedAt", "endedAt", "notes") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`, [id, userId, String(body.employeeNumber || '').trim() || null, String(body.position || '').trim() || null, body.departmentId || null, employmentStatus, startedAt, endedAt, String(body.notes || '').trim() || null]);
+          await tx.execute(`INSERT INTO ${ATTENDANCE_IDENTIFIER} ("id","code","personId","personType","createdById") VALUES ($1,$2,$3,'STAFF',$4)`, [crypto.randomUUID(), newCardCode('staff'), id, request?.principal?.userId || null]);
+        });
         context.events.publish('wattanam.academic-management.officer.created', { officerId: id, userId, employmentStatus });
         return context.database.query(`${officerSelect} WHERE o."id" = $1 LIMIT 1`, [id]).then(decorateOfficerRows).then((items) => items[0]);
+      },
+    });
+    context.routes.register({
+      method: 'GET', path: 'id-cards/staff', permission: 'wattanam.academic-management.manage',
+      handler: async () => {
+        const missing = await context.database.query(`SELECT o."id" FROM ${OFFICER} o LEFT JOIN ${ATTENDANCE_IDENTIFIER} ai ON ai."personId"=o."id" AND ai."personType"='STAFF' AND ai."active"=TRUE WHERE o."employmentStatus"='ACTIVE' AND ai."id" IS NULL`);
+        if (missing.length) await context.database.transaction(async (tx) => {
+          for (const officer of missing) await tx.execute(`INSERT INTO ${ATTENDANCE_IDENTIFIER} ("id","code","personId","personType") VALUES ($1,$2,$3,'STAFF')`, [crypto.randomUUID(), newCardCode('staff'), officer.id]);
+        });
+        const cardSelect = officerSelect.replace(' FROM ', ', ai."code" AS "qrCode" FROM ');
+        const rows = await context.database.query(`${cardSelect} LEFT JOIN ${ATTENDANCE_IDENTIFIER} ai ON ai."personId"=o."id" AND ai."personType"='STAFF' AND ai."active"=TRUE WHERE o."employmentStatus"='ACTIVE' ORDER BY o."createdAt" DESC`);
+        return decorateOfficerRows(rows);
+      },
+    });
+    context.routes.register({
+      method: 'POST', path: 'id-cards/classes/:id/ensure', permission: 'wattanam.academic-management.manage',
+      handler: async (request) => {
+        await requireAdministrativePrincipal(request);
+        const classId = String(request?.params?.id || '');
+        const missing = await context.database.query(`SELECT s."id" FROM ${STUDENT_PROFILE} s JOIN ${ENROLLMENT} e ON e."studentId"=s."id" AND e."validTo" IS NULL WHERE e."classId"=$1 AND s."qrCode" IS NULL`, [classId]);
+        if (missing.length) await context.database.transaction(async (tx) => {
+          for (const student of missing) await tx.execute(`UPDATE ${STUDENT_PROFILE} SET "qrCode"=$1,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=$2 AND "qrCode" IS NULL`, [newCardCode('stu'), student.id]);
+        });
+        return { classId, generated: missing.length };
       },
     });
     context.routes.register({
@@ -1861,8 +1965,29 @@ module.exports = {
         return context.database.query(`SELECT * FROM ${REGISTRATION} WHERE "id" = $1 LIMIT 1`, [id]).then((rows) => rows[0]);
       },
     });
+    context.routes.register({
+      method: 'GET', path: 'session-settings', permission: 'wattanam.academic-management.attendance.view',
+      handler: async () => context.settings.get('attendanceSessionSettings', {
+        classFormat: 'CUSTOM', classFormatRules: false, staffFormatRules: false,
+        staffWorkingDays: ['MON', 'TUE', 'WED', 'THU', 'FRI'],
+      }),
+    });
+    context.routes.register({
+      method: 'PUT', path: 'session-settings', permission: 'wattanam.academic-management.attendance.configure',
+      handler: async (request) => {
+        const body = request?.body || {};
+        const classFormat = String(body.classFormat || 'CUSTOM').toUpperCase();
+        if (!['FULL', 'MORNING', 'AFTERNOON', 'EVENING', 'NIGHT', 'CUSTOM'].includes(classFormat)) throw new Error('Invalid class attendance format');
+        const staffWorkingDays = [...new Set((Array.isArray(body.staffWorkingDays) ? body.staffWorkingDays : []).map((day) => String(day).toUpperCase()))];
+        if (staffWorkingDays.some((day) => !['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].includes(day))) throw new Error('Invalid staff working day');
+        const settings = { classFormat, classFormatRules: body.classFormatRules === true, staffFormatRules: body.staffFormatRules === true, staffWorkingDays };
+        await context.settings.set('attendanceSessionSettings', settings);
+        return settings;
+      },
+    });
     await attendanceRuntime.activate(attendanceContext(context));
     registerSelfAttendance(context);
     registerStaffAttendance(context);
+    registerAuthoritativeReports(context);
   },
 };

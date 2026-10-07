@@ -240,7 +240,11 @@ module.exports = {
       const holidays = await context.database.query(`SELECT "id" FROM ${HOLIDAY} WHERE "date"=$1::date LIMIT 1`, [local.date]);
       if (holidays.length) throw new Error('Attendance cannot be scanned on a configured holiday');
       if (role === 'TEACHER' || role === 'CLASS_ADMIN') await requireRecordScope(request, classId);
-      const aliases = await context.database.query(`SELECT "personId", "personType" FROM ${IDENTIFIER} WHERE "code"=$1 AND "active"=TRUE LIMIT 1`, [code]);
+      let aliases = await context.database.query(`SELECT "personId", "personType" FROM ${IDENTIFIER} WHERE "code"=$1 AND "active"=TRUE LIMIT 1`, [code]);
+      if (!aliases.length && typeof context.directory.resolveAttendanceIdentifier === 'function') {
+        const resolved = await context.directory.resolveAttendanceIdentifier(code);
+        if (resolved) aliases = [resolved];
+      }
       if (!aliases.length) throw new Error('Attendance identifier not found');
       request.body = { ...body, ...aliases[0], classId, date: local.date, session: Number(activeSession.session), status: 'PRESENT', checkInTime: capturedAt.toISOString() };
       const prepared = await prepareRecord(request, mode);

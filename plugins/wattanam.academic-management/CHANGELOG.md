@@ -1,5 +1,91 @@
 # Changelog
 
+## 0.1.31
+
+- Upgrade staff attendance to a dedicated fullscreen camera/USB station with automatic GPS,
+  live clock, scan feedback, vibration, and an in-session accepted-scan history.
+- Add student scanner camera switching, supported-device flashlight control, audible feedback,
+  vibration, durable queue state, and automatic reconnection synchronization.
+- Correct first-time student self-scan responses so only actual retries are marked as
+  idempotent replays.
+- Add security acceptance coverage for signed-token tampering, expiration, class membership,
+  role, geofence, registered-device policy, rejected retries, and exactly-once accepted scans.
+
+## 0.1.30
+
+- Add authoritative student and staff reporting that materializes absences only for elapsed
+  expected sessions and excludes holidays, non-working days, and out-of-employment dates.
+- Resolve historical student rosters per report date, honor class-specific schedules and session
+  overrides, and drive report totals and dashboard class progress from the canonical server model.
+- Add acceptance coverage for elapsed-session absence materialization and holiday exclusion.
+
+## 0.1.29
+
+- Complete the Manage Students workflow with one-step login, profile, enrollment, QR identifier,
+  and ID-card creation from inside a class.
+- Add real Excel template download, `.xlsx`/CSV import, Excel roster export, and row-level import
+  results while retaining the bounded and validated server import pipeline.
+
+## 0.1.28
+
+- Add an audited, idempotent Plugin SDK 1.2 staff-account capability and create restricted
+  STAFF/TEACHER logins directly from Manage Officers.
+- Add the offline-first student scanner and rotating signed-QR attendance-window workspace with
+  durable synchronization, live counters, recent confirmations, and automatic token rotation.
+
+## 0.1.27
+
+- Add a dedicated Attendance Dashboard as the first plugin menu entry with Cambodia-local date,
+  live student/staff KPIs, quick actions, attention cards, roster health, and class progress.
+- Add student/staff attendance distribution charts and a monthly trend panel derived from the
+  canonical Academic Management attendance records.
+
+## 0.1.26
+
+- Add dedicated Student and Staff Attendance Report workspaces with class/date controls, daily,
+  weekly, monthly, and yearly periods, session schedules, status totals, and attendance matrices.
+- Add CSV export and configurable print preview with paper size, organization header, custom header
+  lines, signers, and a print-ready attendance layout.
+
+## 0.1.25
+
+- Add Student ID Cards organized by study year and class, plus Staff ID Cards with searchable,
+  printable card galleries and downloadable attendance QR images.
+- Automatically create persistent, random attendance QR identifiers when students join a class
+  and when officer profiles are created; safely backfill identifiers for existing students/staff.
+- Enable staff identifiers in the attendance schema so printed staff cards work with the secure
+  camera and USB staff-attendance scanners.
+
+## 0.1.24
+
+- Replace the generic attendance-record table with a dedicated Take Attendance workspace that
+  loads class rosters and today’s session records, supports per-student status changes, captures
+  location when permitted, and saves the complete roster.
+- Add connected full-screen camera QR and USB keyboard-scanner experiences with live counters,
+  scan feedback, attended-student history, automatic session selection, and the existing secure
+  identifier, enrollment, time-window, holiday, role, and idempotency validation.
+- Resolve scans against canonical student-profile QR codes when no separately registered
+  attendance identifier exists, allowing existing student ID cards to work without duplication.
+
+## 0.1.23
+
+- Add dedicated Session Time Settings for class and staff attendance: quick class presets, four
+  configurable check-in/out windows per scope, attendance-format rules, staff working days, save,
+  and reset-to-default workflows.
+
+## 0.1.22
+
+- Add a dedicated Manage Officers workspace with officer/department tabs, directory filtering,
+  the complete position catalog, secure officer-profile creation, printable ID cards, editing, and
+  recoverable deactivation that preserves login accounts and attendance history.
+
+## 0.1.21
+
+- Add the dedicated Manage Classes workspace with study-year filtering, search, sorting, grid/list
+  views, rich class creation, attendance schedule presets, class cards, and guarded deletion.
+- Add the in-page Manage Students workflow with available-student enrollment, roster management,
+  CSV sample/import/export, and links to edit student profiles.
+
 ## 0.1.20
 
 - Replace the generic Study Years table and form with a responsive management workspace matching

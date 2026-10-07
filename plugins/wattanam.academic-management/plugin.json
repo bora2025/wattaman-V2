@@ -3,15 +3,16 @@
   "id": "wattanam.academic-management",
   "name": "Academic Management",
   "description": "Official Wattanam academic structures, profiles, admissions, enrollment, and roster contracts.",
-  "version": "0.1.20",
+  "version": "0.1.31",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
   "backendEntry": "backend/index.js",
   "frontendEntry": "frontend/page.json",
-  "sdkVersion": "1.1.0",
+  "sdkVersion": "1.2.0",
   "runtimeVersion": "1.0.0",
   "capabilities": [
+    "accounts.staff.create",
     "accounts.student.create",
     "accounts.student.update",
     "api.routes",
@@ -384,9 +385,21 @@
       "path": "migrations/055_create_self_attendance_part_10.sql",
       "checksum": "48e9ed89caa5694906494788bc9a9907f89aff08a834b88598b478c2c8d7f1d0",
       "destructive": false
+    },
+    {
+      "id": "056_enable_staff_attendance_identifiers",
+      "path": "migrations/056_enable_staff_attendance_identifiers.sql",
+      "checksum": "ff393558f4c2fa9c4fbcf6f8303d276eeae3d9ab358dc4ad99eddfeb3c806cc6",
+      "destructive": false
     }
   ],
   "navigation": [
+    {
+      "id": "attendance-dashboard",
+      "label": "Dashboard",
+      "href": "/plugins/wattanam.academic-management/dashboard",
+      "permission": "wattanam.academic-management.attendance.view"
+    },
     {
       "id": "study-years",
       "label": "Study Years",
@@ -412,6 +425,12 @@
       "permission": "wattanam.academic-management.view"
     },
     {
+      "id": "student-id-cards",
+      "label": "Student ID Cards",
+      "href": "/plugins/wattanam.academic-management/student-id-cards",
+      "permission": "wattanam.academic-management.manage"
+    },
+    {
       "id": "teachers",
       "label": "Teachers",
       "href": "/plugins/wattanam.academic-management/teachers",
@@ -422,6 +441,12 @@
       "label": "Manage Officers",
       "href": "/plugins/wattanam.academic-management/officers",
       "permission": "wattanam.academic-management.view"
+    },
+    {
+      "id": "staff-id-cards",
+      "label": "Staff ID Cards",
+      "href": "/plugins/wattanam.academic-management/staff-id-cards",
+      "permission": "wattanam.academic-management.manage"
     },
     {
       "id": "officer-attendance",

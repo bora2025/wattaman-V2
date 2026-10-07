@@ -7,7 +7,7 @@ scanning, corrections, attendance sessions, holidays, identifiers, alerts, repor
 CSV export. The attendance runtime uses the Academic Management namespace and its canonical Study
 Year records.
 
-Version 0.1.20 includes the dedicated Study Years workspace and the secure self-attendance design described by the monolith planning
+Version 0.1.27 includes a dedicated Attendance Dashboard plus Study Years, Manage Classes, Manage Officers, Student and Staff ID Cards, Session Time Settings, Take Attendance, and Student/Staff Attendance Report workspaces and the secure self-attendance design described by the monolith planning
 documents. Authorized staff open a class/session window and receive short-lived, rotating
 Ed25519-signed tokens. Authenticated students can scan only for themselves; the backend validates
 the signature, installation identity, class enrollment, session, token lifetime, holiday, optional

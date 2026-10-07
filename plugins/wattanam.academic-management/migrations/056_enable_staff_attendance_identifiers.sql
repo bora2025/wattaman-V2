@@ -1,0 +1,2 @@
+-- wattanam-plugin-migration: 056_enable_staff_attendance_identifiers
+ALTER TABLE "plugin_wattanam_academic_management_attendance_identifier" DROP CONSTRAINT IF EXISTS "academic_management_attendance_identifier_student_only";
