@@ -1021,137 +1021,15 @@
       ],
       "components": [
         {
-          "id": "heading",
-          "type": "heading",
-          "title": "Study Years"
-        },
-        {
-          "id": "study-years-table",
-          "type": "table",
-          "title": "Study Years",
+          "id": "study-year-workspace",
+          "type": "study-year-manager",
           "source": "studyYears",
-          "fields": [
-            {
-              "id": "year",
-              "label": "Year",
-              "format": "number",
-              "sortable": true
-            },
-            {
-              "id": "label",
-              "label": "Label",
-              "sortable": true,
-              "filterable": true
-            },
-            {
-              "id": "startDate",
-              "label": "Start date",
-              "format": "date"
-            },
-            {
-              "id": "endDate",
-              "label": "End date",
-              "format": "date"
-            },
-            {
-              "id": "isCurrent",
-              "label": "Current",
-              "format": "boolean",
-              "sortable": true
-            },
-            {
-              "id": "schoolName",
-              "label": "School"
-            },
-            {
-              "id": "classCount",
-              "label": "Classes",
-              "path": "_count.classes",
-              "format": "number"
-            }
-          ],
           "options": {
-            "pageSize": 20,
-            "selectable": true,
-            "rowRoute": "study-years/edit/:id",
-            "rowParameterMap": {
-              "id": "id"
-            }
-          }
-        },
-        {
-          "id": "study-year-actions",
-          "type": "actions",
-          "options": {
-            "actions": [
-              {
-                "id": "set-current-study-year",
-                "label": "Set selected as current",
-                "mode": "bulk",
-                "source": "setCurrentStudyYear",
-                "selectionSource": "studyYears",
-                "idParameter": "studyYearId",
-                "confirmation": "Set the selected study year as current? Select exactly one study year."
-              },
-              {
-                "id": "delete-study-years",
-                "label": "Delete selected study years",
-                "mode": "bulk",
-                "source": "deleteStudyYear",
-                "selectionSource": "studyYears",
-                "idParameter": "studyYearId",
-                "confirmation": "Delete the selected study years? Study years with classes cannot be deleted.",
-                "destructive": true
-              }
-            ]
-          }
-        },
-        {
-          "id": "study-year-create-form",
-          "type": "form",
-          "title": "Create study year",
-          "source": "createStudyYear",
-          "fields": [
-            {
-              "id": "year",
-              "type": "number",
-              "label": "Year",
-              "required": true,
-              "min": 2020,
-              "max": 2100
-            },
-            {
-              "id": "label",
-              "type": "text",
-              "label": "Label",
-              "maxLength": 120
-            },
-            {
-              "id": "startDate",
-              "type": "date",
-              "label": "Start date"
-            },
-            {
-              "id": "endDate",
-              "type": "date",
-              "label": "End date"
-            },
-            {
-              "id": "schoolName",
-              "type": "text",
-              "label": "School name",
-              "maxLength": 160
-            },
-            {
-              "id": "logoUrl",
-              "type": "text",
-              "label": "Logo URL",
-              "maxLength": 500
-            }
-          ],
-          "options": {
-            "submitLabel": "Create",
-            "successMessage": "Study year created"
+            "createSource": "createStudyYear",
+            "setCurrentSource": "setCurrentStudyYear",
+            "deleteSource": "deleteStudyYear",
+            "editRoute": "study-years/edit",
+            "classesRoute": "classes"
           }
         }
       ]

@@ -60,6 +60,8 @@ test('Academic Management exposes administration and full attendance workflows',
   for (const page of ['study-years', 'classes', 'officers', 'officer-edit', 'officer-attendance', 'attendance-records', 'attendance-scanner', 'attendance-corrections', 'attendance-reports', 'attendance-settings', 'attendance-windows', 'student-attendance-scan', 'attendance-self-review', 'staff-attendance-scanner', 'staff-attendance-reports']) {
     assert.ok(ui.pages.some((candidate) => candidate.id === page), `missing UI page ${page}`);
   }
+  const studyYears = ui.pages.find((candidate) => candidate.id === 'study-years');
+  assert.ok(studyYears.components.some((component) => component.type === 'study-year-manager'), 'missing dedicated Study Years workspace');
 });
 
 test('every Academic Management migration uses the verified single-statement format', () => {

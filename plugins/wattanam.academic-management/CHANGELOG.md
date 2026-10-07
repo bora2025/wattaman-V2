@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.20
+
+- Replace the generic Study Years table and form with a responsive management workspace matching
+  the reference UI: expandable creation form, logo upload and preview, current-year cards, class
+  counts, date range, View Classes, Edit, Set Current, and guarded Delete actions.
+
 ## 0.1.19
 
 - Split the pending attendance schema into one SQL statement per migration so Customer School's
