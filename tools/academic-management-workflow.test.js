@@ -173,6 +173,7 @@ test('Academic Management exposes administration and full attendance workflows',
   for (const pageId of ['student-id-cards', 'staff-id-cards']) {
     const cards = ui.pages.find((candidate) => candidate.id === pageId);
     assert.ok(cards?.components.some((component) => component.type === 'id-card-manager'), `missing ${pageId} workspace`);
+    assert.ok(navigation.some((entry) => entry.id === pageId), `missing runtime navigation for ${pageId}`);
   }
   for (const pageId of ['attendance-reports', 'staff-attendance-reports']) {
     const reports = ui.pages.find((candidate) => candidate.id === pageId);
