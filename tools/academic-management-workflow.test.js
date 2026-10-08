@@ -182,6 +182,15 @@ test('Academic Management exposes administration and full attendance workflows',
   assert.ok(routes.has('GET id-cards/staff'), 'missing staff card route');
 });
 
+test('direct class student creation casts date-of-birth input to PostgreSQL date', () => {
+  const source = fs.readFileSync(path.join(root, 'backend', 'index.js'), 'utf8');
+  assert.match(
+    source,
+    /classes\/:id\/students\/create[\s\S]*?"dateOfBirth"[\s\S]*?\$8::date/,
+    'student creation must cast the bound date string before inserting it into a DATE column',
+  );
+});
+
 test('every Academic Management migration uses the verified single-statement format', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'plugin.json'), 'utf8'));
   for (const migration of manifest.migrations.filter((item) => Number(item.id.slice(0, 3)) >= 11)) {
