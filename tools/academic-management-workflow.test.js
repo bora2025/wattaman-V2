@@ -192,6 +192,13 @@ test('direct class student creation casts date-of-birth input to PostgreSQL date
   );
 });
 
+test('merged attendance resolves class rosters from Academic Management tables', () => {
+  const source = fs.readFileSync(path.join(root, 'backend', 'index.js'), 'utf8');
+  assert.match(source, /directory:\s*\{[\s\S]*?getClassRoster,[\s\S]*?resolveAttendanceIdentifier:/);
+  assert.match(source, /FROM \$\{ENROLLMENT\} WHERE "classId" = \$1 AND "validFrom" <= \$2::date/);
+  assert.doesNotMatch(source, /getClassRoster:\s*context\.directory\.getClassRoster/);
+});
+
 test('every Academic Management migration uses the verified single-statement format', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'plugin.json'), 'utf8'));
   for (const migration of manifest.migrations.filter((item) => Number(item.id.slice(0, 3)) >= 11)) {

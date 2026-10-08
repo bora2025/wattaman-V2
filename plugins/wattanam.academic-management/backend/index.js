@@ -67,11 +67,52 @@ function attendanceContext(context) {
       publish: (event) => tx.publish({ ...event, event: attendancePermission(event.event) }),
     })),
   };
+  const getClassRoster = async (classId, asOfIsoDate) => {
+    const date = requireIsoDate(asOfIsoDate);
+    const classes = await context.database.query(
+      `SELECT "id", "name" FROM ${CLASS} WHERE "id" = $1 LIMIT 1`,
+      [String(classId || '')],
+    );
+    if (!classes.length) throw new Error('Class not found');
+    const intervals = await context.database.query(
+      `SELECT "studentId" FROM ${ENROLLMENT} WHERE "classId" = $1 AND "validFrom" <= $2::date AND ("validTo" IS NULL OR "validTo" >= $2::date) ORDER BY "studentId" ASC`,
+      [String(classId || ''), date],
+    );
+    const studentIds = intervals.map((row) => row.studentId);
+    if (new Set(studentIds).size !== studentIds.length) throw new Error('Overlapping Academic Management enrollment intervals detected');
+    const profiles = studentIds.length ? await context.database.query(
+      `SELECT "id", "userId", "studentNumber", "guardianUserId" FROM ${STUDENT_PROFILE} WHERE "id" = ANY($1::text[]) ORDER BY "id" ASC`,
+      [studentIds],
+    ) : [];
+    if (profiles.length !== studentIds.length) throw new Error('Academic enrollment interval references a missing student profile');
+    const users = profiles.length && typeof context.directory.lookupUsers === 'function'
+      ? await context.directory.lookupUsers(profiles.map((profile) => profile.userId))
+      : [];
+    const usersById = new Map(users.map((user) => [user.id, user]));
+    const profilesById = new Map(profiles.map((profile) => [profile.id, profile]));
+    return {
+      contract: ROSTER_CONTRACT,
+      classId: String(classId || ''),
+      className: classes[0].name || null,
+      asOfIsoDate: date,
+      source: 'plugin-enrollment-interval',
+      students: studentIds.map((studentId) => profilesById.get(studentId)).map((profile) => ({
+        studentId: profile.id,
+        userId: profile.userId,
+        studentNumber: profile.studentNumber || null,
+        name: usersById.get(profile.userId)?.name || '',
+        parentId: profile.guardianUserId || null,
+      })),
+    };
+  };
   return {
     ...context,
     database,
     directory: {
       ...context.directory,
+      // Attendance belongs to this plugin and must not fall back to the lean core's
+      // optional legacy academic Prisma models when resolving its own class roster.
+      getClassRoster,
       resolveAttendanceIdentifier: async (code) => {
         const rows = await context.database.query(
           `SELECT "id" AS "personId", 'STUDENT' AS "personType" FROM ${STUDENT_PROFILE} WHERE "qrCode" = $1 LIMIT 1`,

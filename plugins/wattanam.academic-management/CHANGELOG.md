@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.37
+
+- Fix student QR attendance scans on lean-core customer installations by resolving
+  dated class rosters directly from Academic Management enrollment intervals instead
+  of falling back to optional legacy core academic Prisma models.
+
 ## 0.1.31
 
 - Upgrade staff attendance to a dedicated fullscreen camera/USB station with automatic GPS,
