@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.38
+
+- Fix camera, USB, student self-service, and staff QR scans by executing PostgreSQL
+  advisory-lock SELECT statements through the transactional query API accepted by core.
+
 ## 0.1.37
 
 - Fix student QR attendance scans on lean-core customer installations by resolving

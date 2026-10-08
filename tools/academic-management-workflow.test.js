@@ -199,6 +199,14 @@ test('merged attendance resolves class rosters from Academic Management tables',
   assert.doesNotMatch(source, /getClassRoster:\s*context\.directory\.getClassRoster/);
 });
 
+test('attendance advisory locks use the transactional query API', () => {
+  for (const file of ['attendance-runtime.js', 'self-attendance.js', 'staff-attendance.js']) {
+    const source = fs.readFileSync(path.join(root, 'backend', file), 'utf8');
+    assert.doesNotMatch(source, /tx\.execute\(`SELECT pg_advisory_xact_lock/, `${file} must not send a SELECT through execute()`);
+    assert.match(source, /tx\.query\(`SELECT pg_advisory_xact_lock/, `${file} must acquire its lock through query()`);
+  }
+});
+
 test('every Academic Management migration uses the verified single-statement format', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'plugin.json'), 'utf8'));
   for (const migration of manifest.migrations.filter((item) => Number(item.id.slice(0, 3)) >= 11)) {

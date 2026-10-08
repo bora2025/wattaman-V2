@@ -105,7 +105,7 @@ function registerStaffAttendance(context) {
       const studyYear = (await context.database.query(`SELECT "id","label","year" FROM ${STUDY_YEAR} WHERE "isCurrent"=TRUE ORDER BY "year" DESC LIMIT 1`))[0] || null;
       const idempotencyKey = `staff:${commandKey}`;
       const output = await context.database.transaction(async (tx) => {
-        await tx.execute(`SELECT pg_advisory_xact_lock(hashtextextended($1,0)) FROM (SELECT COUNT(*) FROM ${SCAN}) AS namespace_guard`, [idempotencyKey]);
+        await tx.query(`SELECT pg_advisory_xact_lock(hashtextextended($1,0)) FROM (SELECT COUNT(*) FROM ${SCAN}) AS namespace_guard`, [idempotencyKey]);
         const previous = (await tx.query(`SELECT "recordId" FROM ${SCAN} WHERE "idempotencyKey"=$1 LIMIT 1`, [idempotencyKey]))[0];
         if (previous?.recordId) return { record: (await tx.query(`SELECT * FROM ${RECORD} WHERE "id"=$1`, [previous.recordId]))[0], replay: true };
         const existing = (await tx.query(
