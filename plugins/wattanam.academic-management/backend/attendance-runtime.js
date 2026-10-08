@@ -39,6 +39,14 @@ function zonedDateTime(value, timeZone) {
   return { date: `${parts.year}-${parts.month}-${parts.day}`, time: `${parts.hour}:${parts.minute}` };
 }
 
+function timeWithinWindow(current, start, end) {
+  const now = String(current || '').slice(0, 5);
+  const from = String(start || '').slice(0, 5);
+  const until = String(end || '').slice(0, 5);
+  if (!/^\d{2}:\d{2}$/.test(now) || !/^\d{2}:\d{2}$/.test(from) || !/^\d{2}:\d{2}$/.test(until)) return false;
+  return from <= until ? now >= from && now <= until : now >= from || now <= until;
+}
+
 module.exports = {
   id: 'wattanam.attendance-manager',
   health() { return { status: 'ready' }; },
@@ -235,7 +243,7 @@ module.exports = {
         `SELECT "session", "startTime", "endTime", "classId" FROM ${SESSION} WHERE "scope"='STUDENT' AND ("classId"=$1 OR "classId"='') ORDER BY CASE WHEN "classId"=$1 THEN 0 ELSE 1 END, "session"`,
         [classId],
       );
-      const activeSession = sessions.find((candidate) => (requestedSession === null || Number(candidate.session) === requestedSession) && String(candidate.startTime) <= local.time && String(candidate.endTime) >= local.time);
+      const activeSession = sessions.find((candidate) => (requestedSession === null || Number(candidate.session) === requestedSession) && timeWithinWindow(local.time, candidate.startTime, candidate.endTime));
       if (!activeSession) throw new Error('No active attendance session for this class and school-local time');
       const holidays = await context.database.query(`SELECT "id" FROM ${HOLIDAY} WHERE "date"=$1::date LIMIT 1`, [local.date]);
       if (holidays.length) throw new Error('Attendance cannot be scanned on a configured holiday');

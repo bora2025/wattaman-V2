@@ -34,6 +34,14 @@ function minuteOfDay(value) {
   return match ? Number(match[1]) * 60 + Number(match[2]) : null;
 }
 
+function timeWithinWindow(current, start, end) {
+  const now = String(current || '').slice(0, 5);
+  const from = String(start || '').slice(0, 5);
+  const until = String(end || '').slice(0, 5);
+  if (!/^\d{2}:\d{2}$/.test(now) || !/^\d{2}:\d{2}$/.test(from) || !/^\d{2}:\d{2}$/.test(until)) return false;
+  return from <= until ? now >= from && now <= until : now >= from || now <= until;
+}
+
 function staffRole(request) {
   const role = String(request?.principal?.role || '').toUpperCase();
   if (!['SUPER_ADMIN', 'SCHOOL_ADMIN', 'ADMIN', 'WATTAMAN'].includes(role)) throw new Error('This role cannot scan staff attendance');
@@ -79,7 +87,7 @@ function registerStaffAttendance(context) {
       );
       const requested = body.session == null || body.session === '' ? null : Number(body.session);
       const active = sessions.find((candidate) => (requested === null || Number(candidate.session) === requested)
-        && String(candidate.startTime) <= schoolTime.time && String(candidate.endTime) >= schoolTime.time);
+        && timeWithinWindow(schoolTime.time, candidate.startTime, candidate.endTime));
       if (!active) throw new Error('No active staff attendance session');
       const alias = (await context.database.query(
         `SELECT "personId" FROM ${IDENTIFIER} WHERE "code"=$1 AND "personType"='STAFF' AND "active"=TRUE LIMIT 1`, [code],
