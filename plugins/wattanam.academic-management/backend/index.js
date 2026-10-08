@@ -1969,7 +1969,7 @@ module.exports = {
     });
     context.routes.register({
       method: 'GET', path: 'session-settings', permission: 'wattanam.academic-management.attendance.view',
-      handler: async () => context.settings.get('attendanceSessionSettings', {
+      handler: async () => context.settings.get('attendance-session-settings', {
         classFormat: 'CUSTOM', classFormatRules: false, staffFormatRules: false,
         staffWorkingDays: ['MON', 'TUE', 'WED', 'THU', 'FRI'],
       }),
@@ -1983,7 +1983,7 @@ module.exports = {
         const staffWorkingDays = [...new Set((Array.isArray(body.staffWorkingDays) ? body.staffWorkingDays : []).map((day) => String(day).toUpperCase()))];
         if (staffWorkingDays.some((day) => !['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].includes(day))) throw new Error('Invalid staff working day');
         const settings = { classFormat, classFormatRules: body.classFormatRules === true, staffFormatRules: body.staffFormatRules === true, staffWorkingDays };
-        await context.settings.set('attendanceSessionSettings', settings);
+        await context.settings.set('attendance-session-settings', settings);
         return settings;
       },
     });

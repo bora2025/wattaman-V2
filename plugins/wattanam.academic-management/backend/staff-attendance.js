@@ -79,7 +79,7 @@ function registerStaffAttendance(context) {
       const commandKey = required(body.idempotencyKey, 'idempotencyKey');
       const capturedAt = new Date(body.clientTimestamp || new Date());
       if (Number.isNaN(capturedAt.getTime())) throw new Error('clientTimestamp is invalid');
-      const timeZone = await context.settings.get('schoolTimezone', 'Asia/Phnom_Penh');
+      const timeZone = await context.settings.get('school-timezone', 'Asia/Phnom_Penh');
       const schoolTime = local(capturedAt, timeZone);
       if ((await context.database.query(`SELECT "id" FROM ${HOLIDAY} WHERE "date"=$1::date LIMIT 1`, [schoolTime.date])).length) throw new Error('Staff attendance cannot be recorded on a configured holiday');
       const sessions = await context.database.query(
@@ -100,7 +100,7 @@ function registerStaffAttendance(context) {
       if (!officer) throw new Error('Active officer profile not found');
       const person = (await context.directory.lookupUsers([officer.userId]))[0];
       if (!person) throw new Error('Officer directory account not found');
-      const lateAfter = Number(await context.settings.get('attendanceLateAfterMinutes', 15));
+      const lateAfter = Number(await context.settings.get('attendance-late-after-minutes', 15));
       const status = minuteOfDay(schoolTime.time) > minuteOfDay(active.startTime) + lateAfter ? 'LATE' : 'PRESENT';
       const studyYear = (await context.database.query(`SELECT "id","label","year" FROM ${STUDY_YEAR} WHERE "isCurrent"=TRUE ORDER BY "year" DESC LIMIT 1`))[0] || null;
       const idempotencyKey = `staff:${commandKey}`;

@@ -226,10 +226,10 @@ module.exports = {
       if (!['SUPER_ADMIN', 'SCHOOL_ADMIN', 'ADMIN', 'TEACHER', 'CLASS_ADMIN', 'WATTAMAN'].includes(role)) {
         throw new Error('This role cannot scan student attendance');
       }
-      const timeZone = await context.settings.get('schoolTimezone', 'Asia/Phnom_Penh');
+      const timeZone = await context.settings.get('school-timezone', 'Asia/Phnom_Penh');
       try { new Intl.DateTimeFormat('en-US', { timeZone }).format(); } catch { throw new Error('Attendance schoolTimezone setting is invalid'); }
-      const maxOfflineMinutes = finiteSetting(await context.settings.get('maxOfflineMinutes', 1440), 1440, 0, 10080);
-      const futureToleranceMinutes = finiteSetting(await context.settings.get('futureToleranceMinutes', 5), 5, 0, 60);
+      const maxOfflineMinutes = finiteSetting(await context.settings.get('max-offline-minutes', 1440), 1440, 0, 10080);
+      const futureToleranceMinutes = finiteSetting(await context.settings.get('future-tolerance-minutes', 5), 5, 0, 60);
       const now = new Date(); const capturedAt = body.clientTimestamp ? new Date(body.clientTimestamp) : now;
       if (Number.isNaN(capturedAt.getTime())) throw new Error('clientTimestamp is invalid');
       const ageMinutes = (now.getTime() - capturedAt.getTime()) / 60000;

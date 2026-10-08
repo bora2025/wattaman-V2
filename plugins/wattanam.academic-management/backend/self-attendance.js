@@ -349,7 +349,7 @@ function registerSelfAttendance(context) {
       if (scannedAt < new Date(window.startsAt) || scannedAt > new Date(window.endsAt)) {
         return resultFromAudit(await recordAttempt(context.database, { ...base, result: 'NO_ACTIVE_SESSION', reason: 'Scan is outside the attendance window' }));
       }
-      const timeZone = await context.settings.get('schoolTimezone', 'Asia/Phnom_Penh');
+      const timeZone = await context.settings.get('school-timezone', 'Asia/Phnom_Penh');
       const local = localDateTime(scannedAt, timeZone);
       const enrollment = await context.directory.getEnrollmentAtDate(student.id, local.date);
       if (!enrollment.enrolled || !safeEqual(enrollment.classId, claims.classId)) {
@@ -387,7 +387,7 @@ function registerSelfAttendance(context) {
         `SELECT * FROM ${SESSION} WHERE "scope"='STUDENT' AND "session"=$1 AND ("classId"=$2 OR "classId"='') ORDER BY CASE WHEN "classId"=$2 THEN 0 ELSE 1 END LIMIT 1`,
         [Number(claims.session), claims.classId],
       ))[0];
-      const lateAfterMinutes = Number(await context.settings.get('attendanceLateAfterMinutes', 15));
+      const lateAfterMinutes = Number(await context.settings.get('attendance-late-after-minutes', 15));
       const localMinutes = minutes(local.time);
       const sessionStart = minutes(session?.startTime);
       const status = claims.sessionType === 'CHECK_IN' && sessionStart !== null && localMinutes > sessionStart + lateAfterMinutes ? 'LATE' : 'PRESENT';
@@ -497,7 +497,7 @@ function registerSelfAttendance(context) {
       let recordId = attempt.recordId || null;
       if (decision === 'APPROVED' && !recordId) {
         const scannedAt = timestamp(attempt.scannedAt, 'stored scan time');
-        const timeZone = await context.settings.get('schoolTimezone', 'Asia/Phnom_Penh');
+        const timeZone = await context.settings.get('school-timezone', 'Asia/Phnom_Penh');
         const local = localDateTime(scannedAt, timeZone);
         const roster = await context.directory.getClassRoster(attempt.classId, local.date);
         const rosterStudent = roster.students.find((candidate) => candidate.studentId === attempt.studentProfileId);
