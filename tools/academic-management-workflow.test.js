@@ -87,18 +87,20 @@ function selfScanHarness(overrides = {}) {
   return { handler: routes.get('POST student/self-scan').handler, token, claims, audits, records, now };
 }
 
-async function activate(directory = { lookupUsers: async () => [], resolveAudience: async () => [] }) {
+async function activate(directory = { lookupUsers: async () => [], resolveAudience: async () => [] }, databaseOverride = null) {
   const routes = new Map();
   const permissions = [];
   const navigation = [];
+  const database = databaseOverride || { query: async () => [], execute: async () => ({ count: 1 }), transaction: async (work) => work({ query: async () => [], execute: async () => ({ count: 1 }), publish() {} }) };
   await plugin.activate({
     logger: { log() {} },
-    database: { query: async () => [], execute: async () => ({ count: 1 }), transaction: async (work) => work({ query: async () => [], execute: async () => ({ count: 1 }), publish() {} }) },
+    database,
     directory,
     routes: { register(route) { routes.set(`${route.method} ${route.path}`, route); return () => {}; } },
     permissions: { register(items) { permissions.push(...items); return () => {}; } },
     navigation: { register(items) { navigation.push(...items); return () => {}; } },
     events: { publish() {}, subscribe() { return () => {}; } },
+    settings: { get: async (_key, fallback) => fallback, set: async () => {} },
     notifications: { notifyInApp: async () => {}, sendEmail: async () => ({ sent: true }) },
     readModels: { read: async () => [], publish: async () => {} },
     crypto: { hashBcrypt: async (value) => `hash:${value}` },
@@ -106,6 +108,33 @@ async function activate(directory = { lookupUsers: async () => [], resolveAudien
   });
   return { routes, permissions, navigation };
 }
+
+test('activated authoritative reports use Academic Management enrollment rosters', async () => {
+  const reportDate = new Date().toISOString().slice(0, 10);
+  const record = { personId: 'student-1', personType: 'STUDENT', classId: 'class-1', date: reportDate, session: 1, status: 'PRESENT', personNameSnapshot: 'Student One', personNumberSnapshot: '0001' };
+  const database = {
+    query: async (sql) => {
+      if (sql.includes('FROM plugin_wattanam_academic_management_class') && sql.includes('"schedule"')) return [{ id: 'class-1', name: 'A', schedule: JSON.stringify({ week: ['SUN','MON','TUE','WED','THU','FRI','SAT'] }) }];
+      if (sql.includes('FROM plugin_wattanam_academic_management_class')) return [{ id: 'class-1', name: 'A' }];
+      if (sql.includes('FROM plugin_wattanam_academic_management_enrollment_interval')) return [{ studentId: 'student-1' }];
+      if (sql.includes('FROM plugin_wattanam_academic_management_student_profile')) return [{ id: 'student-1', userId: 'user-1', studentNumber: '0001', guardianUserId: null }];
+      if (sql.includes('FROM plugin_wattanam_academic_management_attendance_session')) return [{ scope: 'STUDENT', classId: '', session: 1, type: 'CHECK_IN', startTime: '00:00', endTime: '23:59' }];
+      if (sql.includes('FROM plugin_wattanam_academic_management_attendance_record')) return [record];
+      return [];
+    },
+    execute: async () => ({ count: 1 }),
+    transaction: async (work) => work({ query: async () => [], execute: async () => ({ count: 1 }), publish() {} }),
+  };
+  const directory = {
+    lookupUsers: async () => [{ id: 'user-1', name: 'Student One' }],
+    resolveAudience: async () => [],
+    getClassRoster: async () => { throw new Error('legacy roster must not be used'); },
+  };
+  const { routes } = await activate(directory, database);
+  const report = await routes.get('GET reports/authoritative').handler({ query: { classId: 'class-1', date: reportDate }, principal: { role: 'ADMIN', userId: 'admin-1' } });
+  assert.equal(report.totals.present, 1);
+  assert.deepEqual(report.people.map((person) => person.id), ['student-1']);
+});
 
 test('Academic Management exposes administration and full attendance workflows', async () => {
   const { routes, permissions, navigation } = await activate();

@@ -2051,9 +2051,13 @@ module.exports = {
         return settings;
       },
     });
-    await attendanceRuntime.activate(attendanceContext(context));
+    const academicAttendanceContext = attendanceContext(context);
+    await attendanceRuntime.activate(academicAttendanceContext);
     registerSelfAttendance(context);
     registerStaffAttendance(context);
-    registerAuthoritativeReports(context);
+    // Authoritative student reports must resolve rosters from this plugin's
+    // enrollment tables. The lean customer-school core intentionally does not
+    // expose the legacy academic Prisma models through its directory provider.
+    registerAuthoritativeReports(academicAttendanceContext);
   },
 };

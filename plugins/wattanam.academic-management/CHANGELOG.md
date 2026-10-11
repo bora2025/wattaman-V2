@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.46
+
+- Fix student attendance reports and print previews to load class rosters from
+  Academic Management enrollment data instead of unavailable legacy core models.
+- Verify that a saved QR attendance record flows into the authoritative report.
+
 ## 0.1.45
 
 - Display each class's study days and provide a dedicated editor with Saturday,
