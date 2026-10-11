@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.43
+
+- Show student and staff attendance on the dashboard and authoritative reports as soon
+  as a scan is recorded, without waiting for the active session to end.
+- Continue to exclude untouched future sessions so they are not counted absent early.
+
+## 0.1.42
+
+- Upgrade the student USB attendance station to the proven Wattanam HID workflow with
+  layout-independent QR input, buffered keyboard-scanner capture, device detection,
+  non-recording scanner tests, live activity feedback, and attended-today results.
+
 ## 0.1.41
 
 - Cast ISO timestamp parameters explicitly for student, staff, self-service, and review

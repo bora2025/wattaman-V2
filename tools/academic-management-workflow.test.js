@@ -269,6 +269,38 @@ test('authoritative student reports materialize absence only for elapsed working
   assert.equal(result.entries[0].source, 'EXPECTED_SESSION');
 });
 
+test('authoritative student and staff reports show recorded sessions before the session ends', async () => {
+  const routes = new Map();
+  const future = new Date(); future.setUTCDate(future.getUTCDate() + 7);
+  const reportDate = future.toISOString().slice(0, 10);
+  const dayCode = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][future.getUTCDay()];
+  const studentRecord = { personId: 'student-1', personType: 'STUDENT', classId: 'class-1', date: reportDate, session: 1, status: 'PRESENT', personNameSnapshot: 'Student One', personNumberSnapshot: '0001' };
+  const staffRecord = { personId: 'officer-1', personType: 'STAFF', date: reportDate, session: 1, status: 'PRESENT', personNameSnapshot: 'Officer One', personNumberSnapshot: 'E001' };
+  registerAuthoritativeReports({
+    routes: { register(route) { routes.set(`${route.method} ${route.path}`, route); } },
+    settings: { get: async (key, fallback) => key === 'attendance-session-settings' ? { staffWorkingDays: [dayCode] } : fallback },
+    database: { query: async (sql) => {
+      if (sql.includes(`FROM plugin_wattanam_academic_management_class `)) return [{ id: 'class-1', name: 'A', schedule: JSON.stringify({ week: [dayCode] }) }];
+      if (sql.includes(`FROM plugin_wattanam_academic_management_officer_profile`)) return [{ id: 'officer-1', userId: 'user-1', employeeNumber: 'E001', employmentStatus: 'ACTIVE' }];
+      if (sql.includes(`FROM plugin_wattanam_academic_management_attendance_session`)) return [
+        { scope: 'STUDENT', classId: '', session: 1, type: 'CHECK_IN', startTime: '23:58', endTime: '23:59' },
+        { scope: 'STAFF', classId: '', session: 1, type: 'CHECK_IN', startTime: '23:58', endTime: '23:59' },
+      ];
+      if (sql.includes(`FROM plugin_wattanam_academic_management_attendance_holiday`)) return [];
+      if (sql.includes(`FROM plugin_wattanam_academic_management_attendance_record`)) return sql.includes(`"personType"='STAFF'`) ? [staffRecord] : [studentRecord];
+      return [];
+    } },
+    directory: {
+      getClassRoster: async () => ({ className: 'A', students: [{ studentId: 'student-1', studentNumber: '0001', name: 'Student One' }] }),
+      lookupUsers: async () => [{ id: 'user-1', name: 'Officer One' }],
+    },
+  });
+  const student = await routes.get('GET reports/authoritative').handler({ query: { classId: 'class-1', startDate: reportDate, endDate: reportDate } });
+  const staff = await routes.get('GET staff-attendance/reports/authoritative').handler({ query: { startDate: reportDate, endDate: reportDate } });
+  assert.equal(student.totals.present, 1);
+  assert.equal(staff.totals.present, 1);
+});
+
 test('authoritative student reports exclude configured holidays', async () => {
   const routes = new Map(); const date = '2026-10-07';
   registerAuthoritativeReports({
