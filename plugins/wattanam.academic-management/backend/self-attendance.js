@@ -393,7 +393,7 @@ function registerSelfAttendance(context) {
       const status = claims.sessionType === 'CHECK_IN' && sessionStart !== null && localMinutes > sessionStart + lateAfterMinutes ? 'LATE' : 'PRESENT';
       const studyYear = (await context.database.query(`SELECT "id","label","year" FROM ${STUDY_YEAR} WHERE "isCurrent"=TRUE ORDER BY "year" DESC LIMIT 1`))[0] || null;
       const result = await context.database.transaction(async (tx) => {
-        await tx.query(`SELECT pg_advisory_xact_lock(hashtextextended($1,0)) FROM (SELECT COUNT(*) FROM ${AUDIT}) AS namespace_guard`, [`student-self-scan:${clientRequestId}`]);
+        await tx.query(`SELECT 1 AS "locked" FROM pg_advisory_xact_lock(hashtextextended($1,0)), (SELECT COUNT(*) FROM ${AUDIT}) AS namespace_guard`, [`student-self-scan:${clientRequestId}`]);
         const replay = (await tx.query(`SELECT * FROM ${AUDIT} WHERE "clientRequestId"=$1 LIMIT 1`, [clientRequestId]))[0];
         if (replay) return { audit: replay, record: replay.recordId ? (await tx.query(`SELECT * FROM ${RECORD} WHERE "id"=$1`, [replay.recordId]))[0] : null };
         const prior = (await tx.query(`SELECT * FROM ${RECORD} WHERE "personType"='STUDENT' AND "personId"=$1 AND "classId"=$2 AND "date"=$3::date AND "session"=$4 LIMIT 1 FOR UPDATE`, [student.id, claims.classId, local.date, Number(claims.session)]))[0];

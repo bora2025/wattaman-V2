@@ -203,7 +203,7 @@ test('attendance advisory locks use the transactional query API', () => {
   for (const file of ['attendance-runtime.js', 'self-attendance.js', 'staff-attendance.js']) {
     const source = fs.readFileSync(path.join(root, 'backend', file), 'utf8');
     assert.doesNotMatch(source, /tx\.execute\(`SELECT pg_advisory_xact_lock/, `${file} must not send a SELECT through execute()`);
-    assert.match(source, /tx\.query\(`SELECT pg_advisory_xact_lock/, `${file} must acquire its lock through query()`);
+    assert.match(source, /tx\.query\(`SELECT 1 AS "locked" FROM pg_advisory_xact_lock/, `${file} must acquire its lock without returning PostgreSQL void`);
   }
 });
 

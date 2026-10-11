@@ -257,7 +257,7 @@ module.exports = {
       request.body = { ...body, ...aliases[0], classId, date: local.date, session: Number(activeSession.session), status: 'PRESENT', checkInTime: capturedAt.toISOString() };
       const prepared = await prepareRecord(request, mode);
       const result = await context.database.transaction(async (tx) => {
-        await tx.query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0)) FROM (SELECT COUNT(*) FROM ${SCAN}) AS namespace_guard`, [`${module.exports.id}:scan:${commandKey}`]);
+        await tx.query(`SELECT 1 AS "locked" FROM pg_advisory_xact_lock(hashtextextended($1, 0)), (SELECT COUNT(*) FROM ${SCAN}) AS namespace_guard`, [`${module.exports.id}:scan:${commandKey}`]);
         const previous = await tx.query(`SELECT "recordId", "outcome", "errorCode" FROM ${SCAN} WHERE "idempotencyKey"=$1 LIMIT 1`, [commandKey]);
         if (previous.length) {
           if (previous[0].outcome !== 'ACCEPTED' || !previous[0].recordId) throw new Error(previous[0].errorCode || 'Attendance scan was rejected');
