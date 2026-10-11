@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.47
+
+- Preserve saved student and staff attendance records when their session number is
+  no longer present in the current session configuration.
+- Keep dashboard totals, attendance reports, and print previews consistent after
+  administrators edit session times or replace session definitions.
+
 ## 0.1.46
 
 - Fix student attendance reports and print previews to load class rosters from
