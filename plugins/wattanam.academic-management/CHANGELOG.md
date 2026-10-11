@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.44
+
+- Preserve real student and staff scan records in dashboards and reports on weekends,
+  configured days off, and holidays without generating false absence rows.
+
 ## 0.1.43
 
 - Show student and staff attendance on the dashboard and authoritative reports as soon
