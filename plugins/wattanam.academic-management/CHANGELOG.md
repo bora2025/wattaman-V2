@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.40
+
+- Keep attendance advisory-lock functions out of the SQL `FROM` relation list so the
+  plugin table namespace sandbox accepts them, while casting their result for Prisma.
+
 ## 0.1.39
 
 - Prevent Prisma `void` deserialization errors during QR scans by acquiring each
