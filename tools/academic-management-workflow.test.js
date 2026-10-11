@@ -303,8 +303,9 @@ test('authoritative reports preserve real scans on non-working days without fals
   const routes = new Map();
   const future = new Date(); future.setUTCDate(future.getUTCDate() + 7);
   const reportDate = future.toISOString().slice(0, 10);
-  const studentRecord = { personId: 'student-1', personType: 'STUDENT', classId: 'class-1', date: reportDate, session: 3, status: 'PRESENT', personNameSnapshot: 'Student One', personNumberSnapshot: '0001' };
-  const staffRecord = { personId: 'officer-1', personType: 'STAFF', date: reportDate, session: 3, status: 'PRESENT', personNameSnapshot: 'Officer One', personNumberSnapshot: 'E001' };
+  const databaseDate = new Date(`${reportDate}T00:00:00.000Z`);
+  const studentRecord = { personId: 'student-1', personType: 'STUDENT', classId: 'class-1', date: databaseDate, session: 3, status: 'PRESENT', personNameSnapshot: 'Student One', personNumberSnapshot: '0001' };
+  const staffRecord = { personId: 'officer-1', personType: 'STAFF', date: databaseDate, session: 3, status: 'PRESENT', personNameSnapshot: 'Officer One', personNumberSnapshot: 'E001' };
   registerAuthoritativeReports({
     routes: { register(route) { routes.set(`${route.method} ${route.path}`, route); } },
     settings: { get: async (key, fallback) => key === 'attendance-session-settings' ? { staffWorkingDays: [] } : fallback },

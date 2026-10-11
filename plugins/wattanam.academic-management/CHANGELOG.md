@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.48
+
+- Normalize PostgreSQL date values before matching attendance records to report
+  days, so saved QR and USB scans appear in student and staff reports.
+- Cover real database `Date` objects in the authoritative report workflow test.
+
 ## 0.1.47
 
 - Preserve saved student and staff attendance records when their session number is
