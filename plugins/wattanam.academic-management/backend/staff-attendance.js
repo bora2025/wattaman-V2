@@ -115,20 +115,20 @@ function registerStaffAttendance(context) {
         let record = existing;
         if (existing) {
           if (active.type === 'CHECK_OUT' && !existing.checkOutTime) {
-            await tx.execute(`UPDATE ${RECORD} SET "checkOutTime"=$2,"scanLatitude"=$3,"scanLongitude"=$4,"scanLocation"=$5,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=$1`, [existing.id, capturedAt.toISOString(), body.latitude ?? null, body.longitude ?? null, String(body.location || '').slice(0, 300) || null]);
+            await tx.execute(`UPDATE ${RECORD} SET "checkOutTime"=$2::timestamptz,"scanLatitude"=$3,"scanLongitude"=$4,"scanLocation"=$5,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=$1`, [existing.id, capturedAt.toISOString(), body.latitude ?? null, body.longitude ?? null, String(body.location || '').slice(0, 300) || null]);
             record = (await tx.query(`SELECT * FROM ${RECORD} WHERE "id"=$1`, [existing.id]))[0];
           }
         } else {
           const recordId = crypto.randomUUID();
           await tx.execute(
             `INSERT INTO ${RECORD} ("id","personId","personType","studyYearId","date","session","status","checkInTime","checkOutTime","markedById","scanMode","scanLatitude","scanLongitude","scanLocation","personNameSnapshot","personNumberSnapshot","classNameSnapshot","studyYearLabelSnapshot","source","originalScanAt","synchronizedAt")
-             VALUES ($1,$2,'STAFF',$3,$4::date,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,'STAFF_SCAN',$18,CURRENT_TIMESTAMP)`,
+             VALUES ($1,$2,'STAFF',$3,$4::date,$5,$6,$7::timestamptz,$8::timestamptz,$9,$10,$11,$12,$13,$14,$15,$16,$17,'STAFF_SCAN',$18::timestamptz,CURRENT_TIMESTAMP)`,
             [recordId, officer.id, studyYear?.id || null, schoolTime.date, Number(active.session), status, active.type === 'CHECK_IN' ? capturedAt.toISOString() : null, active.type === 'CHECK_OUT' ? capturedAt.toISOString() : null, request.principal.userId, String(body.mode || '').toUpperCase() === 'USB' ? 'USB' : 'CAMERA', body.latitude ?? null, body.longitude ?? null, String(body.location || '').slice(0, 300) || null, person.name, officer.employeeNumber || null, officer.departmentName || null, studyYear?.label || (studyYear?.year ? String(studyYear.year) : null), capturedAt.toISOString()],
           );
           record = (await tx.query(`SELECT * FROM ${RECORD} WHERE "id"=$1`, [recordId]))[0];
         }
         await tx.execute(
-          `INSERT INTO ${SCAN} ("id","idempotencyKey","codeHash","mode","principalId","clientTimestamp","outcome","recordId","metadata") VALUES ($1,$2,$3,$4,$5,$6,'ACCEPTED',$7,$8::jsonb)`,
+          `INSERT INTO ${SCAN} ("id","idempotencyKey","codeHash","mode","principalId","clientTimestamp","outcome","recordId","metadata") VALUES ($1,$2,$3,$4,$5,$6::timestamptz,'ACCEPTED',$7,$8::jsonb)`,
           [crypto.randomUUID(), idempotencyKey, crypto.createHash('sha256').update(code).digest('hex'), String(body.mode || '').toUpperCase() === 'USB' ? 'USB' : 'CAMERA', request.principal.userId, capturedAt.toISOString(), record.id, JSON.stringify({ scope: 'STAFF', session: Number(active.session), timeZone })],
         );
         await tx.publish({ event: 'wattanam.academic-management.attendance.staff-recorded', version: 1, subjectKey: record.id, payload: { record }, idempotencyKey });

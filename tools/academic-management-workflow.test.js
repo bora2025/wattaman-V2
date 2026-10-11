@@ -208,6 +208,15 @@ test('attendance advisory locks use the transactional query API', () => {
   }
 });
 
+test('attendance scan writes cast ISO timestamp parameters for PostgreSQL', () => {
+  const runtime = fs.readFileSync(path.join(root, 'backend', 'attendance-runtime.js'), 'utf8');
+  const staff = fs.readFileSync(path.join(root, 'backend', 'staff-attendance.js'), 'utf8');
+  const self = fs.readFileSync(path.join(root, 'backend', 'self-attendance.js'), 'utf8');
+  assert.match(runtime, /"clientTimestamp"[\s\S]*?\$6::timestamptz/);
+  assert.match(staff, /"clientTimestamp"[\s\S]*?\$6::timestamptz/);
+  assert.match(self, /"scannedAt"[\s\S]*?\$11::timestamptz/);
+});
+
 test('every Academic Management migration uses the verified single-statement format', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'plugin.json'), 'utf8'));
   for (const migration of manifest.migrations.filter((item) => Number(item.id.slice(0, 3)) >= 11)) {

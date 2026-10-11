@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.41
+
+- Cast ISO timestamp parameters explicitly for student, staff, self-service, and review
+  scan writes so PostgreSQL accepts them for `TIMESTAMPTZ` attendance columns.
+
 ## 0.1.40
 
 - Keep attendance advisory-lock functions out of the SQL `FROM` relation list so the

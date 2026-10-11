@@ -267,7 +267,7 @@ module.exports = {
         }
         const record = await writeRecord(tx, prepared);
         await tx.execute(
-          `INSERT INTO ${SCAN} ("id","idempotencyKey","codeHash","mode","principalId","clientTimestamp","outcome","recordId","metadata") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb)`,
+          `INSERT INTO ${SCAN} ("id","idempotencyKey","codeHash","mode","principalId","clientTimestamp","outcome","recordId","metadata") VALUES ($1,$2,$3,$4,$5,$6::timestamptz,$7,$8,$9::jsonb)`,
           [crypto.randomUUID(), commandKey, crypto.createHash('sha256').update(code).digest('hex'), mode, prepared.markedById, capturedAt.toISOString(), 'ACCEPTED', record.id, JSON.stringify({ classId: prepared.classId, session: prepared.session, timeZone })],
         );
         return { record, replay: false };

@@ -169,7 +169,7 @@ async function tokenForWindow(db, window) {
 async function recordAttempt(db, input) {
   await db.execute(
     `INSERT INTO ${AUDIT} ("id","clientRequestId","tokenHash","tokenVersion","nonce","attendanceWindowId","studentProfileId","directoryUserId","classId","session","scannedAt","syncState","deviceIdHash","networkQuality","latitude","longitude","accuracyMeters","locationDecision","result","rejectionReason","recordId","reviewStatus")
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::timestamptz,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
      ON CONFLICT ("clientRequestId") DO NOTHING`,
     [
       crypto.randomUUID(), input.clientRequestId, input.tokenHash, input.tokenVersion || null,
@@ -398,7 +398,7 @@ function registerSelfAttendance(context) {
         if (replay) return { audit: replay, record: replay.recordId ? (await tx.query(`SELECT * FROM ${RECORD} WHERE "id"=$1`, [replay.recordId]))[0] : null };
         const prior = (await tx.query(`SELECT * FROM ${RECORD} WHERE "personType"='STUDENT' AND "personId"=$1 AND "classId"=$2 AND "date"=$3::date AND "session"=$4 LIMIT 1 FOR UPDATE`, [student.id, claims.classId, local.date, Number(claims.session)]))[0];
         if (prior) {
-          if (claims.sessionType === 'CHECK_OUT' && !prior.checkOutTime) await tx.execute(`UPDATE ${RECORD} SET "checkOutTime"=$2,"synchronizedAt"=CURRENT_TIMESTAMP,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=$1`, [prior.id, scannedAt.toISOString()]);
+          if (claims.sessionType === 'CHECK_OUT' && !prior.checkOutTime) await tx.execute(`UPDATE ${RECORD} SET "checkOutTime"=$2::timestamptz,"synchronizedAt"=CURRENT_TIMESTAMP,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=$1`, [prior.id, scannedAt.toISOString()]);
           const audit = await recordAttempt(tx, { ...base, result: 'ALREADY_RECORDED', recordId: prior.id });
           return { audit, record: prior };
         }
@@ -408,7 +408,7 @@ function registerSelfAttendance(context) {
         const recordId = crypto.randomUUID();
         await tx.execute(
           `INSERT INTO ${RECORD} ("id","personId","personType","classId","studyYearId","date","session","status","checkInTime","checkOutTime","markedById","scanMode","scanLatitude","scanLongitude","personNameSnapshot","personNumberSnapshot","classNameSnapshot","studyYearLabelSnapshot","source","attendanceWindowId","originalScanAt","synchronizedAt")
-           VALUES ($1,$2,'STUDENT',$3,$4,$5::date,$6,$7,$8,$9,$10,'CAMERA',$11,$12,$13,$14,$15,$16,$17,$18,$19,CURRENT_TIMESTAMP)`,
+           VALUES ($1,$2,'STUDENT',$3,$4,$5::date,$6,$7,$8::timestamptz,$9::timestamptz,$10,'CAMERA',$11,$12,$13,$14,$15,$16,$17,$18,$19::timestamptz,CURRENT_TIMESTAMP)`,
           [
             recordId, student.id, claims.classId, studyYear?.id || null, local.date, Number(claims.session), status,
             claims.sessionType === 'CHECK_IN' ? scannedAt.toISOString() : null,
@@ -506,7 +506,7 @@ function registerSelfAttendance(context) {
         recordId = crypto.randomUUID();
         await context.database.execute(
           `INSERT INTO ${RECORD} ("id","personId","personType","classId","studyYearId","date","session","status","checkInTime","markedById","scanMode","scanLatitude","scanLongitude","personNameSnapshot","personNumberSnapshot","classNameSnapshot","studyYearLabelSnapshot","source","attendanceWindowId","originalScanAt","synchronizedAt","reviewStatus")
-           VALUES ($1,$2,'STUDENT',$3,$4,$5::date,$6,'PRESENT',$7,$8,'CAMERA',$9,$10,$11,$12,$13,$14,'STUDENT_OFFLINE_SYNC',$15,$7,CURRENT_TIMESTAMP,'APPROVED')
+           VALUES ($1,$2,'STUDENT',$3,$4,$5::date,$6,'PRESENT',$7::timestamptz,$8,'CAMERA',$9,$10,$11,$12,$13,$14,'STUDENT_OFFLINE_SYNC',$15,$7::timestamptz,CURRENT_TIMESTAMP,'APPROVED')
            ON CONFLICT ("personType","personId","classId","date","session") DO NOTHING`,
           [recordId, attempt.studentProfileId, attempt.classId, studyYear?.id || null, local.date, Number(attempt.session), scannedAt.toISOString(), request.principal.userId, attempt.latitude, attempt.longitude, rosterStudent.name, rosterStudent.studentNumber || null, roster.className || null, studyYear?.label || (studyYear?.year ? String(studyYear.year) : null), attempt.attendanceWindowId],
         );
