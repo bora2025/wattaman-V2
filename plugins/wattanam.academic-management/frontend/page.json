@@ -1070,6 +1070,14 @@
           "permission": "wattanam.academic-management.manage"
         },
         {
+          "id": "updateClass",
+          "method": "PUT",
+          "path": "classes/:classId",
+          "parameters": ["classId"],
+          "autoload": false,
+          "permission": "wattanam.academic-management.manage"
+        },
+        {
           "id": "classStudents",
           "method": "GET",
           "path": "classes/:classId/students",
@@ -1130,6 +1138,7 @@
             "teachersSource": "teachers",
             "classAdminsSource": "classAdmins",
             "createSource": "createClass",
+            "updateSource": "updateClass",
             "deleteSource": "deleteClass",
             "studentsSource": "classStudents",
             "availableStudentsSource": "availableStudents",

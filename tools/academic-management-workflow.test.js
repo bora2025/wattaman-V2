@@ -81,6 +81,7 @@ function selfScanHarness(overrides = {}) {
     directory: {
       getEnrollmentAtDate: async () => overrides.enrollment || { enrolled: true, classId: 'class-1' },
       classesForUser: async () => [], getClassRoster: async () => ({ className: 'A', students: [{ studentId: 'student-1', studentNumber: '0001', name: 'Student One' }] }),
+      getClassAttendanceSchedule: async () => ({ attendanceFormat: 'GLOBAL', week: overrides.studyDays || ['SUN','MON','TUE','WED','THU','FRI','SAT'] }),
     },
   });
   return { handler: routes.get('POST student/self-scan').handler, token, claims, audits, records, now };
@@ -330,6 +331,17 @@ test('student self attendance rejects a modified signed QR', async () => {
   });
   assert.equal(result.result, 'INVALID_QR');
   assert.match(result.rejectionReason, /Signature/);
+});
+
+test('student self attendance rejects scans on a class day marked off', async () => {
+  const harness = selfScanHarness({ studyDays: [] });
+  const result = await harness.handler({
+    principal: { userId: 'user-1', role: 'STUDENT' },
+    body: { clientRequestId: 'day-off-1', attendanceToken: harness.token, clientTimestamp: harness.now.toISOString() },
+  });
+  assert.equal(result.result, 'DAY_OFF');
+  assert.match(result.rejectionReason, /not a study day/);
+  assert.equal(harness.records.length, 0);
 });
 
 test('student self attendance enforces token expiry and class enrollment', async () => {

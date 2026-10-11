@@ -351,6 +351,11 @@ function registerSelfAttendance(context) {
       }
       const timeZone = await context.settings.get('school-timezone', 'Asia/Phnom_Penh');
       const local = localDateTime(scannedAt, timeZone);
+      if (typeof context.directory.getClassAttendanceSchedule === 'function') {
+        const schedule = await context.directory.getClassAttendanceSchedule(claims.classId);
+        const dayCode = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][new Date(`${local.date}T00:00:00.000Z`).getUTCDay()];
+        if (!schedule.week.includes(dayCode)) return resultFromAudit(await recordAttempt(context.database, { ...base, result: 'DAY_OFF', reason: `${dayCode} is not a study day for this class` }));
+      }
       const enrollment = await context.directory.getEnrollmentAtDate(student.id, local.date);
       if (!enrollment.enrolled || !safeEqual(enrollment.classId, claims.classId)) {
         return resultFromAudit(await recordAttempt(context.database, { ...base, result: 'WRONG_CLASS', reason: 'Student is not enrolled in this class' }));

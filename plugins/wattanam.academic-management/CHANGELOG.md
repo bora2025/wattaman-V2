@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.45
+
+- Display each class's study days and provide a dedicated editor with Saturday,
+  Sunday, weekday, and seven-day presets.
+- Replace the raw class edit workflow with a modern guided editor for assignments,
+  registration, attendance format, study days, pricing, and class-card content.
+- Use class Study Days consistently across QR/USB scans, manual attendance,
+  self-attendance, dashboards, and reports; days marked Off reject attendance.
+
 ## 0.1.44
 
 - Preserve real student and staff scan records in dashboards and reports on weekends,

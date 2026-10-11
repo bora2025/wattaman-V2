@@ -120,6 +120,15 @@ function attendanceContext(context) {
         );
         return rows[0] || null;
       },
+      getClassAttendanceSchedule: async (classId) => {
+        const rows = await context.database.query(`SELECT "schedule" FROM ${CLASS} WHERE "id"=$1 LIMIT 1`, [String(classId || '')]);
+        if (!rows.length) throw new Error('Class not found');
+        try {
+          const parsed = typeof rows[0].schedule === 'string' ? JSON.parse(rows[0].schedule || '{}') : rows[0].schedule || {};
+          const week = Array.isArray(parsed.week) && parsed.week.length ? parsed.week.map((day) => String(day).toUpperCase()) : ['MON', 'TUE', 'WED', 'THU', 'FRI'];
+          return { attendanceFormat: String(parsed.attendanceFormat || 'GLOBAL').toUpperCase(), week };
+        } catch { return { attendanceFormat: 'GLOBAL', week: ['MON', 'TUE', 'WED', 'THU', 'FRI'] }; }
+      },
     },
     permissions: { register: (items) => context.permissions.register(items.map((item) => ({ ...item, id: attendancePermission(item.id) }))) },
     navigation: { register: (items) => context.navigation.register(items
@@ -162,6 +171,20 @@ function normalizePhone(value) {
   if (digits.startsWith('855') && digits.length >= 9) return `+${digits}`;
   if (digits.startsWith('0')) return `+855${digits.slice(1)}`;
   return `+${digits}`;
+}
+
+const CLASS_DAY_CODES = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+function normalizeClassSchedule(value) {
+  if (value === undefined || value === null || value === '') return null;
+  let parsed;
+  try { parsed = typeof value === 'string' ? JSON.parse(value) : value; } catch { throw new Error('schedule must be valid JSON'); }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('schedule must be an object');
+  const week = [...new Set((Array.isArray(parsed.week) ? parsed.week : []).map((day) => String(day).toUpperCase()))];
+  if (!week.length) throw new Error('schedule must contain at least one study day');
+  if (week.some((day) => !CLASS_DAY_CODES.includes(day))) throw new Error('schedule contains an invalid study day');
+  const attendanceFormat = String(parsed.attendanceFormat || 'GLOBAL').toUpperCase();
+  if (!['GLOBAL', 'FULL', 'MORNING', 'AFTERNOON', 'EVENING', 'NIGHT', 'CUSTOM'].includes(attendanceFormat)) throw new Error('schedule contains an invalid attendance format');
+  return JSON.stringify({ ...parsed, attendanceFormat, week: CLASS_DAY_CODES.filter((day) => week.includes(day)) });
 }
 
 function parseCsvLine(line) {
@@ -592,7 +615,7 @@ module.exports = {
               body.teacherId,
               body.classAdminId || null,
               body.studyYearId || null,
-              body.schedule || null,
+              normalizeClassSchedule(body.schedule),
               body.registrationStatus || 'HIDDEN',
               body.thumbnail || null,
               body.description || null,
@@ -642,7 +665,7 @@ module.exports = {
         add('teacherId', body.teacherId);
         add('classAdminId', body.classAdminId === '' ? null : body.classAdminId);
         add('studyYearId', body.studyYearId === '' ? null : body.studyYearId);
-        add('schedule', body.schedule);
+        add('schedule', body.schedule === undefined ? undefined : normalizeClassSchedule(body.schedule));
         add('registrationStatus', body.registrationStatus);
         add('thumbnail', body.thumbnail);
         add('description', body.description);

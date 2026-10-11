@@ -15,6 +15,7 @@ const ALERT_DELIVERY = 'plugin_wattanam_attendance_manager_alert_delivery';
 
 const PERSON_TYPE = 'STUDENT';
 const STATUSES = ['PRESENT', 'LATE', 'ABSENT', 'PERMISSION'];
+const DAY_CODES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
 function one(value) { return Array.isArray(value) ? value[0] : value; }
 function required(value, name) { if (typeof value !== 'string' || !value.trim()) throw new Error(`${name} is required`); return value.trim(); }
@@ -145,6 +146,11 @@ module.exports = {
       if (!Number.isInteger(session) || session < 1 || session > 4) throw new Error('session must be 1 through 4');
       const markedById = required(request?.principal?.userId, 'authenticated principal');
       const classId = required(body.classId, 'classId');
+      if (typeof context.directory.getClassAttendanceSchedule === 'function') {
+        const classSchedule = await context.directory.getClassAttendanceSchedule(classId);
+        const dayCode = DAY_CODES[new Date(`${attendanceDate}T00:00:00.000Z`).getUTCDay()];
+        if (!classSchedule.week.includes(dayCode)) throw new Error(`Attendance is disabled because ${dayCode} is not a study day for this class`);
+      }
       const roster = await context.directory.getClassRoster(classId, attendanceDate);
       const student = roster.students.find((candidate) => candidate.studentId === personId);
       if (!student) throw new Error('Student is not enrolled in this class on the attendance date');
