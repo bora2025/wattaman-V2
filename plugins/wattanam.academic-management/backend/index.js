@@ -1833,12 +1833,12 @@ module.exports = {
     context.routes.register({
       method: 'GET', path: 'id-cards/staff', permission: 'wattanam.academic-management.manage',
       handler: async () => {
-        const missing = await context.database.query(`SELECT o."id" FROM ${OFFICER} o LEFT JOIN ${ATTENDANCE_IDENTIFIER} ai ON ai."personId"=o."id" AND ai."personType"='STAFF' AND ai."active"=TRUE WHERE o."employmentStatus"='ACTIVE' AND ai."id" IS NULL`);
+        const missing = await context.database.query(`SELECT o."id" FROM ${OFFICER} o LEFT JOIN ${ATTENDANCE_IDENTIFIER} ai ON ai."personId"=o."id"::text AND ai."personType"='STAFF' AND ai."active"=TRUE WHERE o."employmentStatus"='ACTIVE' AND ai."id" IS NULL`);
         if (missing.length) await context.database.transaction(async (tx) => {
           for (const officer of missing) await tx.execute(`INSERT INTO ${ATTENDANCE_IDENTIFIER} ("id","code","personId","personType") VALUES ($1,$2,$3,'STAFF')`, [crypto.randomUUID(), newCardCode('staff'), officer.id]);
         });
         const cardSelect = officerSelect.replace(' FROM ', ', ai."code" AS "qrCode" FROM ');
-        const rows = await context.database.query(`${cardSelect} LEFT JOIN ${ATTENDANCE_IDENTIFIER} ai ON ai."personId"=o."id" AND ai."personType"='STAFF' AND ai."active"=TRUE WHERE o."employmentStatus"='ACTIVE' ORDER BY o."createdAt" DESC`);
+        const rows = await context.database.query(`${cardSelect} LEFT JOIN ${ATTENDANCE_IDENTIFIER} ai ON ai."personId"=o."id"::text AND ai."personType"='STAFF' AND ai."active"=TRUE WHERE o."employmentStatus"='ACTIVE' ORDER BY o."createdAt" DESC`);
         return decorateOfficerRows(rows);
       },
     });

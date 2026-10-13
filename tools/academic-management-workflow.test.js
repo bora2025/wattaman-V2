@@ -276,6 +276,12 @@ test('officer creation casts bound UUID and date values for PostgreSQL', () => {
   );
 });
 
+test('staff ID card queries cast officer UUIDs before joining text identifiers', () => {
+  const source = fs.readFileSync(path.join(root, 'backend', 'index.js'), 'utf8');
+  const joins = source.match(/ai\."personId"=o\."id"::text/g) || [];
+  assert.equal(joins.length, 2);
+});
+
 test('every published Academic Management event has an explicit version', () => {
   for (const file of fs.readdirSync(path.join(root, 'backend')).filter((name) => name.endsWith('.js'))) {
     const source = fs.readFileSync(path.join(root, 'backend', file), 'utf8');

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.51
+
+- Fix Staff ID Cards by casting officer UUIDs to text when joining attendance
+  identifiers, matching the identifier table schema.
+- Restore active staff cards and their QR codes instead of returning HTTP 500.
+
 ## 0.1.50
 
 - Publish officer and attendance lifecycle events with explicit event versions,
