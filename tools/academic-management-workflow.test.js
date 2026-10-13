@@ -268,6 +268,14 @@ test('officer workflow rejects student identities before storing a profile', asy
   );
 });
 
+test('officer creation casts bound UUID and date values for PostgreSQL', () => {
+  const source = fs.readFileSync(path.join(root, 'backend', 'index.js'), 'utf8');
+  assert.match(
+    source,
+    /INSERT INTO \$\{OFFICER\}[\s\S]*?VALUES \(\$1::uuid,\$2::uuid,\$3,\$4,\$5::uuid,\$6,\$7::date,\$8::date,\$9\)/,
+  );
+});
+
 test('attendance workflow rejects unsupported statuses before writing', async () => {
   const { routes } = await activate();
   await assert.rejects(
@@ -301,7 +309,7 @@ test('authoritative student reports materialize absence only for elapsed working
 
 test('authoritative reports preserve real scans on non-working days without false absences', async () => {
   const routes = new Map();
-  const future = new Date(); future.setUTCDate(future.getUTCDate() + 7);
+  const future = new Date(); future.setUTCDate(future.getUTCDate() + ((7 - future.getUTCDay()) % 7 || 7));
   const reportDate = future.toISOString().slice(0, 10);
   const databaseDate = new Date(`${reportDate}T00:00:00.000Z`);
   const studentRecord = { personId: 'student-1', personType: 'STUDENT', classId: 'class-1', date: databaseDate, session: 3, status: 'PRESENT', personNameSnapshot: 'Student One', personNumberSnapshot: '0001' };

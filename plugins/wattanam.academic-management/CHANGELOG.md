@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.49
+
+- Fix officer creation by explicitly casting bound profile IDs, department IDs,
+  and employment dates to their PostgreSQL column types.
+- Complete the officer profile and staff attendance identifier steps without the
+  UUID parameter type error that previously followed account creation.
+
 ## 0.1.48
 
 - Normalize PostgreSQL date values before matching attendance records to report

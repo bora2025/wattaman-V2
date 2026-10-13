@@ -1823,7 +1823,7 @@ module.exports = {
         if (startedAt && endedAt && endedAt < startedAt) throw new Error('endedAt must be on or after startedAt');
         const id = crypto.randomUUID();
         await context.database.transaction(async (tx) => {
-          await tx.execute(`INSERT INTO ${OFFICER} ("id", "userId", "employeeNumber", "position", "departmentId", "employmentStatus", "startedAt", "endedAt", "notes") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`, [id, userId, String(body.employeeNumber || '').trim() || null, String(body.position || '').trim() || null, body.departmentId || null, employmentStatus, startedAt, endedAt, String(body.notes || '').trim() || null]);
+          await tx.execute(`INSERT INTO ${OFFICER} ("id", "userId", "employeeNumber", "position", "departmentId", "employmentStatus", "startedAt", "endedAt", "notes") VALUES ($1::uuid,$2::uuid,$3,$4,$5::uuid,$6,$7::date,$8::date,$9)`, [id, userId, String(body.employeeNumber || '').trim() || null, String(body.position || '').trim() || null, body.departmentId || null, employmentStatus, startedAt, endedAt, String(body.notes || '').trim() || null]);
           await tx.execute(`INSERT INTO ${ATTENDANCE_IDENTIFIER} ("id","code","personId","personType","createdById") VALUES ($1,$2,$3,'STAFF',$4)`, [crypto.randomUUID(), newCardCode('staff'), id, request?.principal?.userId || null]);
         });
         context.events.publish('wattanam.academic-management.officer.created', { officerId: id, userId, employmentStatus });
