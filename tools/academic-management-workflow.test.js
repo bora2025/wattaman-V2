@@ -163,8 +163,8 @@ test('Academic Management exposes administration and full attendance workflows',
   assert.ok(permissions.some((permission) => permission.id === 'wattanam.academic-management.attendance.scan'));
   assert.ok(permissions.some((permission) => permission.id === 'wattanam.academic-management.attendance.self.scan'));
   assert.deepEqual(
-    navigation.filter((item) => ['study-years', 'classes', 'officers', 'officer-attendance', 'attendance-records', 'attendance-scanner', 'attendance-reports'].includes(item.id)).map((item) => item.id),
-    ['study-years', 'classes', 'officers', 'officer-attendance', 'attendance-records', 'attendance-scanner', 'attendance-reports'],
+    navigation.filter((item) => ['study-years', 'classes', 'officers', 'attendance-records', 'attendance-scanner', 'attendance-reports'].includes(item.id)).map((item) => item.id),
+    ['study-years', 'classes', 'officers', 'attendance-records', 'attendance-scanner', 'attendance-reports'],
   );
 
   const ui = JSON.parse(fs.readFileSync(path.join(root, 'frontend', 'page.json'), 'utf8'));
@@ -280,6 +280,42 @@ test('staff ID card queries cast officer UUIDs before joining text identifiers',
   const source = fs.readFileSync(path.join(root, 'backend', 'index.js'), 'utf8');
   const joins = source.match(/ai\."personId"=o\."id"::text/g) || [];
   assert.equal(joins.length, 2);
+});
+
+test('officer and staff attendance SQL uses explicit PostgreSQL types', () => {
+  const index = fs.readFileSync(path.join(root, 'backend', 'index.js'), 'utf8');
+  const staff = fs.readFileSync(path.join(root, 'backend', 'staff-attendance.js'), 'utf8');
+  assert.match(index, /WHERE o\."id" = \$1::uuid LIMIT 1/);
+  assert.match(index, /a\."attendanceDate" = \$1::date/);
+  assert.match(index, /a\."attendanceDate" BETWEEN \$1::date AND \$2::date/);
+  assert.match(staff, /d\."id"=o\."departmentId"::text WHERE o\."id"=\$1::uuid/);
+});
+
+test('staff attendance defaults and current Study Year repair are migrated', () => {
+  const currentYear = fs.readFileSync(path.join(root, 'migrations', '057_ensure_current_study_year.sql'), 'utf8');
+  const staffSessions = fs.readFileSync(path.join(root, 'migrations', '058_seed_staff_attendance_sessions.sql'), 'utf8');
+  assert.match(currentYear, /NOT EXISTS[\s\S]*?"isCurrent" = TRUE/);
+  assert.equal((staffSessions.match(/'STAFF'/g) || []).length, 4);
+  assert.match(staffSessions, /1, 'CHECK_IN'/);
+  assert.match(staffSessions, /2, 'CHECK_OUT'/);
+  assert.match(staffSessions, /3, 'CHECK_IN'/);
+  assert.match(staffSessions, /4, 'CHECK_OUT'/);
+});
+
+test('staff navigation exposes one canonical attendance workflow', () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, 'plugin.json'), 'utf8'));
+  const ids = manifest.navigation.map((item) => item.id);
+  assert.ok(ids.includes('staff-attendance-scanner'));
+  assert.ok(ids.includes('staff-attendance-reports'));
+  assert.ok(!ids.includes('officer-attendance'));
+  assert.ok(!ids.includes('officer-attendance-reports'));
+});
+
+test('student checkout scans persist checkout timestamps', () => {
+  const runtime = fs.readFileSync(path.join(root, 'backend', 'attendance-runtime.js'), 'utf8');
+  assert.match(runtime, /SELECT "session", "type", "startTime", "endTime"/);
+  assert.match(runtime, /checkOutTime: activeSession\.type === 'CHECK_OUT'/);
+  assert.match(runtime, /"checkInTime","checkOutTime"/);
 });
 
 test('every published Academic Management event has an explicit version', () => {

@@ -333,8 +333,6 @@ module.exports = {
       { id: 'teachers', label: 'Teachers', href: '/plugins/wattanam.academic-management/teachers', permission: 'wattanam.academic-management.view' },
       { id: 'officers', label: 'Manage Officers', href: '/plugins/wattanam.academic-management/officers', permission: 'wattanam.academic-management.view' },
       { id: 'staff-id-cards', label: 'Staff ID Cards', href: '/plugins/wattanam.academic-management/staff-id-cards', permission: 'wattanam.academic-management.manage' },
-      { id: 'officer-attendance', label: 'Officer Attendance', href: '/plugins/wattanam.academic-management/officer-attendance', permission: 'wattanam.academic-management.attendance' },
-      { id: 'officer-attendance-reports', label: 'Officer Attendance Reports', href: '/plugins/wattanam.academic-management/officer-attendance-reports', permission: 'wattanam.academic-management.view' },
       { id: 'registrations', label: 'Registrations', href: '/plugins/wattanam.academic-management/registrations', permission: 'wattanam.academic-management.manage' },
       { id: 'registration-settings', label: 'Registration Settings', href: '/plugins/wattanam.academic-management/registration-settings', permission: 'wattanam.academic-management.manage' },
     ]);
@@ -1785,7 +1783,7 @@ module.exports = {
     context.routes.register({
       method: 'GET', path: 'officers/:id', permission: 'wattanam.academic-management.view',
       handler: async (request) => {
-        const rows = await context.database.query(`${officerSelect} WHERE o."id" = $1 LIMIT 1`, [request?.params?.id]);
+        const rows = await context.database.query(`${officerSelect} WHERE o."id" = $1::uuid LIMIT 1`, [request?.params?.id]);
         if (!rows.length) throw new Error('Officer profile not found');
         return decorateOfficerRows(rows).then((items) => items[0]);
       },
@@ -1827,7 +1825,7 @@ module.exports = {
           await tx.execute(`INSERT INTO ${ATTENDANCE_IDENTIFIER} ("id","code","personId","personType","createdById") VALUES ($1,$2,$3,'STAFF',$4)`, [crypto.randomUUID(), newCardCode('staff'), id, request?.principal?.userId || null]);
         });
         context.events.publish('wattanam.academic-management.officer.created.v1', { officerId: id, userId, employmentStatus });
-        return context.database.query(`${officerSelect} WHERE o."id" = $1 LIMIT 1`, [id]).then(decorateOfficerRows).then((items) => items[0]);
+        return context.database.query(`${officerSelect} WHERE o."id" = $1::uuid LIMIT 1`, [id]).then(decorateOfficerRows).then((items) => items[0]);
       },
     });
     context.routes.register({
@@ -1860,20 +1858,20 @@ module.exports = {
         await requireAdministrativePrincipal(request);
         const id = request?.params?.id;
         const body = request?.body || {};
-        const existing = await context.database.query(`${officerSelect} WHERE o."id" = $1 LIMIT 1`, [id]);
+        const existing = await context.database.query(`${officerSelect} WHERE o."id" = $1::uuid LIMIT 1`, [id]);
         if (!existing.length) throw new Error('Officer profile not found');
         const employmentStatus = String(body.employmentStatus || existing[0].employmentStatus).toUpperCase();
         if (!OFFICER_EMPLOYMENT_STATUSES.includes(employmentStatus)) throw new Error('Invalid employment status');
         const startedAt = body.startedAt ? requireDate(body.startedAt, 'startedAt') : existing[0].startedAt;
         const endedAt = body.endedAt ? requireDate(body.endedAt, 'endedAt') : (body.endedAt === null ? null : existing[0].endedAt);
         if (startedAt && endedAt && String(endedAt).slice(0, 10) < String(startedAt).slice(0, 10)) throw new Error('endedAt must be on or after startedAt');
-        await context.database.execute(`UPDATE ${OFFICER} SET "employeeNumber"=$2, "position"=$3, "departmentId"=$4, "employmentStatus"=$5, "startedAt"=$6, "endedAt"=$7, "notes"=$8, "updatedAt"=CURRENT_TIMESTAMP WHERE "id"=$1`, [id, body.employeeNumber === undefined ? existing[0].employeeNumber : (String(body.employeeNumber || '').trim() || null), body.position === undefined ? existing[0].position : (String(body.position || '').trim() || null), body.departmentId === undefined ? existing[0].departmentId : (body.departmentId || null), employmentStatus, startedAt, endedAt, body.notes === undefined ? existing[0].notes : (String(body.notes || '').trim() || null)]);
+        await context.database.execute(`UPDATE ${OFFICER} SET "employeeNumber"=$2, "position"=$3, "departmentId"=$4::uuid, "employmentStatus"=$5, "startedAt"=$6::date, "endedAt"=$7::date, "notes"=$8, "updatedAt"=CURRENT_TIMESTAMP WHERE "id"=$1::uuid`, [id, body.employeeNumber === undefined ? existing[0].employeeNumber : (String(body.employeeNumber || '').trim() || null), body.position === undefined ? existing[0].position : (String(body.position || '').trim() || null), body.departmentId === undefined ? existing[0].departmentId : (body.departmentId || null), employmentStatus, startedAt, endedAt, body.notes === undefined ? existing[0].notes : (String(body.notes || '').trim() || null)]);
         context.events.publish('wattanam.academic-management.officer.updated.v1', { officerId: id, employmentStatus });
-        return context.database.query(`${officerSelect} WHERE o."id" = $1 LIMIT 1`, [id]).then(decorateOfficerRows).then((items) => items[0]);
+        return context.database.query(`${officerSelect} WHERE o."id" = $1::uuid LIMIT 1`, [id]).then(decorateOfficerRows).then((items) => items[0]);
       },
     });
     const attendanceRows = async (date) => {
-      const rows = await context.database.query(`SELECT a."id", a."officerId", a."attendanceDate", a."status", a."checkInAt", a."checkOutAt", a."note", a."recordedBy", a."correctedBy", a."correctedAt", a."createdAt", a."updatedAt", o."userId", o."employeeNumber", o."position", o."departmentId", o."employmentStatus" FROM ${OFFICER_ATTENDANCE} a JOIN ${OFFICER} o ON o."id" = a."officerId" WHERE a."attendanceDate" = $1 ORDER BY a."createdAt" DESC`, [date]);
+      const rows = await context.database.query(`SELECT a."id", a."officerId", a."attendanceDate", a."status", a."checkInAt", a."checkOutAt", a."note", a."recordedBy", a."correctedBy", a."correctedAt", a."createdAt", a."updatedAt", o."userId", o."employeeNumber", o."position", o."departmentId", o."employmentStatus" FROM ${OFFICER_ATTENDANCE} a JOIN ${OFFICER} o ON o."id" = a."officerId" WHERE a."attendanceDate" = $1::date ORDER BY a."createdAt" DESC`, [date]);
       return decorateOfficerRows(rows);
     };
     context.routes.register({
@@ -1890,16 +1888,16 @@ module.exports = {
         const attendanceDate = requireDate(body.attendanceDate || new Date().toISOString().slice(0, 10), 'attendanceDate');
         const status = String(body.status || '').toUpperCase();
         if (!ATTENDANCE_STATUSES.includes(status)) throw new Error('Invalid attendance status');
-        const officer = await context.database.query(`SELECT "id" FROM ${OFFICER} WHERE "id" = $1 AND "employmentStatus" = 'ACTIVE' LIMIT 1`, [officerId]);
+        const officer = await context.database.query(`SELECT "id" FROM ${OFFICER} WHERE "id" = $1::uuid AND "employmentStatus" = 'ACTIVE' LIMIT 1`, [officerId]);
         if (!officer.length) throw new Error('Active officer profile not found');
         const checkInAt = body.checkInAt ? new Date(body.checkInAt) : null;
         const checkOutAt = body.checkOutAt ? new Date(body.checkOutAt) : null;
         if (checkInAt && Number.isNaN(checkInAt.getTime())) throw new Error('checkInAt must be a valid date and time');
         if (checkOutAt && Number.isNaN(checkOutAt.getTime())) throw new Error('checkOutAt must be a valid date and time');
         if (checkInAt && checkOutAt && checkOutAt < checkInAt) throw new Error('checkOutAt must be on or after checkInAt');
-        const existing = await context.database.query(`SELECT "id" FROM ${OFFICER_ATTENDANCE} WHERE "officerId"=$1 AND "attendanceDate"=$2 LIMIT 1`, [officerId, attendanceDate]);
+        const existing = await context.database.query(`SELECT "id" FROM ${OFFICER_ATTENDANCE} WHERE "officerId"=$1::uuid AND "attendanceDate"=$2::date LIMIT 1`, [officerId, attendanceDate]);
         const id = existing[0]?.id || crypto.randomUUID();
-        await context.database.execute(`INSERT INTO ${OFFICER_ATTENDANCE} ("id", "officerId", "attendanceDate", "status", "checkInAt", "checkOutAt", "note", "recordedBy") VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT ("officerId", "attendanceDate") DO UPDATE SET "status"=EXCLUDED."status", "checkInAt"=EXCLUDED."checkInAt", "checkOutAt"=EXCLUDED."checkOutAt", "note"=EXCLUDED."note", "correctedBy"=EXCLUDED."recordedBy", "correctedAt"=CURRENT_TIMESTAMP, "updatedAt"=CURRENT_TIMESTAMP`, [id, officerId, attendanceDate, status, checkInAt?.toISOString() || null, checkOutAt?.toISOString() || null, String(body.note || '').trim() || null, principal.userId]);
+        await context.database.execute(`INSERT INTO ${OFFICER_ATTENDANCE} ("id", "officerId", "attendanceDate", "status", "checkInAt", "checkOutAt", "note", "recordedBy") VALUES ($1::uuid,$2::uuid,$3::date,$4,$5::timestamptz,$6::timestamptz,$7,$8::uuid) ON CONFLICT ("officerId", "attendanceDate") DO UPDATE SET "status"=EXCLUDED."status", "checkInAt"=EXCLUDED."checkInAt", "checkOutAt"=EXCLUDED."checkOutAt", "note"=EXCLUDED."note", "correctedBy"=EXCLUDED."recordedBy", "correctedAt"=CURRENT_TIMESTAMP, "updatedAt"=CURRENT_TIMESTAMP`, [id, officerId, attendanceDate, status, checkInAt?.toISOString() || null, checkOutAt?.toISOString() || null, String(body.note || '').trim() || null, principal.userId]);
         context.events.publish(existing.length ? 'wattanam.academic-management.attendance.corrected.v1' : 'wattanam.academic-management.attendance.recorded.v1', { attendanceId: id, officerId, attendanceDate, status });
         return attendanceRows(attendanceDate).then((items) => items.find((item) => item.id === id));
       },
@@ -1911,7 +1909,7 @@ module.exports = {
         const startDate = requireDate(request?.query?.startDate || `${today.slice(0, 8)}01`, 'startDate');
         const endDate = requireDate(request?.query?.endDate || today, 'endDate');
         if (endDate < startDate) throw new Error('endDate must be on or after startDate');
-        const rows = await context.database.query(`SELECT o."id" AS "officerId", o."userId", o."employeeNumber", o."position", o."departmentId", o."employmentStatus", COUNT(a."id")::int AS "recordedDays", COUNT(a."id") FILTER (WHERE a."status"='PRESENT')::int AS "presentDays", COUNT(a."id") FILTER (WHERE a."status"='ABSENT')::int AS "absentDays", COUNT(a."id") FILTER (WHERE a."status"='LATE')::int AS "lateDays", COUNT(a."id") FILTER (WHERE a."status"='LEAVE')::int AS "leaveDays", COUNT(a."id") FILTER (WHERE a."status"='EXCUSED')::int AS "excusedDays" FROM ${OFFICER} o LEFT JOIN ${OFFICER_ATTENDANCE} a ON a."officerId"=o."id" AND a."attendanceDate" BETWEEN $1 AND $2 GROUP BY o."id" ORDER BY o."createdAt" DESC`, [startDate, endDate]);
+        const rows = await context.database.query(`SELECT o."id" AS "officerId", o."userId", o."employeeNumber", o."position", o."departmentId", o."employmentStatus", COUNT(a."id")::int AS "recordedDays", COUNT(a."id") FILTER (WHERE a."status"='PRESENT')::int AS "presentDays", COUNT(a."id") FILTER (WHERE a."status"='ABSENT')::int AS "absentDays", COUNT(a."id") FILTER (WHERE a."status"='LATE')::int AS "lateDays", COUNT(a."id") FILTER (WHERE a."status"='LEAVE')::int AS "leaveDays", COUNT(a."id") FILTER (WHERE a."status"='EXCUSED')::int AS "excusedDays" FROM ${OFFICER} o LEFT JOIN ${OFFICER_ATTENDANCE} a ON a."officerId"=o."id" AND a."attendanceDate" BETWEEN $1::date AND $2::date GROUP BY o."id" ORDER BY o."createdAt" DESC`, [startDate, endDate]);
         const decorated = await decorateOfficerRows(rows);
         return decorated.map((row) => ({ ...row, startDate, endDate, attendanceRate: row.recordedDays ? Math.round(((row.presentDays + row.lateDays) / row.recordedDays) * 10000) / 100 : 0 }));
       },

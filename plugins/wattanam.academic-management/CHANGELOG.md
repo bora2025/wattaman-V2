@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.52
+
+- Consolidate staff attendance navigation on the four-session Staff Attendance
+  and Staff Attendance Reports workflow while retaining legacy records and routes.
+- Fix PostgreSQL UUID, date, and timestamp parameter typing across officer detail,
+  legacy officer attendance, and staff scanning queries.
+- Seed four usable staff attendance sessions and select the newest Study Year when
+  an existing installation has no current year.
+- Record student check-out scans in `checkOutTime` instead of incorrectly writing
+  every attendance session to `checkInTime`.
+
 ## 0.1.51
 
 - Fix Staff ID Cards by casting officer UUIDs to text when joining attendance

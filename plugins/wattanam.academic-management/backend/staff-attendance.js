@@ -94,7 +94,7 @@ function registerStaffAttendance(context) {
       ))[0];
       if (!alias) throw new Error('Staff attendance identifier not found');
       const officer = (await context.database.query(
-        `SELECT o.*,d."name" AS "departmentName" FROM ${OFFICER} o LEFT JOIN plugin_wattanam_academic_management_department d ON d."id"=o."departmentId" WHERE o."id"=$1 AND o."employmentStatus"='ACTIVE' LIMIT 1`,
+        `SELECT o.*,d."name" AS "departmentName" FROM ${OFFICER} o LEFT JOIN plugin_wattanam_academic_management_department d ON d."id"=o."departmentId"::text WHERE o."id"=$1::uuid AND o."employmentStatus"='ACTIVE' LIMIT 1`,
         [alias.personId],
       ))[0];
       if (!officer) throw new Error('Active officer profile not found');

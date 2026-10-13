@@ -3,7 +3,7 @@
   "id": "wattanam.academic-management",
   "name": "Academic Management",
   "description": "Official Wattanam academic structures, profiles, admissions, enrollment, and roster contracts.",
-  "version": "0.1.51",
+  "version": "0.1.52",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -391,6 +391,18 @@
       "path": "migrations/056_enable_staff_attendance_identifiers.sql",
       "checksum": "ff393558f4c2fa9c4fbcf6f8303d276eeae3d9ab358dc4ad99eddfeb3c806cc6",
       "destructive": true
+    },
+    {
+      "id": "057_ensure_current_study_year",
+      "path": "migrations/057_ensure_current_study_year.sql",
+      "checksum": "773e5dfed7918db26ef39c1930fec22906d4e89c7bfb91b2d7d67a96ecd4c981",
+      "destructive": false
+    },
+    {
+      "id": "058_seed_staff_attendance_sessions",
+      "path": "migrations/058_seed_staff_attendance_sessions.sql",
+      "checksum": "4afa53d40989a62b297315cd99effe9246fba112039ff895b0b9cb8888748df2",
+      "destructive": false
     }
   ],
   "navigation": [
@@ -447,18 +459,6 @@
       "label": "Staff ID Cards",
       "href": "/plugins/wattanam.academic-management/staff-id-cards",
       "permission": "wattanam.academic-management.manage"
-    },
-    {
-      "id": "officer-attendance",
-      "label": "Officer Attendance",
-      "href": "/plugins/wattanam.academic-management/officer-attendance",
-      "permission": "wattanam.academic-management.attendance"
-    },
-    {
-      "id": "officer-attendance-reports",
-      "label": "Officer Attendance Reports",
-      "href": "/plugins/wattanam.academic-management/officer-attendance-reports",
-      "permission": "wattanam.academic-management.view"
     },
     {
       "id": "attendance-records",

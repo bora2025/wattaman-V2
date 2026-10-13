@@ -165,7 +165,8 @@ module.exports = {
       return {
         id: crypto.randomUUID(), personId, personType, classId, attendanceDate, session, status,
         studyYearId: studyYear?.id || null, permissionType: body.permissionType || null,
-        checkInTime: body.checkInTime || new Date().toISOString(), markedById, scanMode,
+        checkInTime: body.checkInTime || (body.checkOutTime ? null : new Date().toISOString()),
+        checkOutTime: body.checkOutTime || null, markedById, scanMode,
         latitude: body.latitude ?? null, longitude: body.longitude ?? null, location: body.location || null,
         personNameSnapshot: student.name, personNumberSnapshot: student.studentNumber || null,
         classNameSnapshot: roster.className || null,
@@ -174,8 +175,8 @@ module.exports = {
     };
     const writeRecord = async (tx, prepared) => {
         await tx.execute(
-          `INSERT INTO ${RECORD} ("id","personId","personType","classId","studyYearId","date","session","status","permissionType","checkInTime","markedById","scanMode","scanLatitude","scanLongitude","scanLocation","personNameSnapshot","personNumberSnapshot","classNameSnapshot","studyYearLabelSnapshot") VALUES ($1,$2,$3,$4,$5,$6::date,$7,$8,$9,$10::timestamptz,$11,$12,$13,$14,$15,$16,$17,$18,$19) ON CONFLICT ("personType","personId","classId","date","session") DO UPDATE SET "status"=EXCLUDED."status", "permissionType"=EXCLUDED."permissionType", "checkInTime"=EXCLUDED."checkInTime", "markedById"=EXCLUDED."markedById", "scanMode"=EXCLUDED."scanMode", "scanLatitude"=EXCLUDED."scanLatitude", "scanLongitude"=EXCLUDED."scanLongitude", "scanLocation"=EXCLUDED."scanLocation", "updatedAt"=CURRENT_TIMESTAMP`,
-          [prepared.id, prepared.personId, prepared.personType, prepared.classId, prepared.studyYearId, prepared.attendanceDate, prepared.session, prepared.status, prepared.permissionType, prepared.checkInTime, prepared.markedById, prepared.scanMode, prepared.latitude, prepared.longitude, prepared.location, prepared.personNameSnapshot, prepared.personNumberSnapshot, prepared.classNameSnapshot, prepared.studyYearLabelSnapshot],
+          `INSERT INTO ${RECORD} ("id","personId","personType","classId","studyYearId","date","session","status","permissionType","checkInTime","checkOutTime","markedById","scanMode","scanLatitude","scanLongitude","scanLocation","personNameSnapshot","personNumberSnapshot","classNameSnapshot","studyYearLabelSnapshot") VALUES ($1,$2,$3,$4,$5,$6::date,$7,$8,$9,$10::timestamptz,$11::timestamptz,$12,$13,$14,$15,$16,$17,$18,$19,$20) ON CONFLICT ("personType","personId","classId","date","session") DO UPDATE SET "status"=EXCLUDED."status", "permissionType"=EXCLUDED."permissionType", "checkInTime"=COALESCE(EXCLUDED."checkInTime", ${RECORD}."checkInTime"), "checkOutTime"=COALESCE(EXCLUDED."checkOutTime", ${RECORD}."checkOutTime"), "markedById"=EXCLUDED."markedById", "scanMode"=EXCLUDED."scanMode", "scanLatitude"=EXCLUDED."scanLatitude", "scanLongitude"=EXCLUDED."scanLongitude", "scanLocation"=EXCLUDED."scanLocation", "updatedAt"=CURRENT_TIMESTAMP`,
+          [prepared.id, prepared.personId, prepared.personType, prepared.classId, prepared.studyYearId, prepared.attendanceDate, prepared.session, prepared.status, prepared.permissionType, prepared.checkInTime, prepared.checkOutTime, prepared.markedById, prepared.scanMode, prepared.latitude, prepared.longitude, prepared.location, prepared.personNameSnapshot, prepared.personNumberSnapshot, prepared.classNameSnapshot, prepared.studyYearLabelSnapshot],
         );
         const record = await tx.query(`SELECT * FROM ${RECORD} WHERE "personType"=$1 AND "personId"=$2 AND "classId"=$3 AND "date"=$4::date AND "session"=$5 LIMIT 1`, [prepared.personType, prepared.personId, prepared.classId, prepared.attendanceDate, prepared.session]).then((rows) => rows[0]);
         await tx.publish({
@@ -246,7 +247,7 @@ module.exports = {
       const requestedSession = body.session === undefined || body.session === null || body.session === '' ? null : Number(body.session);
       if (requestedSession !== null && (!Number.isInteger(requestedSession) || requestedSession < 1 || requestedSession > 4)) throw new Error('session must be 1 through 4');
       const sessions = await context.database.query(
-        `SELECT "session", "startTime", "endTime", "classId" FROM ${SESSION} WHERE "scope"='STUDENT' AND ("classId"=$1 OR "classId"='') ORDER BY CASE WHEN "classId"=$1 THEN 0 ELSE 1 END, "session"`,
+        `SELECT "session", "type", "startTime", "endTime", "classId" FROM ${SESSION} WHERE "scope"='STUDENT' AND ("classId"=$1 OR "classId"='') ORDER BY CASE WHEN "classId"=$1 THEN 0 ELSE 1 END, "session"`,
         [classId],
       );
       const activeSession = sessions.find((candidate) => (requestedSession === null || Number(candidate.session) === requestedSession) && timeWithinWindow(local.time, candidate.startTime, candidate.endTime));
@@ -260,7 +261,11 @@ module.exports = {
         if (resolved) aliases = [resolved];
       }
       if (!aliases.length) throw new Error('Attendance identifier not found');
-      request.body = { ...body, ...aliases[0], classId, date: local.date, session: Number(activeSession.session), status: 'PRESENT', checkInTime: capturedAt.toISOString() };
+      request.body = {
+        ...body, ...aliases[0], classId, date: local.date, session: Number(activeSession.session), status: 'PRESENT',
+        checkInTime: activeSession.type === 'CHECK_IN' ? capturedAt.toISOString() : null,
+        checkOutTime: activeSession.type === 'CHECK_OUT' ? capturedAt.toISOString() : null,
+      };
       const prepared = await prepareRecord(request, mode);
       const result = await context.database.transaction(async (tx) => {
         await tx.query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))::text AS "locked" FROM (SELECT COUNT(*) FROM ${SCAN}) AS namespace_guard`, [`${module.exports.id}:scan:${commandKey}`]);
