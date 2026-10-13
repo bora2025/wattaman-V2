@@ -57,6 +57,10 @@ const sessionPostPatterns = [
   new RegExp(`^schools/${ID}/enrollment-tokens/${ID}/revoke$`),
 ];
 const matchesSessionPost = (path: string) => sessionPostPatterns.some((pattern) => pattern.test(path));
+const sessionPutPatterns = [
+  /^plugins\/[0-9a-zA-Z._-]+\/pricing$/,
+];
+const matchesSessionPut = (path: string) => sessionPutPatterns.some((pattern) => pattern.test(path));
 
 function marketplaceUrl(): string {
   const value = process.env.MARKETPLACE_API_URL;
@@ -91,9 +95,13 @@ function sessionCookieOptions(expiresAt?: string) {
   };
 }
 
-async function proxy(request: NextRequest, segments: string[], method: 'GET' | 'POST' | 'PATCH') {
+async function proxy(request: NextRequest, segments: string[], method: 'GET' | 'POST' | 'PATCH' | 'PUT') {
   const path = segments.join('/');
-  const allowed = method === 'GET' ? sessionGet.has(path) || sessionGetDetail.test(path) : publicPost.has(path) || sessionPost.has(path) || matchesSessionPost(path);
+  const allowed = method === 'GET'
+    ? sessionGet.has(path) || sessionGetDetail.test(path)
+    : method === 'PUT'
+      ? matchesSessionPut(path)
+      : publicPost.has(path) || sessionPost.has(path) || matchesSessionPost(path);
   if (!allowed) return NextResponse.json({ error: 'Route is not allowed' }, { status: 404 });
 
   if (method !== 'GET') {
@@ -104,7 +112,9 @@ async function proxy(request: NextRequest, segments: string[], method: 'GET' | '
   }
 
   const session = request.cookies.get(SESSION_COOKIE)?.value;
-  const needsSession = method === 'GET' ? allowed : sessionPost.has(path) || matchesSessionPost(path);
+  const needsSession = method === 'GET' || method === 'PUT'
+    ? allowed
+    : sessionPost.has(path) || matchesSessionPost(path);
   if (needsSession && !session) return NextResponse.json({ error: 'Sign-in required' }, { status: 401 });
 
   const target = new URL(`/platform/v1/${path}`, marketplaceUrl());
@@ -178,5 +188,10 @@ export async function POST(request: NextRequest, context: { params: Promise<{ pa
 
 export async function PATCH(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   try { return await proxy(request, (await context.params).path, 'PATCH'); }
+  catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : 'Unavailable' }, { status: 503 }); }
+}
+
+export async function PUT(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
+  try { return await proxy(request, (await context.params).path, 'PUT'); }
   catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : 'Unavailable' }, { status: 503 }); }
 }
