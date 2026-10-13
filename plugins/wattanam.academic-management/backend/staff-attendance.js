@@ -154,7 +154,7 @@ function registerStaffAttendance(context) {
         await tx.execute(`INSERT INTO ${CORRECTION} ("id","recordId","actorId","reason","previousValue","newValue") VALUES ($1,$2,$3,$4,$5::jsonb,$6::jsonb)`, [crypto.randomUUID(), id, request.principal.userId, reason, JSON.stringify({ status: previous.status, permissionType: previous.permissionType || null }), JSON.stringify({ status, permissionType })]);
         return (await tx.query(`SELECT * FROM ${RECORD} WHERE "id"=$1`, [id]))[0];
       });
-      context.events.publish('wattanam.academic-management.attendance.staff-corrected', { recordId: id, status, reason, actorId: request.principal.userId });
+      context.events.publish('wattanam.academic-management.attendance.staff-corrected.v1', { recordId: id, status, reason, actorId: request.principal.userId });
       return record;
     },
   });

@@ -276,6 +276,15 @@ test('officer creation casts bound UUID and date values for PostgreSQL', () => {
   );
 });
 
+test('every published Academic Management event has an explicit version', () => {
+  for (const file of fs.readdirSync(path.join(root, 'backend')).filter((name) => name.endsWith('.js'))) {
+    const source = fs.readFileSync(path.join(root, 'backend', file), 'utf8');
+    for (const match of source.matchAll(/events\.publish\('([^']+)'/g)) {
+      assert.match(match[1], /\.v\d+$/, `${file} publishes an unversioned event: ${match[1]}`);
+    }
+  }
+});
+
 test('attendance workflow rejects unsupported statuses before writing', async () => {
   const { routes } = await activate();
   await assert.rejects(

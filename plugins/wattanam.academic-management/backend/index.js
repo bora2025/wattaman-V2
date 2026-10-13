@@ -1826,7 +1826,7 @@ module.exports = {
           await tx.execute(`INSERT INTO ${OFFICER} ("id", "userId", "employeeNumber", "position", "departmentId", "employmentStatus", "startedAt", "endedAt", "notes") VALUES ($1::uuid,$2::uuid,$3,$4,$5::uuid,$6,$7::date,$8::date,$9)`, [id, userId, String(body.employeeNumber || '').trim() || null, String(body.position || '').trim() || null, body.departmentId || null, employmentStatus, startedAt, endedAt, String(body.notes || '').trim() || null]);
           await tx.execute(`INSERT INTO ${ATTENDANCE_IDENTIFIER} ("id","code","personId","personType","createdById") VALUES ($1,$2,$3,'STAFF',$4)`, [crypto.randomUUID(), newCardCode('staff'), id, request?.principal?.userId || null]);
         });
-        context.events.publish('wattanam.academic-management.officer.created', { officerId: id, userId, employmentStatus });
+        context.events.publish('wattanam.academic-management.officer.created.v1', { officerId: id, userId, employmentStatus });
         return context.database.query(`${officerSelect} WHERE o."id" = $1 LIMIT 1`, [id]).then(decorateOfficerRows).then((items) => items[0]);
       },
     });
@@ -1868,7 +1868,7 @@ module.exports = {
         const endedAt = body.endedAt ? requireDate(body.endedAt, 'endedAt') : (body.endedAt === null ? null : existing[0].endedAt);
         if (startedAt && endedAt && String(endedAt).slice(0, 10) < String(startedAt).slice(0, 10)) throw new Error('endedAt must be on or after startedAt');
         await context.database.execute(`UPDATE ${OFFICER} SET "employeeNumber"=$2, "position"=$3, "departmentId"=$4, "employmentStatus"=$5, "startedAt"=$6, "endedAt"=$7, "notes"=$8, "updatedAt"=CURRENT_TIMESTAMP WHERE "id"=$1`, [id, body.employeeNumber === undefined ? existing[0].employeeNumber : (String(body.employeeNumber || '').trim() || null), body.position === undefined ? existing[0].position : (String(body.position || '').trim() || null), body.departmentId === undefined ? existing[0].departmentId : (body.departmentId || null), employmentStatus, startedAt, endedAt, body.notes === undefined ? existing[0].notes : (String(body.notes || '').trim() || null)]);
-        context.events.publish('wattanam.academic-management.officer.updated', { officerId: id, employmentStatus });
+        context.events.publish('wattanam.academic-management.officer.updated.v1', { officerId: id, employmentStatus });
         return context.database.query(`${officerSelect} WHERE o."id" = $1 LIMIT 1`, [id]).then(decorateOfficerRows).then((items) => items[0]);
       },
     });
@@ -1900,7 +1900,7 @@ module.exports = {
         const existing = await context.database.query(`SELECT "id" FROM ${OFFICER_ATTENDANCE} WHERE "officerId"=$1 AND "attendanceDate"=$2 LIMIT 1`, [officerId, attendanceDate]);
         const id = existing[0]?.id || crypto.randomUUID();
         await context.database.execute(`INSERT INTO ${OFFICER_ATTENDANCE} ("id", "officerId", "attendanceDate", "status", "checkInAt", "checkOutAt", "note", "recordedBy") VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT ("officerId", "attendanceDate") DO UPDATE SET "status"=EXCLUDED."status", "checkInAt"=EXCLUDED."checkInAt", "checkOutAt"=EXCLUDED."checkOutAt", "note"=EXCLUDED."note", "correctedBy"=EXCLUDED."recordedBy", "correctedAt"=CURRENT_TIMESTAMP, "updatedAt"=CURRENT_TIMESTAMP`, [id, officerId, attendanceDate, status, checkInAt?.toISOString() || null, checkOutAt?.toISOString() || null, String(body.note || '').trim() || null, principal.userId]);
-        context.events.publish(existing.length ? 'wattanam.academic-management.attendance.corrected' : 'wattanam.academic-management.attendance.recorded', { attendanceId: id, officerId, attendanceDate, status });
+        context.events.publish(existing.length ? 'wattanam.academic-management.attendance.corrected.v1' : 'wattanam.academic-management.attendance.recorded.v1', { attendanceId: id, officerId, attendanceDate, status });
         return attendanceRows(attendanceDate).then((items) => items.find((item) => item.id === id));
       },
     });

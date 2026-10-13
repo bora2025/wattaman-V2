@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.50
+
+- Publish officer and attendance lifecycle events with explicit event versions,
+  preventing successful database writes from being reported as server errors.
+- Add regression coverage requiring all literal plugin event names to end in a
+  version suffix.
+
 ## 0.1.49
 
 - Fix officer creation by explicitly casting bound profile IDs, department IDs,

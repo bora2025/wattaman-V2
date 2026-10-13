@@ -249,7 +249,7 @@ function registerSelfAttendance(context) {
         ],
       );
       const window = (await context.database.query(`SELECT * FROM ${WINDOW} WHERE "id"=$1`, [id]))[0];
-      context.events.publish('wattanam.academic-management.attendance.window.opened', { windowId: id, classId, session, sessionType });
+      context.events.publish('wattanam.academic-management.attendance.window.opened.v1', { windowId: id, classId, session, sessionType });
       return { ...window, ...(await tokenForWindow(context.database, window)) };
     },
   });
@@ -272,7 +272,7 @@ function registerSelfAttendance(context) {
       if (!window) throw new Error('Attendance window not found');
       await authorizeWindow(context, request, window.classId);
       await context.database.execute(`UPDATE ${WINDOW} SET "status"='CLOSED',"closedById"=$2,"closedAt"=CURRENT_TIMESTAMP,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=$1`, [id, request.principal.userId]);
-      context.events.publish('wattanam.academic-management.attendance.window.closed', { windowId: id, classId: window.classId });
+      context.events.publish('wattanam.academic-management.attendance.window.closed.v1', { windowId: id, classId: window.classId });
       return { id, status: 'CLOSED' };
     },
   });
@@ -522,7 +522,7 @@ function registerSelfAttendance(context) {
         `UPDATE ${AUDIT} SET "reviewStatus"=$2,"reviewedById"=$3,"reviewedAt"=CURRENT_TIMESTAMP,"rejectionReason"=CASE WHEN $2='REJECTED' THEN $4 ELSE "rejectionReason" END,"recordId"=COALESCE($5,"recordId") WHERE "id"=$1`,
         [id, decision, request.principal.userId, reason, recordId],
       );
-      context.events.publish('wattanam.academic-management.attendance.self-scan-reviewed', { attemptId: id, decision, reviewerId: request.principal.userId });
+      context.events.publish('wattanam.academic-management.attendance.self-scan-reviewed.v1', { attemptId: id, decision, reviewerId: request.principal.userId });
       return { id, reviewStatus: decision, reason, recordId };
     },
   });
