@@ -1,5 +1,6 @@
 import { SchoolBillingService } from './school-billing.service';
-import { generateKeyPairSync } from 'node:crypto';
+import { generateKeyPairSync, verify } from 'node:crypto';
+import { canonicalJson } from './signing';
 
 const context = { correlationId: 'billing-correlation', ip: '203.0.113.10', userAgent: 'jest' };
 const now = new Date('2026-09-07T00:00:00.000Z');
@@ -17,7 +18,32 @@ describe('SchoolBillingService', () => {
     const result = await new SchoolBillingService(prisma, undefined, config).signedInstallationControl('registration-1', new Date('2026-09-26T00:00:00.000Z'));
     expect(result.payload).toMatchObject({ generation: 3, installationId: 'installation-1', access: 'ACTIVE', audience: 'wattanam-school-control', keyId: 'control-1' });
     expect(result.signature).toMatchObject({ algorithm: 'ed25519', keyId: 'control-1', value: expect.any(String) });
+    // Verify what an HTTP client actually receives. Nested Prisma Dates must be converted before
+    // signing or the wire payload contains ISO strings that were never covered by the signature.
+    const wire = JSON.parse(JSON.stringify(result));
+    expect(verify(null, Buffer.from(canonicalJson(wire.payload)), pair.publicKey, Buffer.from(wire.signature.value, 'base64'))).toBe(true);
     expect(prisma.installationRegistration.update).toHaveBeenCalledWith(expect.objectContaining({ data: { controlGeneration: { increment: 1 } } }));
+  });
+
+  it('signs nested billing dates in their JSON wire representation', async () => {
+    const pair = generateKeyPairSync('ed25519');
+    const invoiceDate = new Date('2026-09-27T01:02:03.000Z');
+    const prisma = {
+      customerSchool: { findFirst: jest.fn().mockResolvedValue({
+        id: 'school-1', name: 'School', status: 'ACTIVE', currency: 'USD', billingPlan: null,
+        invoices: [{ id: 'invoice-1', invoiceNumber: 'WTN-1', status: 'ISSUED', currency: 'USD', amountMinor: 2000, paidMinor: 0, description: 'Plugin', issuedAt: invoiceDate, dueAt: invoiceDate, paidAt: null, notifications: [], lines: [], paymentSubmissions: [] }],
+        billingNotifications: [],
+      }) },
+      schoolPaymentMethod: { findMany: jest.fn().mockResolvedValue([]) },
+      installationRegistration: { update: jest.fn().mockResolvedValue({ installationId: 'installation-1', controlGeneration: 4 }) },
+    } as any;
+    const config = { entitlementPrivateKey: pair.privateKey.export({ type: 'pkcs8', format: 'pem' }).toString(), entitlementKeyId: 'control-1' } as any;
+
+    const result = await new SchoolBillingService(prisma, undefined, config).signedInstallationControl('registration-1', now);
+    const wire = JSON.parse(JSON.stringify(result));
+
+    expect(wire.payload.billing.invoices[0].issuedAt).toBe(invoiceDate.toISOString());
+    expect(verify(null, Buffer.from(canonicalJson(wire.payload)), pair.publicKey, Buffer.from(wire.signature.value, 'base64'))).toBe(true);
   });
   it('archives a plan without rewriting historical invoices', async () => {
     const existing = { id: '11111111-1111-4111-8111-111111111111', slug: 'standard', active: true };

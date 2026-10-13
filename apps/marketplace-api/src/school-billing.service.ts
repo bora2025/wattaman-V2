@@ -436,12 +436,17 @@ export class SchoolBillingService {
         select: { installationId: true, controlGeneration: true },
       }),
     ]);
-    const payload = {
+    // Sign the exact JSON representation sent over HTTP. Prisma returns Date instances throughout
+    // billing (invoice dates, notification dates, plan timestamps). canonicalJson deliberately
+    // handles plain JSON values; feeding it Date objects turned those values into {}, while
+    // Express later serialized them as ISO strings. The school therefore received different bytes
+    // from the ones signed and correctly rejected every billing-control document.
+    const payload = JSON.parse(JSON.stringify({
       schemaVersion: 1, generation: registration.controlGeneration,
       installationId: registration.installationId, issuedAt: now.toISOString(),
       audience: 'wattanam-school-control', keyId: this.config.entitlementKeyId,
       ...control,
-    };
+    }));
     return { payload, signature: {
       algorithm: 'ed25519' as const, keyId: this.config.entitlementKeyId,
       value: sign(null, Buffer.from(canonicalJson(payload)), this.config.entitlementPrivateKey).toString('base64'),
