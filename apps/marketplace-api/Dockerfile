@@ -16,8 +16,9 @@ RUN apk add --no-cache openssl su-exec
 COPY packages/marketplace-contracts /workspace/packages/marketplace-contracts
 COPY apps/marketplace-api/package.json apps/marketplace-api/package-lock.json ./
 COPY apps/marketplace-api/prisma ./prisma
+COPY apps/marketplace-api/scripts/ensure-plugin-pricing-permission.js ./scripts/ensure-plugin-pricing-permission.js
 RUN npm ci --omit=dev && chown -R node:node /workspace
 COPY --from=build --chown=node:node /workspace/apps/marketplace-api/dist ./dist
 RUN mkdir -p /data/artifacts && chown node:node /data/artifacts
 EXPOSE 3010
-CMD ["sh", "-c", "mkdir -p /data/artifacts && chown node:node /data/artifacts && exec su-exec node sh -c 'npx prisma migrate deploy && node dist/main.js'"]
+CMD ["sh", "-c", "mkdir -p /data/artifacts && chown node:node /data/artifacts && exec su-exec node sh -c 'npx prisma migrate deploy && PLATFORM_APP_ROOT=/workspace/apps/marketplace-api node scripts/ensure-plugin-pricing-permission.js && node dist/main.js'"]
