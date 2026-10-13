@@ -529,6 +529,76 @@ export class CustomerSchoolService {
     };
   }
 
+  /** Marketplace-side plugin inventory for one customer school. Download activity is evidence that
+   * a package was fetched, not proof that the school runtime currently has it activated. Runtime
+   * activation remains intentionally owned by the school's local Plugin Manager. */
+  async plugins(schoolId: string, now = new Date()) {
+    const school = await this.prisma.customerSchool.findUnique({
+      where: { id: schoolId },
+      select: {
+        id: true,
+        installation: {
+          select: {
+            id: true,
+            installationId: true,
+            lastSeenAt: true,
+            entitlements: {
+              select: {
+                id: true, status: true, expiresAt: true, updatesThrough: true, offlineUntil: true,
+                revokedAt: true, revokedReason: true, createdAt: true, updatedAt: true,
+                plugin: { select: { id: true, name: true, description: true, isPaid: true, status: true } },
+              },
+              orderBy: { createdAt: 'desc' },
+            },
+            downloads: {
+              select: {
+                downloadedAt: true,
+                pluginVersion: { select: { pluginId: true, version: true, channel: true } },
+              },
+              orderBy: { downloadedAt: 'desc' },
+            },
+          },
+        },
+      },
+    });
+    if (!school) throw new HttpError(404, 'Customer school not found');
+    if (!school.installation) {
+      return { schoolId, installationId: null, lastSeenAt: null, measuredAt: now.toISOString(), items: [], summary: { licensed: 0, active: 0, expired: 0, revoked: 0, downloaded: 0 } };
+    }
+
+    const downloads = new Map<string, { count: number; lastDownloadedAt: Date; version: string; channel: string }>();
+    for (const event of school.installation.downloads) {
+      const pluginId = event.pluginVersion.pluginId;
+      const existing = downloads.get(pluginId);
+      if (existing) existing.count += 1;
+      else downloads.set(pluginId, { count: 1, lastDownloadedAt: event.downloadedAt, version: event.pluginVersion.version, channel: event.pluginVersion.channel });
+    }
+    const items = school.installation.entitlements.map((entitlement) => {
+      const effectiveStatus = entitlement.revokedAt || entitlement.status === 'REVOKED'
+        ? 'REVOKED'
+        : entitlement.expiresAt && entitlement.expiresAt <= now
+          ? 'EXPIRED'
+          : entitlement.status;
+      const activity = downloads.get(entitlement.plugin.id);
+      return {
+        plugin: entitlement.plugin,
+        entitlement: { ...entitlement, effectiveStatus },
+        activity: activity ? { downloadCount: activity.count, lastDownloadedAt: activity.lastDownloadedAt, lastDownloadedVersion: activity.version, channel: activity.channel } : null,
+      };
+    });
+    return {
+      schoolId, installationId: school.installation.installationId, lastSeenAt: school.installation.lastSeenAt,
+      measuredAt: now.toISOString(), items,
+      summary: {
+        licensed: items.length,
+        active: items.filter((item) => item.entitlement.effectiveStatus === 'ACTIVE').length,
+        expired: items.filter((item) => item.entitlement.effectiveStatus === 'EXPIRED').length,
+        revoked: items.filter((item) => item.entitlement.effectiveStatus === 'REVOKED').length,
+        downloaded: items.filter((item) => item.activity).length,
+      },
+    };
+  }
+
   async addDomain(schoolId: string, operatorId: string, value: unknown, context: PlatformActionContext) {
     const input = domainInput.parse(value);
     return this.prisma.$transaction(async (tx) => {

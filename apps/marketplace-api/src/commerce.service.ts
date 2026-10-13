@@ -1,4 +1,5 @@
 import { Prisma, PrismaClient } from '@prisma/client';
+import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 import { MarketplaceConfig } from './config';
 import { recordSaleEntries } from './publisher-governance.service';
@@ -33,12 +34,18 @@ export class CommerceService {
   async createOrder(value: unknown, now = new Date()) {
     const input = orderInput.parse(value);
     return this.prisma.$transaction(async (tx) => {
-      const existing = await tx.marketplaceOrder.findUnique({ where: { idempotencyKey: input.idempotencyKey }, include: { lines: true } });
-      if (existing) return existing;
+      const existing = await tx.marketplaceOrder.findUnique({
+        where: { idempotencyKey: input.idempotencyKey },
+        include: { lines: { include: { invoiceLine: { include: { invoice: true } } } } },
+      });
+      if (existing) {
+        const invoice = existing.lines.find((line) => line.invoiceLine)?.invoiceLine?.invoice;
+        return invoice ? { ...existing, invoice } : existing;
+      }
       const [account, installation, prices] = await Promise.all([
         tx.marketplaceAccount.findUnique({ where: { id: input.accountId }, select: { id: true } }),
-        tx.installationRegistration.findUnique({ where: { id: input.installationId }, select: { id: true, installationId: true, accountId: true, school: { select: { id: true, status: true, currency: true, billingAnchorAt: true, billingPlan: { select: { id: true, active: true, currency: true } } } } } }),
-        tx.productPrice.findMany({ where: { id: { in: input.priceIds } }, include: { plugin: { select: { id: true, isPaid: true, status: true } } } }),
+        tx.installationRegistration.findUnique({ where: { id: input.installationId }, select: { id: true, installationId: true, accountId: true, school: { select: { id: true, name: true, contactEmail: true, status: true, currency: true, billingAnchorAt: true, billingPlan: { select: { id: true, active: true, currency: true } } } } } }),
+        tx.productPrice.findMany({ where: { id: { in: input.priceIds } }, include: { plugin: { select: { id: true, name: true, isPaid: true, status: true } } } }),
       ]);
       if (!account || !installation) throw new HttpError(404, 'Account or installation not found');
       if (installation.accountId !== input.accountId) throw new HttpError(403, 'Installation is not registered to this account');
@@ -59,7 +66,38 @@ export class CommerceService {
           lines: { create: ordered.map((price) => ({ pluginId: price.pluginId, priceId: price.id, unitPriceMinor: price.amountMinor })) },
         }, include: { lines: true },
       });
-      if (input.settlementMode !== 'INVOICE') return order;
+      if (input.settlementMode !== 'INVOICE') {
+        // Manual customer-school checkout raises a dedicated invoice. Its bank QR and receipt
+        // submission are already exposed by the school billing flow; the licence remains withheld
+        // until finance approves the evidence and settles this order.
+        if (!installation.school) return order;
+        if (installation.school.currency && installation.school.currency !== input.currency) {
+          throw new HttpError(409, `This school is billed in ${installation.school.currency} and the price is in ${input.currency}`);
+        }
+        const receivingAccount = await tx.schoolPaymentMethod.findFirst({ where: { active: true, currency: input.currency }, select: { id: true } });
+        if (!receivingAccount) throw new HttpError(409, `Manual payment is not configured for ${input.currency}; add an active bank account and QR code first`);
+        const invoice = await tx.schoolInvoice.create({
+          data: {
+            invoiceNumber: `WTN-${now.getUTCFullYear()}-${randomBytes(5).toString('hex').toUpperCase()}`,
+            customerSchoolId: installation.school.id, currency: input.currency, amountMinor: totalMinor,
+            description: `Plugin purchase ${order.id}`, dueAt: addDays(now, 7), issuedAt: now,
+            idempotencyKey: `plugin-checkout:${order.id}`, origin: 'CUSTOMER_CHECKOUT',
+            lines: { create: order.lines.map((line, position) => ({
+              position, kind: 'PLUGIN', description: `${ordered[position].plugin.name} (plugin licence)`,
+              quantity: 1, unitAmountMinor: line.unitPriceMinor, amountMinor: line.unitPriceMinor,
+              sourceOrderLineId: line.id,
+            })) },
+          },
+          select: { id: true, invoiceNumber: true, status: true, currency: true, amountMinor: true, paidMinor: true, dueAt: true },
+        });
+        await tx.schoolBillingNotification.create({ data: {
+          customerSchoolId: installation.school.id, invoiceId: invoice.id, type: 'INVOICE_ISSUED', recipientEmail: installation.school.contactEmail,
+          subject: `Wattanam plugin invoice ${invoice.invoiceNumber}`,
+          message: `${installation.school.name}: scan the bank QR and submit your receipt for ${invoice.invoiceNumber}. The plugin activates after finance approves payment.`,
+          deduplicationKey: `invoice-issued:${invoice.id}`,
+        } });
+        return { ...order, invoice };
+      }
       // Bought on account: the entitlement is granted now and the charge lands on the school's next
       // subscription invoice. The order stays PENDING because no money has arrived -- settlementMode
       // is what says the difference between "not paid yet" and "not paid, and that is the deal".

@@ -95,7 +95,7 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   const accountRequests = new MarketplaceAccountRequestService(prisma);
   const schoolPluginRequests = new SchoolPluginRequestService(prisma, config, commerce);
   const schoolProvisioning = new SchoolProvisioningService(prisma);
-  const schoolBilling = new SchoolBillingService(prisma, transactionalEmail, config);
+  const schoolBilling = new SchoolBillingService(prisma, transactionalEmail, config, commerce);
   const starterBundles = new StarterBundleService(prisma);
   app.locals.schoolBilling = schoolBilling;
   const upload = multer({ storage: multer.memoryStorage(), limits: { files: 1, fileSize: config.maxArtifactBytes, fields: 10 } });
@@ -407,6 +407,9 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   app.get('/platform/v1/dashboard', requirePlatformOperator, requirePlatformPermission(platformAuth, 'platform.dashboard.read'), async (_request, response, next) => {
     try { response.json(await platformRead.dashboard()); } catch (error) { next(error); }
   });
+  app.get('/platform/v1/payment-alerts', requirePlatformOperator, requirePlatformPermission(platformAuth, 'school_billing.read'), async (_request, response, next) => {
+    try { response.json(await platformRead.pendingPaymentAlerts()); } catch (error) { next(error); }
+  });
   // ── PA-2 read-only operations ──────────────────────────────────────────
   const P = (key: string) => requirePlatformPermission(platformAuth, key);
 
@@ -511,6 +514,9 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   });
   app.get('/platform/v1/schools/:schoolId/usage', requirePlatformOperator, P('schools.read'), async (request, response, next) => {
     try { response.json(await customerSchools.usage(String(request.params.schoolId))); } catch (error) { next(error); }
+  });
+  app.get('/platform/v1/schools/:schoolId/plugins', requirePlatformOperator, P('schools.read'), async (request, response, next) => {
+    try { response.json(await customerSchools.plugins(String(request.params.schoolId))); } catch (error) { next(error); }
   });
   app.post('/platform/v1/schools/:schoolId/update', requirePlatformOperator, P('schools.manage'), async (request: PlatformRequest, response, next) => {
     try { response.json(await customerSchools.update(String(request.params.schoolId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }

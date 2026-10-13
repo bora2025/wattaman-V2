@@ -9,6 +9,7 @@ import { MAX_QR_IMAGE_BYTES, MAX_RECEIPT_IMAGE_BYTES, validateImageDataUrl } fro
 import { MarketplaceConfig } from './config';
 import { issueTerminalEntitlement } from './entitlement';
 import { canonicalJson } from './signing';
+import { CommerceService } from './commerce.service';
 
 const reason = z.string().trim().min(3).max(5000);
 
@@ -130,6 +131,7 @@ export class SchoolBillingService {
     private readonly prisma: PrismaClient,
     private readonly email: TransactionalEmailService = new DisabledTransactionalEmailService(),
     private readonly config?: MarketplaceConfig,
+    private readonly commerce?: CommerceService,
   ) {}
 
   plans() {
@@ -716,13 +718,24 @@ export class SchoolBillingService {
         const orderLineIds = billedOrderLines.map((line) => line.sourceOrderLineId!).filter(Boolean);
         if (orderLineIds.length) {
           const closing = await tx.marketplaceOrder.findMany({
-            where: { settlementMode: 'INVOICE', status: 'PENDING', lines: { some: { id: { in: orderLineIds } } } },
-            select: { id: true, currency: true, lines: { select: { id: true, unitPriceMinor: true, plugin: { select: { publisherId: true } } } } },
+            where: { status: 'PENDING', lines: { some: { id: { in: orderLineIds } } } },
+            select: { id: true, settlementMode: true, totalMinor: true, currency: true, lines: { select: { id: true, unitPriceMinor: true, plugin: { select: { publisherId: true } } } } },
           });
-          await tx.marketplaceOrder.updateMany({ where: { id: { in: closing.map((order) => order.id) } }, data: { status: 'PAID' } });
+          const creditOrders = closing.filter((order) => order.settlementMode === 'INVOICE');
+          if (creditOrders.length) {
+            await tx.marketplaceOrder.updateMany({ where: { id: { in: creditOrders.map((order) => order.id) } }, data: { status: 'PAID' } });
+          }
           // A plugin bought on account is licensed before the money arrives, but the publisher's
           // share is only earned once it does -- which is here.
-          for (const order of closing) await recordSaleEntries(tx, order);
+          for (const order of creditOrders) await recordSaleEntries(tx, order);
+          // Immediate/manual checkout deliberately withholds the licence. Finance approval of the
+          // receipt is the settlement event that issues it and records publisher revenue.
+          for (const order of closing.filter((candidate) => candidate.settlementMode === 'IMMEDIATE')) {
+            if (!this.commerce) throw new HttpError(503, 'Plugin payment settlement is not configured');
+            await this.commerce.settleProviderPayment(tx, {
+              orderId: order.id, provider: 'school-invoice', providerReference: `${invoice.id}:${order.id}`, amountMinor: order.totalMinor,
+            }, receivedAt);
+          }
         }
       }
       await this.audit(tx, operatorId, context, 'school_payment_recorded', schoolId, input.internalReason, {
@@ -773,6 +786,13 @@ export class SchoolBillingService {
           },
         });
         revokedEntitlements.push(entitlement.id);
+      }
+      const orderLineIds = invoice.lines.map((line) => line.sourceOrderLineId).filter((id): id is string => Boolean(id));
+      if (orderLineIds.length) {
+        await tx.marketplaceOrder.updateMany({
+          where: { status: 'PENDING', lines: { some: { id: { in: orderLineIds } } } },
+          data: { status: 'CANCELLED' },
+        });
       }
       const updated = await tx.schoolInvoice.update({
         // Clearing periodKey releases the period guard, so a voided month can be invoiced again.

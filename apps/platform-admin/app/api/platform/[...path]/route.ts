@@ -22,8 +22,9 @@ const sessionGet = new Set([
   'schools/provisioning-requests',
   'school-billing-plans',
   'school-payment-methods',
+  'payment-alerts',
 ]);
-const sessionGetDetail = /^(operators|customers|schools|installations|publishers|plugins|submissions|orders|plugin-requests)\/[0-9a-zA-Z._-]+$|^schools\/[0-9a-f-]{36}\/(usage|billing)$|^schools\/provisioning-requests\/[0-9a-f-]{36}$/;
+const sessionGetDetail = /^(operators|customers|schools|installations|publishers|plugins|submissions|orders|plugin-requests)\/[0-9a-zA-Z._-]+$|^schools\/[0-9a-f-]{36}\/(usage|billing|plugins)$|^schools\/provisioning-requests\/[0-9a-f-]{36}$/;
 /**
  * Mutations reachable through this proxy, one readable pattern each. A single combined expression
  * became hard to extend without silently widening it -- and a path that is not listed here is a

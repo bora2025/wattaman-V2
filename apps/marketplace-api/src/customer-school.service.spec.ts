@@ -41,6 +41,30 @@ describe('CustomerSchoolService', () => {
     expect(school.contactEmail).toBe('h***@example.com');
   });
 
+  it('reports school plugin licences separately from observed package downloads', async () => {
+    const prisma = { customerSchool: { findUnique: jest.fn().mockResolvedValue({
+      id: 'school-1',
+      installation: {
+        installationId: 'installation-1', lastSeenAt: new Date('2026-10-13T01:00:00Z'),
+        entitlements: [{
+          id: 'entitlement-1', status: 'ACTIVE', expiresAt: new Date('2026-10-01T00:00:00Z'), updatesThrough: null,
+          offlineUntil: null, revokedAt: null, revokedReason: null, createdAt: new Date(), updatedAt: new Date(),
+          plugin: { id: 'plugin.example', name: 'Example', description: 'Example plugin', isPaid: true, status: 'APPROVED' },
+        }],
+        downloads: [
+          { downloadedAt: new Date('2026-10-12T00:00:00Z'), pluginVersion: { pluginId: 'plugin.example', version: '1.2.0', channel: 'STABLE' } },
+          { downloadedAt: new Date('2026-10-10T00:00:00Z'), pluginVersion: { pluginId: 'plugin.example', version: '1.1.0', channel: 'STABLE' } },
+        ],
+      },
+    }) } } as any;
+
+    const result = await new CustomerSchoolService(prisma).plugins('school-1', new Date('2026-10-13T00:00:00Z'));
+
+    expect(result.summary).toEqual({ licensed: 1, active: 0, expired: 1, revoked: 0, downloaded: 1 });
+    expect(result.items[0].activity).toMatchObject({ downloadCount: 2, lastDownloadedVersion: '1.2.0' });
+    expect(result.items[0].entitlement.effectiveStatus).toBe('EXPIRED');
+  });
+
   it('maps a duplicate slug to a conflict that names the collision', async () => {
     const tx = { customerSchool: { create: jest.fn().mockRejectedValue({ code: 'P2002', meta: { target: ['slug'] } }) }, platformAuditEvent: { create: jest.fn() } };
     const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;

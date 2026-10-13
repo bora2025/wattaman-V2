@@ -34,6 +34,24 @@ export class PlatformReadService {
     };
   }
 
+  async pendingPaymentAlerts() {
+    const items = await this.prisma.schoolPaymentSubmission.findMany({
+      where: { status: 'PENDING' },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      select: {
+        id: true, provider: true, providerReference: true, amountMinor: true, createdAt: true, source: true, submittedBy: true,
+        invoice: {
+          select: {
+            id: true, invoiceNumber: true, currency: true,
+            school: { select: { id: true, name: true } },
+          },
+        },
+      },
+    });
+    return { measuredAt: new Date().toISOString(), count: items.length, items };
+  }
+
   async auditEvents(query: unknown, reader: { operatorId: string; context: PlatformActionContext }) {
     const input = listInput.parse(query);
     await this.prisma.platformAuditEvent.create({

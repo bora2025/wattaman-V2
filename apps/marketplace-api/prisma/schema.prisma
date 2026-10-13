@@ -167,6 +167,7 @@ enum SchoolBillingInterval {
 enum SchoolInvoiceOrigin {
   OPERATOR
   SCHEDULED
+  CUSTOMER_CHECKOUT
 }
 
 enum SchoolInvoiceLineKind {

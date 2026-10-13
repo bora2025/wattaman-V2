@@ -280,6 +280,9 @@ describe('CommerceService invoice settlement', () => {
       marketplaceAccount: { findUnique: jest.fn().mockResolvedValue({ id: ACCOUNT }) },
       installationRegistration: { findUnique: jest.fn().mockResolvedValue({ id: INSTALLATION, installationId: 'install-abc', accountId: ACCOUNT, school }) },
       productPrice: { findMany: jest.fn().mockResolvedValue([{ id: PRICE, pluginId: 'plugin-1', currency: 'USD', amountMinor: 12000, licensedMajor: 1, licenseDays: 3650, updatesDays: 365, validFrom: new Date('2020-01-01'), validUntil: null, plugin: { id: 'plugin-1', isPaid: true, status: 'APPROVED' } }]) },
+      schoolPaymentMethod: { findFirst: jest.fn().mockResolvedValue({ id: 'payment-method-1' }) },
+      schoolInvoice: { create: jest.fn().mockResolvedValue({ id: 'invoice-1', invoiceNumber: 'WTN-2026-TEST', status: 'ISSUED', currency: 'USD', amountMinor: 12000, paidMinor: 0, dueAt: new Date('2026-09-17T00:00:00.000Z') }) },
+      schoolBillingNotification: { create: jest.fn().mockResolvedValue({ id: 'notice-1' }) },
       installationEntitlement: { findUnique: jest.fn().mockResolvedValue(null), upsert: jest.fn().mockResolvedValue({ id: 'entitlement-1' }) },
       publisherRevenueEntry: { upsert: jest.fn().mockResolvedValue({ id: 'revenue-1' }) },
     };
@@ -309,20 +312,23 @@ describe('CommerceService invoice settlement', () => {
     expect(tx.marketplaceOrder.create.mock.calls[0][0].data.status).toBeUndefined();
   });
 
-  it('still withholds the entitlement on an immediate order', async () => {
+  it('creates a manual-payment invoice but withholds entitlement on an immediate school order', async () => {
     const { tx, prisma } = harness();
-    await new CommerceService(prisma, config).createOrder(order('IMMEDIATE'), new Date('2026-09-10T00:00:00.000Z'));
+    const result = await new CommerceService(prisma, config).createOrder(order('IMMEDIATE'), new Date('2026-09-10T00:00:00.000Z'));
 
     expect(tx.installationEntitlement.upsert).not.toHaveBeenCalled();
+    expect(tx.schoolInvoice.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ origin: 'CUSTOMER_CHECKOUT', amountMinor: 12000 }) }));
+    expect(result).toMatchObject({ invoice: { id: 'invoice-1', invoiceNumber: 'WTN-2026-TEST' } });
   });
 
-  it('defaults to immediate settlement, so existing callers are unchanged', async () => {
+  it('defaults to immediate manual settlement', async () => {
     const { tx, prisma } = harness();
     const { settlementMode: _omitted, ...withoutMode } = order('IMMEDIATE');
     await new CommerceService(prisma, config).createOrder(withoutMode, new Date('2026-09-10T00:00:00.000Z'));
 
     expect(tx.marketplaceOrder.create.mock.calls[0][0].data.settlementMode).toBe('IMMEDIATE');
     expect(tx.installationEntitlement.upsert).not.toHaveBeenCalled();
+    expect(tx.schoolInvoice.create).toHaveBeenCalled();
   });
 
   it('refuses credit to a school with no active billing plan', async () => {

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { OperatorProfile, platformFetch, platformJson } from '../lib/api';
+import PaymentAlerts from './PaymentAlerts';
 
 /** Navigation is filtered by the operator's real permission set from /platform/v1/me. This is a
  * usability affordance only — the API authorizes every request independently (plan §7: "UI hiding
@@ -82,6 +83,7 @@ export default function OperatorShell({ children }: { children: React.ReactNode 
             </span>
           </div>
           <div className="flex items-center gap-2">
+            {profile.permissions.includes('school_billing.read') && <PaymentAlerts />}
             {/* Outside the permission-filtered navigation on purpose: changing your own password
                 is not a granted capability, it is something every operator must always be able
                 to do — including one with no roles at all. */}

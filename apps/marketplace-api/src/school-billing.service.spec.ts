@@ -167,6 +167,38 @@ describe('SchoolBillingService', () => {
     expect(tx.schoolInvoice.update.mock.calls[0][0].data).toMatchObject({ paidMinor: 4000, status: 'PARTIALLY_PAID' });
   });
 
+  it('settles an immediate plugin order only when its invoice is paid in full', async () => {
+    const commerce = { settleProviderPayment: jest.fn().mockResolvedValue({ orderId: 'order-1', status: 'PAID' }) } as any;
+    const tx = {
+      $executeRaw: jest.fn(),
+      schoolPayment: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({ id: 'payment-1', provider: 'bank-transfer', providerReference: 'BANK-PLUGIN-1', amountMinor: 12000 }),
+      },
+      schoolInvoice: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'invoice-1', invoiceNumber: 'WTN-PLUGIN-1', currency: 'USD', customerSchoolId: 'school-1', status: 'ISSUED', amountMinor: 12000, paidMinor: 0 }),
+        update: jest.fn(),
+      },
+      schoolInvoiceLine: { findMany: jest.fn().mockResolvedValue([{ sourceOrderLineId: 'order-line-1' }]) },
+      marketplaceOrder: {
+        findMany: jest.fn().mockResolvedValue([{ id: 'order-1', settlementMode: 'IMMEDIATE', totalMinor: 12000, currency: 'USD', lines: [] }]),
+        updateMany: jest.fn(),
+      },
+      customerSchool: { findUnique: jest.fn().mockResolvedValue({ name: 'Bora School', contactEmail: 'owner@bora.example' }) },
+      schoolBillingNotification: { create: jest.fn() },
+      platformAuditEvent: { create: jest.fn() },
+    };
+    const prisma = { $transaction: jest.fn((work: any) => work(tx)), schoolBillingNotification: { findMany: jest.fn().mockResolvedValue([]) } } as any;
+    await new SchoolBillingService(prisma, undefined, undefined, commerce).recordPayment('school-1', 'invoice-1', 'operator-1', {
+      provider: 'bank-transfer', providerReference: 'BANK-PLUGIN-1', amountMinor: 12000, internalReason: 'Receipt and bank statement verified.',
+    }, context, now);
+
+    expect(commerce.settleProviderPayment).toHaveBeenCalledWith(tx, {
+      orderId: 'order-1', provider: 'school-invoice', providerReference: 'invoice-1:order-1', amountMinor: 12000,
+    }, now);
+    expect(tx.schoolInvoice.update.mock.calls[0][0].data).toMatchObject({ status: 'PAID', paidMinor: 12000 });
+  });
+
   it('accepts customer payment evidence only for an invoice owned by that account', async () => {
     const prisma = {
       schoolInvoice: { findFirst: jest.fn().mockResolvedValue({ id: '11111111-1111-4111-8111-111111111111', status: 'ISSUED', amountMinor: 10000, paidMinor: 0 }) },
@@ -607,6 +639,7 @@ describe('SchoolBillingService voiding an invoice that granted credit', () => {
         update: jest.fn().mockResolvedValue({ id: 'invoice-1', status: 'VOID', voidedAt: now }),
       },
       installationEntitlement: { findFirst: jest.fn().mockResolvedValue(entitlement), update: jest.fn() },
+      marketplaceOrder: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
       platformAuditEvent: { create: jest.fn() },
     };
     const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
@@ -623,6 +656,7 @@ describe('SchoolBillingService voiding an invoice that granted credit', () => {
       data: expect.objectContaining({ status: 'REVOKED', revokedReason: 'Invoice WTN-2026-AAAA was voided' }),
     }));
     expect(tx.platformAuditEvent.create.mock.calls[0][0].data.metadata.revokedEntitlements).toEqual(['entitlement-1']);
+    expect(tx.marketplaceOrder.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: { status: 'CANCELLED' } }));
   });
 
   it('leaves a subscription-only invoice with nothing to revoke', async () => {
