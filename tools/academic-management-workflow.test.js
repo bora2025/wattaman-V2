@@ -293,8 +293,12 @@ test('officer and staff attendance SQL uses explicit PostgreSQL types', () => {
 
 test('staff attendance defaults and current Study Year repair are migrated', () => {
   const currentYear = fs.readFileSync(path.join(root, 'migrations', '057_ensure_current_study_year.sql'), 'utf8');
-  const staffSessions = fs.readFileSync(path.join(root, 'migrations', '058_seed_staff_attendance_sessions.sql'), 'utf8');
+  const removeStudentOnlyConstraint = fs.readFileSync(path.join(root, 'migrations', '058_seed_staff_attendance_sessions.sql'), 'utf8');
+  const allowStaffSessions = fs.readFileSync(path.join(root, 'migrations', '059_allow_staff_attendance_sessions.sql'), 'utf8');
+  const staffSessions = fs.readFileSync(path.join(root, 'migrations', '060_seed_staff_attendance_sessions.sql'), 'utf8');
   assert.match(currentYear, /NOT EXISTS[\s\S]*?"isCurrent" = TRUE/);
+  assert.match(removeStudentOnlyConstraint, /DROP CONSTRAINT IF EXISTS academic_management_attendance_session_student_only/);
+  assert.match(allowStaffSessions, /"scope" IN \('STUDENT', 'TEACHER', 'STAFF'\)/);
   assert.equal((staffSessions.match(/'STAFF'/g) || []).length, 4);
   assert.match(staffSessions, /1, 'CHECK_IN'/);
   assert.match(staffSessions, /2, 'CHECK_OUT'/);

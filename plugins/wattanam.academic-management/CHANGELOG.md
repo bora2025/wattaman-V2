@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.53
+
+- Repair upgrades from 0.1.51 by removing the obsolete student-only attendance-session constraint before staff defaults are inserted.
+- Restore an explicit supported-scope constraint for student, teacher, and staff attendance sessions.
+
 ## 0.1.52
 
 - Consolidate staff attendance navigation on the four-session Staff Attendance

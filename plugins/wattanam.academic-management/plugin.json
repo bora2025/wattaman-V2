@@ -3,7 +3,7 @@
   "id": "wattanam.academic-management",
   "name": "Academic Management",
   "description": "Official Wattanam academic structures, profiles, admissions, enrollment, and roster contracts.",
-  "version": "0.1.52",
+  "version": "0.1.53",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -401,7 +401,19 @@
     {
       "id": "058_seed_staff_attendance_sessions",
       "path": "migrations/058_seed_staff_attendance_sessions.sql",
-      "checksum": "4afa53d40989a62b297315cd99effe9246fba112039ff895b0b9cb8888748df2",
+      "checksum": "b4c51b3abadbde8e5736114e78e3bfa6733f388d4288effb98d7811eed807f80",
+      "destructive": true
+    },
+    {
+      "id": "059_allow_staff_attendance_sessions",
+      "path": "migrations/059_allow_staff_attendance_sessions.sql",
+      "checksum": "0256e17df85b3dba399f372e82e894cd1632c889a5e2ffc6549ae8a48cf6301d",
+      "destructive": false
+    },
+    {
+      "id": "060_seed_staff_attendance_sessions",
+      "path": "migrations/060_seed_staff_attendance_sessions.sql",
+      "checksum": "ae56d78ab64f9b032a62e3474f3dad4c695f5c7ccaf1e1c6a1d5aef8493073db",
       "destructive": false
     }
   ],
