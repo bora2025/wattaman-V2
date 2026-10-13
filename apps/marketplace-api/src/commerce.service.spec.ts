@@ -14,6 +14,9 @@ function config() {
 }
 
 function prismaWith(tx: any) {
+  if (tx.marketplaceOrder && !tx.marketplaceOrder.findFirst) {
+    tx.marketplaceOrder.findFirst = jest.fn().mockResolvedValue(null);
+  }
   if (tx.installationEntitlement && !tx.installationEntitlement.findUnique) {
     tx.installationEntitlement.findUnique = jest.fn().mockResolvedValue(null);
   }
@@ -270,6 +273,7 @@ describe('CommerceService invoice settlement', () => {
     const tx = {
       marketplaceOrder: {
         findUnique: jest.fn().mockResolvedValue(null),
+        findFirst: jest.fn().mockResolvedValue(null),
         create: jest.fn().mockResolvedValue(created),
         findUniqueOrThrow: jest.fn().mockResolvedValue({
           id: 'order-1', accountId: ACCOUNT, installationId: INSTALLATION,
@@ -319,6 +323,21 @@ describe('CommerceService invoice settlement', () => {
     expect(tx.installationEntitlement.upsert).not.toHaveBeenCalled();
     expect(tx.schoolInvoice.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ origin: 'CUSTOMER_CHECKOUT', amountMinor: 12000 }) }));
     expect(result).toMatchObject({ invoice: { id: 'invoice-1', invoiceNumber: 'WTN-2026-TEST' } });
+  });
+
+  it('reuses the existing pending invoice when the same manual purchase is retried', async () => {
+    const { tx, prisma } = harness();
+    const invoice = { id: 'invoice-existing', invoiceNumber: 'WTN-2026-EXISTING', status: 'ISSUED' };
+    tx.marketplaceOrder.findFirst.mockResolvedValue({
+      id: 'order-existing', status: 'PENDING', settlementMode: 'IMMEDIATE', currency: 'USD',
+      lines: [{ priceId: PRICE, invoiceLine: { invoice } }],
+    });
+
+    const result = await new CommerceService(prisma, config).createOrder(order('IMMEDIATE'), new Date('2026-09-10T00:00:00.000Z'));
+
+    expect(result).toMatchObject({ id: 'order-existing', invoice });
+    expect(tx.marketplaceOrder.create).not.toHaveBeenCalled();
+    expect(tx.schoolInvoice.create).not.toHaveBeenCalled();
   });
 
   it('defaults to immediate manual settlement', async () => {

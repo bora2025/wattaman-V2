@@ -57,6 +57,30 @@ export class CommerceService {
         if (price.currency !== input.currency || price.validFrom > now || (price.validUntil && price.validUntil <= now)) throw new HttpError(409, 'Price is not active for this order');
         if (!price.plugin.isPaid || price.plugin.status !== 'APPROVED') throw new HttpError(409, 'Product is not available for purchase');
       }
+      // A manual checkout remains payable until finance settles or cancels it. Return that same
+      // order and invoice when a school retries, instead of issuing duplicate invoices for every
+      // click or network retry.
+      if (input.settlementMode === 'IMMEDIATE') {
+        const pending = await tx.marketplaceOrder.findFirst({
+          where: {
+            installationId: input.installationId,
+            status: 'PENDING',
+            settlementMode: 'IMMEDIATE',
+            currency: input.currency,
+            lines: { some: { priceId: { in: input.priceIds } } },
+          },
+          include: { lines: { include: { invoiceLine: { include: { invoice: true } } } } },
+          orderBy: { createdAt: 'desc' },
+        });
+        if (pending) {
+          const pendingPriceIds = pending.lines.map((line) => line.priceId).sort();
+          const requestedPriceIds = [...input.priceIds].sort();
+          if (pendingPriceIds.length === requestedPriceIds.length && pendingPriceIds.every((id, index) => id === requestedPriceIds[index])) {
+            const invoice = pending.lines.find((line) => line.invoiceLine)?.invoiceLine?.invoice;
+            return invoice ? { ...pending, invoice } : pending;
+          }
+        }
+      }
       const totalMinor = ordered.reduce((sum, price) => safeMinorTotal(sum, price.amountMinor), 0);
       if (input.settlementMode === 'INVOICE') assertInvoiceable(installation.school, input.currency);
       const order = await tx.marketplaceOrder.create({
