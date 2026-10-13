@@ -18,6 +18,7 @@ import { CustomerMarketplaceService } from './customer-marketplace.service';
 import { PlatformAuthService } from './platform-auth.service';
 import { PlatformReadService } from './platform-read.service';
 import { PlatformDirectoryService } from './platform-directory.service';
+import { PluginPricingService } from './plugin-pricing.service';
 import { PlatformCommerceReadService } from './platform-commerce-read.service';
 import { PlatformExportService } from './platform-export.service';
 import { PlatformOperatorReadService } from './platform-operator-read.service';
@@ -84,6 +85,7 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   const platformAuth = new PlatformAuthService(prisma, config);
   const platformRead = new PlatformReadService(prisma);
   const platformDirectory = new PlatformDirectoryService(prisma);
+  const pluginPricing = new PluginPricingService(prisma);
   const platformCommerce = new PlatformCommerceReadService(prisma);
   const platformExport = new PlatformExportService(prisma);
   const platformOperators = new PlatformOperatorReadService(prisma);
@@ -631,6 +633,9 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   });
   app.get('/platform/v1/plugins/:pluginId', requirePlatformOperator, P('plugins.read'), async (request, response, next) => {
     try { response.json(await platformDirectory.plugin(String(request.params.pluginId))); } catch (error) { next(error); }
+  });
+  app.put('/platform/v1/plugins/:pluginId/pricing', requirePlatformOperator, P('plugins.pricing.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await pluginPricing.configure(String(request.params.pluginId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
   });
   app.get('/platform/v1/starter-bundles', requirePlatformOperator, P('starter_bundles.read'), async (_request, response, next) => {
     try { response.json(await starterBundles.adminList()); } catch (error) { next(error); }

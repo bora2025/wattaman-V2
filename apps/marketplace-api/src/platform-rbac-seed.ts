@@ -24,6 +24,7 @@ export const PLATFORM_PERMISSIONS: Array<{ key: string; description: string }> =
   { key: 'publishers.manage', description: 'Manage publisher identity, members, and signing-key approval' },
   { key: 'plugins.read', description: 'View plugin catalog entries and releases' },
   { key: 'plugins.create', description: 'Create plugin catalog entries' },
+  { key: 'plugins.pricing.manage', description: 'Configure free or paid plugin availability and pricing' },
   { key: 'plugins.review', description: 'Review plugin submissions' },
   { key: 'plugins.publish', description: 'Publish or promote a plugin release' },
   { key: 'plugins.withdraw', description: 'Withdraw a plugin release' },
@@ -64,7 +65,7 @@ export const PLATFORM_ROLES: Array<{ key: string; displayName: string; descripti
   {
     key: 'marketplace_operator', displayName: 'Marketplace Operator',
     description: 'Catalog, schools, plugin requests, and manual entitlements. No key custody or payout approval.',
-    permissions: ['platform.dashboard.read', 'customers.read', 'account_requests.review', 'schools.read', 'schools.manage', 'schools.entitlements.manage', 'school_billing.read', 'plugin_requests.read', 'plugin_requests.review', 'plugins.read', 'starter_bundles.read', 'starter_bundles.manage', 'starter_bundles.publish'],
+    permissions: ['platform.dashboard.read', 'customers.read', 'account_requests.review', 'schools.read', 'schools.manage', 'schools.entitlements.manage', 'school_billing.read', 'plugin_requests.read', 'plugin_requests.review', 'plugins.read', 'plugins.pricing.manage', 'starter_bundles.read', 'starter_bundles.manage', 'starter_bundles.publish'],
   },
   {
     key: 'plugin_reviewer', displayName: 'Plugin Reviewer',
