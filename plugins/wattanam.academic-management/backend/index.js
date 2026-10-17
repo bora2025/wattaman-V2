@@ -326,7 +326,7 @@ module.exports = {
       { id: 'wattanam.academic-management.attendance', label: 'Record and correct officer attendance' },
     ]);
     context.navigation.register([
-      { id: 'study-years', label: 'Study Years', href: '/plugins/wattanam.academic-management/study-years', permission: 'wattanam.academic-management.view' },
+      { id: 'study-years', label: 'Academic Years', href: '/plugins/wattanam.academic-management/study-years', permission: 'wattanam.academic-management.view' },
       { id: 'classes', label: 'Classes', href: '/plugins/wattanam.academic-management/classes', permission: 'wattanam.academic-management.view', dashboard: { title: 'Academic Management', description: 'Manage classes, enrollment, and student academic profiles.', priority: 50 } },
       { id: 'student-id-cards', label: 'Student ID Cards', href: '/plugins/wattanam.academic-management/student-id-cards', permission: 'wattanam.academic-management.manage' },
       { id: 'officers', label: 'Manage Officers', href: '/plugins/wattanam.academic-management/officers', permission: 'wattanam.academic-management.view' },
