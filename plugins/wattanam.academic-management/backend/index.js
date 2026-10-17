@@ -1826,7 +1826,7 @@ module.exports = {
     });
     const defaultCardTemplates = {
       student: { schoolName: 'Wattanam School', cardTitle: 'Student Identification Card', logoUrl: '', cardSize: 'cr80-portrait', designPreset: 'classic-orange', primaryColor: '#ea580c', accentColor: '#f97316', footerText: 'Scan QR code for attendance', extraInfo: '', showPhone: true, showEmail: false, showAddress: true, showDateOfBirth: true },
-      staff: { schoolName: 'Wattanam School', cardTitle: 'Staff Identification Card', logoUrl: '', cardSize: 'cr80-landscape', designPreset: 'staff-professional', primaryColor: '#0f766e', accentColor: '#d97706', footerText: 'Official staff attendance card', extraInfo: '', showPhone: true, showEmail: true, showAddress: false, showDateOfBirth: false },
+      staff: { schoolName: 'Wattanam School', cardTitle: 'Office Employee ID Card', logoUrl: '', cardSize: 'cr80-portrait', designPreset: 'staff-geometric-mint', primaryColor: '#164e3f', accentColor: '#3b9478', footerText: 'Official staff attendance card', extraInfo: '', showPhone: true, showEmail: true, showAddress: false, showDateOfBirth: false },
     };
     const cardTemplate = (type, value = {}) => {
       if (!defaultCardTemplates[type]) throw new Error('Card template type must be student or staff');

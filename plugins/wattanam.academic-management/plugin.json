@@ -3,7 +3,7 @@
   "id": "wattanam.academic-management",
   "name": "Academic Management",
   "description": "Official Wattanam academic structures, profiles, admissions, enrollment, and roster contracts.",
-  "version": "0.1.56",
+  "version": "0.1.57",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -30,6 +30,7 @@
     "readmodels.read",
     "realtime.notify",
     "settings.read",
+    "settings.write",
     "ui.pages"
   ],
   "permissions": [

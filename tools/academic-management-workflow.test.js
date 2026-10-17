@@ -216,6 +216,15 @@ test('Academic Management exposes the streamlined administration and attendance 
   assert.ok(routes.has('PUT id-cards/templates/:type'), 'missing ID card template save route');
 });
 
+test('Academic Management declares settings write access for editable templates and attendance settings', () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, 'plugin.json'), 'utf8'));
+  const backendSource = fs.readFileSync(path.join(root, 'backend', 'index.js'), 'utf8');
+  assert.ok(manifest.capabilities.includes('settings.read'));
+  assert.ok(manifest.capabilities.includes('settings.write'));
+  assert.match(backendSource, /context\.settings\.set\(`id-card-template-\$\{type\}`/);
+  assert.match(backendSource, /context\.settings\.set\('attendance-session-settings'/);
+});
+
 test('direct class student creation casts date-of-birth input to PostgreSQL date', () => {
   const source = fs.readFileSync(path.join(root, 'backend', 'index.js'), 'utf8');
   assert.match(
