@@ -25,10 +25,12 @@ describe('marketplace API discovery root', () => {
     expect(page.headers['content-type']).toMatch(/^text\/html/);
     expect(page.text).toContain('Approve school connection');
     expect(page.text).toContain('/marketplace/link/approval.js');
+    expect(page.text).not.toContain('MFA or recovery code');
     expect(page.headers['cache-control']).toBe('no-store');
 
     const script = await request(app).get('/marketplace/link/approval.js').expect(200);
     expect(script.headers['content-type']).toMatch(/^application\/javascript/);
     expect(script.text).toContain('/v1/marketplace-links/');
+    expect(script.text).toContain('window.close()');
   });
 });

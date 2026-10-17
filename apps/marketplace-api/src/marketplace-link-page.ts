@@ -19,7 +19,6 @@ export const marketplaceLinkPage = `<!doctype html>
     <form id="approval-form" hidden>
       <label>Email<input id="email" type="email" autocomplete="username" required></label>
       <label>Password<input id="password" type="password" autocomplete="current-password" required></label>
-      <label id="code-label" hidden>MFA or recovery code<input id="code" autocomplete="one-time-code" inputmode="numeric"></label>
       <div class="actions">
         <button id="approve" type="submit">Sign in and approve</button>
         <button id="deny" type="button" class="secondary">Deny</button>
@@ -49,7 +48,6 @@ export const marketplaceLinkScript = `
   const details = document.getElementById('details');
   const form = document.getElementById('approval-form');
   const message = document.getElementById('message');
-  const codeLabel = document.getElementById('code-label');
   const setBusy = value => form.querySelectorAll('button,input').forEach(item => { item.disabled = value; });
   const showMessage = (text, kind = '') => { message.textContent = text; message.className = kind; };
   const readJson = async response => {
@@ -67,9 +65,8 @@ export const marketplaceLinkScript = `
   }
   async function authenticate() {
     const payload = { email: document.getElementById('email').value.trim(), password: document.getElementById('password').value };
-    const code = document.getElementById('code').value.trim(); if (code) payload.code = code;
     const login = await readJson(await fetch('/v1/sessions', { method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json' }, body: JSON.stringify(payload) }));
-    if (login.status === 'mfa_required') { codeLabel.hidden = false; throw new Error('Enter your MFA or recovery code, then approve again.'); }
+    if (login.status === 'mfa_required') throw new Error('This Marketplace account requires MFA. Sign in through the Marketplace account portal or ask the account owner to disable MFA before linking.');
     if (!login.sessionToken) throw new Error('Marketplace sign-in did not return a session.');
     return login.sessionToken;
   }
@@ -80,7 +77,12 @@ export const marketplaceLinkScript = `
       await readJson(await fetch('/v1/marketplace-links/' + encodeURIComponent(requestId) + '/' + decision, { method: 'POST', headers: { authorization: 'Bearer ' + token, accept: 'application/json' } }));
       form.hidden = true; details.hidden = true;
       summary.textContent = decision === 'approve' ? 'Connection approved.' : 'Connection denied.';
-      showMessage(decision === 'approve' ? 'Return to the school Plugin Manager and choose Finish linking.' : 'The school connection request was denied.', 'success');
+      showMessage(decision === 'approve' ? 'Connection approved. Returning to the school Plugin Manager…' : 'The school connection request was denied.', 'success');
+      if (decision === 'approve') {
+        // This tab was opened by the school Plugin Manager. Closing it returns focus to the
+        // existing page, whose approval poll completes the exchange and refreshes the catalog.
+        window.setTimeout(() => window.close(), 900);
+      }
     } catch (error) { showMessage(error instanceof Error ? error.message : 'Request failed', 'error'); }
     finally { setBusy(false); }
   }
