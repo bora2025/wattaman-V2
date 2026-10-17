@@ -78,6 +78,16 @@ test('organization settings reject invalid timezone identifiers', async () => {
   await assert.rejects(routes.get('PUT organization')({ body: { name: 'Example', organizationType: 'COMPANY', timezone: 'Mars/Olympus' } }), /valid IANA timezone/i);
 });
 
+test('employee creation does not persist an unknown optional position foreign key', async () => {
+  let inserted;
+  const database = { query: async () => [], execute: async (_sql, params) => { inserted = params; return { count: 1 }; } };
+  const { context, routes } = harness(database); registerWorkforce(context);
+  const result = await routes.get('POST employees')({ body: { employeeNumber: 'EMP-1', fullName: 'Example Person', employmentType: 'EMPLOYEE', employmentStatus: 'ACTIVE', positionId: 'Manager', position: 'Manager' } });
+  assert.equal(result.employeeNumber, 'EMP-1');
+  assert.equal(inserted[5], null);
+  assert.equal(inserted[6], 'Manager');
+});
+
 test('attendance reports reject reversed date ranges', async () => {
   const database = { query: async () => [] };
   const { context, routes } = harness(database); registerReports(context);

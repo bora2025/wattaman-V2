@@ -156,3 +156,9 @@
 - Register the Organizing Management dashboard, reports, and workforce profile components with the Customer School UI contract.
 - Declare runtime route parameters for salary updates and ID-card template saves so the complete UI bundle passes activation validation.
 
+# 0.16.3
+
+- Prevent employee and employer creation from failing when an optional position value is not an existing position foreign key.
+- Resolve linked positions by ID, code, or exact title while preserving the free-text position label.
+- Remove the unsafe raw Position ID fields from the standard employee forms.
+
