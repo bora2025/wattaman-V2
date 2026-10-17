@@ -47,15 +47,17 @@ export default function SchoolsPage() {
     } finally { setBusy(false); }
   }
 
-  return <div className="space-y-4">
+  return <div className="space-y-6">
     <div className="flex flex-wrap items-start justify-between gap-4">
-      <div><h1 className="text-xl font-bold">Customer schools</h1><p className="text-sm text-slate-500">Create the customer directory record before deploying or enrolling its isolated school installation.</p></div>
+      <div><p className="text-xs font-bold uppercase tracking-[.2em] text-indigo-600">Customer operations</p><h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">Customer schools</h1><p className="mt-2 max-w-2xl text-sm text-slate-600">Provision, connect, bill, and support every school installation from a single operational directory.</p></div>
       {canManage && <div className="flex gap-2">
         <Link className="pa-btn-secondary" href="/schools/provisioning">Provision a new school</Link>
         <Link className="pa-btn-secondary" href="/schools/adopt">Adopt existing Railway school</Link>
         <button className="pa-btn-primary" onClick={() => setShowCreate(value => !value)}>{showCreate ? 'Cancel' : 'Create customer school'}</button>
       </div>}
     </div>
+
+    <div className="grid gap-4 md:grid-cols-3"><Link href="/schools/provisioning" className="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-5 transition hover:border-indigo-300"><div className="text-sm font-bold text-indigo-950">01 · Provision</div><p className="mt-2 text-xs leading-5 text-indigo-700">Create an isolated school environment and platform record.</p></Link><Link href="/schools/adopt" className="rounded-2xl border border-cyan-100 bg-cyan-50/60 p-5 transition hover:border-cyan-300"><div className="text-sm font-bold text-cyan-950">02 · Connect</div><p className="mt-2 text-xs leading-5 text-cyan-700">Adopt an existing Railway deployment and verify its gateway.</p></Link><Link href="/billing-plans" className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-5 transition hover:border-emerald-300"><div className="text-sm font-bold text-emerald-950">03 · Bill</div><p className="mt-2 text-xs leading-5 text-emerald-700">Assign a recurring plan and receive manual payments.</p></Link></div>
 
     {showCreate && <form className="pa-card space-y-4" onSubmit={createSchool}>
       <div><h2 className="font-semibold">New customer school</h2><p className="mt-1 text-xs text-slate-500">This creates the audited platform record. Railway deployment remains a separate controlled operation.</p></div>
@@ -85,10 +87,11 @@ export default function SchoolsPage() {
       { key: 'claimed', label: 'Installation', type: 'select', options: [{ value: 'true', label: 'Claimed' }, { value: 'false', label: 'Not claimed' }] },
     ]} columns={[
       { header: 'School', render: row => <div><Link className="font-medium text-indigo-700 hover:underline" href={`/schools/${row.id}`}>{row.name}</Link><div className="font-mono text-xs text-slate-500">{row.slug}</div></div> },
-      { header: 'Status', render: row => row.status.toLowerCase().replace('_', ' ') },
+      { header: 'Status', render: row => <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${row.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-700' : row.status === 'SUSPENDED' || row.status === 'TERMINATED' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-800'}`}>{row.status.toLowerCase().replaceAll('_', ' ')}</span> },
       { header: 'Region / plan', render: row => <div>{row.region || '—'}<div className="text-xs text-slate-500">{row.plan || 'No plan'}</div></div> },
       { header: 'Contact', render: row => row.contactEmail || '—' },
       { header: 'Installation', render: row => row.installation ? <span className="text-emerald-700">Claimed</span> : <span className="text-amber-700">Not claimed</span> },
+      { header: '', render: row => <Link className="pa-btn-secondary whitespace-nowrap" href={`/schools/${row.id}`}>Open →</Link> },
     ]} />
   </div>;
 }

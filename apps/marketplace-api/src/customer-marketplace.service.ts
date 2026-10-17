@@ -29,7 +29,10 @@ export class CustomerMarketplaceService {
     return plugins.map((plugin) => {
       const compatibleVersions = plugin.versions.filter((version) => !coreVersion || semver.satisfies(coreVersion, version.requiresCore));
       return {
-        id: plugin.id, name: plugin.name, description: plugin.description, license: plugin.license, paid: plugin.isPaid,
+        id: plugin.id, name: plugin.name, description: plugin.description,
+        promotionalDescription: plugin.promotionalDescription, coverImage: plugin.coverImage,
+        screenshots: Array.isArray(plugin.screenshots) ? plugin.screenshots.filter((item): item is string => typeof item === 'string') : [],
+        license: plugin.license, paid: plugin.isPaid,
         publisher: plugin.publisher, prices: plugin.prices.map((price) => ({ id: price.id, currency: price.currency, amountMinor: price.amountMinor, licensedMajor: price.licensedMajor, updatesDays: price.updatesDays, licenseDays: price.licenseDays })),
         versions: compatibleVersions.map((version) => ({
           version: version.version, requiresCore: version.requiresCore, changelog: version.changelog,

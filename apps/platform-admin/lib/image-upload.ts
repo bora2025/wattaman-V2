@@ -1,6 +1,6 @@
 /**
- * Turns a picked image into a data URL small enough for the marketplace API, which caps JSON bodies
- * at 256kb and checks the decoded bytes of every image it is given.
+ * Turns a picked image into a data URL with a caller-defined byte limit. The marketplace API checks
+ * the decoded bytes of every image it is given instead of trusting browser metadata.
  *
  * Re-drawing through a canvas does two jobs: it shrinks large photos to a sensible size, and it always
  * produces a genuine PNG or JPEG. Whatever the picked file really was, what is sent is a freshly drawn

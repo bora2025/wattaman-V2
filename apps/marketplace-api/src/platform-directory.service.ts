@@ -212,7 +212,7 @@ export class PlatformDirectoryService {
     const plugin = await this.prisma.marketplacePlugin.findUnique({
       where: { id: pluginId },
       select: {
-        id: true, name: true, description: true, license: true, isPaid: true, status: true,
+        id: true, name: true, description: true, promotionalDescription: true, coverImage: true, screenshots: true, license: true, isPaid: true, status: true,
         createdAt: true, updatedAt: true,
         publisher: { select: { id: true, slug: true, displayName: true, status: true } },
         versions: {

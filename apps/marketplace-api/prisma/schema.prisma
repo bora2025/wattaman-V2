@@ -457,6 +457,9 @@ model MarketplacePlugin {
   publisherId          String
   name                 String
   description          String
+  promotionalDescription String?
+  coverImage           String?
+  screenshots          Json?
   license              String
   isPaid               Boolean                   @default(false)
   status               ReviewStatus              @default(DRAFT)

@@ -19,6 +19,7 @@ import { PlatformAuthService } from './platform-auth.service';
 import { PlatformReadService } from './platform-read.service';
 import { PlatformDirectoryService } from './platform-directory.service';
 import { PluginPricingService } from './plugin-pricing.service';
+import { PluginPromotionService } from './plugin-promotion.service';
 import { PlatformCommerceReadService } from './platform-commerce-read.service';
 import { PlatformExportService } from './platform-export.service';
 import { PlatformOperatorReadService } from './platform-operator-read.service';
@@ -86,6 +87,7 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   const platformRead = new PlatformReadService(prisma);
   const platformDirectory = new PlatformDirectoryService(prisma);
   const pluginPricing = new PluginPricingService(prisma);
+  const pluginPromotion = new PluginPromotionService(prisma);
   const platformCommerce = new PlatformCommerceReadService(prisma);
   const platformExport = new PlatformExportService(prisma);
   const platformOperators = new PlatformOperatorReadService(prisma);
@@ -104,7 +106,7 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   app.use(helmet());
   app.use(requestLoggingMiddleware(metrics));
   app.use(express.json({
-    limit: '256kb',
+    limit: '3mb',
     verify: (request, _response, buffer) => { (request as Request & { rawBody?: Buffer }).rawBody = Buffer.from(buffer); },
   }));
 
@@ -642,6 +644,9 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   });
   app.put('/platform/v1/plugins/:pluginId/pricing', requirePlatformOperator, P('plugins.pricing.manage'), async (request: PlatformRequest, response, next) => {
     try { response.json(await pluginPricing.configure(String(request.params.pluginId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
+  });
+  app.put('/platform/v1/plugins/:pluginId/promotion', requirePlatformOperator, P('plugins.pricing.manage'), async (request: PlatformRequest, response, next) => {
+    try { response.json(await pluginPromotion.configure(String(request.params.pluginId), request.operatorId!, request.body, actionContext(request))); } catch (error) { next(error); }
   });
   app.get('/platform/v1/starter-bundles', requirePlatformOperator, P('starter_bundles.read'), async (_request, response, next) => {
     try { response.json(await starterBundles.adminList()); } catch (error) { next(error); }
