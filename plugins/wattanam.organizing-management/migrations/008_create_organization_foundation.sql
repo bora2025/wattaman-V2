@@ -1,0 +1,2 @@
+-- wattanam-plugin-migration: 008_create_organization_foundation
+CREATE INDEX plugin_wattanam_organizing_management_calendar_start_idx ON plugin_wattanam_organizing_management_calendar_event("startsAt");

@@ -1,4 +1,4 @@
--- wattanam-plugin-migration: 011_fix_attendance_based_payroll
+-- wattanam-plugin-migration: 052_fix_attendance_based_payroll
 CREATE OR REPLACE FUNCTION plugin_wattanam_organizing_management_apply_payroll_permissions()
 RETURNS TRIGGER AS $$
 DECLARE

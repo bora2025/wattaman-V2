@@ -1,0 +1,2 @@
+-- wattanam-plugin-migration: 026_create_employee_relations_workflow
+CREATE INDEX plugin_wattanam_organizing_management_promotion_employee_idx ON plugin_wattanam_organizing_management_job_promotion("employeeId", "effectiveDate");

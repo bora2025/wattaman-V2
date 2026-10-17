@@ -1,0 +1,2 @@
+-- wattanam-plugin-migration: 034_create_attendance_scanner
+CREATE INDEX plugin_wattanam_organizing_management_scan_received_idx ON plugin_wattanam_organizing_management_scan_attempt("receivedAt");

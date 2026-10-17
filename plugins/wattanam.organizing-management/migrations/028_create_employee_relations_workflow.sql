@@ -1,0 +1,4 @@
+-- wattanam-plugin-migration: 028_create_employee_relations_workflow
+CREATE TRIGGER plugin_wattanam_organizing_management_payroll_permissions_trigger
+BEFORE INSERT OR UPDATE ON plugin_wattanam_organizing_management_payroll_record
+FOR EACH ROW EXECUTE FUNCTION plugin_wattanam_organizing_management_apply_payroll_permissions();

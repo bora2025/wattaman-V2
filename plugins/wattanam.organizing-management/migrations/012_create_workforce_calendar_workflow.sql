@@ -1,0 +1,2 @@
+-- wattanam-plugin-migration: 012_create_workforce_calendar_workflow
+CREATE INDEX plugin_wattanam_organizing_management_position_active_idx ON plugin_wattanam_organizing_management_position("active");

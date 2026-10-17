@@ -3,7 +3,7 @@
   "id": "wattanam.organizing-management",
   "name": "Organizing Management",
   "description": "Workforce, HR calendar, employee ID cards, QR attendance, corrections, settings, and reporting for companies, shops, stores, and organizations.",
-  "version": "0.16.0",
+  "version": "0.16.1",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -11,7 +11,14 @@
   "frontendEntry": "frontend/page.json",
   "sdkVersion": "1.2.0",
   "runtimeVersion": "1.0.0",
-  "capabilities": ["api.routes", "database.read", "database.write", "navigation.register", "permissions.register", "ui.pages"],
+  "capabilities": [
+    "api.routes",
+    "database.read",
+    "database.write",
+    "navigation.register",
+    "permissions.register",
+    "ui.pages"
+  ],
   "permissions": [
     "wattanam.organizing-management.view",
     "wattanam.organizing-management.employees.manage",
@@ -32,42 +39,498 @@
   "dependencies": {},
   "optionalDependencies": {},
   "migrations": [
-    { "id": "001_create_organization_foundation", "path": "migrations/001_create_organization_foundation.sql", "checksum": "d1e1d3f79c263c6a2076af054e0934218802d9b8c54c5a719b1a4a1ff6ecbbb2", "destructive": false },
-    { "id": "002_create_workforce_calendar_workflow", "path": "migrations/002_create_workforce_calendar_workflow.sql", "checksum": "36f48c698cef38f744013865ae37e60a4b4ec127b7e816bd921db7758f6062ba", "destructive": false },
-    { "id": "003_create_payroll_rewards_permissions", "path": "migrations/003_create_payroll_rewards_permissions.sql", "checksum": "7280c57122f22c5be4e202ec48145de2492e6e32d1bf2db79a582d05a0b37d70", "destructive": false },
-    { "id": "004_create_employee_relations_workflow", "path": "migrations/004_create_employee_relations_workflow.sql", "checksum": "8b63f81cfda038f45afe62f5bac70bbb64f997fd7c5fd36bde950d6831d3adf2", "destructive": false },
-    { "id": "005_create_profiles_and_print_settings", "path": "migrations/005_create_profiles_and_print_settings.sql", "checksum": "65ac7722560cca8f18b5bbbdb7daa2b387bbb46cb8ca8d33244a4cd1704a022f", "destructive": false },
-    { "id": "006_create_attendance_scanner", "path": "migrations/006_create_attendance_scanner.sql", "checksum": "f41ca2d79437114abcbdf4bb858027e14ef27d74483e300e833aad96d961b67a", "destructive": false },
-    { "id": "007_harden_attendance_scanner", "path": "migrations/007_harden_attendance_scanner.sql", "checksum": "43f1068df04141661ebb86dec45405c8e105a528377ead945fe87ec913e6ae1b", "destructive": false },
-    { "id": "008_harden_payroll_and_approvals", "path": "migrations/008_harden_payroll_and_approvals.sql", "checksum": "eab24288ba775cf1d8ed32cf90be5abf54b8343c05e431a613e76bd95f43b548", "destructive": false },
-    { "id": "009_audit_hr_and_attendance_corrections", "path": "migrations/009_audit_hr_and_attendance_corrections.sql", "checksum": "fa42e9c04b7fc6b9b58ee5e0118f051bb1eb576a2af580681c785071855408a0", "destructive": false },
-    { "id": "010_create_id_card_templates", "path": "migrations/010_create_id_card_templates.sql", "checksum": "39ec14a8edcd49bbbd3ac9dbaabfb94233e54ee3723c13a1c5e82ebc0093d0f9", "destructive": false },
-    { "id": "011_fix_attendance_based_payroll", "path": "migrations/011_fix_attendance_based_payroll.sql", "checksum": "8325d3bb0c6a845674d29f8a1f0cb56157541b2e90f8dcada4e77fe20d069fff", "destructive": false },
-    { "id": "012_harden_calendar_and_settings", "path": "migrations/012_harden_calendar_and_settings.sql", "checksum": "504e4e741e641a79713e10e9eb259bdc796e845c6a9036fa0fd8f23215ae5b27", "destructive": false }
+    {
+      "id": "001_create_organization_foundation",
+      "path": "migrations/001_create_organization_foundation.sql",
+      "checksum": "42b940e6215a1a84284ef07b965b3f2c5e3b0ea33faf656a8251943f9fdf4e73",
+      "destructive": false
+    },
+    {
+      "id": "002_create_organization_foundation",
+      "path": "migrations/002_create_organization_foundation.sql",
+      "checksum": "1af642cf4c73a535c52b8b1437e27cfb4033656854b959a049bcfa8f2eb18143",
+      "destructive": false
+    },
+    {
+      "id": "003_create_organization_foundation",
+      "path": "migrations/003_create_organization_foundation.sql",
+      "checksum": "5c9f717e2bea86770ff492488397908f79da8b16b7fafebaf2c12fbdbf5c3f1c",
+      "destructive": false
+    },
+    {
+      "id": "004_create_organization_foundation",
+      "path": "migrations/004_create_organization_foundation.sql",
+      "checksum": "eb5781705146923ebb6cc2f077dffb71124c654aed3b57e735169cf24949ca6c",
+      "destructive": false
+    },
+    {
+      "id": "005_create_organization_foundation",
+      "path": "migrations/005_create_organization_foundation.sql",
+      "checksum": "bb6f3f5343567f90b669428fdd9b0f44c6f414bac3269308abcabb3d11227168",
+      "destructive": false
+    },
+    {
+      "id": "006_create_organization_foundation",
+      "path": "migrations/006_create_organization_foundation.sql",
+      "checksum": "dff670b8ae63d8c9bec3e60f613f906a8a6ea2c2c983a0b252d79e842e893acd",
+      "destructive": false
+    },
+    {
+      "id": "007_create_organization_foundation",
+      "path": "migrations/007_create_organization_foundation.sql",
+      "checksum": "ac5e2bd93229b5760b814baf89ce5bfebc3ce8cf61e958a65ea9851778884c81",
+      "destructive": false
+    },
+    {
+      "id": "008_create_organization_foundation",
+      "path": "migrations/008_create_organization_foundation.sql",
+      "checksum": "51804e48262c876ff7be3ddd0731bb2cc6ff4e013a3001de5d1d24de11dd7f80",
+      "destructive": false
+    },
+    {
+      "id": "009_create_workforce_calendar_workflow",
+      "path": "migrations/009_create_workforce_calendar_workflow.sql",
+      "checksum": "d73ac8a89be5fc2379ea244c23ea0712f9fafbfb5e1c13b251a41249d402d17e",
+      "destructive": false
+    },
+    {
+      "id": "010_create_workforce_calendar_workflow",
+      "path": "migrations/010_create_workforce_calendar_workflow.sql",
+      "checksum": "8fea217ea1b1c56c9941022c78ffd688748f576ccdfdc9b83031337bbb464443",
+      "destructive": false
+    },
+    {
+      "id": "011_create_workforce_calendar_workflow",
+      "path": "migrations/011_create_workforce_calendar_workflow.sql",
+      "checksum": "dbfe52489b8236123e4eb3860de1311af2fc11dda7c43d1b639cf84891a76650",
+      "destructive": false
+    },
+    {
+      "id": "012_create_workforce_calendar_workflow",
+      "path": "migrations/012_create_workforce_calendar_workflow.sql",
+      "checksum": "83497dbeed8e3266a692dff974565ad86736a9e603d404e9d3512b4e7aee4870",
+      "destructive": false
+    },
+    {
+      "id": "013_create_workforce_calendar_workflow",
+      "path": "migrations/013_create_workforce_calendar_workflow.sql",
+      "checksum": "cdee14cbed3b2cca23d150bc81f1e97a6f464bd13f49394c3c41eb486a9f4617",
+      "destructive": false
+    },
+    {
+      "id": "014_create_workforce_calendar_workflow",
+      "path": "migrations/014_create_workforce_calendar_workflow.sql",
+      "checksum": "1538ad13337210bfe9ea8dd89c96b5c5f9f5e66d86be8cf6d99203d49da9e7b9",
+      "destructive": false
+    },
+    {
+      "id": "015_create_payroll_rewards_permissions",
+      "path": "migrations/015_create_payroll_rewards_permissions.sql",
+      "checksum": "ae7d787c1554eec1a034f6b552d448f0845799c7ced11de328f93dda47d0e6ca",
+      "destructive": false
+    },
+    {
+      "id": "016_create_payroll_rewards_permissions",
+      "path": "migrations/016_create_payroll_rewards_permissions.sql",
+      "checksum": "2b14679922acdd24d772eec7a972d820c31a06af19db14bf673960c8a3ce0d5e",
+      "destructive": false
+    },
+    {
+      "id": "017_create_payroll_rewards_permissions",
+      "path": "migrations/017_create_payroll_rewards_permissions.sql",
+      "checksum": "c96a39fa373c173c06b01d54261807a158a2f11d3df08d50c0e10ac6eec2a377",
+      "destructive": false
+    },
+    {
+      "id": "018_create_payroll_rewards_permissions",
+      "path": "migrations/018_create_payroll_rewards_permissions.sql",
+      "checksum": "d8b70473fce8ddb5f63db09448a9ca7dc53f7e3ebc286a882eaee83753379563",
+      "destructive": false
+    },
+    {
+      "id": "019_create_payroll_rewards_permissions",
+      "path": "migrations/019_create_payroll_rewards_permissions.sql",
+      "checksum": "f4f4b628f0bc5183700844c776d5d577b3fc89e0bfc1a68224246dd104398fdd",
+      "destructive": false
+    },
+    {
+      "id": "020_create_payroll_rewards_permissions",
+      "path": "migrations/020_create_payroll_rewards_permissions.sql",
+      "checksum": "786d997c7bc7f50990c4ec10aab3094a34bb399a34ae3307861217531267ebf9",
+      "destructive": false
+    },
+    {
+      "id": "021_create_payroll_rewards_permissions",
+      "path": "migrations/021_create_payroll_rewards_permissions.sql",
+      "checksum": "940d4535e6fc16766bec46c85720e7a8464286c35ebe7c6f1fa47216ba2b66bf",
+      "destructive": false
+    },
+    {
+      "id": "022_create_employee_relations_workflow",
+      "path": "migrations/022_create_employee_relations_workflow.sql",
+      "checksum": "7ba53d506d30636ed1bcb4d485d332a828de9d71e13eae3e8840ad4813125bb4",
+      "destructive": false
+    },
+    {
+      "id": "023_create_employee_relations_workflow",
+      "path": "migrations/023_create_employee_relations_workflow.sql",
+      "checksum": "3fc4f99b13cac281b357869741bdc071e637a9266fdf441ff60864d1f82a03b5",
+      "destructive": false
+    },
+    {
+      "id": "024_create_employee_relations_workflow",
+      "path": "migrations/024_create_employee_relations_workflow.sql",
+      "checksum": "248a5c41005f6f8127fb479752672ec3667152a164c6917156c0f143787175c1",
+      "destructive": false
+    },
+    {
+      "id": "025_create_employee_relations_workflow",
+      "path": "migrations/025_create_employee_relations_workflow.sql",
+      "checksum": "5b0a3483c6db12e372c745adbe7018cfeaa10ff9cb262619915e0bb9915863a6",
+      "destructive": false
+    },
+    {
+      "id": "026_create_employee_relations_workflow",
+      "path": "migrations/026_create_employee_relations_workflow.sql",
+      "checksum": "9a71deeb3a1e0251692254dac9b80b0560b7b4716a703d6c0fb2989e944419de",
+      "destructive": false
+    },
+    {
+      "id": "027_create_employee_relations_workflow",
+      "path": "migrations/027_create_employee_relations_workflow.sql",
+      "checksum": "bd6ac5ad5b0e6e34d61e305acec867dd67cec14f32b2e7bd7b948eb13c0f9e15",
+      "destructive": false
+    },
+    {
+      "id": "028_create_employee_relations_workflow",
+      "path": "migrations/028_create_employee_relations_workflow.sql",
+      "checksum": "f9939834f5f75a5c40dd144fbf6206bffa0b812b009b82fa86058bd2a5b897d1",
+      "destructive": false
+    },
+    {
+      "id": "029_create_profiles_and_print_settings",
+      "path": "migrations/029_create_profiles_and_print_settings.sql",
+      "checksum": "3744b4e7631a77eec6c454040277a0c4cf46474949409ee8ad4859b38f378e7c",
+      "destructive": false
+    },
+    {
+      "id": "030_create_profiles_and_print_settings",
+      "path": "migrations/030_create_profiles_and_print_settings.sql",
+      "checksum": "05ea81fa0e8080160733687de755fbcd3fd7e78d3a3897091dc8ed4cdc239b7c",
+      "destructive": false
+    },
+    {
+      "id": "031_create_attendance_scanner",
+      "path": "migrations/031_create_attendance_scanner.sql",
+      "checksum": "22e9b18640d8c5ce47f5f26f6e02a3e9ccc28423a99fc8c8c7256a8ccdd57897",
+      "destructive": false
+    },
+    {
+      "id": "032_create_attendance_scanner",
+      "path": "migrations/032_create_attendance_scanner.sql",
+      "checksum": "4b3165727139b3c1a998756bd78c0f74408a289232f62d1e55002a335f2a1ce4",
+      "destructive": false
+    },
+    {
+      "id": "033_create_attendance_scanner",
+      "path": "migrations/033_create_attendance_scanner.sql",
+      "checksum": "ce5e7b77f30c8c34425c8aceb41572168b21059f5cc661bc2353bb8809f39688",
+      "destructive": false
+    },
+    {
+      "id": "034_create_attendance_scanner",
+      "path": "migrations/034_create_attendance_scanner.sql",
+      "checksum": "6ac1f450ae8ea8228b3f31a27c1c76374da95ae347e64f0e62b03dcb4f76c3b8",
+      "destructive": false
+    },
+    {
+      "id": "035_harden_attendance_scanner",
+      "path": "migrations/035_harden_attendance_scanner.sql",
+      "checksum": "fcdfaefca36b2b1ccd28cd91c96ebbc24a08199cc89e873a211320a984ec5e76",
+      "destructive": false
+    },
+    {
+      "id": "036_harden_attendance_scanner",
+      "path": "migrations/036_harden_attendance_scanner.sql",
+      "checksum": "f1a977c55be663e3ff30819936d629e361ab5849e7486cb3b7b3be4117a4b352",
+      "destructive": false
+    },
+    {
+      "id": "037_harden_attendance_scanner",
+      "path": "migrations/037_harden_attendance_scanner.sql",
+      "checksum": "b418c534c911dfebae389e10156eb8ceb988e8eb28bd59847aa25459a24732fe",
+      "destructive": false
+    },
+    {
+      "id": "038_harden_payroll_and_approvals",
+      "path": "migrations/038_harden_payroll_and_approvals.sql",
+      "checksum": "6faaa60150086df3a317446797dc3082949e11668fc0e0ff678137cd0514788a",
+      "destructive": false
+    },
+    {
+      "id": "039_harden_payroll_and_approvals",
+      "path": "migrations/039_harden_payroll_and_approvals.sql",
+      "checksum": "b351fc7ad9d06044b6469ea874fb3621123687eb56814369359d19b1d66675c5",
+      "destructive": false
+    },
+    {
+      "id": "040_harden_payroll_and_approvals",
+      "path": "migrations/040_harden_payroll_and_approvals.sql",
+      "checksum": "076106b6fe88fee7f149c5895c2d8f1ff48dedf7a5d7770c87eff48653bd79d7",
+      "destructive": false
+    },
+    {
+      "id": "041_harden_payroll_and_approvals",
+      "path": "migrations/041_harden_payroll_and_approvals.sql",
+      "checksum": "715450a4a5b6be373fec1de2878d0a53c345f716d47e7878c86c3f83b6c8713c",
+      "destructive": false
+    },
+    {
+      "id": "042_harden_payroll_and_approvals",
+      "path": "migrations/042_harden_payroll_and_approvals.sql",
+      "checksum": "e779debd4dfff3627916d564f480ce1c05f9ed39ff4927f42bbaed57329eadca",
+      "destructive": false
+    },
+    {
+      "id": "043_harden_payroll_and_approvals",
+      "path": "migrations/043_harden_payroll_and_approvals.sql",
+      "checksum": "89bba98874d4a0dd2802a488b32101a48899506994eae532ca9ba570295bd76d",
+      "destructive": false
+    },
+    {
+      "id": "044_audit_hr_and_attendance_corrections",
+      "path": "migrations/044_audit_hr_and_attendance_corrections.sql",
+      "checksum": "71b057069810e37d219adbc502deb9b64af6db4fabf5733c761d48a38bdc7f9c",
+      "destructive": false
+    },
+    {
+      "id": "045_audit_hr_and_attendance_corrections",
+      "path": "migrations/045_audit_hr_and_attendance_corrections.sql",
+      "checksum": "40d58fc96cc3497d92399a26dc967f2d8562eedfd02fb5a0d238332aedf676ea",
+      "destructive": false
+    },
+    {
+      "id": "046_audit_hr_and_attendance_corrections",
+      "path": "migrations/046_audit_hr_and_attendance_corrections.sql",
+      "checksum": "8c8d10918a70efeb21ad363805f7b925759e981936f99377d59a62eb66fec5ea",
+      "destructive": false
+    },
+    {
+      "id": "047_audit_hr_and_attendance_corrections",
+      "path": "migrations/047_audit_hr_and_attendance_corrections.sql",
+      "checksum": "6cbf51f4229a26f93667eb9c2f2e7369372bfa678be6ec8e74f13215b4c2c6e1",
+      "destructive": false
+    },
+    {
+      "id": "048_audit_hr_and_attendance_corrections",
+      "path": "migrations/048_audit_hr_and_attendance_corrections.sql",
+      "checksum": "652a362c8e42bc17b428fc4e213aa0e5b56c337ae57e2e6e33bacc68eda0fe1f",
+      "destructive": false
+    },
+    {
+      "id": "049_audit_hr_and_attendance_corrections",
+      "path": "migrations/049_audit_hr_and_attendance_corrections.sql",
+      "checksum": "551f5df11b75111ac6286a4e71b5d5361fe92690e7a77320fff6804868151e4b",
+      "destructive": false
+    },
+    {
+      "id": "050_create_id_card_templates",
+      "path": "migrations/050_create_id_card_templates.sql",
+      "checksum": "0e76fe4aeb05d2e68cf37fb7b42914cbda1d4b3c8abf9ef1d8b9d11398f52305",
+      "destructive": false
+    },
+    {
+      "id": "051_create_id_card_templates",
+      "path": "migrations/051_create_id_card_templates.sql",
+      "checksum": "a3bafcfa1382bf066f90348193cbe73bd72c5bae3720dba61e341f05cadc3758",
+      "destructive": false
+    },
+    {
+      "id": "052_fix_attendance_based_payroll",
+      "path": "migrations/052_fix_attendance_based_payroll.sql",
+      "checksum": "2c7ab4469f8d8769769c1ab91f717ab249df7efbcb1593a9506b37f498d46f20",
+      "destructive": false
+    },
+    {
+      "id": "053_harden_calendar_and_settings",
+      "path": "migrations/053_harden_calendar_and_settings.sql",
+      "checksum": "f7561c7b3c13e41be433d17a92c163d0fce46a22840cf0a7ae52a9ef961fc11f",
+      "destructive": false
+    },
+    {
+      "id": "054_harden_calendar_and_settings",
+      "path": "migrations/054_harden_calendar_and_settings.sql",
+      "checksum": "669de4360b8c198fd2e0d4c5ce78085f8f7074476d0144ee1d4ea9f8cd23e194",
+      "destructive": false
+    },
+    {
+      "id": "055_harden_calendar_and_settings",
+      "path": "migrations/055_harden_calendar_and_settings.sql",
+      "checksum": "21a31fe0f1e57a197ddae747698f2e907949fb1d9d8b5e77a1063f0b86ed085c",
+      "destructive": false
+    },
+    {
+      "id": "056_harden_calendar_and_settings",
+      "path": "migrations/056_harden_calendar_and_settings.sql",
+      "checksum": "689b1d088c108b162ddee468ed80a5921b1c0c6455927dbb5112e61ccd28b8aa",
+      "destructive": false
+    }
   ],
   "navigation": [
-    { "id": "dashboard", "label": "Organizing Dashboard", "icon": "layout-dashboard", "href": "/plugins/wattanam.organizing-management/dashboard", "permission": "wattanam.organizing-management.view" },
-    { "id": "organization", "label": "Organization Profile", "icon": "building-2", "href": "/plugins/wattanam.organizing-management/organization", "permission": "wattanam.organizing-management.employees.manage" },
-    { "id": "positions", "label": "Positions", "icon": "briefcase-business", "href": "/plugins/wattanam.organizing-management/positions", "permission": "wattanam.organizing-management.employees.manage" },
-    { "id": "employees", "label": "Employers & Employees", "icon": "users", "href": "/plugins/wattanam.organizing-management/employees", "permission": "wattanam.organizing-management.employees.manage" },
-    { "id": "hr-calendar", "label": "HR Calendar", "icon": "calendar-days", "href": "/plugins/wattanam.organizing-management/hr-calendar", "permission": "wattanam.organizing-management.calendar.manage" },
-    { "id": "day-off", "label": "Day-Off Requests", "icon": "calendar-clock", "href": "/plugins/wattanam.organizing-management/day-off", "permission": "wattanam.organizing-management.calendar.manage" },
-    { "id": "compensation", "label": "Rewards & Deductions", "icon": "badge-dollar-sign", "href": "/plugins/wattanam.organizing-management/compensation", "permission": "wattanam.organizing-management.payroll.manage" },
-    { "id": "payroll", "label": "Salary & Payroll", "icon": "wallet-cards", "href": "/plugins/wattanam.organizing-management/payroll", "permission": "wattanam.organizing-management.payroll.manage" },
-    { "id": "permissions", "label": "Employee Permissions", "icon": "file-check-2", "href": "/plugins/wattanam.organizing-management/permissions", "permission": "wattanam.organizing-management.permissions.request" },
-    { "id": "payroll-attendance", "label": "Payroll Attendance Report", "icon": "chart-no-axes-column", "href": "/plugins/wattanam.organizing-management/payroll-attendance", "permission": "wattanam.organizing-management.payroll.manage" },
-    { "id": "disciplinary-actions", "label": "Disciplinary Actions", "icon": "shield-alert", "href": "/plugins/wattanam.organizing-management/disciplinary-actions", "permission": "wattanam.organizing-management.discipline.manage" },
-    { "id": "promotions", "label": "Job Promotions", "icon": "trending-up", "href": "/plugins/wattanam.organizing-management/promotions", "permission": "wattanam.organizing-management.promotions.manage" }
-    ,{ "id": "profiles", "label": "Workforce Profiles", "icon": "user", "href": "/plugins/wattanam.organizing-management/directory", "permission": "wattanam.organizing-management.employees.manage" }
-    ,{ "id": "reports", "label": "Workforce Reports", "icon": "printer", "href": "/plugins/wattanam.organizing-management/reports", "permission": "wattanam.organizing-management.reports.view" }
-    ,{ "id": "id-cards", "label": "Workforce ID Cards", "icon": "id-card", "href": "/plugins/wattanam.organizing-management/id-cards", "permission": "wattanam.organizing-management.id-cards.manage" }
-    ,{ "id": "attendance-scan", "label": "Scan Attendance", "icon": "scan", "href": "/plugins/wattanam.organizing-management/attendance-scan", "permission": "wattanam.organizing-management.attendance.scan" }
-    ,{ "id": "attendance-records", "label": "Attendance Records", "icon": "check-square", "href": "/plugins/wattanam.organizing-management/attendance-records", "permission": "wattanam.organizing-management.attendance.report" }
-    ,{ "id": "attendance-corrections", "label": "Attendance Corrections", "icon": "file-pen-line", "href": "/plugins/wattanam.organizing-management/attendance-corrections", "permission": "wattanam.organizing-management.attendance.correct" }
-    ,{ "id": "attendance-settings", "label": "Attendance Settings", "icon": "settings", "href": "/plugins/wattanam.organizing-management/attendance-settings", "permission": "wattanam.organizing-management.attendance.configure" }
+    {
+      "id": "dashboard",
+      "label": "Organizing Dashboard",
+      "icon": "layout-dashboard",
+      "href": "/plugins/wattanam.organizing-management/dashboard",
+      "permission": "wattanam.organizing-management.view"
+    },
+    {
+      "id": "organization",
+      "label": "Organization Profile",
+      "icon": "building-2",
+      "href": "/plugins/wattanam.organizing-management/organization",
+      "permission": "wattanam.organizing-management.employees.manage"
+    },
+    {
+      "id": "positions",
+      "label": "Positions",
+      "icon": "briefcase-business",
+      "href": "/plugins/wattanam.organizing-management/positions",
+      "permission": "wattanam.organizing-management.employees.manage"
+    },
+    {
+      "id": "employees",
+      "label": "Employers & Employees",
+      "icon": "users",
+      "href": "/plugins/wattanam.organizing-management/employees",
+      "permission": "wattanam.organizing-management.employees.manage"
+    },
+    {
+      "id": "hr-calendar",
+      "label": "HR Calendar",
+      "icon": "calendar-days",
+      "href": "/plugins/wattanam.organizing-management/hr-calendar",
+      "permission": "wattanam.organizing-management.calendar.manage"
+    },
+    {
+      "id": "day-off",
+      "label": "Day-Off Requests",
+      "icon": "calendar-clock",
+      "href": "/plugins/wattanam.organizing-management/day-off",
+      "permission": "wattanam.organizing-management.calendar.manage"
+    },
+    {
+      "id": "compensation",
+      "label": "Rewards & Deductions",
+      "icon": "badge-dollar-sign",
+      "href": "/plugins/wattanam.organizing-management/compensation",
+      "permission": "wattanam.organizing-management.payroll.manage"
+    },
+    {
+      "id": "payroll",
+      "label": "Salary & Payroll",
+      "icon": "wallet-cards",
+      "href": "/plugins/wattanam.organizing-management/payroll",
+      "permission": "wattanam.organizing-management.payroll.manage"
+    },
+    {
+      "id": "permissions",
+      "label": "Employee Permissions",
+      "icon": "file-check-2",
+      "href": "/plugins/wattanam.organizing-management/permissions",
+      "permission": "wattanam.organizing-management.permissions.request"
+    },
+    {
+      "id": "payroll-attendance",
+      "label": "Payroll Attendance Report",
+      "icon": "chart-no-axes-column",
+      "href": "/plugins/wattanam.organizing-management/payroll-attendance",
+      "permission": "wattanam.organizing-management.payroll.manage"
+    },
+    {
+      "id": "disciplinary-actions",
+      "label": "Disciplinary Actions",
+      "icon": "shield-alert",
+      "href": "/plugins/wattanam.organizing-management/disciplinary-actions",
+      "permission": "wattanam.organizing-management.discipline.manage"
+    },
+    {
+      "id": "promotions",
+      "label": "Job Promotions",
+      "icon": "trending-up",
+      "href": "/plugins/wattanam.organizing-management/promotions",
+      "permission": "wattanam.organizing-management.promotions.manage"
+    },
+    {
+      "id": "profiles",
+      "label": "Workforce Profiles",
+      "icon": "user",
+      "href": "/plugins/wattanam.organizing-management/directory",
+      "permission": "wattanam.organizing-management.employees.manage"
+    },
+    {
+      "id": "reports",
+      "label": "Workforce Reports",
+      "icon": "printer",
+      "href": "/plugins/wattanam.organizing-management/reports",
+      "permission": "wattanam.organizing-management.reports.view"
+    },
+    {
+      "id": "id-cards",
+      "label": "Workforce ID Cards",
+      "icon": "id-card",
+      "href": "/plugins/wattanam.organizing-management/id-cards",
+      "permission": "wattanam.organizing-management.id-cards.manage"
+    },
+    {
+      "id": "attendance-scan",
+      "label": "Scan Attendance",
+      "icon": "scan",
+      "href": "/plugins/wattanam.organizing-management/attendance-scan",
+      "permission": "wattanam.organizing-management.attendance.scan"
+    },
+    {
+      "id": "attendance-records",
+      "label": "Attendance Records",
+      "icon": "check-square",
+      "href": "/plugins/wattanam.organizing-management/attendance-records",
+      "permission": "wattanam.organizing-management.attendance.report"
+    },
+    {
+      "id": "attendance-corrections",
+      "label": "Attendance Corrections",
+      "icon": "file-pen-line",
+      "href": "/plugins/wattanam.organizing-management/attendance-corrections",
+      "permission": "wattanam.organizing-management.attendance.correct"
+    },
+    {
+      "id": "attendance-settings",
+      "label": "Attendance Settings",
+      "icon": "settings",
+      "href": "/plugins/wattanam.organizing-management/attendance-settings",
+      "permission": "wattanam.organizing-management.attendance.configure"
+    }
   ],
-  "supportedLanguages": ["en", "km"],
+  "supportedLanguages": [
+    "en",
+    "km"
+  ],
   "supportUrl": "https://wattanam.example/support/organizing-management",
   "privacyUrl": "https://wattanam.example/privacy/plugins/organizing-management",
-  "operational": { "healthCheck": "runtime", "dataClassification": ["employment-records", "personal-data"], "backup": { "database": "required", "files": "none", "restore": "required" }, "uninstall": { "dataRetention": "preserve" }, "pricing": "marketplace" }
+  "operational": {
+    "healthCheck": "runtime",
+    "dataClassification": [
+      "employment-records",
+      "personal-data"
+    ],
+    "backup": {
+      "database": "required",
+      "files": "none",
+      "restore": "required"
+    },
+    "uninstall": {
+      "dataRetention": "preserve"
+    },
+    "pricing": "marketplace"
+  }
 }

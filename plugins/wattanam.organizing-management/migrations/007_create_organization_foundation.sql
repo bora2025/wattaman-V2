@@ -1,0 +1,2 @@
+-- wattanam-plugin-migration: 007_create_organization_foundation
+CREATE INDEX plugin_wattanam_organizing_management_attendance_date_idx ON plugin_wattanam_organizing_management_attendance_record("attendanceDate");

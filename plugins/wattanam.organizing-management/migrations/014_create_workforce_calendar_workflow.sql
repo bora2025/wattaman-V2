@@ -1,0 +1,2 @@
+-- wattanam-plugin-migration: 014_create_workforce_calendar_workflow
+CREATE INDEX plugin_wattanam_organizing_management_day_off_status_idx ON plugin_wattanam_organizing_management_day_off_request("status", "startsOn");

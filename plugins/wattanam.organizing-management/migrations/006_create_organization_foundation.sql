@@ -1,0 +1,2 @@
+-- wattanam-plugin-migration: 006_create_organization_foundation
+CREATE INDEX plugin_wattanam_organizing_management_employee_status_idx ON plugin_wattanam_organizing_management_employee("employmentStatus");

@@ -1,0 +1,3 @@
+-- wattanam-plugin-migration: 048_audit_hr_and_attendance_corrections
+CREATE INDEX plugin_wattanam_organizing_management_attendance_correction_record_idx
+  ON plugin_wattanam_organizing_management_attendance_correction("attendanceRecordId", "createdAt");

@@ -1,0 +1,2 @@
+-- wattanam-plugin-migration: 019_create_payroll_rewards_permissions
+CREATE INDEX plugin_wattanam_organizing_management_adjustment_employee_date_idx ON plugin_wattanam_organizing_management_compensation_adjustment("employeeId", "effectiveDate");

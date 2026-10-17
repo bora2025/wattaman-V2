@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.16.1
+
+- Split the installation schema into independently verified single-statement migrations required by Customer School.
+- Preserved PostgreSQL payroll trigger functions as single top-level migration statements.
+- Added customer runtime SQL parsing that correctly ignores semicolons inside PostgreSQL dollar-quoted function bodies.
+- Fixed first-time activation failing with “Migration must contain exactly one SQL statement”.
+
 ## 0.16.0
 
 - Corrected printable attendance reports to count true no-shows from configured workdays.

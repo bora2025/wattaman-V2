@@ -1,4 +1,4 @@
--- wattanam-plugin-migration: 010_create_id_card_templates
+-- wattanam-plugin-migration: 050_create_id_card_templates
 CREATE TABLE plugin_wattanam_organizing_management_id_card_template (
   "id" TEXT PRIMARY KEY,
   "cardType" TEXT NOT NULL UNIQUE CHECK ("cardType" IN ('STAFF')),
@@ -19,7 +19,3 @@ CREATE TABLE plugin_wattanam_organizing_management_id_card_template (
   "createdAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-
-ALTER TABLE plugin_wattanam_organizing_management_employee
-  ADD COLUMN "qrRotatedAt" TIMESTAMPTZ,
-  ADD COLUMN "qrRotatedById" TEXT;

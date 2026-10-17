@@ -1,0 +1,2 @@
+-- wattanam-plugin-migration: 025_create_employee_relations_workflow
+CREATE INDEX plugin_wattanam_organizing_management_disciplinary_employee_idx ON plugin_wattanam_organizing_management_disciplinary_action("employeeId", "incidentDate");
