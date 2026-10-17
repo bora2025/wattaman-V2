@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "id": "wattanam.organizing-management",
+  "name": "Organizing Management",
+  "description": "Workforce, HR calendar, employee ID cards, QR attendance, corrections, settings, and reporting for companies, shops, stores, and organizations.",
+  "version": "0.16.0",
+  "requiresCore": ">=0.1.0-0 <1.0.0",
+  "publisher": "wattanam",
+  "license": "commercial",
+  "backendEntry": "backend/index.js",
+  "frontendEntry": "frontend/page.json",
+  "sdkVersion": "1.2.0",
+  "runtimeVersion": "1.0.0",
+  "capabilities": ["api.routes", "database.read", "database.write", "navigation.register", "permissions.register", "ui.pages"],
+  "permissions": [
+    "wattanam.organizing-management.view",
+    "wattanam.organizing-management.employees.manage",
+    "wattanam.organizing-management.calendar.manage",
+    "wattanam.organizing-management.payroll.manage",
+    "wattanam.organizing-management.permissions.request",
+    "wattanam.organizing-management.permissions.review",
+    "wattanam.organizing-management.discipline.manage",
+    "wattanam.organizing-management.promotions.manage",
+    "wattanam.organizing-management.reports.view",
+    "wattanam.organizing-management.reports.configure",
+    "wattanam.organizing-management.id-cards.manage",
+    "wattanam.organizing-management.attendance.scan",
+    "wattanam.organizing-management.attendance.report",
+    "wattanam.organizing-management.attendance.correct",
+    "wattanam.organizing-management.attendance.configure"
+  ],
+  "dependencies": {},
+  "optionalDependencies": {},
+  "migrations": [
+    { "id": "001_create_organization_foundation", "path": "migrations/001_create_organization_foundation.sql", "checksum": "d1e1d3f79c263c6a2076af054e0934218802d9b8c54c5a719b1a4a1ff6ecbbb2", "destructive": false },
+    { "id": "002_create_workforce_calendar_workflow", "path": "migrations/002_create_workforce_calendar_workflow.sql", "checksum": "36f48c698cef38f744013865ae37e60a4b4ec127b7e816bd921db7758f6062ba", "destructive": false },
+    { "id": "003_create_payroll_rewards_permissions", "path": "migrations/003_create_payroll_rewards_permissions.sql", "checksum": "7280c57122f22c5be4e202ec48145de2492e6e32d1bf2db79a582d05a0b37d70", "destructive": false },
+    { "id": "004_create_employee_relations_workflow", "path": "migrations/004_create_employee_relations_workflow.sql", "checksum": "8b63f81cfda038f45afe62f5bac70bbb64f997fd7c5fd36bde950d6831d3adf2", "destructive": false },
+    { "id": "005_create_profiles_and_print_settings", "path": "migrations/005_create_profiles_and_print_settings.sql", "checksum": "65ac7722560cca8f18b5bbbdb7daa2b387bbb46cb8ca8d33244a4cd1704a022f", "destructive": false },
+    { "id": "006_create_attendance_scanner", "path": "migrations/006_create_attendance_scanner.sql", "checksum": "f41ca2d79437114abcbdf4bb858027e14ef27d74483e300e833aad96d961b67a", "destructive": false },
+    { "id": "007_harden_attendance_scanner", "path": "migrations/007_harden_attendance_scanner.sql", "checksum": "43f1068df04141661ebb86dec45405c8e105a528377ead945fe87ec913e6ae1b", "destructive": false },
+    { "id": "008_harden_payroll_and_approvals", "path": "migrations/008_harden_payroll_and_approvals.sql", "checksum": "eab24288ba775cf1d8ed32cf90be5abf54b8343c05e431a613e76bd95f43b548", "destructive": false },
+    { "id": "009_audit_hr_and_attendance_corrections", "path": "migrations/009_audit_hr_and_attendance_corrections.sql", "checksum": "fa42e9c04b7fc6b9b58ee5e0118f051bb1eb576a2af580681c785071855408a0", "destructive": false },
+    { "id": "010_create_id_card_templates", "path": "migrations/010_create_id_card_templates.sql", "checksum": "39ec14a8edcd49bbbd3ac9dbaabfb94233e54ee3723c13a1c5e82ebc0093d0f9", "destructive": false },
+    { "id": "011_fix_attendance_based_payroll", "path": "migrations/011_fix_attendance_based_payroll.sql", "checksum": "8325d3bb0c6a845674d29f8a1f0cb56157541b2e90f8dcada4e77fe20d069fff", "destructive": false },
+    { "id": "012_harden_calendar_and_settings", "path": "migrations/012_harden_calendar_and_settings.sql", "checksum": "504e4e741e641a79713e10e9eb259bdc796e845c6a9036fa0fd8f23215ae5b27", "destructive": false }
+  ],
+  "navigation": [
+    { "id": "dashboard", "label": "Organizing Dashboard", "icon": "layout-dashboard", "href": "/plugins/wattanam.organizing-management/dashboard", "permission": "wattanam.organizing-management.view" },
+    { "id": "organization", "label": "Organization Profile", "icon": "building-2", "href": "/plugins/wattanam.organizing-management/organization", "permission": "wattanam.organizing-management.employees.manage" },
+    { "id": "positions", "label": "Positions", "icon": "briefcase-business", "href": "/plugins/wattanam.organizing-management/positions", "permission": "wattanam.organizing-management.employees.manage" },
+    { "id": "employees", "label": "Employers & Employees", "icon": "users", "href": "/plugins/wattanam.organizing-management/employees", "permission": "wattanam.organizing-management.employees.manage" },
+    { "id": "hr-calendar", "label": "HR Calendar", "icon": "calendar-days", "href": "/plugins/wattanam.organizing-management/hr-calendar", "permission": "wattanam.organizing-management.calendar.manage" },
+    { "id": "day-off", "label": "Day-Off Requests", "icon": "calendar-clock", "href": "/plugins/wattanam.organizing-management/day-off", "permission": "wattanam.organizing-management.calendar.manage" },
+    { "id": "compensation", "label": "Rewards & Deductions", "icon": "badge-dollar-sign", "href": "/plugins/wattanam.organizing-management/compensation", "permission": "wattanam.organizing-management.payroll.manage" },
+    { "id": "payroll", "label": "Salary & Payroll", "icon": "wallet-cards", "href": "/plugins/wattanam.organizing-management/payroll", "permission": "wattanam.organizing-management.payroll.manage" },
+    { "id": "permissions", "label": "Employee Permissions", "icon": "file-check-2", "href": "/plugins/wattanam.organizing-management/permissions", "permission": "wattanam.organizing-management.permissions.request" },
+    { "id": "payroll-attendance", "label": "Payroll Attendance Report", "icon": "chart-no-axes-column", "href": "/plugins/wattanam.organizing-management/payroll-attendance", "permission": "wattanam.organizing-management.payroll.manage" },
+    { "id": "disciplinary-actions", "label": "Disciplinary Actions", "icon": "shield-alert", "href": "/plugins/wattanam.organizing-management/disciplinary-actions", "permission": "wattanam.organizing-management.discipline.manage" },
+    { "id": "promotions", "label": "Job Promotions", "icon": "trending-up", "href": "/plugins/wattanam.organizing-management/promotions", "permission": "wattanam.organizing-management.promotions.manage" }
+    ,{ "id": "profiles", "label": "Workforce Profiles", "icon": "user", "href": "/plugins/wattanam.organizing-management/directory", "permission": "wattanam.organizing-management.employees.manage" }
+    ,{ "id": "reports", "label": "Workforce Reports", "icon": "printer", "href": "/plugins/wattanam.organizing-management/reports", "permission": "wattanam.organizing-management.reports.view" }
+    ,{ "id": "id-cards", "label": "Workforce ID Cards", "icon": "id-card", "href": "/plugins/wattanam.organizing-management/id-cards", "permission": "wattanam.organizing-management.id-cards.manage" }
+    ,{ "id": "attendance-scan", "label": "Scan Attendance", "icon": "scan", "href": "/plugins/wattanam.organizing-management/attendance-scan", "permission": "wattanam.organizing-management.attendance.scan" }
+    ,{ "id": "attendance-records", "label": "Attendance Records", "icon": "check-square", "href": "/plugins/wattanam.organizing-management/attendance-records", "permission": "wattanam.organizing-management.attendance.report" }
+    ,{ "id": "attendance-corrections", "label": "Attendance Corrections", "icon": "file-pen-line", "href": "/plugins/wattanam.organizing-management/attendance-corrections", "permission": "wattanam.organizing-management.attendance.correct" }
+    ,{ "id": "attendance-settings", "label": "Attendance Settings", "icon": "settings", "href": "/plugins/wattanam.organizing-management/attendance-settings", "permission": "wattanam.organizing-management.attendance.configure" }
+  ],
+  "supportedLanguages": ["en", "km"],
+  "supportUrl": "https://wattanam.example/support/organizing-management",
+  "privacyUrl": "https://wattanam.example/privacy/plugins/organizing-management",
+  "operational": { "healthCheck": "runtime", "dataClassification": ["employment-records", "personal-data"], "backup": { "database": "required", "files": "none", "restore": "required" }, "uninstall": { "dataRetention": "preserve" }, "pricing": "marketplace" }
+}

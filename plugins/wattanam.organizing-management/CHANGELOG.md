@@ -1,0 +1,146 @@
+# Changelog
+
+## 0.16.0
+
+- Corrected printable attendance reports to count true no-shows from configured workdays.
+- Excluded organization holidays and approved leave or permissions from absence totals.
+- Required an explicit date period for authoritative attendance summaries.
+- Removed sensitive identity and address fields from the general printable workforce list.
+- Aligned protected employee-detail UI permissions with the secured backend route.
+- Returned the authoritative database-triggered payroll calculation so the UI matches stored absence and salary totals.
+
+## 0.15.0
+
+- Removed QR credentials and sensitive personal fields from the general workforce directory API.
+- Added a separately authorized workforce-profile data source for HR administrators.
+- Restricted detailed employee records to workforce-management permission.
+- Stopped returning newly created QR credentials from the general employee creation workflow.
+- Added strict email and HTTPS/uploaded-image validation for workforce profiles.
+
+## 0.14.0
+
+- Added editable HR calendar detail pages and guarded update routes.
+- Added transactional calendar row locking and immutable before-change audit snapshots.
+- Added calendar actor attribution and recoverable retirement schema support.
+- Enforced valid 24-hour attendance times and chronological schedule ordering.
+
+## 0.13.1
+
+- Removed duplicate runtime permission registrations that could fail on strict plugin hosts.
+- Added activation contract tests for UI routes, permissions, navigation uniqueness, and plugin table namespace isolation.
+- Improved workforce directory filter accessibility and organization-specific ID-card defaults.
+
+## 0.13.0
+
+- Fixed no-show employees being omitted from attendance-based payroll absence calculations.
+- Derived expected workdays from configured weekdays while excluding organization holidays.
+- Integrated approved paid/unpaid leave and attendance permissions into payroll day counts.
+- Recalculated monthly absence deductions and daily wages from authoritative calendar data.
+
+## 0.12.0
+
+- Added payroll review pages with explicit approve, pay, and void actions.
+- Added row navigation from payroll history into secured state transitions.
+- Added disciplinary action detail, activation, resolution, and void UI.
+- Exposed guarded disciplinary lifecycle transitions through the customer-school interface.
+
+## 0.11.1
+
+- Made the dashboard use the configured organization timezone.
+- Added strict report date-range validation.
+- Restricted report and ID-card logos to HTTPS URLs or supported uploaded image data.
+- Added automated security workflow coverage for approvals, corrections, timezone, report ranges, and ID-card templates.
+
+## 0.11.0
+
+- Added editable professional workforce ID-card templates with organization logo support.
+- Added CR80 portrait and landscape print layouts and a two-sided card preset.
+- Added live QR attendance credentials to every active workforce card.
+- Added a protected QR credential rotation route with actor and timestamp attribution.
+- Added the workforce ID-card page and navigation entry.
+
+## 0.10.0
+
+- Added a complete audited attendance-correction workflow with original and replacement values.
+- Added correction history, record detail, correction forms, and dedicated navigation.
+- Added requester and reviewer attribution with self-approval prevention for day-off requests.
+- Added creator attribution for disciplinary actions and promotions.
+- Added guarded disciplinary action resolution and void transitions.
+- Validated organization timezones as real IANA timezone identifiers.
+
+## 0.9.0
+
+- Added payroll creator, approver, payer, voider, and transition-audit attribution.
+- Enforced creator/approver and approver/payer separation of duties with transactional row locks.
+- Prevented approved, paid, or void payroll periods from being silently recalculated.
+- Added overflow validation for every persisted payroll monetary total.
+- Added creator attribution for rewards and deductions.
+- Added requester/reviewer attribution and self-approval prevention for attendance permissions.
+
+## 0.8.0
+
+- Hardened scanner transactions so rejected attempts remain auditable after the attendance transaction completes.
+- Redacted raw QR values from scan history and stored a SHA-256 fingerprint instead.
+- Added scanner principal attribution, bounded coordinate validation, and per-principal rate limiting.
+- Preserved deterministic idempotent responses for both accepted and rejected retry attempts.
+- Added structured scanner metadata without exposing the employee QR credential.
+
+## 0.7.1
+
+- Aligned organization USB scanning with the Academic Management staff attendance station.
+- Added the same keyboard-wedge scanner mode, focus-first input, Enter submission, debounce, idempotency, geolocation fields, and camera/USB switching.
+- Added today’s employer and employee attendance directly below the scanner station.
+
+## 0.7.0
+
+- Added full-screen camera QR and USB keyboard-scanner attendance stations.
+- Added server-authoritative check-in, late, check-out, workday, holiday, day-off, and permission evaluation.
+- Added idempotent scan commands, per-employee transactional locking, offline-age validation, and duplicate protection.
+- Added accepted and rejected scan audit history with device source and rejection reason.
+- Added editable attendance workdays, schedule times, checkout delay, and offline scan policy.
+- Added attendance records and scanner-audit pages for employers and employees.
+
+## 0.6.0
+
+- Added a modern searchable workforce directory with type and employment-status filters.
+- Added a unified detail editor for employer and employee identity, contact, position, status, personal, and emergency information.
+- Added active-position selection directly in the workforce profile editor.
+- Added professional SVG icon mappings for every Organizing Management navigation feature.
+- Added a dedicated Workforce Profiles navigation destination optimized for customer-school rendering.
+
+## 0.5.0
+
+- Expanded employer and employee profiles with personal, identity, address, emergency-contact, and notes fields.
+- Added printable employee-list, attendance, and salary reports.
+- Added reusable editable report headers, logo, custom text, footer, signer, paper size, and orientation.
+- Added an editable report date and additional one-time text before printing or saving as PDF.
+
+## 0.4.0
+
+- Refined attendance-based payroll to report present, absent, and approved permission days separately.
+- Excluded approved permission dates from monthly absence deductions.
+- Added disciplinary-action records for warnings, suspension, and termination recommendations.
+- Added transactional job promotions that preserve position and salary history.
+- Added dedicated Disciplinary Actions and Job Promotions management pages.
+
+## 0.3.0
+
+- Added monthly, daily, and hourly salary configuration for employers and employees.
+- Added good-job rewards, seniority bonuses, year-end bonuses, and other earnings.
+- Added salary deductions, wage deductions, and other deductions with required reasons.
+- Added attendance-based draft payroll calculation with stored attendance and adjustment audit data.
+- Added late-arrival, early-departure, short-leave, remote-work, and other permission requests with approval workflow.
+
+## 0.2.0
+
+- Added organization profile configuration for companies, shops, stores, nonprofits, and other organizations.
+- Added position and workforce-member management for employers, employees, contractors, and interns.
+- Added HR calendar entries for holidays, events, paydays, meetings, and reminders.
+- Added employee day-off requests with pending, approved, rejected, and cancelled workflow states.
+- Added dedicated professional navigation and declarative UI pages for the new HR workflow.
+
+## 0.1.0
+
+- Introduced the Organizing Management plugin foundation.
+- Added a live workforce and daily attendance dashboard.
+- Added isolated employee, calendar, attendance, and settings storage for upcoming modules.
