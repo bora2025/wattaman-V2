@@ -1824,6 +1824,22 @@ module.exports = {
         return context.database.query(`${officerSelect} WHERE o."id" = $1::uuid LIMIT 1`, [id]).then(decorateOfficerRows).then((items) => items[0]);
       },
     });
+    const defaultCardTemplates = {
+      student: { schoolName: 'Wattanam School', cardTitle: 'Student Identification Card', logoUrl: '', cardSize: 'cr80-portrait', designPreset: 'classic-orange', primaryColor: '#ea580c', accentColor: '#f97316', footerText: 'Scan QR code for attendance', extraInfo: '', showPhone: true, showEmail: false, showAddress: true, showDateOfBirth: true },
+      staff: { schoolName: 'Wattanam School', cardTitle: 'Staff Identification Card', logoUrl: '', cardSize: 'cr80-landscape', designPreset: 'staff-professional', primaryColor: '#0f766e', accentColor: '#d97706', footerText: 'Official staff attendance card', extraInfo: '', showPhone: true, showEmail: true, showAddress: false, showDateOfBirth: false },
+    };
+    const cardTemplate = (type, value = {}) => {
+      if (!defaultCardTemplates[type]) throw new Error('Card template type must be student or staff');
+      const text = (key, limit) => String(value[key] === undefined ? defaultCardTemplates[type][key] : value[key]).trim().slice(0, limit);
+      const color = (key) => /^#[0-9a-f]{6}$/i.test(String(value[key] || '')) ? String(value[key]) : defaultCardTemplates[type][key];
+      const requestedLogo = String(value.logoUrl || '').trim();
+      const logoUrl = (/^https:\/\//i.test(requestedLogo) || /^data:image\/(?:png|jpeg|webp|gif);base64,/i.test(requestedLogo)) && requestedLogo.length <= 1000000 ? requestedLogo : '';
+      const cardSize = ['cr80-portrait','cr80-landscape'].includes(value.cardSize) ? value.cardSize : defaultCardTemplates[type].cardSize;
+      const designPreset = /^[a-z0-9-]{1,40}$/.test(String(value.designPreset || '')) ? String(value.designPreset) : defaultCardTemplates[type].designPreset;
+      return { schoolName: text('schoolName', 100), cardTitle: text('cardTitle', 100), logoUrl, cardSize, designPreset, primaryColor: color('primaryColor'), accentColor: color('accentColor'), footerText: text('footerText', 160), extraInfo: text('extraInfo', 500), ...Object.fromEntries(['showPhone','showEmail','showAddress','showDateOfBirth'].map((key) => [key, value[key] === undefined ? defaultCardTemplates[type][key] : value[key] === true])) };
+    };
+    context.routes.register({ method: 'GET', path: 'id-cards/templates/:type', permission: 'wattanam.academic-management.manage', handler: async (request) => { const type = String(request?.params?.type || '').toLowerCase(); return cardTemplate(type, await context.settings.get(`id-card-template-${type}`, defaultCardTemplates[type])); } });
+    context.routes.register({ method: 'PUT', path: 'id-cards/templates/:type', permission: 'wattanam.academic-management.manage', handler: async (request) => { await requireAdministrativePrincipal(request); const type = String(request?.params?.type || '').toLowerCase(); const template = cardTemplate(type, request?.body || {}); await context.settings.set(`id-card-template-${type}`, template); return template; } });
     context.routes.register({
       method: 'GET', path: 'id-cards/staff', permission: 'wattanam.academic-management.manage',
       handler: async () => {

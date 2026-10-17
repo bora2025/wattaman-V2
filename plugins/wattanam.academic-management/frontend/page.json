@@ -4069,11 +4069,13 @@
       "dataSources": [
         { "id": "classes", "method": "GET", "path": "classes", "permission": "wattanam.academic-management.view" },
         { "id": "studyYears", "method": "GET", "path": "study-years", "permission": "wattanam.academic-management.view" },
+        { "id": "studentCardTemplate", "method": "GET", "path": "id-cards/templates/student", "permission": "wattanam.academic-management.manage" },
+        { "id": "saveStudentCardTemplate", "method": "PUT", "path": "id-cards/templates/student", "permission": "wattanam.academic-management.manage", "autoload": false },
         { "id": "classStudents", "method": "GET", "path": "classes/:classId/students", "permission": "wattanam.academic-management.view", "parameters": ["classId"], "autoload": false },
         { "id": "ensureStudentCards", "method": "POST", "path": "id-cards/classes/:classId/ensure", "permission": "wattanam.academic-management.manage", "parameters": ["classId"], "autoload": false }
       ],
       "components": [
-        { "id": "student-id-cards", "type": "id-card-manager", "title": "Student ID Cards", "source": "classes", "options": { "mode": "student", "studyYearsSource": "studyYears", "studentsSource": "classStudents", "ensureSource": "ensureStudentCards" } }
+        { "id": "student-id-cards", "type": "id-card-manager", "title": "Student ID Cards", "source": "classes", "options": { "mode": "student", "studyYearsSource": "studyYears", "studentsSource": "classStudents", "ensureSource": "ensureStudentCards", "templateSource": "studentCardTemplate", "saveTemplateSource": "saveStudentCardTemplate" } }
       ]
     },
     {
@@ -4083,10 +4085,12 @@
       "permission": "wattanam.academic-management.manage",
       "parameters": [],
       "dataSources": [
-        { "id": "staffCards", "method": "GET", "path": "id-cards/staff", "permission": "wattanam.academic-management.manage" }
+        { "id": "staffCards", "method": "GET", "path": "id-cards/staff", "permission": "wattanam.academic-management.manage" },
+        { "id": "staffCardTemplate", "method": "GET", "path": "id-cards/templates/staff", "permission": "wattanam.academic-management.manage" },
+        { "id": "saveStaffCardTemplate", "method": "PUT", "path": "id-cards/templates/staff", "permission": "wattanam.academic-management.manage", "autoload": false }
       ],
       "components": [
-        { "id": "staff-id-cards", "type": "id-card-manager", "title": "Staff ID Cards", "source": "staffCards", "options": { "mode": "staff" } }
+        { "id": "staff-id-cards", "type": "id-card-manager", "title": "Staff ID Cards", "source": "staffCards", "options": { "mode": "staff", "templateSource": "staffCardTemplate", "saveTemplateSource": "saveStaffCardTemplate" } }
       ]
     }
   ]

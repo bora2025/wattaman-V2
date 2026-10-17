@@ -202,6 +202,8 @@ test('Academic Management exposes the streamlined administration and attendance 
   for (const pageId of ['student-id-cards', 'staff-id-cards']) {
     const cards = ui.pages.find((candidate) => candidate.id === pageId);
     assert.ok(cards?.components.some((component) => component.type === 'id-card-manager'), `missing ${pageId} workspace`);
+    const manager = cards?.components.find((component) => component.type === 'id-card-manager');
+    assert.ok(manager?.options?.templateSource && manager?.options?.saveTemplateSource, `missing editable ${pageId} template sources`);
     assert.ok(navigation.some((entry) => entry.id === pageId), `missing runtime navigation for ${pageId}`);
   }
   for (const pageId of ['attendance-reports', 'staff-attendance-reports']) {
@@ -210,6 +212,8 @@ test('Academic Management exposes the streamlined administration and attendance 
   }
   assert.ok(routes.has('POST id-cards/classes/:id/ensure'), 'missing student card identifier backfill route');
   assert.ok(routes.has('GET id-cards/staff'), 'missing staff card route');
+  assert.ok(routes.has('GET id-cards/templates/:type'), 'missing ID card template read route');
+  assert.ok(routes.has('PUT id-cards/templates/:type'), 'missing ID card template save route');
 });
 
 test('direct class student creation casts date-of-birth input to PostgreSQL date', () => {
