@@ -132,10 +132,11 @@ function attendanceContext(context) {
     },
     permissions: { register: (items) => context.permissions.register(items.map((item) => ({ ...item, id: attendancePermission(item.id) }))) },
     navigation: { register: (items) => context.navigation.register(items
-      .filter((item) => item.id !== 'study-years')
+      .filter((item) => !['study-years', 'scanner'].includes(item.id))
       .map((item) => ({
         ...item,
         id: item.id === 'attendance' ? 'attendance-records' : `attendance-${item.id}`,
+        label: item.id === 'reports' ? 'Student Attendance Reports' : item.label,
         href: item.href.replace('/wattanam.attendance-manager/', '/wattanam.academic-management/'),
         permission: attendancePermission(item.permission),
         dashboard: item.dashboard ? { ...item.dashboard, title: 'Academic Attendance' } : undefined,
@@ -326,15 +327,10 @@ module.exports = {
     ]);
     context.navigation.register([
       { id: 'study-years', label: 'Study Years', href: '/plugins/wattanam.academic-management/study-years', permission: 'wattanam.academic-management.view' },
-      { id: 'departments', label: 'Departments', href: '/plugins/wattanam.academic-management/departments', permission: 'wattanam.academic-management.view' },
-      { id: 'subjects', label: 'Subjects', href: '/plugins/wattanam.academic-management/subjects', permission: 'wattanam.academic-management.view' },
-      { id: 'classes', label: 'Classes', href: '/plugins/wattanam.academic-management/classes', permission: 'wattanam.academic-management.view', dashboard: { title: 'Academic Management', description: 'Manage classes, subjects, enrollment, and student academic profiles.', priority: 50 } },
+      { id: 'classes', label: 'Classes', href: '/plugins/wattanam.academic-management/classes', permission: 'wattanam.academic-management.view', dashboard: { title: 'Academic Management', description: 'Manage classes, enrollment, and student academic profiles.', priority: 50 } },
       { id: 'student-id-cards', label: 'Student ID Cards', href: '/plugins/wattanam.academic-management/student-id-cards', permission: 'wattanam.academic-management.manage' },
-      { id: 'teachers', label: 'Teachers', href: '/plugins/wattanam.academic-management/teachers', permission: 'wattanam.academic-management.view' },
       { id: 'officers', label: 'Manage Officers', href: '/plugins/wattanam.academic-management/officers', permission: 'wattanam.academic-management.view' },
       { id: 'staff-id-cards', label: 'Staff ID Cards', href: '/plugins/wattanam.academic-management/staff-id-cards', permission: 'wattanam.academic-management.manage' },
-      { id: 'registrations', label: 'Registrations', href: '/plugins/wattanam.academic-management/registrations', permission: 'wattanam.academic-management.manage' },
-      { id: 'registration-settings', label: 'Registration Settings', href: '/plugins/wattanam.academic-management/registration-settings', permission: 'wattanam.academic-management.manage' },
     ]);
     const studyYearSelect = `SELECT y."id", y."year", y."label", y."startDate", y."endDate", y."isCurrent", y."schoolName", y."logoUrl", y."createdAt", y."updatedAt", jsonb_build_object('classes', COUNT(c."id")::int) AS "_count" FROM ${STUDY_YEAR} y LEFT JOIN ${CLASS} c ON c."studyYearId" = y."id"`;
     context.routes.register({

@@ -136,7 +136,7 @@ test('activated authoritative reports use Academic Management enrollment rosters
   assert.deepEqual(report.people.map((person) => person.id), ['student-1']);
 });
 
-test('Academic Management exposes administration and full attendance workflows', async () => {
+test('Academic Management exposes the streamlined administration and attendance workflows', async () => {
   const { routes, permissions, navigation } = await activate();
   for (const route of [
     'GET study-years', 'POST study-years', 'GET classes', 'POST classes',
@@ -163,15 +163,14 @@ test('Academic Management exposes administration and full attendance workflows',
   assert.ok(permissions.some((permission) => permission.id === 'wattanam.academic-management.attendance.scan'));
   assert.ok(permissions.some((permission) => permission.id === 'wattanam.academic-management.attendance.self.scan'));
   assert.deepEqual(
-    navigation.filter((item) => ['study-years', 'classes', 'officers', 'attendance-records', 'attendance-scanner', 'attendance-reports'].includes(item.id)).map((item) => item.id),
-    ['study-years', 'classes', 'officers', 'attendance-records', 'attendance-scanner', 'attendance-reports'],
+    navigation.map((item) => item.id),
+    ['study-years', 'classes', 'student-id-cards', 'officers', 'staff-id-cards', 'attendance-records', 'attendance-corrections', 'attendance-alerts', 'attendance-reports', 'attendance-settings', 'staff-attendance-scanner', 'staff-attendance-reports'],
   );
+  assert.equal(navigation.find((item) => item.id === 'attendance-reports')?.label, 'Student Attendance Reports');
 
   const ui = JSON.parse(fs.readFileSync(path.join(root, 'frontend', 'page.json'), 'utf8'));
   const dashboard = ui.pages.find((candidate) => candidate.id === 'attendance-dashboard');
   assert.ok(dashboard?.components.some((component) => component.type === 'attendance-dashboard'), 'missing dedicated Attendance Dashboard workspace');
-  const manifest = JSON.parse(fs.readFileSync(path.join(root, 'plugin.json'), 'utf8'));
-  assert.equal(manifest.navigation[0]?.id, 'attendance-dashboard', 'Attendance Dashboard must be the first plugin menu item');
   for (const page of ['study-years', 'classes', 'officers', 'officer-edit', 'officer-attendance', 'attendance-records', 'attendance-scanner', 'attendance-corrections', 'attendance-reports', 'attendance-settings', 'attendance-windows', 'student-attendance-scan', 'attendance-self-review', 'staff-attendance-scanner', 'staff-attendance-reports']) {
     assert.ok(ui.pages.some((candidate) => candidate.id === page), `missing UI page ${page}`);
   }

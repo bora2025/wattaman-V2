@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.54
+
+- Consolidate the administrator menu around the supported academic and attendance workflows.
+- Remove duplicate or retired navigation entries for Dashboard, Departments, Subjects, Teachers,
+  Registrations, Registration Settings, Attendance Scanner, Self-attendance QR, Scan Attendance,
+  and Self-attendance Review.
+- Rename Attendance Reports to Student Attendance Reports so it is distinct from Staff Attendance
+  Reports.
+- Preserve shared department, scan, and attendance storage still required by officer profiles and
+  the retained student/staff attendance workflows.
+
 ## 0.1.53
 
 - Repair upgrades from 0.1.51 by removing the obsolete student-only attendance-session constraint before staff defaults are inserted.

@@ -189,12 +189,6 @@ function registerSelfAttendance(context) {
     { id: selfScan, label: 'Record my own attendance with a signed school QR' },
     { id: review, label: 'Review exceptional student self-attendance scans' },
   ]);
-  context.navigation.register([
-    { id: 'attendance-windows', label: 'Self-attendance QR', href: '/plugins/wattanam.academic-management/attendance-windows', permission: manage },
-    { id: 'student-attendance-scan', label: 'Scan Attendance', href: '/plugins/wattanam.academic-management/student/attendance-scan', permission: selfScan },
-    { id: 'attendance-self-review', label: 'Self-attendance Review', href: '/plugins/wattanam.academic-management/attendance-self-review', permission: review },
-  ]);
-
   context.routes.register({
     method: 'GET', path: 'attendance-windows', permission: manage,
     handler: async (request) => {
