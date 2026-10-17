@@ -84,7 +84,6 @@ export class RepositoryService {
 
   async publishPlugin(fields: unknown, packageBuffer: Buffer, reviewStatus: 'APPROVED' | 'IN_REVIEW' = 'APPROVED') {
     const input = releaseInput.parse(fields);
-    if (input.paid === 'true') throw new HttpError(501, 'Paid publication is disabled until entitlement enforcement is operational');
     const packageHash = createHash('sha256').update(packageBuffer).digest('hex');
     const duplicate = await this.prisma.packageArtifact.findUnique({ where: { sha256: packageHash } });
     if (duplicate) throw new HttpError(409, 'This immutable artifact is already published');
