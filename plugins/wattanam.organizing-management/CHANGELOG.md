@@ -151,3 +151,8 @@
 - Introduced the Organizing Management plugin foundation.
 - Added a live workforce and daily attendance dashboard.
 - Added isolated employee, calendar, attendance, and settings storage for upcoming modules.
+# 0.16.2
+
+- Register the Organizing Management dashboard, reports, and workforce profile components with the Customer School UI contract.
+- Declare runtime route parameters for salary updates and ID-card template saves so the complete UI bundle passes activation validation.
+
