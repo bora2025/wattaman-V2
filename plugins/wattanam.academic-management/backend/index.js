@@ -1843,9 +1843,12 @@ module.exports = {
     context.routes.register({
       method: 'GET', path: 'id-cards/staff', permission: 'wattanam.academic-management.manage',
       handler: async () => {
-        const missing = await context.database.query(`SELECT o."id" FROM ${OFFICER} o LEFT JOIN ${ATTENDANCE_IDENTIFIER} ai ON ai."personId"=o."id"::text AND ai."personType"='STAFF' AND ai."active"=TRUE WHERE o."employmentStatus"='ACTIVE' AND ai."id" IS NULL`);
+        const missing = await context.database.query(`SELECT o."id", ai."id" AS "identifierId" FROM ${OFFICER} o LEFT JOIN ${ATTENDANCE_IDENTIFIER} ai ON ai."personId"=o."id"::text AND ai."personType"='STAFF' AND ai."active"=TRUE WHERE o."employmentStatus"='ACTIVE' AND (ai."id" IS NULL OR NULLIF(BTRIM(ai."code"),'') IS NULL)`);
         if (missing.length) await context.database.transaction(async (tx) => {
-          for (const officer of missing) await tx.execute(`INSERT INTO ${ATTENDANCE_IDENTIFIER} ("id","code","personId","personType") VALUES ($1,$2,$3,'STAFF')`, [crypto.randomUUID(), newCardCode('staff'), officer.id]);
+          for (const officer of missing) {
+            if (officer.identifierId) await tx.execute(`UPDATE ${ATTENDANCE_IDENTIFIER} SET "code"=$1,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=$2`, [newCardCode('staff'), officer.identifierId]);
+            else await tx.execute(`INSERT INTO ${ATTENDANCE_IDENTIFIER} ("id","code","personId","personType") VALUES ($1,$2,$3,'STAFF')`, [crypto.randomUUID(), newCardCode('staff'), officer.id]);
+          }
         });
         const cardSelect = officerSelect.replace(' FROM ', ', ai."code" AS "qrCode" FROM ');
         const rows = await context.database.query(`${cardSelect} LEFT JOIN ${ATTENDANCE_IDENTIFIER} ai ON ai."personId"=o."id"::text AND ai."personType"='STAFF' AND ai."active"=TRUE WHERE o."employmentStatus"='ACTIVE' ORDER BY o."createdAt" DESC`);
@@ -1857,9 +1860,9 @@ module.exports = {
       handler: async (request) => {
         await requireAdministrativePrincipal(request);
         const classId = String(request?.params?.id || '');
-        const missing = await context.database.query(`SELECT s."id" FROM ${STUDENT_PROFILE} s JOIN ${ENROLLMENT} e ON e."studentId"=s."id" AND e."validTo" IS NULL WHERE e."classId"=$1 AND s."qrCode" IS NULL`, [classId]);
+        const missing = await context.database.query(`SELECT s."id" FROM ${STUDENT_PROFILE} s JOIN ${ENROLLMENT} e ON e."studentId"=s."id" AND e."validTo" IS NULL WHERE e."classId"=$1 AND NULLIF(BTRIM(s."qrCode"),'') IS NULL`, [classId]);
         if (missing.length) await context.database.transaction(async (tx) => {
-          for (const student of missing) await tx.execute(`UPDATE ${STUDENT_PROFILE} SET "qrCode"=$1,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=$2 AND "qrCode" IS NULL`, [newCardCode('stu'), student.id]);
+          for (const student of missing) await tx.execute(`UPDATE ${STUDENT_PROFILE} SET "qrCode"=$1,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=$2 AND NULLIF(BTRIM("qrCode"),'') IS NULL`, [newCardCode('stu'), student.id]);
         });
         return { classId, generated: missing.length };
       },
