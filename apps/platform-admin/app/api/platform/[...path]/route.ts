@@ -60,6 +60,7 @@ const sessionPostPatterns = [
 const matchesSessionPost = (path: string) => sessionPostPatterns.some((pattern) => pattern.test(path));
 const sessionPutPatterns = [
   /^plugins\/[0-9a-zA-Z._-]+\/pricing$/,
+  /^plugins\/[0-9a-zA-Z._-]+\/promotion$/,
 ];
 const matchesSessionPut = (path: string) => sessionPutPatterns.some((pattern) => pattern.test(path));
 
