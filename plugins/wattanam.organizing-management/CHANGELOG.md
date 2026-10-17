@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.16.4
+
+- Declared the durable-events capability required by the customer runtime for atomic database transactions.
+- Restored camera and USB attendance scans, including idempotent scan logging and attendance record updates.
+- Added contract coverage to prevent transactional handlers from shipping without the required capability.
+
 ## 0.16.1
 
 - Split the installation schema into independently verified single-statement migrations required by Customer School.

@@ -67,6 +67,18 @@ test('runtime and manifest navigation identifiers are unique', async () => {
   assert.deepEqual(new Set(runtimeIds), new Set(manifestIds));
 });
 
+test('transactional handlers declare the durable-events capability', () => {
+  const backendDirectory = path.join(__dirname, '..', 'backend');
+  const transactionalFiles = fs.readdirSync(backendDirectory)
+    .filter(file => file.endsWith('.js'))
+    .filter(file => fs.readFileSync(path.join(backendDirectory, file), 'utf8').includes('database.transaction'));
+  assert.ok(transactionalFiles.length > 0, 'expected at least one transactional backend handler');
+  assert.ok(
+    manifest.capabilities.includes('events.durable'),
+    `events.durable is required by transactional handlers: ${transactionalFiles.join(', ')}`,
+  );
+});
+
 test('all explicit plugin table identifiers remain inside the plugin namespace', () => {
   for (const migration of manifest.migrations) {
     const sql = fs.readFileSync(path.join(__dirname, '..', migration.path), 'utf8');
