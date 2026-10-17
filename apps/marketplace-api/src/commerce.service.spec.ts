@@ -274,6 +274,7 @@ describe('CommerceService invoice settlement', () => {
       marketplaceOrder: {
         findUnique: jest.fn().mockResolvedValue(null),
         findFirst: jest.fn().mockResolvedValue(null),
+        update: jest.fn().mockResolvedValue({}),
         create: jest.fn().mockResolvedValue(created),
         findUniqueOrThrow: jest.fn().mockResolvedValue({
           id: 'order-1', accountId: ACCOUNT, installationId: INSTALLATION,
@@ -338,6 +339,21 @@ describe('CommerceService invoice settlement', () => {
     expect(result).toMatchObject({ id: 'order-existing', invoice });
     expect(tx.marketplaceOrder.create).not.toHaveBeenCalled();
     expect(tx.schoolInvoice.create).not.toHaveBeenCalled();
+  });
+
+  it('cancels an orphan pending order and creates a new payable invoice', async () => {
+    const { tx, prisma } = harness();
+    tx.marketplaceOrder.findFirst.mockResolvedValue({
+      id: 'order-orphan', status: 'PENDING', settlementMode: 'IMMEDIATE', currency: 'USD',
+      lines: [{ priceId: PRICE, invoiceLine: null }],
+    });
+
+    const result = await new CommerceService(prisma, config).createOrder(order('IMMEDIATE'), new Date('2026-09-10T00:00:00.000Z'));
+
+    expect(tx.marketplaceOrder.update).toHaveBeenCalledWith({ where: { id: 'order-orphan' }, data: { status: 'CANCELLED' } });
+    expect(tx.marketplaceOrder.create).toHaveBeenCalled();
+    expect(tx.schoolInvoice.create).toHaveBeenCalled();
+    expect(result).toMatchObject({ invoice: { id: 'invoice-1' } });
   });
 
   it('defaults to immediate manual settlement', async () => {

@@ -77,7 +77,11 @@ export class CommerceService {
           const requestedPriceIds = [...input.priceIds].sort();
           if (pendingPriceIds.length === requestedPriceIds.length && pendingPriceIds.every((id, index) => id === requestedPriceIds[index])) {
             const invoice = pending.lines.find((line) => line.invoiceLine)?.invoiceLine?.invoice;
-            return invoice ? { ...pending, invoice } : pending;
+            if (invoice && invoice.status !== 'VOID') return { ...pending, invoice };
+            // Orders created before manual checkout invoicing was introduced can be PENDING with
+            // no payable invoice. Reusing one strands the customer on a checkout that has nowhere
+            // to submit payment. Retire that orphan and create a complete order + invoice below.
+            await tx.marketplaceOrder.update({ where: { id: pending.id }, data: { status: 'CANCELLED' } });
           }
         }
       }
