@@ -48,9 +48,10 @@ export function createTestContext(overrides: ContextOverrides = {}): TestHarness
   const storageStore = new Map<string, string>();
 
   const context: PluginRuntimeContext = {
-    sdkVersion: '1.2.0',
+    sdkVersion: '1.3.0',
     pluginId: 'local-test-plugin',
     logger: { log: () => undefined },
+    errors: { contract: (code, diagnosticMessage) => Object.assign(new Error(diagnosticMessage || code), { name: 'PluginContractError', code, isPluginContractError: true as const }) },
     dependencies: { required: {}, optional: {}, isAvailable: async () => false },
     events: {
       publish: (event, payload) => { published.push({ event, payload }); },

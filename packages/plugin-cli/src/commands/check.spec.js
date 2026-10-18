@@ -25,9 +25,27 @@ describe('wattanam-plugin check', () => {
   });
 
   it('passes a freshly scaffolded plugin', async () => {
-    await check([dir]);
+    await check([dir, '--require-universal-ui']);
     expect(logs.join('')).toContain('ALL CHECKS PASSED');
     expect(logs.join('')).not.toMatch(/^FAIL/m);
+  });
+
+  it('rejects host-specific UI when universal portability is required', async () => {
+    const descriptorPath = path.join(dir, 'frontend', 'page.json');
+    const descriptor = JSON.parse(fs.readFileSync(descriptorPath, 'utf8'));
+    descriptor.pages[0].components = [{ id: 'private', type: 'organizing-dashboard' }];
+    fs.writeFileSync(descriptorPath, JSON.stringify(descriptor, null, 2));
+    await expect(check([dir, '--require-universal-ui'])).rejects.toThrow('check(s) failed');
+    expect(logs.join('')).toContain('unsupported: organizing-dashboard');
+  });
+
+  it('requires universal UI automatically for SDK 1.3 plugins', async () => {
+    const descriptorPath = path.join(dir, 'frontend', 'page.json');
+    const descriptor = JSON.parse(fs.readFileSync(descriptorPath, 'utf8'));
+    delete descriptor.portability;
+    fs.writeFileSync(descriptorPath, JSON.stringify(descriptor, null, 2));
+    await expect(check([dir])).rejects.toThrow('check(s) failed');
+    expect(logs.join('')).toContain('portability=legacy, sdk=1.3.0');
   });
 
   it('fails and reports the exact reason when plugin.json is invalid', async () => {

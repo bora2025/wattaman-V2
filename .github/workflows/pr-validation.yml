@@ -5,12 +5,59 @@ on:
   workflow_dispatch:
 
 jobs:
+  secret-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan repository history for committed secrets
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_VERSION: 8.29.1
+
+  customer-school-compatibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out Marketplace candidate
+        uses: actions/checkout@v4
+        with:
+          path: marketplace
+      - name: Check out released Customer School host
+        uses: actions/checkout@v4
+        with:
+          repository: bora2025/Customer-School
+          path: customer-school
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            marketplace/packages/plugin-cli/package-lock.json
+            customer-school/backend/package-lock.json
+      - name: Install host and publisher tooling
+        run: |
+          npm --prefix marketplace/packages/plugin-cli ci
+          npm --prefix customer-school/backend ci
+      - name: Verify signed catalog lifecycle and universal UI against released host
+        working-directory: customer-school/backend
+        env:
+          PLUGIN_SOURCE_CATALOG: ${{ github.workspace }}/marketplace/plugins
+        run: >-
+          npm test -- --runInBand
+          src/plugins/all-plugin-package-lifecycle.spec.ts
+          src/plugins/plugin-ui-schema.spec.ts
+
   contracts-and-tooling:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 20 }
+        with: { node-version: 24 }
       - name: Install contract and plugin tooling dependencies
         run: |
           npm --prefix packages/marketplace-contracts ci
@@ -24,6 +71,10 @@ jobs:
           npm run test:tools
       - name: Build plugin SDK
         run: npm run build:sdk
+      - name: Audit production plugin tooling dependencies
+        run: |
+          npm --prefix packages/plugin-sdk audit --omit=dev --audit-level=high
+          npm --prefix packages/plugin-cli audit --omit=dev --audit-level=high
       - name: Validate control-plane deployment configuration
         run: npm run verify:control-plane
 
@@ -45,7 +96,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: npm, cache-dependency-path: apps/marketplace-api/package-lock.json }
+        with: { node-version: 24, cache: npm, cache-dependency-path: apps/marketplace-api/package-lock.json }
       - name: Install
         working-directory: apps/marketplace-api
         run: npm ci
@@ -73,7 +124,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: npm, cache-dependency-path: apps/marketplace-api/package-lock.json }
+        with: { node-version: 24, cache: npm, cache-dependency-path: apps/marketplace-api/package-lock.json }
       - uses: actions/setup-go@v5
         with: { go-version: '1.24.x', cache: false }
       - name: Install Marketplace API
@@ -106,13 +157,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: npm, cache-dependency-path: apps/platform-admin/package-lock.json }
+        with: { node-version: 24, cache: npm, cache-dependency-path: apps/platform-admin/package-lock.json }
       - name: Install applications
         run: |
           npm --prefix apps/marketplace-api ci
           npm --prefix apps/platform-admin ci
       - name: Build Platform Admin
         run: npm run build:admin
+      - name: Audit Platform Admin production dependencies
+        working-directory: apps/platform-admin
+        run: npm audit --omit=dev --audit-level=high
       - name: Run browser control-plane tests
         working-directory: apps/platform-admin
         run: |

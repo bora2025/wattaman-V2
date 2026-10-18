@@ -12,7 +12,7 @@
     "e2e:keep": "node scripts/e2e-stack.mjs --keep"
   },
   "dependencies": {
-    "next": "^16.3.3",
+    "next": "^16.3.8",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
@@ -26,5 +26,9 @@
     "postcss": "^8.0.9",
     "tailwindcss": "^3.3.0",
     "typescript": "^5"
+  },
+  "overrides": {
+    "sharp": "0.35.5",
+    "source-map-js": "1.2.2"
   }
 }

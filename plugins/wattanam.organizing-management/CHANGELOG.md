@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.17.0
+
+- Migrated the dashboard, workforce directory, and report workspace to the universal declarative UI contract.
+- Declared universal portability so Customer School can validate and render the plugin without Organizing-specific host code.
+- Added reusable workflow navigation, nested dashboard metrics and tables, printable workforce, attendance, and salary reports.
+- Adopted SDK 1.3 for stable host-owned plugin error contracts and pre-publication portability checks.
+- Mapped expected camera and USB attendance rejections to safe, declared 4xx responses instead of generic server errors.
+
 ## 0.16.5
 
 - Cast scanner timestamps explicitly for PostgreSQL raw queries.

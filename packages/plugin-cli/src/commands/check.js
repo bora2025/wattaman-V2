@@ -5,6 +5,12 @@ const path = require('path');
 const Module = require('module');
 const { sha256 } = require('../util');
 
+const UNIVERSAL_UI_COMPONENTS = new Set([
+  'heading', 'text', 'workflow', 'status', 'card', 'metric', 'table', 'form',
+  'detail', 'chart', 'file', 'print', 'document', 'designer', 'scanner',
+  'filter', 'actions', 'id-card-manager',
+]);
+
 /**
  * The compatibility test kit: validates a plugin directory the same way the
  * real backend verifier would, plus a local activate() smoke test -- all
@@ -20,6 +26,7 @@ async function run(argv, options = {}) {
     return;
   }
   const root = path.resolve(dir);
+  const requireUniversalUi = argv.includes('--require-universal-ui');
   // eslint-disable-next-line global-require
   const { parsePluginManifest, createTestContext } = require('@wattanam/plugin-sdk');
 
@@ -54,6 +61,23 @@ async function run(argv, options = {}) {
 
     for (const entry of [manifest.backendEntry, manifest.frontendEntry].filter(Boolean)) {
       check(`entry file exists: ${entry}`, fs.existsSync(path.join(root, entry)));
+    }
+
+    if (manifest.frontendEntry && fs.existsSync(path.join(root, manifest.frontendEntry))) {
+      try {
+        const descriptor = JSON.parse(fs.readFileSync(path.join(root, manifest.frontendEntry), 'utf8'));
+        const componentTypes = [...new Set((descriptor.pages || []).flatMap((page) => (page.components || []).map((component) => component.type)))];
+        const universal = descriptor.schemaVersion === 2 && descriptor.kind === 'declarative-ui' && descriptor.portability === 'universal';
+        const sdkParts = String(manifest.sdkVersion || '0.0.0').split('.').map(Number);
+        const sdkRequiresUniversal = sdkParts[0] > 1 || (sdkParts[0] === 1 && sdkParts[1] >= 3);
+        check('frontend UI descriptor declares its portability', !(requireUniversalUi || sdkRequiresUniversal) || universal, `portability=${descriptor.portability || 'legacy'}, sdk=${manifest.sdkVersion || 'unspecified'}`);
+        if (universal) {
+          const unsupported = componentTypes.filter((type) => !UNIVERSAL_UI_COMPONENTS.has(type));
+          check('frontend contains only universal UI components', unsupported.length === 0, unsupported.length ? `unsupported: ${unsupported.join(', ')}` : `${componentTypes.length} component types`);
+        }
+      } catch (error) {
+        check('frontend descriptor is valid JSON', false, error.message);
+      }
     }
 
     if (manifest.backendEntry && options.activate !== false) {

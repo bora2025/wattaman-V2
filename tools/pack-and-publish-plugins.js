@@ -91,6 +91,15 @@ function readPluginManifest(sourceDir) {
 
 function runPack({ rootDir, sourceDir, privateKeyPath, keyId, outputPath }) {
   const cliPath = path.resolve(rootDir, 'packages/plugin-cli/bin/cli.js');
+  const checkResult = spawnSync(process.execPath, [cliPath, 'check', sourceDir], {
+    cwd: rootDir,
+    encoding: 'utf8',
+    stdio: 'pipe',
+  });
+  if (checkResult.status !== 0) {
+    const detail = [checkResult.stdout || '', checkResult.stderr || ''].filter(Boolean).join('\n').trim();
+    throw new Error(`Pre-publish compatibility check failed for ${sourceDir}${detail ? `\n${detail}` : ''}`);
+  }
   const args = [
     cliPath,
     'pack',

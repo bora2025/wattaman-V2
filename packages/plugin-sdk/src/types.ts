@@ -47,9 +47,10 @@ export interface DirectoryRecipient {
 }
 
 export interface PluginRuntimeContext {
-  sdkVersion: '1.2.0';
+  sdkVersion: '1.3.0';
   pluginId: string;
   logger: PluginLogger;
+  errors: { contract(code: string, diagnosticMessage?: string): Error & { code: string; isPluginContractError: true } };
   dependencies: { required: Readonly<Record<string, string>>; optional: Readonly<Record<string, string>>; isAvailable(pluginId: string): Promise<boolean> };
   events: {
     publish(event: string, payload: unknown): void;

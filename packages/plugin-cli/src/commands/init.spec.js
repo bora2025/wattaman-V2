@@ -15,7 +15,7 @@ describe('wattanam-plugin init', () => {
     expect(manifest.id).toBe('acme.widget');
     expect(manifest.publisher).toBe('acme');
     expect(manifest.navigation[0].href).toBe('/plugins/acme.widget/records');
-    expect(manifest.sdkVersion).toBe('1.1.0');
+    expect(manifest.sdkVersion).toBe('1.3.0');
     expect(manifest.supportedLanguages).toEqual(['en', 'km']);
     expect(manifest.operational).toEqual({
       healthCheck: 'runtime', dataClassification: ['personal-data'],
@@ -33,6 +33,7 @@ describe('wattanam-plugin init', () => {
     const frontend = JSON.parse(fs.readFileSync(path.join(dest, 'frontend', 'page.json'), 'utf8'));
     expect(frontend.schemaVersion).toBe(2);
     expect(frontend.kind).toBe('declarative-ui');
+    expect(frontend.portability).toBe('universal');
     expect(frontend.pages.map((page) => page.routePath)).toEqual(['records', 'records/:id']);
     expect(frontend.pages[0].components.map((component) => component.type)).toEqual(['heading', 'table', 'form', 'print']);
 

@@ -14,3 +14,17 @@ bfa4af4607f08ac1d8c1bf301a3e9cd59b3a50bf:apps/marketplace-api/src/school-plugin-
 1fad58acf00e255d6a017c99b52a7ec094796a64:backend/scripts/jwt-secret-rotation-live-drill.js:generic-api-key:44
 dad5467ebd1ab6cbef0c6370d70361dbc94d4e01:.env.example:generic-api-key:5
 dad5467ebd1ab6cbef0c6370d70361dbc94d4e01:backend/src/common/identity.ts:generic-api-key:27
+# Reviewed deterministic idempotency fixtures and retired JWT drill values from the imported
+# customer-school history. Fingerprints are commit/path/rule/line exact; future hits still fail.
+94d27b71007f7d8b44636b0c131bc27651d11c23:apps/marketplace-api/src/commerce.service.spec.ts:generic-api-key:278
+94d27b71007f7d8b44636b0c131bc27651d11c23:apps/marketplace-api/src/school-plugin-request.service.spec.ts:generic-api-key:177
+94d27b71007f7d8b44636b0c131bc27651d11c23:apps/marketplace-api/src/school-plugin-request.service.spec.ts:generic-api-key:182
+94d27b71007f7d8b44636b0c131bc27651d11c23:apps/marketplace-api/src/school-plugin-request.service.spec.ts:generic-api-key:188
+94d27b71007f7d8b44636b0c131bc27651d11c23:apps/marketplace-api/src/school-plugin-request.service.spec.ts:generic-api-key:211
+94d27b71007f7d8b44636b0c131bc27651d11c23:apps/marketplace-api/src/school-billing.service.spec.ts:generic-api-key:75
+94d27b71007f7d8b44636b0c131bc27651d11c23:apps/marketplace-api/src/school-billing.service.spec.ts:generic-api-key:173
+94d27b71007f7d8b44636b0c131bc27651d11c23:apps/marketplace-api/src/school-billing.service.spec.ts:generic-api-key:189
+94d27b71007f7d8b44636b0c131bc27651d11c23:apps/marketplace-api/src/school-billing.service.spec.ts:generic-api-key:198
+94d27b71007f7d8b44636b0c131bc27651d11c23:apps/marketplace-api/src/school-billing.service.spec.ts:generic-api-key:208
+94d27b71007f7d8b44636b0c131bc27651d11c23:backend/scripts/jwt-secret-rotation-live-drill.js:generic-api-key:43
+94d27b71007f7d8b44636b0c131bc27651d11c23:backend/scripts/jwt-secret-rotation-live-drill.js:generic-api-key:44

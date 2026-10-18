@@ -13,8 +13,8 @@ describe('SDK 1.0 frozen contract surface (twin of the backend pinning test)', (
     ]);
   });
 
-  it('pins the SDK and runtime version at 1.0.0', () => {
-    expect(PLUGIN_SDK_VERSION).toBe('1.2.0');
+  it('pins the SDK at 1.3.0 and the runtime at 1.0.0', () => {
+    expect(PLUGIN_SDK_VERSION).toBe('1.3.0');
     expect(PLUGIN_RUNTIME_VERSION).toBe('1.0.0');
     expect([...PLUGIN_CAPABILITIES_V1_1].sort()).toEqual(['accounts.guardian.assign', 'accounts.parent.resolve', 'accounts.student.create', 'accounts.student.update', 'crypto.hash', 'events.durable', 'readmodels.publish', 'readmodels.read']);
     expect([...PLUGIN_CAPABILITIES_V1_2]).toEqual(['accounts.staff.create']);

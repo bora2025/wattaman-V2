@@ -1,6 +1,7 @@
 {
   "schemaVersion": 2,
   "kind": "declarative-ui",
+  "portability": "universal",
   "pages": [
     {
       "id": "records", "title": "{{displayName}}", "routePath": "records",
