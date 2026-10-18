@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.17.1
+
+- Unified Scan, Reports, Corrections, and Settings into a professional four-step attendance workflow.
+- Added report-period filters, searchable workforce attendance tables, print/PDF/CSV export, and scanner audit visibility.
+- Improved correction review and edit layouts while preserving immutable correction history.
+- Expanded attendance settings guidance and active-policy presentation.
+- Renamed Attendance Records to Attendance Reports across package and runtime navigation.
+
 ## 0.17.0
 
 - Migrated the dashboard, workforce directory, and report workspace to the universal declarative UI contract.
