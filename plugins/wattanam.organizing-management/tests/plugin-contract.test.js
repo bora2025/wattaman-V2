@@ -79,6 +79,14 @@ test('transactional handlers declare the durable-events capability', () => {
   );
 });
 
+test('attendance scanner casts raw timestamp parameters for PostgreSQL', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'backend', 'attendance-secure.js'), 'utf8');
+  assert.match(source, /\$7::timestamptz,'REJECTED'/);
+  assert.match(source, /\$7::timestamptz,'ACCEPTED'/);
+  assert.match(source, /\$5::timestamptz,\$6,\$7/);
+  assert.match(source, /"checkOutAt"=\$2::timestamptz/);
+});
+
 test('all explicit plugin table identifiers remain inside the plugin namespace', () => {
   for (const migration of manifest.migrations) {
     const sql = fs.readFileSync(path.join(__dirname, '..', migration.path), 'utf8');

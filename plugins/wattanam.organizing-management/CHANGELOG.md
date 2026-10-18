@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.16.5
+
+- Cast scanner timestamps explicitly for PostgreSQL raw queries.
+- Fixed camera and USB scans failing while recording rejected or accepted attempts.
+- Kept attendance check-in and check-out timestamps consistent with the database schema.
+
 ## 0.16.4
 
 - Declared the durable-events capability required by the customer runtime for atomic database transactions.
