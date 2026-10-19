@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.17.8
+
+- Corrected universal table column identifiers so the lifecycle profile installs on customer hosts.
+
 ## 0.17.7
 
 - Replaced the onboarding-style employee view with a unified employee and employer HR workspace.
