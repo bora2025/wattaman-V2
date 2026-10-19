@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.19.0
+
+- Completed payroll-type CRUD with guarded deletion for unused reusable payroll formats.
+- Added selectable payroll-type rows and a bulk delete action to the Salary & Payroll workflow.
+- Protected assigned types and payroll-history references from deletion; administrators can deactivate those types instead.
+
 ## 0.18.1
 
 - Shortened the payroll-types guidance title to satisfy the customer host's 200-character component-title contract.

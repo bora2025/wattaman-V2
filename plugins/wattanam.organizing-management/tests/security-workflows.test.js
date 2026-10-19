@@ -129,6 +129,23 @@ test('payroll types store reusable defaults in minor units and expose normal amo
   assert.equal(insertParams[6],5000);
 });
 
+test('unused payroll types can be deleted without breaking payroll audit history', async () => {
+  const calls=[];
+  const tx={query:async sql=>sql.includes('FOR UPDATE')?[{id:'type-1',name:'Temporary'}]:[{memberCount:0,payrollCount:0}],execute:async(sql,params)=>{calls.push({sql,params});return{count:1};}};
+  const database={query:tx.query,execute:tx.execute,transaction:async callback=>callback(tx)};
+  const {context,routes}=harness(database);registerPayroll(context);
+  const result=await routes.get('DELETE payroll-types/:id')({params:{id:'type-1'}});
+  assert.deepEqual(result,{id:'type-1',name:'Temporary',deleted:true});
+  assert.match(calls[0].sql,/DELETE FROM plugin_wattanam_organizing_management_payroll_type/);
+});
+
+test('payroll types in use must be deactivated instead of deleted', async () => {
+  const tx={query:async sql=>sql.includes('FOR UPDATE')?[{id:'type-1',name:'Staff'}]:[{memberCount:1,payrollCount:2}],execute:async()=>({count:1})};
+  const database={query:tx.query,execute:tx.execute,transaction:async callback=>callback(tx)};
+  const {context,routes}=harness(database);registerPayroll(context);
+  await assert.rejects(routes.get('DELETE payroll-types/:id')({params:{id:'type-1'}}),/Deactivate it instead/);
+});
+
 test('payroll type assignment resolves the visible workforce number', async () => {
   const calls=[];
   const database={query:async(sql)=>sql.includes('employeeNumber')?[{id:'employee-internal'}]:[{id:'type-1',name:'Staff'}],execute:async(sql,params)=>{calls.push({sql,params});return{count:1};},transaction:async callback=>callback(database)};
@@ -167,6 +184,9 @@ test('payroll UI exposes an audit-ready register and individual payslip', () => 
   assert.equal(pages.find(page => page.id === 'salary-edit').components.find(component => component.id === 'save').initialSource, 'record');
   const types=pages.find(page=>page.id==='payroll-types');
   assert.equal(types.components.find(component=>component.id==='list').options.rowRoute,'payroll-types/:id');
+  assert.equal(types.components.find(component=>component.id==='list').options.selectable,true);
+  const deleteAction=types.components.find(component=>component.id==='manage').options.actions[0];
+  assert.deepEqual({mode:deleteAction.mode,source:deleteAction.source,selectionSource:deleteAction.selectionSource,idParameter:deleteAction.idParameter},{mode:'bulk',source:'remove',selectionSource:'list',idParameter:'id'});
   assert.match(types.components.find(component=>component.id==='batch').options.confirmation,/will not be changed/i);
 });
 
