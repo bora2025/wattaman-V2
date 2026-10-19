@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.22.1
+
+- Modernized CRUD creation flows with compact action cards and button-triggered forms.
+- Added clearer confirmations and direct navigation from newly created records to their edit pages.
+- Simplified compensation amount entry to use normal currency amounts consistently.
+
 ## 0.22.0
 
 - Completed UX-driven CRUD controls for positions, workforce members, HR calendar items, and compensation adjustments.
