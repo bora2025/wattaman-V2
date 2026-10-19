@@ -126,6 +126,18 @@ test('workforce directory rows open the single unified HR lifecycle profile', ()
   assert.equal(descriptor.pages.filter(item => item.routePath === 'profiles/:id').length, 1);
 });
 
+test('employers and employees page uses an expandable form with profile navigation and Excel/print export', () => {
+  const descriptor = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'frontend', 'page.json'), 'utf8'));
+  const page = descriptor.pages.find(item => item.id === 'employees');
+  const create = page.components.find(item => item.id === 'create');
+  const table = page.components.find(item => item.id === 'list');
+  const exporter = page.components.find(item => item.id === 'export');
+  assert.deepEqual([create.options.collapsible, create.options.defaultCollapsed, create.options.triggerLabel], [true, true, 'Add employer / employee']);
+  assert.deepEqual([table.options.rowClickable, table.options.rowRoute], [true, 'profiles/:id']);
+  assert.deepEqual(exporter.options.formats, ['print', 'xlsx']);
+  assert.equal(exporter.options.showPreview, false);
+});
+
 test('employee relations profile separates rewards and deductions and includes HR history', async () => {
   const responses = [
     [{ id:'employee-1', fullName:'Example Person', employeeNumber:'EMP-1', positionTitle:'Manager', department:'Operations', qrIdentifier:'secure-qr' }],

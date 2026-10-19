@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.17.11
+
+- Converted the Employers & Employees creation form into a compact expandable Add employer / employee action.
+- Made workforce rows open the unified employee/employer profile workspace.
+- Added professional workforce printing and native Excel export.
+
 ## 0.17.10
 
 - Made every Workforce Profiles row open the unified employee/employer HR lifecycle workspace.
