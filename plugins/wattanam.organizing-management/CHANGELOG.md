@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.18.0
+
+- Added reusable payroll types for workforce groups such as CEO, Head Office, and Staff.
+- Added reusable defaults for overtime, bonuses, reimbursements, leave adjustments, allowances, deductions, and taxes.
+- Added workforce-to-payroll-type assignment using the visible workforce number.
+- Added controlled batch payroll generation that creates up to 500 missing drafts per run and never overwrites existing payroll records.
+- Added create, edit, assignment, member-count, and batch-generation UI for scalable payroll administration.
+
+## 0.17.17
+
+- Standardized salary, payroll, rewards, deductions, and promotion forms on normal currency amounts while retaining integer minor-unit storage internally.
+- Resolved visible workforce numbers consistently across salary, payroll, leave, permission, disciplinary, compensation, and promotion workflows.
+- Added normalized currency values to profile, payroll, payslip, and report responses so the same amount is shown throughout the plugin.
+- Added prefilled salary editing from the payroll directory and audited draft-payroll editing with server-side total recalculation.
+- Prevented approved, paid, and void payroll records from being modified through the edit workflow.
+
 ## 0.17.16
 
 - Fixed salary setup and payroll calculation to accept the visible employee/workforce number as well as the internal employee ID.

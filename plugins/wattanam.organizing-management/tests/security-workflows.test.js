@@ -51,9 +51,10 @@ test('salary terms accept the visible workforce number and update the internal e
     transaction: async callback => callback(database),
   };
   const { context, routes } = harness(database); registerPayroll(context);
-  const result = await routes.get('PUT salary/:employeeId')({ params: { employeeId: '001' }, body: { baseSalaryMinor: 500, salaryCurrency: 'USD', salaryBasis: 'MONTHLY' } });
+  const result = await routes.get('PUT salary/:employeeId')({ params: { employeeId: '001' }, body: { baseSalary: 500, salaryCurrency: 'USD', salaryBasis: 'MONTHLY' } });
   assert.equal(result.id, 'employee-internal-id');
-  assert.deepEqual(updateParams, ['employee-internal-id', 500, 'USD', 'MONTHLY']);
+  assert.equal(result.baseSalary, 500);
+  assert.deepEqual(updateParams, ['employee-internal-id', 50000, 'USD', 'MONTHLY']);
 });
 
 test('payroll calculation returns the authoritative stored row after database triggers', async () => {
@@ -72,12 +73,83 @@ test('payroll calculation returns the authoritative stored row after database tr
   };
   const { context, routes } = harness(database); registerPayroll(context);
   const result = await routes.get('POST payroll/calculate')({ principal: { userId: 'maker-1' }, body: { employeeId: 'employee-1', periodStart: '2026-10-17', periodEnd: '2026-10-18', allowancesMinor: 10000, overtimePayMinor: 5000, incomeTaxMinor: 3000, socialSecurityMinor: 2000 } });
-  assert.deepEqual(result, authoritative);
+  assert.equal(result.netPayMinor, 50000);
+  assert.equal(result.netPay, 500);
   assert.equal(insertParams[14], 10000);
   assert.equal(insertParams[15], 5000);
   assert.equal(insertParams[24], 3000);
   assert.equal(insertParams[25], 2000);
   assert.match(insertParams[28], /"formula":"grossPay-\(totalDeductions\+totalTaxes\)"/);
+});
+
+test('salary directory and detail expose normal currency amounts for editing', async () => {
+  const row = { id:'employee-1', employeeNumber:'001', fullName:'Bora', baseSalaryMinor:50000, salaryCurrency:'USD', salaryBasis:'MONTHLY' };
+  const database = { query: async () => [row], execute: async () => ({ count:1 }), transaction: async callback => callback(database) };
+  const { context, routes } = harness(database); registerPayroll(context);
+  const list = await routes.get('GET salaries')({});
+  const detail = await routes.get('GET salary/:employeeId')({ params:{ employeeId:'001' } });
+  assert.equal(list[0].baseSalary, 500);
+  assert.equal(detail.baseSalary, 500);
+});
+
+test('draft payroll edits recalculate totals and retain an audit snapshot', async () => {
+  const calls = [];
+  const current = { id:'payroll-1', status:'DRAFT', basePayMinor:50000, earningsMinor:2500, attendanceDeductionMinor:1000, deductionsMinor:500, calculation:{ salaryBasis:'MONTHLY' }, allowancesMinor:0, overtimePayMinor:0, bonusesMinor:0, reimbursementsMinor:0, leaveAdjustmentMinor:0, retirementContributionMinor:0, insurancePremiumMinor:0, loanRecoveryMinor:0, lossOfPayMinor:0, otherPostTaxDeductionMinor:0, incomeTaxMinor:0, socialSecurityMinor:0, localTaxMinor:0, grossPayMinor:52500, totalDeductionsMinor:1500, totalTaxesMinor:0, netPayMinor:51000 };
+  const saved = { ...current, allowancesMinor:10000, insurancePremiumMinor:2000, incomeTaxMinor:3000, grossPayMinor:62500, totalDeductionsMinor:3500, totalTaxesMinor:3000, netPayMinor:56000 };
+  let queryCount = 0;
+  const tx = { query: async () => (++queryCount === 1 ? [current] : [saved]), execute: async (sql, params) => { calls.push({ sql, params }); return { count:1 }; } };
+  const database = { query: tx.query, execute: tx.execute, transaction: async callback => callback(tx) };
+  const { context, routes } = harness(database); registerPayroll(context);
+  const result = await routes.get('PUT payroll/:id/draft')({ params:{ id:'payroll-1' }, principal:{ userId:'manager-1' }, body:{ allowances:100, insurancePremium:20, incomeTax:30 } });
+  assert.equal(result.grossPay, 625);
+  assert.equal(result.netPay, 560);
+  assert.equal(calls[0].params[1], 10000);
+  assert.equal(calls[0].params[7], 2000);
+  assert.equal(calls[0].params[11], 3000);
+  assert.match(calls[1].sql, /payroll_audit/);
+  assert.match(calls[1].params[3], /EDIT_DRAFT/);
+});
+
+test('approved payroll cannot be edited', async () => {
+  const tx = { query: async () => [{ id:'payroll-1', status:'APPROVED' }], execute: async () => ({ count:1 }) };
+  const database = { query:tx.query, execute:tx.execute, transaction:async callback => callback(tx) };
+  const { context, routes } = harness(database); registerPayroll(context);
+  await assert.rejects(routes.get('PUT payroll/:id/draft')({ params:{id:'payroll-1'}, principal:{userId:'manager-1'}, body:{} }), /Only draft payroll can be edited/);
+});
+
+test('payroll types store reusable defaults in minor units and expose normal amounts', async () => {
+  let insertParams=[];
+  const database={query:async()=>[],execute:async(_sql,params)=>{insertParams=params;return{count:1};},transaction:async callback=>callback(database)};
+  const {context,routes}=harness(database);registerPayroll(context);
+  const result=await routes.get('POST payroll-types')({principal:{userId:'manager-1'},body:{code:'staff',name:'Staff',allowances:100,overtimePay:25.5,bonuses:50,active:true}});
+  assert.equal(result.code,'STAFF');
+  assert.equal(result.allowances,100);
+  assert.equal(insertParams[4],10000);
+  assert.equal(insertParams[5],2550);
+  assert.equal(insertParams[6],5000);
+});
+
+test('payroll type assignment resolves the visible workforce number', async () => {
+  const calls=[];
+  const database={query:async(sql)=>sql.includes('employeeNumber')?[{id:'employee-internal'}]:[{id:'type-1',name:'Staff'}],execute:async(sql,params)=>{calls.push({sql,params});return{count:1};},transaction:async callback=>callback(database)};
+  const {context,routes}=harness(database);registerPayroll(context);
+  const result=await routes.get('PUT payroll-assignment/:employeeId')({params:{employeeId:'001'},body:{payrollTypeId:'type-1'}});
+  assert.equal(result.employeeId,'employee-internal');
+  assert.deepEqual(calls[0].params,['employee-internal','type-1']);
+});
+
+test('batch payroll creates only missing drafts and never overwrites existing payroll', async () => {
+  const type={id:'type-1',name:'Staff',allowancesMinor:10000,overtimePayMinor:2500};
+  let queryCount=0,insert;
+  const database={query:async()=>++queryCount===1?[type]:[{id:'employee-1',salaryCurrency:'USD',earningsMinor:5000,deductionsMinor:1000}],execute:async(sql,params)=>{insert={sql,params};return{count:1};},transaction:async callback=>callback(database)};
+  const {context,routes}=harness(database);registerPayroll(context);
+  const result=await routes.get('POST payroll/batch')({principal:{userId:'manager-1'},body:{payrollTypeId:'type-1',periodStart:'2026-10-01',periodEnd:'2026-10-31'}});
+  assert.equal(result.created,1);
+  assert.match(insert.sql,/ON CONFLICT \("employeeId","periodStart","periodEnd"\) DO NOTHING/);
+  const payload=JSON.parse(insert.params[0]);
+  assert.equal(payload[0].allowancesMinor,10000);
+  assert.equal(payload[0].overtimePayMinor,2500);
+  assert.equal(payload[0].earningsMinor,5000);
 });
 
 test('payroll UI exposes an audit-ready register and individual payslip', () => {
@@ -86,9 +158,16 @@ test('payroll UI exposes an audit-ready register and individual payslip', () => 
   const review = pages.find(page => page.id === 'payroll-review');
   const calculate = payroll.components.find(component => component.id === 'calculate');
   const fieldIds = new Set(calculate.fields.map(field => field.id));
-  for (const field of ['allowancesMinor','overtimePayMinor','bonusesMinor','reimbursementsMinor','retirementContributionMinor','insurancePremiumMinor','loanRecoveryMinor','lossOfPayMinor','incomeTaxMinor','socialSecurityMinor','localTaxMinor']) assert.ok(fieldIds.has(field), `missing payroll input ${field}`);
+  for (const field of ['allowances','overtimePay','bonuses','reimbursements','retirementContribution','insurancePremium','loanRecovery','lossOfPay','incomeTax','socialSecurity','localTax']) assert.ok(fieldIds.has(field), `missing payroll input ${field}`);
+  assert.ok(calculate.fields.every(field => !field.id.endsWith('Minor')), 'payroll form must use normal currency amounts');
   assert.deepEqual(payroll.components.find(component => component.id === 'export').options.formats, ['print','xlsx']);
   assert.deepEqual(review.components.find(component => component.id === 'payslip').options.formats, ['print','pdf','xlsx']);
+  assert.equal(payroll.components.find(component => component.id === 'salaries').options.rowRoute, 'salary/:employeeId');
+  assert.equal(review.components.find(component => component.id === 'editDraft').initialSource, 'record');
+  assert.equal(pages.find(page => page.id === 'salary-edit').components.find(component => component.id === 'save').initialSource, 'record');
+  const types=pages.find(page=>page.id==='payroll-types');
+  assert.equal(types.components.find(component=>component.id==='list').options.rowRoute,'payroll-types/:id');
+  assert.match(types.components.find(component=>component.id==='batch').options.confirmation,/will not be changed/i);
 });
 
 test('day-off requester cannot approve their own request', async () => {
@@ -174,12 +253,12 @@ test('employers and employees page uses an expandable form with profile navigati
 
 test('employee relations profile separates rewards and deductions and includes HR history', async () => {
   const responses = [
-    [{ id:'employee-1', fullName:'Example Person', employeeNumber:'EMP-1', positionTitle:'Manager', department:'Operations', qrIdentifier:'secure-qr' }],
-    [{ id:'reward-1', adjustmentType:'GOOD_JOB_REWARD' }, { id:'deduction-1', adjustmentType:'WAGE_DEDUCTION' }],
+    [{ id:'employee-1', fullName:'Example Person', employeeNumber:'EMP-1', positionTitle:'Manager', department:'Operations', qrIdentifier:'secure-qr', baseSalaryMinor:50000 }],
+    [{ id:'reward-1', adjustmentType:'GOOD_JOB_REWARD', amountMinor:2500 }, { id:'deduction-1', adjustmentType:'WAGE_DEDUCTION', amountMinor:1000 }],
     [{ id:'permission-1', status:'APPROVED' }],
     [{ id:'discipline-1', status:'CLOSED' }],
-    [{ id:'promotion-1', toPosition:'Manager' }],
-    [{ id:'payroll-1', status:'PAID' }],
+    [{ id:'promotion-1', toPosition:'Manager', previousBaseSalaryMinor:45000, newBaseSalaryMinor:50000 }],
+    [{ id:'payroll-1', status:'PAID', basePayMinor:50000, earningsMinor:2500, deductionsMinor:1000, attendanceDeductionMinor:0, netPayMinor:51500 }],
   ];
   let call = 0;
   const database = { query: async () => responses[call++] };
@@ -192,6 +271,10 @@ test('employee relations profile separates rewards and deductions and includes H
   assert.equal(result.disciplinaryActions[0].id, 'discipline-1');
   assert.equal(result.promotions[0].id, 'promotion-1');
   assert.equal(result.payroll[0].id, 'payroll-1');
+  assert.equal(result.employee.baseSalary, 500);
+  assert.equal(result.rewards[0].amount, 25);
+  assert.equal(result.promotions[0].newBaseSalary, 500);
+  assert.equal(result.payroll[0].netPay, 515);
 });
 
 test('workforce search returns a permission-scoped edit destination', async () => {

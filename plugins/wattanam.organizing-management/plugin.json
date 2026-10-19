@@ -3,7 +3,7 @@
   "id": "wattanam.organizing-management",
   "name": "Organizing Management",
   "description": "Workforce, HR calendar, employee ID cards, QR attendance, corrections, settings, and reporting for companies, shops, stores, and organizations.",
-  "version": "0.17.16",
+  "version": "0.18.0",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -395,6 +395,24 @@
       "path": "migrations/059_backfill_audit_ready_payroll.sql",
       "checksum": "be532588cd92e6a8ba1d82314b108f3844fb0f2b4f56a8257cf32b03a37eb50c",
       "destructive": false
+    },
+    {
+      "id": "060_create_payroll_types",
+      "path": "migrations/060_create_payroll_types.sql",
+      "checksum": "3efd95dc79e387a7b94970f471ee23b4e9368a09c8cd5553b3d4d8f23924714e",
+      "destructive": false
+    },
+    {
+      "id": "061_assign_payroll_types",
+      "path": "migrations/061_assign_payroll_types.sql",
+      "checksum": "37015a6a69ee0f89df0da35aaa7fe8625293f6d8a45a0c16e6a05f0b43d1521d",
+      "destructive": false
+    },
+    {
+      "id": "062_index_payroll_types",
+      "path": "migrations/062_index_payroll_types.sql",
+      "checksum": "8042f2ab789b90cb5913c84977bf46e31ee0dab81d130e351f44e02fc0120b84",
+      "destructive": false
     }
   ],
   "navigation": [
@@ -445,6 +463,13 @@
       "label": "Rewards & Deductions",
       "icon": "badge-dollar-sign",
       "href": "/plugins/wattanam.organizing-management/compensation",
+      "permission": "wattanam.organizing-management.payroll.manage"
+    },
+    {
+      "id": "payroll-types",
+      "label": "Payroll Types",
+      "icon": "list-checks",
+      "href": "/plugins/wattanam.organizing-management/payroll-types",
       "permission": "wattanam.organizing-management.payroll.manage"
     },
     {
