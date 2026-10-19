@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.17.5
+
+- Improved employee and employer profile navigation with an explicit open-and-edit workflow.
+- Redirect newly created workforce records directly to their editable profile.
+
 ## 0.17.4
 
 - Added a complete employee and employer profile workflow covering identity, contact, employment, emergency-contact, and notes fields.
