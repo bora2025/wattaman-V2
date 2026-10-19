@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.17.2
+
+- Standardized 21 organization, workforce, calendar, leave, payroll, employee-relations, profile, and ID-card screens around one professional six-stage workflow.
+- Added searchable operational tables across workforce and HR management pages.
+- Added printable PDF and CSV payroll attendance reporting.
+- Connected list, detail, review, and edit screens with consistent navigation and contextual guidance.
+
 ## 0.17.1
 
 - Unified Scan, Reports, Corrections, and Settings into a professional four-step attendance workflow.
