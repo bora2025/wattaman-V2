@@ -67,6 +67,16 @@ test('runtime and manifest navigation identifiers are unique', async () => {
   assert.deepEqual(new Set(runtimeIds), new Set(manifestIds));
 });
 
+test('component titles satisfy the customer host contract', () => {
+  const invalid = [];
+  for (const page of pages.pages) for (const component of page.components || []) {
+    if (component.title !== undefined && (typeof component.title !== 'string' || component.title.length < 1 || component.title.length > 200)) {
+      invalid.push(`${page.id}.${component.id}: ${String(component.title).length} characters`);
+    }
+  }
+  assert.deepEqual(invalid, []);
+});
+
 test('complete profile creation is consolidated into the workforce directory', () => {
   const employeesPage = pages.pages.find(page => page.id === 'employees');
   const createForm = employeesPage?.components.find(component => component.id === 'create');

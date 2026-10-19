@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.18.1
+
+- Shortened the payroll-types guidance title to satisfy the customer host's 200-character component-title contract.
+- Added a regression test that verifies every declarative UI component title remains compatible with the customer host.
+
 ## 0.18.0
 
 - Added reusable payroll types for workforce groups such as CEO, Head Office, and Staff.
