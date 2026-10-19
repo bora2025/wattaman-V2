@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.17.4
+
+- Added a complete employee and employer profile workflow covering identity, contact, employment, emergency-contact, and notes fields.
+- Added permission-filtered workforce search with direct navigation to editable employee and employer profiles.
+- Added a professional Add Employee / Employer workspace and navigation entry using the universal plugin UI contract.
+
 ## 0.17.3
 
 - Added a professional workforce attendance-settings workspace with four configurable check-in and check-out sessions.

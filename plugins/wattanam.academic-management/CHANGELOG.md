@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.59
+
+- Added permission-filtered global search for students, staff, and classes.
+- Added direct navigation from search results to the corresponding edit workspace.
+
 ## 0.1.54
 
 - Consolidate the administrator menu around the supported academic and attendance workflows.

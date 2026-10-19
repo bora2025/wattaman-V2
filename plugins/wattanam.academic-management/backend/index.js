@@ -2064,6 +2064,25 @@ module.exports = {
         return settings;
       },
     });
+    context.routes.register({
+      method: 'GET', path: 'search', permission: 'wattanam.academic-management.view',
+      handler: async (request) => {
+        const query = String(request?.query?.q || '').trim();
+        if (query.length < 2 || query.length > 100) throw new Error('Search query must be between 2 and 100 characters');
+        const [students, officers, classes] = await Promise.all([
+          context.database.query(`SELECT s."id",s."userId",s."studentNumber",s."nameKh",e."classId",c."name" AS "className" FROM ${STUDENT_PROFILE} s JOIN ${ENROLLMENT} e ON e."studentId"=s."id" AND e."validTo" IS NULL JOIN ${CLASS} c ON c."id"=e."classId" ORDER BY s."studentNumber" LIMIT 500`),
+          context.database.query(`SELECT o."id",o."userId",o."employeeNumber",o."position",o."department",o."employmentStatus" FROM ${OFFICER} o ORDER BY o."employmentStatus"='ACTIVE' DESC,o."employeeNumber" LIMIT 300`),
+          context.database.query(`SELECT c."id",c."name",c."subject" AS "subjectName",COALESCE(y."label",y."year"::text) AS "studyYear" FROM ${CLASS} c LEFT JOIN ${STUDY_YEAR} y ON y."id"=c."studyYearId" ORDER BY c."name" LIMIT 300`),
+        ]);
+        const users = await lookupUserMap([...students.map((row) => row.userId), ...officers.map((row) => row.userId)]);
+        const needle = query.toLocaleLowerCase();
+        const matches = (values) => values.filter(Boolean).join(' ').toLocaleLowerCase().includes(needle);
+        const studentResults = students.filter((row) => { const user = users.get(row.userId); return matches([row.studentNumber,row.nameKh,row.className,user?.name,user?.email,user?.phone]); }).map((row) => { const user=users.get(row.userId); return {id:`student:${row.id}`,title:user?.name||row.nameKh||row.studentNumber,description:['Student',row.studentNumber,row.className,user?.email].filter(Boolean).join(' • '),href:`/plugins/wattanam.academic-management/classes/${encodeURIComponent(row.classId)}/students/${encodeURIComponent(row.id)}`}; });
+        const officerResults = officers.filter((row) => { const user = users.get(row.userId); return matches([row.employeeNumber,row.position,row.department,row.employmentStatus,user?.name,user?.email,user?.phone]); }).map((row) => { const user=users.get(row.userId); return {id:`officer:${row.id}`,title:user?.name||row.employeeNumber,description:['Staff',row.employeeNumber,row.position,row.department,row.employmentStatus].filter(Boolean).join(' • '),href:`/plugins/wattanam.academic-management/officers/edit/${encodeURIComponent(row.id)}`}; });
+        const classResults = classes.filter((row) => matches([row.name,row.subjectName,row.studyYear])).map((row) => ({id:`class:${row.id}`,title:row.name,description:['Class',row.subjectName,row.studyYear].filter(Boolean).join(' • '),href:`/plugins/wattanam.academic-management/classes/edit/${encodeURIComponent(row.id)}`}));
+        return [...studentResults,...officerResults,...classResults].slice(0,25);
+      },
+    });
     const academicAttendanceContext = attendanceContext(context);
     await attendanceRuntime.activate(academicAttendanceContext);
     registerSelfAttendance(context);

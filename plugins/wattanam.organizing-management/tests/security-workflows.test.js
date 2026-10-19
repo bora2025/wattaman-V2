@@ -78,14 +78,28 @@ test('organization settings reject invalid timezone identifiers', async () => {
   await assert.rejects(routes.get('PUT organization')({ body: { name: 'Example', organizationType: 'COMPANY', timezone: 'Mars/Olympus' } }), /valid IANA timezone/i);
 });
 
-test('employee creation does not persist an unknown optional position foreign key', async () => {
+test('employee creation persists a complete profile without an unknown position foreign key', async () => {
   let inserted;
   const database = { query: async () => [], execute: async (_sql, params) => { inserted = params; return { count: 1 }; } };
   const { context, routes } = harness(database); registerWorkforce(context);
-  const result = await routes.get('POST employees')({ body: { employeeNumber: 'EMP-1', fullName: 'Example Person', employmentType: 'EMPLOYEE', employmentStatus: 'ACTIVE', positionId: 'Manager', position: 'Manager' } });
+  const result = await routes.get('POST employees')({ body: { employeeNumber: 'EMP-1', fullName: 'Example Person', employmentType: 'EMPLOYEE', employmentStatus: 'ACTIVE', positionId: 'Manager', position: 'Manager', dateOfBirth: '1998-04-20', gender: 'FEMALE', nationalId: 'ID-100', address: 'Phnom Penh', emergencyContactName: 'Example Contact', emergencyContactPhone: '012345678', notes: 'Complete profile' } });
   assert.equal(result.employeeNumber, 'EMP-1');
   assert.equal(inserted[5], null);
   assert.equal(inserted[6], 'Manager');
+  assert.equal(inserted[13], '1998-04-20');
+  assert.deepEqual(inserted.slice(14, 20), ['FEMALE', 'ID-100', 'Phnom Penh', 'Example Contact', '012345678', 'Complete profile']);
+  assert.equal(result.profileCreated, true);
+});
+
+test('workforce search returns a permission-scoped edit destination', async () => {
+  const database = { query: async (sql, params) => {
+    assert.match(sql, /POSITION\(LOWER\(\$1\)/);
+    assert.deepEqual(params, ['bora']);
+    return [{ id:'employee-1', employeeNumber:'EMP-1', fullName:'Bora Example', employmentType:'EMPLOYEE', employmentStatus:'ACTIVE', positionTitle:'Manager', department:'Operations' }];
+  } };
+  const { context, routes } = harness(database); registerWorkforce(context);
+  const result = await routes.get('GET search')({ query:{q:'bora'} });
+  assert.deepEqual(result, [{ id:'workforce:employee-1', title:'Bora Example', description:'EMPLOYEE • EMP-1 • Manager • Operations • ACTIVE', href:'/plugins/wattanam.organizing-management/profiles/employee-1' }]);
 });
 
 test('attendance reports reject reversed date ranges', async () => {
