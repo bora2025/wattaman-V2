@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.20.0
+
+- Completed Payroll Register CRUD with selectable rows and guarded deletion of pristine draft payroll records.
+- Protected approved, paid, void, and previously edited payroll records from deletion to preserve audit history.
+- Kept review, payslip, draft editing, approval, payment, and void workflows available from each payroll row.
+
 ## 0.19.0
 
 - Completed payroll-type CRUD with guarded deletion for unused reusable payroll formats.

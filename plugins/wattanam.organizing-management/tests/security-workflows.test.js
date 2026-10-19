@@ -117,6 +117,27 @@ test('approved payroll cannot be edited', async () => {
   await assert.rejects(routes.get('PUT payroll/:id/draft')({ params:{id:'payroll-1'}, principal:{userId:'manager-1'}, body:{} }), /Only draft payroll can be edited/);
 });
 
+test('pristine draft payroll can be deleted', async () => {
+  const calls=[];
+  const tx={query:async sql=>sql.includes('FOR UPDATE')?[{id:'payroll-1',status:'DRAFT'}]:[{count:0}],execute:async(sql,params)=>{calls.push({sql,params});return{count:1};}};
+  const database={query:tx.query,execute:tx.execute,transaction:async callback=>callback(tx)};
+  const {context,routes}=harness(database);registerPayroll(context);
+  const result=await routes.get('DELETE payroll/:id')({params:{id:'payroll-1'}});
+  assert.deepEqual(result,{id:'payroll-1',deleted:true});
+  assert.match(calls[0].sql,/"status"='DRAFT'/);
+});
+
+test('payroll with a final status or audit history cannot be deleted', async () => {
+  const approvedTx={query:async()=>[{id:'payroll-1',status:'APPROVED'}],execute:async()=>({count:1})};
+  let database={query:approvedTx.query,execute:approvedTx.execute,transaction:async callback=>callback(approvedTx)};
+  let setup=harness(database);registerPayroll(setup.context);
+  await assert.rejects(setup.routes.get('DELETE payroll/:id')({params:{id:'payroll-1'}}),/Only draft payroll/);
+  const editedTx={query:async sql=>sql.includes('FOR UPDATE')?[{id:'payroll-2',status:'DRAFT'}]:[{count:1}],execute:async()=>({count:1})};
+  database={query:editedTx.query,execute:editedTx.execute,transaction:async callback=>callback(editedTx)};
+  setup=harness(database);registerPayroll(setup.context);
+  await assert.rejects(setup.routes.get('DELETE payroll/:id')({params:{id:'payroll-2'}}),/audit history/);
+});
+
 test('payroll types store reusable defaults in minor units and expose normal amounts', async () => {
   let insertParams=[];
   const database={query:async()=>[],execute:async(_sql,params)=>{insertParams=params;return{count:1};},transaction:async callback=>callback(database)};
@@ -178,6 +199,9 @@ test('payroll UI exposes an audit-ready register and individual payslip', () => 
   for (const field of ['allowances','overtimePay','bonuses','reimbursements','retirementContribution','insurancePremium','loanRecovery','lossOfPay','incomeTax','socialSecurity','localTax']) assert.ok(fieldIds.has(field), `missing payroll input ${field}`);
   assert.ok(calculate.fields.every(field => !field.id.endsWith('Minor')), 'payroll form must use normal currency amounts');
   assert.deepEqual(payroll.components.find(component => component.id === 'export').options.formats, ['print','xlsx']);
+  assert.equal(payroll.components.find(component => component.id === 'list').options.selectable, true);
+  const payrollDelete=payroll.components.find(component=>component.id==='managePayroll').options.actions[0];
+  assert.deepEqual({mode:payrollDelete.mode,source:payrollDelete.source,selectionSource:payrollDelete.selectionSource,idParameter:payrollDelete.idParameter},{mode:'bulk',source:'removePayroll',selectionSource:'list',idParameter:'id'});
   assert.deepEqual(review.components.find(component => component.id === 'payslip').options.formats, ['print','pdf','xlsx']);
   assert.equal(payroll.components.find(component => component.id === 'salaries').options.rowRoute, 'salary/:employeeId');
   assert.equal(review.components.find(component => component.id === 'editDraft').initialSource, 'record');
