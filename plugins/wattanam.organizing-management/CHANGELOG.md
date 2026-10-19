@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.17.13
+
+- Expanded payroll into an audit-ready gross-to-net register covering allowances, overtime, bonuses, reimbursements, leave adjustments, statutory and post-tax deductions, and taxes.
+- Added deterministic gross pay, total deduction, total tax, and net pay calculations while retaining attendance-based salary and HR adjustments.
+- Added payroll register printing and Excel export plus an individual reviewable and printable payslip.
+- Kept tax amounts explicit and policy-controlled instead of hard-coding jurisdiction-specific rates.
+- Added visible page-flow guidance across Organizing Management, including current-stage context, the recommended next stage, and a dedicated profile editing guide.
+
 ## 0.17.12
 
 - Merged complete employee and employer profile creation into the Employers & Employees page.

@@ -41,6 +41,7 @@ test('payroll approver cannot mark their own approval paid', async () => {
 
 test('payroll calculation returns the authoritative stored row after database triggers', async () => {
   const authoritative = { id: 'payroll-1', employeeId: 'employee-1', attendanceDays: 2, presentDays: 1, absentDays: 1, netPayMinor: 50000 };
+  let insertParams = [];
   const database = {
     query: async sql => {
       if (sql.includes('FROM plugin_wattanam_organizing_management_employee')) return [{ id: 'employee-1', baseSalaryMinor: 100000, salaryCurrency: 'USD', salaryBasis: 'MONTHLY' }];
@@ -49,12 +50,28 @@ test('payroll calculation returns the authoritative stored row after database tr
       if (sql.includes('FROM plugin_wattanam_organizing_management_payroll_record WHERE')) return [authoritative];
       return [];
     },
-    execute: async () => ({ count: 1 }),
+    execute: async (sql, params) => { if (sql.includes('INSERT INTO plugin_wattanam_organizing_management_payroll_record')) insertParams = params; return { count: 1 }; },
     transaction: async callback => callback(database),
   };
   const { context, routes } = harness(database); registerPayroll(context);
-  const result = await routes.get('POST payroll/calculate')({ principal: { userId: 'maker-1' }, body: { employeeId: 'employee-1', periodStart: '2026-10-17', periodEnd: '2026-10-18' } });
+  const result = await routes.get('POST payroll/calculate')({ principal: { userId: 'maker-1' }, body: { employeeId: 'employee-1', periodStart: '2026-10-17', periodEnd: '2026-10-18', allowancesMinor: 10000, overtimePayMinor: 5000, incomeTaxMinor: 3000, socialSecurityMinor: 2000 } });
   assert.deepEqual(result, authoritative);
+  assert.equal(insertParams[14], 10000);
+  assert.equal(insertParams[15], 5000);
+  assert.equal(insertParams[24], 3000);
+  assert.equal(insertParams[25], 2000);
+  assert.match(insertParams[28], /"formula":"grossPay-\(totalDeductions\+totalTaxes\)"/);
+});
+
+test('payroll UI exposes an audit-ready register and individual payslip', () => {
+  const pages = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'frontend', 'page.json'), 'utf8')).pages;
+  const payroll = pages.find(page => page.id === 'payroll');
+  const review = pages.find(page => page.id === 'payroll-review');
+  const calculate = payroll.components.find(component => component.id === 'calculate');
+  const fieldIds = new Set(calculate.fields.map(field => field.id));
+  for (const field of ['allowancesMinor','overtimePayMinor','bonusesMinor','reimbursementsMinor','retirementContributionMinor','insurancePremiumMinor','loanRecoveryMinor','lossOfPayMinor','incomeTaxMinor','socialSecurityMinor','localTaxMinor']) assert.ok(fieldIds.has(field), `missing payroll input ${field}`);
+  assert.deepEqual(payroll.components.find(component => component.id === 'export').options.formats, ['print','xlsx']);
+  assert.deepEqual(review.components.find(component => component.id === 'payslip').options.formats, ['print','pdf','xlsx']);
 });
 
 test('day-off requester cannot approve their own request', async () => {

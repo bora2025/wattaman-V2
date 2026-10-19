@@ -3,7 +3,7 @@
   "id": "wattanam.organizing-management",
   "name": "Organizing Management",
   "description": "Workforce, HR calendar, employee ID cards, QR attendance, corrections, settings, and reporting for companies, shops, stores, and organizations.",
-  "version": "0.17.12",
+  "version": "0.17.13",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -376,6 +376,24 @@
       "id": "056_harden_calendar_and_settings",
       "path": "migrations/056_harden_calendar_and_settings.sql",
       "checksum": "689b1d088c108b162ddee468ed80a5921b1c0c6455927dbb5112e61ccd28b8aa",
+      "destructive": false
+    },
+    {
+      "id": "057_expand_audit_ready_payroll",
+      "path": "migrations/057_expand_audit_ready_payroll.sql",
+      "checksum": "dfc0c4a75f32ec31b686094de42cc5c7d8c4844e6fc4be42a5fca0ef5fb905cd",
+      "destructive": false
+    },
+    {
+      "id": "058_calculate_audit_ready_payroll",
+      "path": "migrations/058_calculate_audit_ready_payroll.sql",
+      "checksum": "bbd664961c2902f26fda00a8116a438ef11a1fc2750f5a12cc150c14dd4b12cc",
+      "destructive": false
+    },
+    {
+      "id": "059_backfill_audit_ready_payroll",
+      "path": "migrations/059_backfill_audit_ready_payroll.sql",
+      "checksum": "be532588cd92e6a8ba1d82314b108f3844fb0f2b4f56a8257cf32b03a37eb50c",
       "destructive": false
     }
   ],
