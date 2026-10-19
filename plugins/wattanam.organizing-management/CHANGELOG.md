@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.23.0
+
+- Moved CRUD commands into the Actions column of each record row.
+- Removed detached bulk-action cards and selection checkboxes from CRUD tables.
+- Kept destructive confirmations and server-side audit protections for every row action.
+
 ## 0.22.1
 
 - Modernized CRUD creation flows with compact action cards and button-triggered forms.

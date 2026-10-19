@@ -215,21 +215,24 @@ test('payroll UI exposes an audit-ready register and individual payslip', () => 
   for (const field of ['allowances','overtimePay','bonuses','reimbursements','retirementContribution','insurancePremium','loanRecovery','lossOfPay','incomeTax','socialSecurity','localTax']) assert.ok(fieldIds.has(field), `missing payroll input ${field}`);
   assert.ok(calculate.fields.every(field => !field.id.endsWith('Minor')), 'payroll form must use normal currency amounts');
   assert.deepEqual(payroll.components.find(component => component.id === 'export').options.formats, ['print','xlsx']);
-  assert.equal(payroll.components.find(component => component.id === 'list').options.selectable, true);
-  const payrollDelete=payroll.components.find(component=>component.id==='managePayroll').options.actions[0];
-  assert.deepEqual({mode:payrollDelete.mode,source:payrollDelete.source,selectionSource:payrollDelete.selectionSource,idParameter:payrollDelete.idParameter},{mode:'bulk',source:'removePayroll',selectionSource:'list',idParameter:'id'});
-  assert.equal(payroll.components.find(component => component.id === 'salaries').options.selectable, true);
-  const salaryDelete=payroll.components.find(component=>component.id==='manageSalaries').options.actions[0];
-  assert.deepEqual({mode:salaryDelete.mode,source:salaryDelete.source,selectionSource:salaryDelete.selectionSource,idParameter:salaryDelete.idParameter},{mode:'bulk',source:'removeSalary',selectionSource:'salaries',idParameter:'employeeId'});
+  const payrollList=payroll.components.find(component => component.id === 'list');
+  assert.equal(payrollList.options.selectable, false);
+  const payrollDelete=payrollList.options.rowActions[0];
+  assert.deepEqual({source:payrollDelete.source,idField:payrollDelete.idField,idParameter:payrollDelete.idParameter,destructive:payrollDelete.destructive},{source:'removePayroll',idField:'id',idParameter:'id',destructive:true});
+  const salaryList=payroll.components.find(component => component.id === 'salaries');
+  assert.equal(salaryList.options.selectable, false);
+  const salaryDelete=salaryList.options.rowActions[0];
+  assert.deepEqual({source:salaryDelete.source,idField:salaryDelete.idField,idParameter:salaryDelete.idParameter,destructive:salaryDelete.destructive},{source:'removeSalary',idField:'id',idParameter:'employeeId',destructive:true});
   assert.deepEqual(review.components.find(component => component.id === 'payslip').options.formats, ['print','pdf','xlsx']);
   assert.equal(payroll.components.find(component => component.id === 'salaries').options.rowRoute, 'salary/:employeeId');
   assert.equal(review.components.find(component => component.id === 'editDraft').initialSource, 'record');
   assert.equal(pages.find(page => page.id === 'salary-edit').components.find(component => component.id === 'save').initialSource, 'record');
   const types=pages.find(page=>page.id==='payroll-types');
   assert.equal(types.components.find(component=>component.id==='list').options.rowRoute,'payroll-types/:id');
-  assert.equal(types.components.find(component=>component.id==='list').options.selectable,true);
-  const deleteAction=types.components.find(component=>component.id==='manage').options.actions[0];
-  assert.deepEqual({mode:deleteAction.mode,source:deleteAction.source,selectionSource:deleteAction.selectionSource,idParameter:deleteAction.idParameter},{mode:'bulk',source:'remove',selectionSource:'list',idParameter:'id'});
+  const typeList=types.components.find(component=>component.id==='list');
+  assert.equal(typeList.options.selectable,false);
+  const deleteAction=typeList.options.rowActions[0];
+  assert.deepEqual({source:deleteAction.source,idField:deleteAction.idField,idParameter:deleteAction.idParameter,destructive:deleteAction.destructive},{source:'remove',idField:'id',idParameter:'id',destructive:true});
   assert.match(types.components.find(component=>component.id==='batch').options.confirmation,/will not be changed/i);
 });
 
@@ -403,13 +406,14 @@ test('mutable workforce modules expose guarded delete or archive routes', async 
   for (const route of ['DELETE positions/:id','DELETE employees/:id','DELETE calendar/:id','GET compensation/:id','PUT compensation/:id','DELETE compensation/:id']) assert.equal(typeof routes.get(route), 'function', `${route} should be registered`);
 });
 
-test('CRUD list pages provide clickable edit rows and guarded bulk actions', () => {
+test('CRUD list pages provide clickable edit rows and guarded per-record actions', () => {
   const ui = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'frontend', 'page.json'), 'utf8'));
   for (const pageId of ['positions','employees','hr-calendar','compensation']) {
-    const page = ui.pages.find(item => item.id === pageId), table = page.components.find(item => item.id === 'list'), actions = page.components.find(item => item.type === 'actions');
-    assert.equal(table.options.selectable, true, `${pageId} should support selection`);
+    const page = ui.pages.find(item => item.id === pageId), table = page.components.find(item => item.id === 'list');
+    assert.equal(table.options.selectable, false, `${pageId} should not require bulk selection`);
     assert.equal(table.options.rowClickable, true, `${pageId} should open its edit or profile view`);
-    assert.ok(actions?.options?.actions?.some(action => action.destructive), `${pageId} should expose a guarded remove/archive action`);
+    assert.ok(table.options.rowActions?.some(action => action.destructive), `${pageId} should expose a guarded remove/archive action in each row`);
+    assert.equal(page.components.some(item => item.type === 'actions'), false, `${pageId} should not show a detached action card`);
   }
   assert.ok(ui.pages.some(page => page.id === 'compensation-edit'));
 });
