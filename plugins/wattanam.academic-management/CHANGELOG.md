@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0
+
+- Upgrade the plugin UI contract to the SDK 1.3 universal declarative architecture.
+- Move enrollment, registration-field, alert, attendance-window, and review actions into each
+  record's Actions column instead of detached bulk-action panels.
+- Preserve all published migrations and existing academic, attendance, and ID-card data.
+- Declare versioned Academic directory and identity host contracts so activation no longer depends
+  on the host recognizing this plugin by its package ID.
+
 ## 0.1.59
 
 - Added permission-filtered global search for students, staff, and classes.

@@ -1,6 +1,7 @@
 {
   "schemaVersion": 2,
   "kind": "declarative-ui",
+  "portability": "universal",
   "pages": [
     {
       "id": "attendance-dashboard",
@@ -16,7 +17,19 @@
         { "id": "dashboardAuthoritative", "method": "GET", "path": "attendance/dashboard-authoritative", "permission": "wattanam.academic-management.attendance.view" }
       ],
       "components": [
-        { "id": "attendance-dashboard", "type": "attendance-dashboard", "title": "Attendance Dashboard", "source": "dashboardClasses", "options": { "officersSource": "dashboardOfficers", "studentRecordsSource": "dashboardStudentRecords", "staffRecordsSource": "dashboardStaffRecords", "authoritativeSource": "dashboardAuthoritative" } }
+        { "id": "dashboard-heading", "type": "heading", "title": "Attendance Dashboard" },
+        { "id": "student-expected", "type": "metric", "title": "Expected student sessions", "source": "dashboardAuthoritative", "options": { "valuePath": "student.expected", "format": "number" } },
+        { "id": "student-present", "type": "metric", "title": "Students present", "source": "dashboardAuthoritative", "options": { "valuePath": "student.present", "format": "number" } },
+        { "id": "student-absent", "type": "metric", "title": "Students absent", "source": "dashboardAuthoritative", "options": { "valuePath": "student.absent", "format": "number" } },
+        { "id": "staff-present", "type": "metric", "title": "Staff present", "source": "dashboardAuthoritative", "options": { "valuePath": "staff.present", "format": "number" } },
+        { "id": "class-progress", "type": "table", "title": "Today's class attendance", "source": "dashboardAuthoritative", "fields": [
+          { "id": "className", "label": "Class" },
+          { "id": "students", "label": "Students", "format": "number" },
+          { "id": "present", "label": "Present", "format": "number" },
+          { "id": "late", "label": "Late", "format": "number" },
+          { "id": "absent", "label": "Absent", "format": "number" },
+          { "id": "rate", "label": "Rate (%)", "format": "number" }
+        ], "options": { "itemsPath": "classProgress", "pageSize": 20, "selectable": false } }
       ]
     },
     {
@@ -464,18 +477,34 @@
         }
       ],
       "components": [
-        {
-          "id": "officer-management-workspace",
-          "type": "officer-manager",
-          "source": "officers",
-          "options": {
-            "departmentsSource": "officerDepartments",
-            "createSource": "createOfficer",
-            "deactivateSource": "deactivateOfficer",
-            "editRoute": "officers/edit",
-            "departmentsRoute": "departments"
-          }
-        }
+        { "id": "officers-heading", "type": "heading", "title": "Manage Officers" },
+        { "id": "create-officer", "type": "form", "title": "Add officer", "source": "createOfficer", "fields": [
+          { "id": "name", "type": "text", "label": "Full name", "required": true, "maxLength": 160 },
+          { "id": "email", "type": "email", "label": "Email", "required": true },
+          { "id": "password", "type": "password", "label": "Temporary password", "required": true, "minLength": 8, "maxLength": 200 },
+          { "id": "phone", "type": "text", "label": "Phone" },
+          { "id": "employeeNumber", "type": "text", "label": "Employee number" },
+          { "id": "position", "type": "select", "label": "Position", "required": true, "options": [
+            { "label": "Teacher", "value": "TEACHER" }, { "label": "Officer", "value": "OFFICER" }, { "label": "Staff", "value": "STAFF" }, { "label": "Office Head", "value": "OFFICE_HEAD" }, { "label": "Department Head", "value": "DEPARTMENT_HEAD" }, { "label": "Principal", "value": "SECONDARY_SCHOOL_PRINCIPAL" }
+          ] },
+          { "id": "departmentId", "type": "text", "label": "Department ID" },
+          { "id": "employmentStatus", "type": "select", "label": "Status", "required": true, "defaultValue": "ACTIVE", "options": [
+            { "label": "Active", "value": "ACTIVE" }, { "label": "Inactive", "value": "INACTIVE" }, { "label": "Suspended", "value": "SUSPENDED" }
+          ] },
+          { "id": "startedAt", "type": "date", "label": "Start date" },
+          { "id": "notes", "type": "textarea", "label": "Notes", "maxLength": 1000 }
+        ], "options": { "collapsible": true, "defaultCollapsed": true, "triggerLabel": "Add officer", "submitLabel": "Create officer", "successMessage": "Officer and attendance ID created" } },
+        { "id": "officers-table", "type": "table", "title": "Officer directory", "source": "officers", "fields": [
+          { "id": "employeeNumber", "label": "Employee number", "filterable": true },
+          { "id": "name", "label": "Name", "filterable": true },
+          { "id": "email", "label": "Email", "filterable": true },
+          { "id": "phone", "label": "Phone" },
+          { "id": "position", "label": "Position", "filterable": true },
+          { "id": "department.name", "path": "department.name", "label": "Department" },
+          { "id": "employmentStatus", "label": "Status", "filterable": true }
+        ], "options": { "pageSize": 30, "selectable": false, "rowClickable": true, "rowActionLabel": "View / Edit", "rowRoute": "officers/edit/:id", "rowParameterMap": { "id": "id" }, "rowActions": [
+          { "id": "deactivate-officer", "label": "Deactivate", "source": "deactivateOfficer", "idField": "id", "idParameter": "officerId", "body": { "employmentStatus": "INACTIVE" }, "confirmation": "Deactivate this officer? Login and attendance history will be preserved.", "destructive": true }
+        ] } }
       ]
     },
     {
@@ -927,18 +956,21 @@
         }
       ],
       "components": [
-        {
-          "id": "study-year-workspace",
-          "type": "study-year-manager",
-          "source": "studyYears",
-          "options": {
-            "createSource": "createStudyYear",
-            "setCurrentSource": "setCurrentStudyYear",
-            "deleteSource": "deleteStudyYear",
-            "editRoute": "study-years/edit",
-            "classesRoute": "classes"
-          }
-        }
+        { "id": "study-years-heading", "type": "heading", "title": "Academic Years" },
+        { "id": "create-study-year", "type": "form", "title": "Add academic year", "source": "createStudyYear", "fields": [
+          { "id": "year", "type": "number", "label": "Year", "required": true, "min": 2020, "max": 2100 },
+          { "id": "startDate", "type": "date", "label": "Start date", "required": true },
+          { "id": "endDate", "type": "date", "label": "End date", "required": true }
+        ], "options": { "collapsible": true, "defaultCollapsed": true, "triggerLabel": "Add academic year", "submitLabel": "Create academic year", "successMessage": "Academic year created" } },
+        { "id": "study-years-table", "type": "table", "title": "Academic years", "source": "studyYears", "fields": [
+          { "id": "year", "label": "Year", "format": "number", "sortable": true },
+          { "id": "startDate", "label": "Start date", "format": "date" },
+          { "id": "endDate", "label": "End date", "format": "date" },
+          { "id": "isCurrent", "label": "Current", "format": "boolean" }
+        ], "options": { "pageSize": 20, "selectable": false, "rowClickable": true, "rowActionLabel": "Edit", "rowRoute": "study-years/edit/:id", "rowParameterMap": { "id": "id" }, "rowActions": [
+          { "id": "set-current", "label": "Set current", "source": "setCurrentStudyYear", "idField": "id", "idParameter": "studyYearId", "confirmation": "Set this as the current academic year?" },
+          { "id": "delete-year", "label": "Delete", "source": "deleteStudyYear", "idField": "id", "idParameter": "studyYearId", "confirmation": "Delete this academic year only if it has no dependent records?", "destructive": true }
+        ] } }
       ]
     },
     {
@@ -1129,28 +1161,29 @@
         }
       ],
       "components": [
-        {
-          "id": "class-management-workspace",
-          "type": "class-manager",
-          "source": "classes",
-          "options": {
-            "studyYearsSource": "studyYears",
-            "teachersSource": "teachers",
-            "classAdminsSource": "classAdmins",
-            "createSource": "createClass",
-            "updateSource": "updateClass",
-            "deleteSource": "deleteClass",
-            "studentsSource": "classStudents",
-            "availableStudentsSource": "availableStudents",
-            "addStudentSource": "addClassStudent",
-        "createStudentSource": "createClassStudent",
-            "removeStudentSource": "removeClassStudent",
-            "bulkUploadSource": "bulkUploadClassStudents",
-            "detailRoute": "classes",
-            "editRoute": "classes/edit",
-            "attendanceRoute": "attendance"
-          }
-        }
+        { "id": "classes-heading", "type": "heading", "title": "Classes" },
+        { "id": "create-class", "type": "form", "title": "Add class", "source": "createClass", "fields": [
+          { "id": "name", "type": "text", "label": "Class name", "required": true, "maxLength": 160 },
+          { "id": "subject", "type": "text", "label": "Subject" },
+          { "id": "teacherId", "type": "text", "label": "Teacher user ID", "required": true },
+          { "id": "classAdminId", "type": "text", "label": "Class administrator user ID" },
+          { "id": "studyYearId", "type": "text", "label": "Academic year ID" },
+          { "id": "registrationStatus", "type": "select", "label": "Registration status", "required": true, "defaultValue": "HIDDEN", "options": [
+            { "label": "Available", "value": "AVAILABLE" }, { "label": "Unavailable", "value": "UNAVAILABLE" }, { "label": "Hidden", "value": "HIDDEN" }
+          ] },
+          { "id": "schedule", "type": "json", "label": "Weekly schedule", "jsonShape": "object", "defaultValue": { "week": ["MON", "TUE", "WED", "THU", "FRI"] } },
+          { "id": "description", "type": "textarea", "label": "Description", "maxLength": 2000 }
+        ], "options": { "collapsible": true, "defaultCollapsed": true, "triggerLabel": "Add class", "submitLabel": "Create class", "successMessage": "Class created" } },
+        { "id": "classes-table", "type": "table", "title": "Class directory", "source": "classes", "fields": [
+          { "id": "name", "label": "Class", "filterable": true, "sortable": true },
+          { "id": "subject", "label": "Subject", "filterable": true },
+          { "id": "teacher.name", "path": "teacher.name", "label": "Teacher" },
+          { "id": "studyYear.label", "path": "studyYear.label", "label": "Academic year" },
+          { "id": "registrationStatus", "label": "Registration", "filterable": true },
+          { "id": "studentCount", "path": "_count.students", "label": "Students", "format": "number" }
+        ], "options": { "pageSize": 30, "selectable": false, "rowClickable": true, "rowActionLabel": "Open class", "rowRoute": "classes/:id", "rowParameterMap": { "id": "id" }, "rowActions": [
+          { "id": "delete-class", "label": "Delete", "source": "deleteClass", "idField": "id", "idParameter": "classId", "confirmation": "Delete this class only if it has no protected enrollment history?", "destructive": true }
+        ] } }
       ]
     },
     {
@@ -1450,34 +1483,19 @@
           ],
           "options": {
             "pageSize": 20,
-            "selectable": true,
+            "selectable": false,
             "rowRoute": "classes/:id/students/:studentId",
             "rowParameterMap": {
               "studentId": "id"
-            }
-          }
-        },
-        {
-          "id": "student-actions",
-          "type": "actions",
-          "options": {
-            "actions": [
+            },
+            "rowActions": [
               {
-                "id": "remove-selected-students",
-                "label": "Remove selected students",
-                "mode": "bulk",
+                "id": "remove-student",
+                "label": "Remove from class",
                 "source": "removeStudent",
-                "selectionSource": "students",
+                "idField": "id",
                 "idParameter": "studentId",
-                "confirmation": "End the selected students' current class enrollments? Their profiles, accounts, and history will be preserved.",
-                "destructive": true
-              },
-              {
-                "id": "cleanup-orphaned-students",
-                "label": "Clean up orphaned students",
-                "mode": "single",
-                "source": "cleanupOrphanedStudents",
-                "confirmation": "Delete plugin profiles that have never had an enrollment? Core accounts are preserved.",
+                "confirmation": "End this student's current class enrollment? The profile, account, and history will be preserved.",
                 "destructive": true
               }
             ]
@@ -1909,22 +1927,15 @@
           ],
           "options": {
             "pageSize": 20,
-            "selectable": true
-          }
-        },
-        {
-          "id": "custom-field-actions",
-          "type": "actions",
-          "options": {
-            "actions": [
+            "selectable": false,
+            "rowActions": [
               {
-                "id": "delete-selected-custom-fields",
-                "label": "Delete selected fields",
-                "mode": "bulk",
+                "id": "delete-custom-field",
+                "label": "Delete",
                 "source": "deleteCustomField",
-                "selectionSource": "customFields",
+                "idField": "id",
                 "idParameter": "fieldId",
-                "confirmation": "Delete the selected custom registration fields? Existing submitted values are retained in registration records but the fields will no longer appear on the form.",
+                "confirmation": "Delete this custom registration field? Existing submitted values are retained in registration records but the field will no longer appear on the form.",
                 "destructive": true
               }
             ]
@@ -2242,19 +2253,30 @@
         }
       ],
       "components": [
-        {
-          "id": "take-attendance",
-          "type": "take-attendance",
-          "title": "Take Attendance",
-          "source": "classes",
-          "options": {
-            "sessionsSource": "sessions",
-            "recordsSource": "records",
-            "studentsSource": "classStudents",
-            "saveSource": "saveRecord",
-            "scanSource": "scan"
-          }
-        }
+        { "id": "attendance-heading", "type": "heading", "title": "Student Attendance" },
+        { "id": "attendance-filter", "type": "filter", "fields": [
+          { "id": "classId", "type": "text", "label": "Class ID" },
+          { "id": "date", "type": "date", "label": "Attendance date" },
+          { "id": "session", "type": "select", "label": "Session", "options": [
+            { "label": "Session 1", "value": "1" }, { "label": "Session 2", "value": "2" }, { "label": "Session 3", "value": "3" }, { "label": "Session 4", "value": "4" }
+          ] }
+        ], "options": { "sources": ["records", "classStudents"], "applyLabel": "Load attendance", "clearLabel": "Clear" } },
+        { "id": "mark-attendance", "type": "form", "title": "Record student attendance", "source": "saveRecord", "fields": [
+          { "id": "personId", "type": "text", "label": "Student profile ID", "required": true },
+          { "id": "classId", "type": "text", "label": "Class ID", "required": true },
+          { "id": "date", "type": "date", "label": "Date", "required": true },
+          { "id": "session", "type": "number", "label": "Session", "required": true, "min": 1, "max": 4 },
+          { "id": "status", "type": "select", "label": "Status", "required": true, "options": [
+            { "label": "Present", "value": "PRESENT" }, { "label": "Late", "value": "LATE" }, { "label": "Absent", "value": "ABSENT" }, { "label": "Permission", "value": "PERMISSION" }
+          ] },
+          { "id": "permissionType", "type": "text", "label": "Permission type", "visibleWhen": { "field": "status", "equals": "PERMISSION" } }
+        ], "options": { "collapsible": true, "defaultCollapsed": true, "triggerLabel": "Record attendance", "submitLabel": "Save attendance", "successMessage": "Attendance saved" } },
+        { "id": "student-roster", "type": "table", "title": "Class students", "source": "classStudents", "fields": [
+          { "id": "studentNumber", "label": "Student number" }, { "id": "user.name", "path": "user.name", "label": "Student" }, { "id": "user.email", "path": "user.email", "label": "Email" }
+        ], "options": { "pageSize": 50, "selectable": false } },
+        { "id": "attendance-records-table", "type": "table", "title": "Attendance records", "source": "records", "fields": [
+          { "id": "date", "label": "Date", "format": "date" }, { "id": "personNameSnapshot", "label": "Student" }, { "id": "personNumberSnapshot", "label": "Student number" }, { "id": "classNameSnapshot", "label": "Class" }, { "id": "session", "label": "Session" }, { "id": "status", "label": "Status", "filterable": true }, { "id": "checkInTime", "label": "Check in", "format": "datetime" }
+        ], "options": { "pageSize": 50, "selectable": false } }
       ]
     },
     {
@@ -2576,23 +2598,15 @@
           ],
           "options": {
             "pageSize": 50,
-            "selectable": true
-          }
-        },
-        {
-          "id": "alert-actions",
-          "type": "actions",
-          "options": {
-            "actions": [
+            "selectable": false,
+            "rowActions": [
               {
                 "id": "acknowledge",
-                "label": "Acknowledge selected",
-                "mode": "bulk",
+                "label": "Acknowledge",
                 "source": "acknowledge",
-                "selectionSource": "alerts",
                 "idField": "id",
                 "idParameter": "id",
-                "confirmation": "Acknowledge the selected attendance alerts?"
+                "confirmation": "Acknowledge this attendance alert?"
               }
             ]
           }
@@ -2662,19 +2676,6 @@
         }
       ],
       "components": [
-        {
-          "id": "student-attendance-report-workspace",
-          "type": "attendance-report-manager",
-          "title": "Student Attendance Reports",
-          "source": "reportClasses",
-          "options": {
-            "mode": "student",
-            "sessionsSource": "reportSessions",
-            "peopleSource": "reportStudents",
-            "reportSource": "reportRows"
-        ,"authoritativeSource": "authoritativeReport"
-          }
-        },
         {
           "id": "heading",
           "type": "heading",
@@ -3189,19 +3190,6 @@
           "title": "Secure student self-attendance"
         },
         {
-          "id": "attendance-window-workspace",
-          "type": "attendance-window-manager",
-          "title": "Rotating attendance QR workspace",
-          "source": "windows",
-          "options": {
-            "classesSource": "windowClasses",
-            "openSource": "openWindow",
-            "rotateSource": "rotateWindow",
-            "closeSource": "closeWindow",
-            "liveSource": "windowLive"
-          }
-        },
-        {
           "id": "windows-table",
           "type": "table",
           "title": "Attendance windows and rotating QR tokens",
@@ -3247,31 +3235,23 @@
           ],
           "options": {
             "pageSize": 20,
-            "selectable": true
-          }
-        },
-        {
-          "id": "window-actions",
-          "type": "actions",
-          "options": {
-            "actions": [
+            "selectable": false,
+            "rowActions": [
               {
                 "id": "rotate-window",
-                "label": "Rotate selected QR",
-                "mode": "bulk",
+                "label": "Rotate QR",
                 "source": "rotateWindow",
-                "selectionSource": "windows",
+                "idField": "id",
                 "idParameter": "id",
-                "confirmation": "Generate a fresh short-lived QR token for the selected window?"
+                "confirmation": "Generate a fresh short-lived QR token for this window?"
               },
               {
                 "id": "close-window",
-                "label": "Close selected windows",
-                "mode": "bulk",
+                "label": "Close",
                 "source": "closeWindow",
-                "selectionSource": "windows",
+                "idField": "id",
                 "idParameter": "id",
-                "confirmation": "Close the selected attendance windows?",
+                "confirmation": "Close this attendance window?",
                 "destructive": true
               }
             ]
@@ -3438,7 +3418,7 @@
         },
         {
           "id": "self-scanner",
-          "type": "self-attendance-scanner",
+          "type": "scanner",
           "title": "Student self-attendance scanner",
           "source": "selfScan",
           "options": {
@@ -3661,39 +3641,31 @@
           ],
           "options": {
             "pageSize": 25,
-            "selectable": true
-          }
-        },
-        {
-          "id": "review-actions",
-          "type": "actions",
-          "options": {
-            "actions": [
+            "selectable": false,
+            "rowActions": [
               {
                 "id": "approve-attempt",
-                "label": "Approve selected",
-                "mode": "bulk",
+                "label": "Approve",
                 "source": "decide",
-                "selectionSource": "attempts",
+                "idField": "id",
                 "idParameter": "id",
                 "body": {
                   "decision": "APPROVED",
                   "reason": "Approved after staff review"
                 },
-                "confirmation": "Approve selected self-attendance attempts?"
+                "confirmation": "Approve this self-attendance attempt?"
               },
               {
                 "id": "reject-attempt",
-                "label": "Reject selected",
-                "mode": "bulk",
+                "label": "Reject",
                 "source": "decide",
-                "selectionSource": "attempts",
+                "idField": "id",
                 "idParameter": "id",
                 "body": {
                   "decision": "REJECTED",
                   "reason": "Rejected after staff review"
                 },
-                "confirmation": "Reject selected self-attendance attempts?",
+                "confirmation": "Reject this self-attendance attempt?",
                 "destructive": true
               }
             ]
@@ -3873,18 +3845,6 @@
         }
       ],
       "components": [
-        {
-          "id": "staff-attendance-report-workspace",
-          "type": "attendance-report-manager",
-          "title": "Staff Attendance Reports",
-          "source": "reportStaff",
-          "options": {
-            "mode": "staff",
-            "sessionsSource": "staffReportSessions",
-            "reportSource": "staffReport"
-        ,"authoritativeSource": "staffAuthoritativeReport"
-          }
-        },
         {
           "id": "heading",
           "type": "heading",

@@ -11,6 +11,20 @@ const plugin = require(path.join(root, 'backend', 'index.js'));
 const { registerAuthoritativeReports } = require(path.join(root, 'backend', 'authoritative-reports.js'));
 const { registerSelfAttendance } = require(path.join(root, 'backend', 'self-attendance.js'));
 
+test('Academic Management uses the universal SDK 1.3 UI contract', () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, 'plugin.json'), 'utf8'));
+  const descriptor = JSON.parse(fs.readFileSync(path.join(root, 'frontend', 'page.json'), 'utf8'));
+  const universal = new Set(['heading','text','workflow','status','card','metric','table','form','detail','chart','file','print','document','designer','scanner','filter','actions','id-card-manager','session-manager','profile-manager']);
+  const components = descriptor.pages.flatMap((page) => page.components || []);
+  assert.equal(manifest.sdkVersion, '1.3.0');
+  assert.deepEqual(manifest.hostContracts, ['wattanam.academic.directory.v1', 'wattanam.academic.identity.v1']);
+  assert.equal(descriptor.portability, 'universal');
+  assert.ok(components.every((component) => universal.has(component.type)), 'host-specific component remains in universal descriptor');
+  assert.equal(components.filter((component) => component.type === 'actions').length, 0);
+  assert.equal(components.filter((component) => component.type === 'table' && component.options?.selectable).length, 0);
+  assert.ok(components.reduce((count, component) => count + (component.options?.rowActions?.length || 0), 0) >= 10);
+});
+
 function tamperSignedToken(token) {
   const [payload, signature] = token.split('.');
   return `${payload}.${signature[0] === 'A' ? 'B' : 'A'}${signature.slice(1)}`;
@@ -170,30 +184,34 @@ test('Academic Management exposes the streamlined administration and attendance 
 
   const ui = JSON.parse(fs.readFileSync(path.join(root, 'frontend', 'page.json'), 'utf8'));
   const dashboard = ui.pages.find((candidate) => candidate.id === 'attendance-dashboard');
-  assert.ok(dashboard?.components.some((component) => component.type === 'attendance-dashboard'), 'missing dedicated Attendance Dashboard workspace');
+  assert.ok(dashboard?.components.some((component) => component.type === 'metric'), 'missing universal Attendance Dashboard metrics');
+  assert.ok(dashboard?.components.some((component) => component.type === 'table' && component.options?.itemsPath === 'classProgress'), 'missing universal class attendance progress');
   for (const page of ['study-years', 'classes', 'officers', 'officer-edit', 'officer-attendance', 'attendance-records', 'attendance-scanner', 'attendance-corrections', 'attendance-reports', 'attendance-settings', 'attendance-windows', 'student-attendance-scan', 'attendance-self-review', 'staff-attendance-scanner', 'staff-attendance-reports']) {
     assert.ok(ui.pages.some((candidate) => candidate.id === page), `missing UI page ${page}`);
   }
   const studyYears = ui.pages.find((candidate) => candidate.id === 'study-years');
-  assert.ok(studyYears.components.some((component) => component.type === 'study-year-manager'), 'missing dedicated Study Years workspace');
+  assert.ok(studyYears.components.some((component) => component.type === 'form' && component.source === 'createStudyYear'), 'missing universal Academic Year creation workflow');
+  assert.ok(studyYears.components.some((component) => component.type === 'table' && component.options?.rowActions?.some((action) => action.source === 'setCurrentStudyYear')), 'missing per-record current Academic Year action');
   const classes = ui.pages.find((candidate) => candidate.id === 'classes');
-  assert.ok(classes.components.some((component) => component.type === 'class-manager'), 'missing dedicated Manage Classes workspace');
-  const classManager = classes.components.find((component) => component.type === 'class-manager');
-  assert.equal(classManager.options.createStudentSource, 'createClassStudent', 'class roster must support creating a student login and profile directly');
+  assert.ok(classes.components.some((component) => component.type === 'form' && component.source === 'createClass'), 'missing universal class creation workflow');
+  assert.ok(classes.components.some((component) => component.type === 'table' && component.options?.rowActions?.some((action) => action.source === 'deleteClass')), 'missing per-record class action');
   assert.ok(classes.dataSources.some((source) => source.id === 'createClassStudent' && source.path === 'classes/:classId/students/create'), 'missing direct class student creation source');
   assert.ok(classes.dataSources.some((source) => source.id === 'bulkUploadClassStudents'), 'missing bounded class spreadsheet import source');
   const officers = ui.pages.find((candidate) => candidate.id === 'officers');
-  assert.ok(officers.components.some((component) => component.type === 'officer-manager'), 'missing dedicated Manage Officers workspace');
+  assert.ok(officers.components.some((component) => component.type === 'form' && component.source === 'createOfficer'), 'missing universal officer creation workflow');
+  assert.ok(officers.components.some((component) => component.type === 'table' && component.options?.rowActions?.some((action) => action.source === 'deactivateOfficer')), 'missing per-record officer action');
   const settings = ui.pages.find((candidate) => candidate.id === 'attendance-settings');
   assert.ok(settings.components.some((component) => component.type === 'session-manager'), 'missing dedicated Session Time Settings workspace');
   const attendance = ui.pages.find((candidate) => candidate.id === 'attendance-records');
-  assert.ok(attendance.components.some((component) => component.type === 'take-attendance'), 'missing dedicated Take Attendance workspace');
+  assert.ok(attendance.components.some((component) => component.type === 'form' && component.source === 'saveRecord'), 'missing universal Take Attendance form');
+  assert.ok(attendance.components.some((component) => component.type === 'table' && component.source === 'records'), 'missing universal attendance records table');
   assert.ok(attendance.dataSources.some((source) => source.id === 'classStudents' && source.autoload === false), 'missing runtime class roster source');
   const studentScanner = ui.pages.find((candidate) => candidate.id === 'student-attendance-scan');
-  assert.ok(studentScanner?.components.some((component) => component.type === 'self-attendance-scanner'), 'student scanner must use the durable offline-first workspace');
+  assert.ok(studentScanner?.components.some((component) => component.type === 'scanner'), 'student scanner must use the universal scanner workspace');
   assert.ok(studentScanner?.dataSources.some((source) => source.id === 'selfScan' && source.path === 'student/self-scan'), 'student scanner must submit to the secure self-scan route');
   const attendanceWindows = ui.pages.find((candidate) => candidate.id === 'attendance-windows');
-  assert.ok(attendanceWindows?.components.some((component) => component.type === 'attendance-window-manager'), 'missing rotating signed-QR attendance window workspace');
+  assert.ok(attendanceWindows?.components.some((component) => component.type === 'form' && component.source === 'openWindow'), 'missing universal attendance window creation workflow');
+  assert.ok(attendanceWindows?.components.some((component) => component.type === 'table' && component.options?.rowActions?.some((action) => action.source === 'rotateWindow')), 'missing per-record attendance window rotation action');
   assert.ok(attendanceWindows?.dataSources.some((source) => source.id === 'windowLive' && source.path === 'attendance-windows/:id/live'), 'attendance window workspace requires live confirmation data');
   const staffScanner = ui.pages.find((candidate) => candidate.id === 'staff-attendance-scanner');
   const staffScannerComponent = staffScanner?.components.find((component) => component.id === 'staff-scanner');
@@ -208,7 +226,8 @@ test('Academic Management exposes the streamlined administration and attendance 
   }
   for (const pageId of ['attendance-reports', 'staff-attendance-reports']) {
     const reports = ui.pages.find((candidate) => candidate.id === pageId);
-    assert.ok(reports?.components.some((component) => component.type === 'attendance-report-manager'), `missing ${pageId} workspace`);
+    assert.ok(reports?.components.some((component) => component.type === 'table'), `missing universal ${pageId} table`);
+    assert.ok(reports?.components.some((component) => component.type === 'print'), `missing universal ${pageId} print workflow`);
   }
   assert.ok(routes.has('POST id-cards/classes/:id/ensure'), 'missing student card identifier backfill route');
   assert.ok(routes.has('GET id-cards/staff'), 'missing staff card route');

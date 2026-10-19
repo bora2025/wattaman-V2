@@ -34,7 +34,13 @@ function validManifest(overrides: Record<string, unknown> = {}) {
 describe('parsePluginManifest', () => {
   it('accepts a well-formed manifest and normalizes it', () => {
     const parsed = parsePluginManifest(validManifest());
-    expect(parsed).toMatchObject({ id: 'acme.widget', publisher: 'acme', capabilities: ['api.routes'] });
+    expect(parsed).toMatchObject({ id: 'acme.widget', publisher: 'acme', capabilities: ['api.routes'], hostContracts: [] });
+  });
+
+  it('normalizes supported host contracts and rejects unknown host coupling', () => {
+    expect(parsePluginManifest(validManifest({ hostContracts: ['wattanam.academic.directory.v1', 'wattanam.academic.directory.v1'] })).hostContracts)
+      .toEqual(['wattanam.academic.directory.v1']);
+    expect(() => parsePluginManifest(validManifest({ hostContracts: ['acme.host.private.v1'] }))).toThrow('hostContracts');
   });
 
   it('requires the plugin id to be namespaced by its publisher', () => {
