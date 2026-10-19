@@ -18,6 +18,8 @@
     "events.durable",
     "navigation.register",
     "permissions.register",
+    "settings.read",
+    "settings.write",
     "ui.pages"
   ],
   "permissions": [
