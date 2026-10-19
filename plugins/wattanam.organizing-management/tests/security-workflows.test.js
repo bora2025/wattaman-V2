@@ -1,6 +1,8 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const registerPayroll = require('../backend/payroll');
 const registerWorkforce = require('../backend/workforce');
 const registerAttendance = require('../backend/attendance-secure');
@@ -89,6 +91,19 @@ test('employee creation persists a complete profile without an unknown position 
   assert.equal(inserted[13], '1998-04-20');
   assert.deepEqual(inserted.slice(14, 20), ['FEMALE', 'ID-100', 'Phnom Penh', 'Example Contact', '012345678', 'Complete profile']);
   assert.equal(result.profileCreated, true);
+});
+
+test('employee and employer profile editor can update the complete workforce record', () => {
+  const descriptor = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'frontend', 'page.json'), 'utf8'));
+  const page = descriptor.pages.find(item => item.id === 'profile-edit');
+  const save = page.dataSources.find(item => item.id === 'save');
+  const form = page.components.find(item => item.id === 'save');
+  assert.equal(save.method, 'PUT');
+  assert.equal(save.path, 'employees/:id');
+  assert.deepEqual(form.fields.map(field => field.id), [
+    'employmentType','employeeNumber','fullName','photoUrl','email','phone','positionId','position','department','startDate','employmentStatus',
+    'dateOfBirth','gender','nationalId','address','emergencyContactName','emergencyContactPhone','notes',
+  ]);
 });
 
 test('workforce search returns a permission-scoped edit destination', async () => {

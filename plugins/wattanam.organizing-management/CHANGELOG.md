@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.17.6
+
+- Consolidated employee and employer editing into one complete profile form.
+- Added editing for identity, employment, contact, position, status, photo, and emergency fields.
+- Added regression coverage for the complete workforce profile contract.
+
 ## 0.17.5
 
 - Improved employee and employer profile navigation with an explicit open-and-edit workflow.
