@@ -39,6 +39,23 @@ test('payroll approver cannot mark their own approval paid', async () => {
   await assert.rejects(routes.get('PUT payroll/:id')({ params: { id: 'payroll-1' }, principal: { userId: 'approver-1' }, body: { status: 'PAID' } }), /approver cannot mark/i);
 });
 
+test('salary terms accept the visible workforce number and update the internal employee id', async () => {
+  let updateParams = [];
+  const database = {
+    query: async (sql, params) => {
+      assert.match(sql, /"id"=\$1 OR "employeeNumber"=\$1/);
+      assert.deepEqual(params, ['001']);
+      return [{ id: 'employee-internal-id' }];
+    },
+    execute: async (sql, params) => { updateParams = params; return { count: 1 }; },
+    transaction: async callback => callback(database),
+  };
+  const { context, routes } = harness(database); registerPayroll(context);
+  const result = await routes.get('PUT salary/:employeeId')({ params: { employeeId: '001' }, body: { baseSalaryMinor: 500, salaryCurrency: 'USD', salaryBasis: 'MONTHLY' } });
+  assert.equal(result.id, 'employee-internal-id');
+  assert.deepEqual(updateParams, ['employee-internal-id', 500, 'USD', 'MONTHLY']);
+});
+
 test('payroll calculation returns the authoritative stored row after database triggers', async () => {
   const authoritative = { id: 'payroll-1', employeeId: 'employee-1', attendanceDays: 2, presentDays: 1, absentDays: 1, netPayMinor: 50000 };
   let insertParams = [];

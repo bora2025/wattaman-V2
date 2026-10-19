@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.17.16
+
+- Fixed salary setup and payroll calculation to accept the visible employee/workforce number as well as the internal employee ID.
+
 ## 0.17.15
 
 - Removed the final false-positive relation token from the payroll trigger so it passes the customer SQL namespace guard.
