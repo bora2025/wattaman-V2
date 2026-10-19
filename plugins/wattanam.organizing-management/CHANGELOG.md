@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.17.3
+
+- Added a professional workforce attendance-settings workspace with four configurable check-in and check-out sessions.
+- Added organization-wide working-day presets and attendance format-rule controls.
+- Synchronized saved session windows and working days with the camera and USB scanner policy.
+- Adopted the host-owned universal session manager so customer installations need no plugin-specific frontend code.
+
 ## 0.17.2
 
 - Standardized 21 organization, workforce, calendar, leave, payroll, employee-relations, profile, and ID-card screens around one professional six-stage workflow.
