@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.17.7
+
+- Replaced the onboarding-style employee view with a unified employee and employer HR workspace.
+- Added salary, rewards, deductions, permissions, disciplinary actions, job promotions, payroll history, and ID-card information to the profile.
+- Kept the lifecycle workspace universal, permission-scoped, and fully supplied by the plugin without customer-host frontend files.
+
 ## 0.17.6
 
 - Consolidated employee and employer editing into one complete profile form.

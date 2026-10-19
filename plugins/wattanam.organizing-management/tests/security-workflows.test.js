@@ -8,6 +8,7 @@ const registerWorkforce = require('../backend/workforce');
 const registerAttendance = require('../backend/attendance-secure');
 const registerReports = require('../backend/reports');
 const registerIdCards = require('../backend/id-cards');
+const registerEmployeeRelations = require('../backend/employee-relations');
 
 function harness(database) {
   const routes = new Map();
@@ -98,12 +99,40 @@ test('employee and employer profile editor can update the complete workforce rec
   const page = descriptor.pages.find(item => item.id === 'profile-edit');
   const save = page.dataSources.find(item => item.id === 'save');
   const form = page.components.find(item => item.id === 'save');
+  const relations = page.dataSources.find(item => item.id === 'relations');
   assert.equal(save.method, 'PUT');
   assert.equal(save.path, 'employees/:id');
+  assert.equal(relations.path, 'employees/:id/relations');
   assert.deepEqual(form.fields.map(field => field.id), [
     'employmentType','employeeNumber','fullName','photoUrl','email','phone','positionId','position','department','startDate','employmentStatus',
     'dateOfBirth','gender','nationalId','address','emergencyContactName','emergencyContactPhone','notes',
   ]);
+  assert.deepEqual(page.components.slice(3).map(component => component.title), [
+    'Your ID Card','Salary & Employment','Rewards & Bonuses','Salary & Wage Deductions','Permissions & Leave',
+    'Disciplinary Actions','Job Promotion History','Salary & Payroll History',
+  ]);
+});
+
+test('employee relations profile separates rewards and deductions and includes HR history', async () => {
+  const responses = [
+    [{ id:'employee-1', fullName:'Example Person', employeeNumber:'EMP-1', positionTitle:'Manager', department:'Operations', qrIdentifier:'secure-qr' }],
+    [{ id:'reward-1', adjustmentType:'GOOD_JOB_REWARD' }, { id:'deduction-1', adjustmentType:'WAGE_DEDUCTION' }],
+    [{ id:'permission-1', status:'APPROVED' }],
+    [{ id:'discipline-1', status:'CLOSED' }],
+    [{ id:'promotion-1', toPosition:'Manager' }],
+    [{ id:'payroll-1', status:'PAID' }],
+  ];
+  let call = 0;
+  const database = { query: async () => responses[call++] };
+  const { context, routes } = harness(database); registerEmployeeRelations(context);
+  const result = await routes.get('GET employees/:id/relations')({ params:{ id:'employee-1' } });
+  assert.equal(result.idCard.employeeNumber, 'EMP-1');
+  assert.equal(result.rewards[0].id, 'reward-1');
+  assert.equal(result.deductions[0].id, 'deduction-1');
+  assert.equal(result.permissions[0].id, 'permission-1');
+  assert.equal(result.disciplinaryActions[0].id, 'discipline-1');
+  assert.equal(result.promotions[0].id, 'promotion-1');
+  assert.equal(result.payroll[0].id, 'payroll-1');
 });
 
 test('workforce search returns a permission-scoped edit destination', async () => {
