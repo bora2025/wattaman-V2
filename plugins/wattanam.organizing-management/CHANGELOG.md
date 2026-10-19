@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.21.0
+
+- Completed Employee and Employer Salary Terms CRUD with explicit configured-state tracking.
+- Added selectable salary rows and safe removal that retains workforce profiles and historical payroll records.
+- Prevented payroll calculation until salary terms are configured for the workforce member.
+
 ## 0.20.0
 
 - Completed Payroll Register CRUD with selectable rows and guarded deletion of pristine draft payroll records.

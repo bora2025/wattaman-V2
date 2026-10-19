@@ -57,12 +57,28 @@ test('salary terms accept the visible workforce number and update the internal e
   assert.deepEqual(updateParams, ['employee-internal-id', 50000, 'USD', 'MONTHLY']);
 });
 
+test('salary terms can be removed without deleting workforce or payroll history', async () => {
+  const calls=[];
+  const database={query:async()=>[{id:'employee-internal'}],execute:async(sql,params)=>{calls.push({sql,params});return{count:1};},transaction:async callback=>callback(database)};
+  const {context,routes}=harness(database);registerPayroll(context);
+  const result=await routes.get('DELETE salary/:employeeId')({params:{employeeId:'001'}});
+  assert.deepEqual(result,{id:'employee-internal',deleted:true});
+  assert.match(calls[0].sql,/"salaryConfigured"=FALSE/);
+  assert.doesNotMatch(calls[0].sql,/DELETE FROM/);
+});
+
+test('payroll calculation requires configured salary terms', async () => {
+  const database={query:async()=>[{id:'employee-1',baseSalaryMinor:0,salaryCurrency:'USD',salaryBasis:'MONTHLY',salaryConfigured:false}],execute:async()=>({count:1}),transaction:async callback=>callback(database)};
+  const {context,routes}=harness(database);registerPayroll(context);
+  await assert.rejects(routes.get('POST payroll/calculate')({principal:{userId:'manager-1'},body:{employeeId:'001',periodStart:'2026-10-01',periodEnd:'2026-10-31'}}),/must be configured/);
+});
+
 test('payroll calculation returns the authoritative stored row after database triggers', async () => {
   const authoritative = { id: 'payroll-1', employeeId: 'employee-1', attendanceDays: 2, presentDays: 1, absentDays: 1, netPayMinor: 50000 };
   let insertParams = [];
   const database = {
     query: async sql => {
-      if (sql.includes('FROM plugin_wattanam_organizing_management_employee')) return [{ id: 'employee-1', baseSalaryMinor: 100000, salaryCurrency: 'USD', salaryBasis: 'MONTHLY' }];
+      if (sql.includes('FROM plugin_wattanam_organizing_management_employee')) return [{ id: 'employee-1', baseSalaryMinor: 100000, salaryCurrency: 'USD', salaryBasis: 'MONTHLY', salaryConfigured: true }];
       if (sql.includes('COUNT(*)::int AS "attendanceDays"')) return [{ attendanceDays: 1, presentDays: 1, lateDays: 0, absentDays: 0, leaveDays: 0, workedHours: 8 }];
       if (sql.includes('FROM plugin_wattanam_organizing_management_compensation_adjustment')) return [];
       if (sql.includes('FROM plugin_wattanam_organizing_management_payroll_record WHERE')) return [authoritative];
@@ -202,6 +218,9 @@ test('payroll UI exposes an audit-ready register and individual payslip', () => 
   assert.equal(payroll.components.find(component => component.id === 'list').options.selectable, true);
   const payrollDelete=payroll.components.find(component=>component.id==='managePayroll').options.actions[0];
   assert.deepEqual({mode:payrollDelete.mode,source:payrollDelete.source,selectionSource:payrollDelete.selectionSource,idParameter:payrollDelete.idParameter},{mode:'bulk',source:'removePayroll',selectionSource:'list',idParameter:'id'});
+  assert.equal(payroll.components.find(component => component.id === 'salaries').options.selectable, true);
+  const salaryDelete=payroll.components.find(component=>component.id==='manageSalaries').options.actions[0];
+  assert.deepEqual({mode:salaryDelete.mode,source:salaryDelete.source,selectionSource:salaryDelete.selectionSource,idParameter:salaryDelete.idParameter},{mode:'bulk',source:'removeSalary',selectionSource:'salaries',idParameter:'employeeId'});
   assert.deepEqual(review.components.find(component => component.id === 'payslip').options.formats, ['print','pdf','xlsx']);
   assert.equal(payroll.components.find(component => component.id === 'salaries').options.rowRoute, 'salary/:employeeId');
   assert.equal(review.components.find(component => component.id === 'editDraft').initialSource, 'record');
