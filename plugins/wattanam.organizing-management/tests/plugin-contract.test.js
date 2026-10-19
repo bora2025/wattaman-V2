@@ -67,6 +67,21 @@ test('runtime and manifest navigation identifiers are unique', async () => {
   assert.deepEqual(new Set(runtimeIds), new Set(manifestIds));
 });
 
+test('complete profile creation is consolidated into the workforce directory', () => {
+  const employeesPage = pages.pages.find(page => page.id === 'employees');
+  const createForm = employeesPage?.components.find(component => component.id === 'create');
+  const fieldIds = new Set(createForm?.fields.map(field => field.id));
+
+  assert.ok(employeesPage, 'employees page must exist');
+  assert.equal(createForm?.options.collapsible, true);
+  assert.equal(createForm?.options.defaultCollapsed, true);
+  assert.equal(createForm?.options.triggerLabel, 'Add employer / employee');
+  for (const field of ['employmentType', 'employeeNumber', 'fullName', 'photoUrl', 'positionId', 'dateOfBirth', 'gender', 'nationalId', 'address', 'emergencyContactName', 'emergencyContactPhone', 'notes']) {
+    assert.ok(fieldIds.has(field), `merged profile form is missing ${field}`);
+  }
+  assert.equal(manifest.navigation.some(item => item.id === 'create-workforce-profile'), false);
+});
+
 test('transactional handlers declare the durable-events capability', () => {
   const backendDirectory = path.join(__dirname, '..', 'backend');
   const transactionalFiles = fs.readdirSync(backendDirectory)

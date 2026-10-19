@@ -3,7 +3,7 @@
   "id": "wattanam.organizing-management",
   "name": "Organizing Management",
   "description": "Workforce, HR calendar, employee ID cards, QR attendance, corrections, settings, and reporting for companies, shops, stores, and organizations.",
-  "version": "0.17.11",
+  "version": "0.17.12",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -406,13 +406,6 @@
       "label": "Employers & Employees",
       "icon": "users",
       "href": "/plugins/wattanam.organizing-management/employees",
-      "permission": "wattanam.organizing-management.employees.manage"
-    },
-    {
-      "id": "create-workforce-profile",
-      "label": "Add Employee / Employer",
-      "icon": "user-plus",
-      "href": "/plugins/wattanam.organizing-management/create-profile",
       "permission": "wattanam.organizing-management.employees.manage"
     },
     {

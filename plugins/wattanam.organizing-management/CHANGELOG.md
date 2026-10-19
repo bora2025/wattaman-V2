@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.17.12
+
+- Merged complete employee and employer profile creation into the Employers & Employees page.
+- Kept the full creation form behind the compact Add employer / employee button.
+- Removed the redundant Add Employee / Employer sidebar destination.
+- Made employee and employer profiles read-only by default with an explicit Edit profile, Cancel, and Save changes workflow.
+
 ## 0.17.11
 
 - Converted the Employers & Employees creation form into a compact expandable Add employer / employee action.
