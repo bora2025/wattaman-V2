@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.17.14
+
+- Rewrote the payroll calculation-freeze guard to remain compatible with the customer host SQL namespace scanner.
+
 ## 0.17.13
 
 - Expanded payroll into an audit-ready gross-to-net register covering allowances, overtime, bonuses, reimbursements, leave adjustments, statutory and post-tax deductions, and taxes.
