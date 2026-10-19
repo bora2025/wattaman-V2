@@ -1,7 +1,100 @@
 {
-  "schemaVersion": 1,
-  "id": "settings",
-  "title": "Announcement settings",
-  "routePath": "settings",
-  "kind": "json-settings"
+  "schemaVersion": 2,
+  "kind": "declarative-ui",
+  "portability": "universal",
+  "pages": [
+    {
+      "id": "announcements",
+      "title": "Announcements",
+      "routePath": "announcements",
+      "permission": "wattanam.announcements.manage",
+      "parameters": [],
+      "dataSources": [
+        { "id": "announcements", "method": "GET", "path": "all", "permission": "wattanam.announcements.manage" },
+        { "id": "createAnnouncement", "method": "POST", "path": "create", "permission": "wattanam.announcements.manage" }
+      ],
+      "components": [
+        { "id": "heading", "type": "heading", "title": "Announcements" },
+        {
+          "id": "announcement-create",
+          "type": "form",
+          "title": "Create announcement",
+          "source": "createAnnouncement",
+          "fields": [
+            { "id": "title", "type": "text", "label": "Title", "required": true, "minLength": 1, "maxLength": 200 },
+            { "id": "body", "type": "textarea", "label": "Message", "required": true, "minLength": 1, "maxLength": 10000 },
+            { "id": "audience", "type": "select", "label": "Audience", "required": true, "options": [
+              { "label": "Entire school", "value": "SCHOOL" },
+              { "label": "Role", "value": "ROLE" },
+              { "label": "Class", "value": "CLASS" }
+            ] },
+            { "id": "targetRole", "type": "text", "label": "Target role", "visibleWhen": { "field": "audience", "equals": "ROLE" } },
+            { "id": "classId", "type": "text", "label": "Class ID", "visibleWhen": { "field": "audience", "equals": "CLASS" } },
+            { "id": "pinned", "type": "checkbox", "label": "Pin announcement" },
+            { "id": "scheduledAt", "type": "datetime", "label": "Schedule delivery" }
+          ],
+          "options": {
+            "submitLabel": "Publish announcement",
+            "confirmation": "Publish this announcement to the selected audience?",
+            "successMessage": "Announcement published.",
+            "collapsible": true,
+            "defaultCollapsed": true,
+            "triggerLabel": "Create announcement"
+          }
+        },
+        {
+          "id": "announcement-table",
+          "type": "table",
+          "title": "Published and scheduled announcements",
+          "source": "announcements",
+          "fields": [
+            { "id": "title", "label": "Title", "sortable": true, "filterable": true },
+            { "id": "audience", "label": "Audience", "sortable": true, "filterable": true },
+            { "id": "targetRole", "label": "Role" },
+            { "id": "class.name", "label": "Class" },
+            { "id": "author.name", "label": "Author" },
+            { "id": "pinned", "label": "Pinned", "format": "boolean" },
+            { "id": "sentAt", "label": "Sent", "format": "datetime", "sortable": true },
+            { "id": "scheduledAt", "label": "Scheduled", "format": "datetime" },
+            { "id": "readCount", "label": "Reads", "format": "number" }
+          ],
+          "options": { "pageSize": 25, "selectable": false }
+        }
+      ]
+    },
+    {
+      "id": "settings",
+      "title": "Announcement settings",
+      "routePath": "settings",
+      "permission": "wattanam.announcements.manage",
+      "parameters": [],
+      "dataSources": [
+        { "id": "settings", "method": "GET", "path": "settings", "permission": "wattanam.announcements.read" },
+        { "id": "saveSettings", "method": "PATCH", "path": "settings", "permission": "wattanam.announcements.manage" }
+      ],
+      "components": [
+        { "id": "heading", "type": "heading", "title": "Announcement settings" },
+        { "id": "description", "type": "text", "title": "Configure digest delivery and the default audience for school communications." },
+        {
+          "id": "settings-form",
+          "type": "form",
+          "title": "Delivery preferences",
+          "source": "saveSettings",
+          "fields": [
+            { "id": "digestEnabled", "type": "checkbox", "label": "Enable digest notifications" },
+            { "id": "audience", "type": "select", "label": "Default audience", "required": true, "options": [
+              { "label": "Everyone", "value": "all" },
+              { "label": "Staff", "value": "staff" },
+              { "label": "Parents", "value": "parents" }
+            ] }
+          ],
+          "options": {
+            "initialSource": "settings",
+            "submitLabel": "Save settings",
+            "successMessage": "Announcement settings saved."
+          }
+        }
+      ]
+    }
+  ]
 }

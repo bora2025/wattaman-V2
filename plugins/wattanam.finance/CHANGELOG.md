@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.0
+
+- Upgrade fee management and finance settings to the universal SDK 1.3 declarative UI contract.
+
 ## 0.1.3
 
 - Cast restored receipt amounts explicitly during compensating reversals on PostgreSQL.

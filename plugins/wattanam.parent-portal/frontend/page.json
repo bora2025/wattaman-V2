@@ -1,9 +1,104 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
+  "kind": "declarative-ui",
+  "portability": "universal",
   "pages": [
-    { "id": "children", "path": "children", "title": "My children", "permission": "wattanam.parent-portal.view", "components": [{ "type": "table", "title": "Linked children", "source": { "method": "GET", "path": "children" }, "columns": [{ "key": "name", "label": "Student" }, { "key": "studentNumber", "label": "Number" }, { "key": "className", "label": "Class" }] }] },
-    { "id": "link", "path": "link", "title": "Parent link", "permission": "wattanam.parent-portal.request", "components": [{ "type": "form", "title": "Request parent link", "submit": { "method": "POST", "path": "link/request" }, "fields": [{ "key": "parentEmail", "label": "Parent email", "input": "email", "required": true }, { "key": "parentName", "label": "Parent name", "input": "text" }, { "key": "parentPhone", "label": "Parent phone", "input": "text" }, { "key": "note", "label": "Note", "input": "textarea" }] }] },
-    { "id": "requests", "path": "requests", "title": "Parent-link requests", "permission": "wattanam.parent-portal.manage", "components": [{ "type": "table", "title": "Requests", "source": { "method": "GET", "path": "requests" }, "columns": [{ "key": "parentEmail", "label": "Parent" }, { "key": "studentDirectoryUserId", "label": "Student user" }, { "key": "status", "label": "Status" }, { "key": "createdAt", "label": "Requested" }] }] }
+    {
+      "id": "children",
+      "title": "My children",
+      "routePath": "children",
+      "permission": "wattanam.parent-portal.view",
+      "parameters": [],
+      "dataSources": [
+        { "id": "children", "method": "GET", "path": "children", "permission": "wattanam.parent-portal.view" }
+      ],
+      "components": [
+        { "id": "heading", "type": "heading", "title": "My children" },
+        {
+          "id": "children-table",
+          "type": "table",
+          "title": "Linked children",
+          "source": "children",
+          "fields": [
+            { "id": "name", "label": "Student", "sortable": true, "filterable": true },
+            { "id": "studentNumber", "label": "Number", "sortable": true },
+            { "id": "className", "label": "Class", "sortable": true, "filterable": true }
+          ],
+          "options": { "pageSize": 25, "selectable": false }
+        }
+      ]
+    },
+    {
+      "id": "link",
+      "title": "Parent link",
+      "routePath": "link",
+      "permission": "wattanam.parent-portal.request",
+      "parameters": [],
+      "dataSources": [
+        { "id": "currentRequest", "method": "GET", "path": "link/request", "permission": "wattanam.parent-portal.request" },
+        { "id": "submitRequest", "method": "POST", "path": "link/request", "permission": "wattanam.parent-portal.request" }
+      ],
+      "components": [
+        { "id": "heading", "type": "heading", "title": "Request a parent link" },
+        {
+          "id": "current-request",
+          "type": "detail",
+          "title": "Current request",
+          "source": "currentRequest",
+          "fields": [
+            { "label": "Parent email", "path": "parentEmail" },
+            { "label": "Status", "path": "status" },
+            { "label": "Requested", "path": "createdAt", "format": "datetime" },
+            { "label": "Resolution", "path": "rejectReason" }
+          ]
+        },
+        {
+          "id": "request-form",
+          "type": "form",
+          "title": "Parent information",
+          "source": "submitRequest",
+          "fields": [
+            { "id": "parentEmail", "type": "email", "label": "Parent email", "required": true },
+            { "id": "parentName", "type": "text", "label": "Parent name", "maxLength": 160 },
+            { "id": "parentPhone", "type": "text", "label": "Parent phone", "maxLength": 40 },
+            { "id": "note", "type": "textarea", "label": "Note", "maxLength": 2000 }
+          ],
+          "options": {
+            "submitLabel": "Send request",
+            "confirmation": "Send this parent-link request for administrator review?",
+            "successMessage": "Parent-link request submitted."
+          }
+        }
+      ]
+    },
+    {
+      "id": "requests",
+      "title": "Parent-link requests",
+      "routePath": "requests",
+      "permission": "wattanam.parent-portal.manage",
+      "parameters": [],
+      "dataSources": [
+        { "id": "requests", "method": "GET", "path": "requests", "permission": "wattanam.parent-portal.manage" }
+      ],
+      "components": [
+        { "id": "heading", "type": "heading", "title": "Parent-link requests" },
+        {
+          "id": "requests-table",
+          "type": "table",
+          "title": "Requests",
+          "source": "requests",
+          "fields": [
+            { "id": "parentEmail", "label": "Parent", "sortable": true, "filterable": true },
+            { "id": "parentName", "label": "Parent name", "filterable": true },
+            { "id": "studentDirectoryUserId", "label": "Student user" },
+            { "id": "status", "label": "Status", "sortable": true, "filterable": true },
+            { "id": "createdAt", "label": "Requested", "format": "datetime", "sortable": true },
+            { "id": "resolvedAt", "label": "Resolved", "format": "datetime" }
+          ],
+          "options": { "pageSize": 50, "selectable": false }
+        }
+      ]
+    }
   ]
 }
 

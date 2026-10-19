@@ -1,6 +1,7 @@
 {
   "schemaVersion": 2,
   "kind": "declarative-ui",
+  "portability": "universal",
   "pages": [
     {
       "id": "exams", "title": "Examinations", "routePath": "exams", "permission": "wattanam.examination.exams.view", "parameters": [],

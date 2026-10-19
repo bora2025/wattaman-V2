@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.0
+
+- Upgrade employee CV, payroll, and staff-attendance workspaces to the universal SDK 1.3 declarative UI contract.
+
 ## 0.1.3
 
 - Declare employment/financial data, backup/restore and retention behavior and runtime health.

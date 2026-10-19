@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.0
+
+- Upgrade course, lesson, assignment, quiz, session, attendance, and learner workspaces to the universal SDK 1.3 declarative UI contract.
+
 ## 0.1.5
 
 - Cast course-session timestamps explicitly for PostgreSQL runtime compatibility.

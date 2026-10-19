@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.0
+
+- Upgrade student and class reporting workspaces to the universal SDK 1.3 declarative UI contract.
+
 ## 0.1.3
 
 - Declare read-model data classification, restore verification and runtime health without claiming

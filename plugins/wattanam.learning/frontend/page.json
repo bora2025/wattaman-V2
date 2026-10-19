@@ -1,6 +1,7 @@
 {
   "schemaVersion": 2,
   "kind": "declarative-ui",
+  "portability": "universal",
   "pages": [
     {
       "id": "courses", "title": "Courses", "routePath": "courses", "permission": "wattanam.learning.courses.view", "parameters": [],

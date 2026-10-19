@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.0
+
+- Upgrade timetable, subject, classroom, teacher, lesson, schedule, and attendance workspaces to the universal SDK 1.3 declarative UI contract.
+
 ## 0.1.6
 
 - Cast teacher attendance check-in timestamps explicitly for PostgreSQL runtime compatibility.

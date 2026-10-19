@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.0
+
+- Certify templates, asset management, preview, printing, and visual editing as universal SDK 1.3 declarative UI.
+
 ## 0.1.7
 
 - Declare database and file backup participation plus the complete operational contract.

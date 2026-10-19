@@ -1,1 +1,151 @@
-{"schemaVersion":2,"kind":"declarative-ui","pages":[{"id":"messages","title":"Messages","routePath":"messages","permission":"wattanam.communication.messages.read","parameters":[],"dataSources":[{"id":"inbox","method":"GET","path":"messages/inbox","permission":"wattanam.communication.messages.read"},{"id":"send","method":"POST","path":"messages","permission":"wattanam.communication.messages.send"}],"components":[{"id":"compose","type":"form","title":"New message","source":"send","fields":[{"id":"receiverId","type":"text","label":"Recipient directory user ID","required":true},{"id":"content","type":"textarea","label":"Message","required":true,"maxLength":10000}],"options":{"submitLabel":"Send message","successMessage":"Message queued for delivery"}},{"id":"inbox","type":"table","title":"Recent messages","source":"inbox","fields":[{"id":"senderDirectoryUserId","label":"Sender"},{"id":"receiverDirectoryUserId","label":"Receiver"},{"id":"content","label":"Message"},{"id":"createdAt","label":"Sent","format":"datetime"}],"options":{"pageSize":50,"selectable":false}}]},{"id":"posts","title":"Communication posts","routePath":"posts","permission":"wattanam.communication.posts.manage","parameters":[],"dataSources":[{"id":"posts","method":"GET","path":"posts","permission":"wattanam.communication.posts.manage"},{"id":"create","method":"POST","path":"posts","permission":"wattanam.communication.posts.manage"}],"components":[{"id":"create","type":"form","title":"Create post","source":"create","fields":[{"id":"title","type":"text","label":"Title","required":true,"maxLength":300},{"id":"excerpt","type":"textarea","label":"Excerpt","maxLength":1000},{"id":"body","type":"textarea","label":"Body","maxLength":50000},{"id":"type","type":"select","label":"Type","required":true,"options":[{"label":"Text","value":"TEXT"},{"label":"Image","value":"IMAGE"},{"label":"Video","value":"VIDEO"}]},{"id":"imageUrl","type":"text","label":"Image URL"},{"id":"videoUrl","type":"text","label":"Video URL"},{"id":"published","type":"checkbox","label":"Publish now"},{"id":"pinned","type":"checkbox","label":"Pin post"}],"options":{"submitLabel":"Create post","successMessage":"Post created"}},{"id":"posts","type":"table","title":"Posts","source":"posts","fields":[{"id":"title","label":"Title"},{"id":"type","label":"Type"},{"id":"published","label":"Published"},{"id":"pinned","label":"Pinned"},{"id":"updatedAt","label":"Updated","format":"datetime"}],"options":{"pageSize":50,"selectable":false}}]}]}
+{
+  "schemaVersion": 2,
+  "kind": "declarative-ui",
+  "portability": "universal",
+  "pages": [
+    {
+      "id": "messages",
+      "title": "Messages",
+      "routePath": "messages",
+      "permission": "wattanam.communication.messages.read",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "inbox",
+          "method": "GET",
+          "path": "messages/inbox",
+          "permission": "wattanam.communication.messages.read"
+        },
+        {
+          "id": "send",
+          "method": "POST",
+          "path": "messages",
+          "permission": "wattanam.communication.messages.send"
+        }
+      ],
+      "components": [
+        {
+          "id": "compose",
+          "type": "form",
+          "title": "New message",
+          "source": "send",
+          "fields": [
+            {
+              "id": "receiverId",
+              "type": "text",
+              "label": "Recipient directory user ID",
+              "required": true
+            },
+            {
+              "id": "content",
+              "type": "textarea",
+              "label": "Message",
+              "required": true,
+              "maxLength": 10000
+            }
+          ],
+          "options": {
+            "submitLabel": "Send message",
+            "successMessage": "Message queued for delivery"
+          }
+        },
+        {
+          "id": "inbox",
+          "type": "table",
+          "title": "Recent messages",
+          "source": "inbox",
+          "fields": [
+            { "id": "senderDirectoryUserId", "label": "Sender" },
+            { "id": "receiverDirectoryUserId", "label": "Receiver" },
+            { "id": "content", "label": "Message" },
+            { "id": "createdAt", "label": "Sent", "format": "datetime" }
+          ],
+          "options": { "pageSize": 50, "selectable": false }
+        }
+      ]
+    },
+    {
+      "id": "posts",
+      "title": "Communication posts",
+      "routePath": "posts",
+      "permission": "wattanam.communication.posts.manage",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "posts",
+          "method": "GET",
+          "path": "posts",
+          "permission": "wattanam.communication.posts.manage"
+        },
+        {
+          "id": "create",
+          "method": "POST",
+          "path": "posts",
+          "permission": "wattanam.communication.posts.manage"
+        }
+      ],
+      "components": [
+        {
+          "id": "create",
+          "type": "form",
+          "title": "Create post",
+          "source": "create",
+          "fields": [
+            {
+              "id": "title",
+              "type": "text",
+              "label": "Title",
+              "required": true,
+              "maxLength": 300
+            },
+            {
+              "id": "excerpt",
+              "type": "textarea",
+              "label": "Excerpt",
+              "maxLength": 1000
+            },
+            {
+              "id": "body",
+              "type": "textarea",
+              "label": "Body",
+              "maxLength": 50000
+            },
+            {
+              "id": "type",
+              "type": "select",
+              "label": "Type",
+              "required": true,
+              "options": [
+                { "label": "Text", "value": "TEXT" },
+                { "label": "Image", "value": "IMAGE" },
+                { "label": "Video", "value": "VIDEO" }
+              ]
+            },
+            { "id": "imageUrl", "type": "text", "label": "Image URL" },
+            { "id": "videoUrl", "type": "text", "label": "Video URL" },
+            { "id": "published", "type": "checkbox", "label": "Publish now" },
+            { "id": "pinned", "type": "checkbox", "label": "Pin post" }
+          ],
+          "options": {
+            "submitLabel": "Create post",
+            "successMessage": "Post created"
+          }
+        },
+        {
+          "id": "posts",
+          "type": "table",
+          "title": "Posts",
+          "source": "posts",
+          "fields": [
+            { "id": "title", "label": "Title" },
+            { "id": "type", "label": "Type" },
+            { "id": "published", "label": "Published" },
+            { "id": "pinned", "label": "Pinned" },
+            { "id": "updatedAt", "label": "Updated", "format": "datetime" }
+          ],
+          "options": { "pageSize": 50, "selectable": false }
+        }
+      ]
+    }
+  ]
+}

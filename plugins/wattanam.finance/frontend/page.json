@@ -1,1 +1,189 @@
-{"schemaVersion":2,"kind":"declarative-ui","pages":[{"id":"fees","title":"Student fees","routePath":"fees","permission":"wattanam.finance.view","parameters":[],"dataSources":[{"id":"fees","method":"GET","path":"fees","permission":"wattanam.finance.view"},{"id":"summary","method":"GET","path":"summary","permission":"wattanam.finance.view"},{"id":"create","method":"POST","path":"fees","permission":"wattanam.finance.manage"}],"components":[{"id":"summary","type":"detail","title":"Summary (minor units)","source":"summary","fields":[{"label":"Collected","path":"collectedMinor"},{"label":"Outstanding","path":"outstandingMinor"},{"label":"Fee records","path":"recordCount"}]},{"id":"create","type":"form","title":"Create fee","source":"create","fields":[{"id":"academicStudentId","type":"text","label":"Academic student ID","required":true},{"id":"totalMinor","type":"number","label":"Total (minor units)","required":true,"min":0},{"id":"discountMinor","type":"number","label":"Discount (minor units)","min":0},{"id":"discountReason","type":"text","label":"Discount reason"},{"id":"dueDate","type":"date","label":"Due date","required":true},{"id":"term","type":"text","label":"Term"},{"id":"subject","type":"text","label":"Subject"},{"id":"feeClass","type":"text","label":"Fee class"},{"id":"notes","type":"textarea","label":"Notes"}],"options":{"submitLabel":"Create fee","successMessage":"Fee created"}},{"id":"fees","type":"table","title":"Fees","source":"fees","fields":[{"id":"academicStudentId","label":"Student"},{"id":"currency","label":"Currency"},{"id":"totalMinor","label":"Total"},{"id":"discountMinor","label":"Discount"},{"id":"paidMinor","label":"Paid"},{"id":"balanceMinor","label":"Balance"},{"id":"dueDate","label":"Due"}],"options":{"pageSize":50,"selectable":false}}]},{"id":"settings","title":"Finance settings","routePath":"settings","permission":"wattanam.finance.settings.manage","parameters":[],"dataSources":[{"id":"settings","method":"GET","path":"settings","permission":"wattanam.finance.view"},{"id":"save","method":"PUT","path":"settings","permission":"wattanam.finance.settings.manage"}],"components":[{"id":"current","type":"detail","title":"Current settings","source":"settings","fields":[{"label":"Currency","path":"currency"},{"label":"School","path":"schoolName"},{"label":"Invoice title","path":"invoiceTitle"}]},{"id":"save","type":"form","title":"Update settings","source":"save","fields":[{"id":"currency","type":"text","label":"ISO currency","required":true,"maxLength":3},{"id":"schoolName","type":"text","label":"School name","required":true},{"id":"schoolAddress","type":"textarea","label":"Address"},{"id":"schoolPhone","type":"text","label":"Phone"},{"id":"schoolEmail","type":"text","label":"Email"},{"id":"invoiceTitle","type":"text","label":"Invoice title","required":true},{"id":"invoiceSubtitle","type":"text","label":"Invoice subtitle","required":true},{"id":"invoiceFooter","type":"textarea","label":"Invoice footer","required":true}],"options":{"submitLabel":"Save settings","successMessage":"Finance settings saved"}}]}]}
+{
+  "schemaVersion": 2,
+  "kind": "declarative-ui",
+  "portability": "universal",
+  "pages": [
+    {
+      "id": "fees",
+      "title": "Student fees",
+      "routePath": "fees",
+      "permission": "wattanam.finance.view",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "fees",
+          "method": "GET",
+          "path": "fees",
+          "permission": "wattanam.finance.view"
+        },
+        {
+          "id": "summary",
+          "method": "GET",
+          "path": "summary",
+          "permission": "wattanam.finance.view"
+        },
+        {
+          "id": "create",
+          "method": "POST",
+          "path": "fees",
+          "permission": "wattanam.finance.manage"
+        }
+      ],
+      "components": [
+        {
+          "id": "summary",
+          "type": "detail",
+          "title": "Summary (minor units)",
+          "source": "summary",
+          "fields": [
+            { "label": "Collected", "path": "collectedMinor" },
+            { "label": "Outstanding", "path": "outstandingMinor" },
+            { "label": "Fee records", "path": "recordCount" }
+          ]
+        },
+        {
+          "id": "create",
+          "type": "form",
+          "title": "Create fee",
+          "source": "create",
+          "fields": [
+            {
+              "id": "academicStudentId",
+              "type": "text",
+              "label": "Academic student ID",
+              "required": true
+            },
+            {
+              "id": "totalMinor",
+              "type": "number",
+              "label": "Total (minor units)",
+              "required": true,
+              "min": 0
+            },
+            {
+              "id": "discountMinor",
+              "type": "number",
+              "label": "Discount (minor units)",
+              "min": 0
+            },
+            {
+              "id": "discountReason",
+              "type": "text",
+              "label": "Discount reason"
+            },
+            {
+              "id": "dueDate",
+              "type": "date",
+              "label": "Due date",
+              "required": true
+            },
+            { "id": "term", "type": "text", "label": "Term" },
+            { "id": "subject", "type": "text", "label": "Subject" },
+            { "id": "feeClass", "type": "text", "label": "Fee class" },
+            { "id": "notes", "type": "textarea", "label": "Notes" }
+          ],
+          "options": {
+            "submitLabel": "Create fee",
+            "successMessage": "Fee created"
+          }
+        },
+        {
+          "id": "fees",
+          "type": "table",
+          "title": "Fees",
+          "source": "fees",
+          "fields": [
+            { "id": "academicStudentId", "label": "Student" },
+            { "id": "currency", "label": "Currency" },
+            { "id": "totalMinor", "label": "Total" },
+            { "id": "discountMinor", "label": "Discount" },
+            { "id": "paidMinor", "label": "Paid" },
+            { "id": "balanceMinor", "label": "Balance" },
+            { "id": "dueDate", "label": "Due" }
+          ],
+          "options": { "pageSize": 50, "selectable": false }
+        }
+      ]
+    },
+    {
+      "id": "settings",
+      "title": "Finance settings",
+      "routePath": "settings",
+      "permission": "wattanam.finance.settings.manage",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "settings",
+          "method": "GET",
+          "path": "settings",
+          "permission": "wattanam.finance.view"
+        },
+        {
+          "id": "save",
+          "method": "PUT",
+          "path": "settings",
+          "permission": "wattanam.finance.settings.manage"
+        }
+      ],
+      "components": [
+        {
+          "id": "current",
+          "type": "detail",
+          "title": "Current settings",
+          "source": "settings",
+          "fields": [
+            { "label": "Currency", "path": "currency" },
+            { "label": "School", "path": "schoolName" },
+            { "label": "Invoice title", "path": "invoiceTitle" }
+          ]
+        },
+        {
+          "id": "save",
+          "type": "form",
+          "title": "Update settings",
+          "source": "save",
+          "fields": [
+            {
+              "id": "currency",
+              "type": "text",
+              "label": "ISO currency",
+              "required": true,
+              "maxLength": 3
+            },
+            {
+              "id": "schoolName",
+              "type": "text",
+              "label": "School name",
+              "required": true
+            },
+            { "id": "schoolAddress", "type": "textarea", "label": "Address" },
+            { "id": "schoolPhone", "type": "text", "label": "Phone" },
+            { "id": "schoolEmail", "type": "text", "label": "Email" },
+            {
+              "id": "invoiceTitle",
+              "type": "text",
+              "label": "Invoice title",
+              "required": true
+            },
+            {
+              "id": "invoiceSubtitle",
+              "type": "text",
+              "label": "Invoice subtitle",
+              "required": true
+            },
+            {
+              "id": "invoiceFooter",
+              "type": "textarea",
+              "label": "Invoice footer",
+              "required": true
+            }
+          ],
+          "options": {
+            "submitLabel": "Save settings",
+            "successMessage": "Finance settings saved"
+          }
+        }
+      ]
+    }
+  ]
+}

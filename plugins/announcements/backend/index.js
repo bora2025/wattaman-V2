@@ -75,7 +75,12 @@ module.exports = {
         const counts = await context.database.query(`SELECT "announcementId" as id, COUNT(*)::int as count FROM ${READ_TABLE} GROUP BY "announcementId"`, []);
         const countById = new Map(counts.map((row) => [row.id, row.count]));
         const enriched = await enrich(rows);
-        return enriched.map((row) => ({ ...row, _count: { reads: countById.get(row.id) || 0 } }));
+        return enriched.map((row) => {
+          const readCount = countById.get(row.id) || 0;
+          // Keep the legacy nested count for existing API clients while exposing a
+          // portable field name that the universal table contract can bind safely.
+          return { ...row, readCount, _count: { reads: readCount } };
+        });
       },
     });
 

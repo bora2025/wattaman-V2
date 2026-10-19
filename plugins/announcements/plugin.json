@@ -3,13 +3,13 @@
   "id": "wattanam.announcements",
   "name": "Wattanam Announcements",
   "description": "Official reference plugin proving routes, settings, storage, jobs, migrations, permissions, navigation, and events.",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
   "backendEntry": "backend/index.js",
   "frontendEntry": "frontend/page.json",
-  "sdkVersion": "1.0.0",
+  "sdkVersion": "1.3.0",
   "runtimeVersion": "1.0.0",
   "capabilities": ["api.routes", "database.read", "database.write", "directory.read", "events.subscribe", "jobs.schedule", "navigation.register", "notifications.send", "permissions.register", "realtime.notify", "settings.read", "settings.write", "storage.read", "storage.write", "ui.pages"],
   "permissions": ["wattanam.announcements.read", "wattanam.announcements.manage"],
@@ -34,12 +34,20 @@
       "destructive": false
     }
   ],
-  "navigation": [{
-    "id": "settings",
-    "label": "Announcement settings",
-    "href": "/plugins/wattanam.announcements/settings",
-    "permission": "wattanam.announcements.manage"
-  }],
+  "navigation": [
+    {
+      "id": "announcements",
+      "label": "Announcements",
+      "href": "/plugins/wattanam.announcements/announcements",
+      "permission": "wattanam.announcements.manage"
+    },
+    {
+      "id": "settings",
+      "label": "Announcement settings",
+      "href": "/plugins/wattanam.announcements/settings",
+      "permission": "wattanam.announcements.manage"
+    }
+  ],
   "supportedLanguages": ["en", "km"],
   "supportUrl": "https://wattanam.example/support/announcements",
   "privacyUrl": "https://wattanam.example/privacy/plugins/announcements"

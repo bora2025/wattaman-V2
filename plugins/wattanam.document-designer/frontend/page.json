@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2, "kind": "declarative-ui",
+  "schemaVersion": 2, "kind": "declarative-ui", "portability": "universal",
   "pages": [
     {
       "id": "templates", "title": "Document Designer", "routePath": "templates", "permission": "wattanam.document-designer.view", "parameters": [],

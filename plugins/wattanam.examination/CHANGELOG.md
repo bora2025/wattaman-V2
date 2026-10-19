@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.0
+
+- Upgrade examination and score-sheet workspaces to the universal SDK 1.3 declarative UI contract.
+
 ## 0.1.7
 
 - Execute attempt advisory locks through the mutation adapter so PostgreSQL `void` results are never deserialized.

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.0
+
+- Upgrade children, parent-link request, and administrator request-list pages to the universal SDK 1.3 declarative UI contract.
+
 ## 0.1.3
 
 - Declare the operational contract and expose the standard runtime health probe.

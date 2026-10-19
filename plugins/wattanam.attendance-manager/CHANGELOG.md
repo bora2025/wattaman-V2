@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.0
+
+- Certify the existing attendance, scanner, correction, alert, report, study-year, and settings workspaces as universal SDK 1.3 declarative UI.
+
 ## 0.1.9
 
 - Replaced the invalid dotted export route with the SDK-compatible `reports/export-csv` path.

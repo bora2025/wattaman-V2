@@ -69,6 +69,7 @@ jobs:
           npm run test:sdk
           npm run test:cli
           npm run test:tools
+          npm run plugins:check:universal
       - name: Build plugin SDK
         run: npm run build:sdk
       - name: Audit production plugin tooling dependencies
@@ -106,6 +107,8 @@ jobs:
       - name: Test and build
         working-directory: apps/marketplace-api
         run: npm test && npm run certify:starter-bundles:postgres && npm run build
+      - name: Test official plugin behavior owned by Marketplace
+        run: npm run test:official-plugins
       - name: Audit production dependencies
         working-directory: apps/marketplace-api
         run: npm audit --omit=dev --audit-level=high

@@ -1,6 +1,7 @@
 {
   "schemaVersion": 2,
   "kind": "declarative-ui",
+  "portability": "universal",
   "pages": [
     {
       "id": "attendance", "title": "Attendance Manager", "routePath": "attendance", "permission": "wattanam.attendance-manager.view", "parameters": [],

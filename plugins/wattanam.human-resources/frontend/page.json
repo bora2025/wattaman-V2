@@ -1,1 +1,208 @@
-{"schemaVersion":2,"kind":"declarative-ui","pages":[{"id":"employee-cv","title":"Employee CV","routePath":"employees/:id/cv","permission":"wattanam.human-resources.view","parameters":[{"name":"id","type":"string","maximumLength":100}],"dataSources":[{"id":"cv","method":"GET","path":"employees/:id/cv","permission":"wattanam.human-resources.view"}],"components":[{"id":"profile","type":"detail","title":"Profile","source":"cv","fields":[{"label":"Directory user","path":"directoryUserId"},{"label":"Title","path":"profile.title"},{"label":"Summary","path":"profile.summary"}]}]},{"id":"payroll","title":"Payroll","routePath":"payroll","permission":"wattanam.human-resources.payroll.manage","parameters":[],"dataSources":[{"id":"payroll","method":"GET","path":"payroll","permission":"wattanam.human-resources.payroll.manage"},{"id":"create","method":"POST","path":"payroll","permission":"wattanam.human-resources.payroll.manage"}],"components":[{"id":"create","type":"form","title":"Prepare salary","source":"create","fields":[{"id":"directoryUserId","type":"text","label":"Employee directory user ID","required":true},{"id":"month","type":"number","label":"Month","required":true,"min":1,"max":12},{"id":"year","type":"number","label":"Year","required":true,"min":2000,"max":2200},{"id":"currency","type":"text","label":"Currency","required":true,"maxLength":3},{"id":"baseMinor","type":"number","label":"Base (minor units)","required":true,"min":0},{"id":"allowancesMinor","type":"number","label":"Allowances","min":0},{"id":"deductionsMinor","type":"number","label":"Deductions","min":0},{"id":"notes","type":"textarea","label":"Notes"}],"options":{"submitLabel":"Prepare salary","successMessage":"Draft salary prepared"}},{"id":"payroll","type":"table","title":"Salary records","source":"payroll","fields":[{"id":"directoryUserId","label":"Employee"},{"id":"month","label":"Month"},{"id":"year","label":"Year"},{"id":"currency","label":"Currency"},{"id":"netMinor","label":"Net"},{"id":"status","label":"Status"}],"options":{"pageSize":50,"selectable":false}}]},{"id":"attendance","title":"Staff attendance","routePath":"attendance","permission":"wattanam.human-resources.attendance.manage","parameters":[],"dataSources":[{"id":"attendance","method":"GET","path":"attendance","permission":"wattanam.human-resources.attendance.manage"},{"id":"mark","method":"POST","path":"attendance","permission":"wattanam.human-resources.attendance.manage"}],"components":[{"id":"mark","type":"form","title":"Mark attendance","source":"mark","fields":[{"id":"directoryUserId","type":"text","label":"Employee directory user ID","required":true},{"id":"date","type":"date","label":"Date","required":true},{"id":"session","type":"number","label":"Session","required":true,"min":1},{"id":"status","type":"select","label":"Status","required":true,"options":[{"label":"Present","value":"PRESENT"},{"label":"Late","value":"LATE"},{"label":"Absent","value":"ABSENT"},{"label":"Excused","value":"EXCUSED"}]}],"options":{"submitLabel":"Save attendance","successMessage":"Attendance saved"}},{"id":"attendance","type":"table","title":"Attendance records","source":"attendance","fields":[{"id":"directoryUserId","label":"Employee"},{"id":"date","label":"Date"},{"id":"session","label":"Session"},{"id":"status","label":"Status"}],"options":{"pageSize":100,"selectable":false}}]}]}
+{
+  "schemaVersion": 2,
+  "kind": "declarative-ui",
+  "portability": "universal",
+  "pages": [
+    {
+      "id": "employee-cv",
+      "title": "Employee CV",
+      "routePath": "employees/:id/cv",
+      "permission": "wattanam.human-resources.view",
+      "parameters": [{ "name": "id", "type": "string", "maximumLength": 100 }],
+      "dataSources": [
+        {
+          "id": "cv",
+          "method": "GET",
+          "path": "employees/:id/cv",
+          "permission": "wattanam.human-resources.view"
+        }
+      ],
+      "components": [
+        {
+          "id": "profile",
+          "type": "detail",
+          "title": "Profile",
+          "source": "cv",
+          "fields": [
+            { "label": "Directory user", "path": "directoryUserId" },
+            { "label": "Title", "path": "profile.title" },
+            { "label": "Summary", "path": "profile.summary" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "payroll",
+      "title": "Payroll",
+      "routePath": "payroll",
+      "permission": "wattanam.human-resources.payroll.manage",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "payroll",
+          "method": "GET",
+          "path": "payroll",
+          "permission": "wattanam.human-resources.payroll.manage"
+        },
+        {
+          "id": "create",
+          "method": "POST",
+          "path": "payroll",
+          "permission": "wattanam.human-resources.payroll.manage"
+        }
+      ],
+      "components": [
+        {
+          "id": "create",
+          "type": "form",
+          "title": "Prepare salary",
+          "source": "create",
+          "fields": [
+            {
+              "id": "directoryUserId",
+              "type": "text",
+              "label": "Employee directory user ID",
+              "required": true
+            },
+            {
+              "id": "month",
+              "type": "number",
+              "label": "Month",
+              "required": true,
+              "min": 1,
+              "max": 12
+            },
+            {
+              "id": "year",
+              "type": "number",
+              "label": "Year",
+              "required": true,
+              "min": 2000,
+              "max": 2200
+            },
+            {
+              "id": "currency",
+              "type": "text",
+              "label": "Currency",
+              "required": true,
+              "maxLength": 3
+            },
+            {
+              "id": "baseMinor",
+              "type": "number",
+              "label": "Base (minor units)",
+              "required": true,
+              "min": 0
+            },
+            {
+              "id": "allowancesMinor",
+              "type": "number",
+              "label": "Allowances",
+              "min": 0
+            },
+            {
+              "id": "deductionsMinor",
+              "type": "number",
+              "label": "Deductions",
+              "min": 0
+            },
+            { "id": "notes", "type": "textarea", "label": "Notes" }
+          ],
+          "options": {
+            "submitLabel": "Prepare salary",
+            "successMessage": "Draft salary prepared"
+          }
+        },
+        {
+          "id": "payroll",
+          "type": "table",
+          "title": "Salary records",
+          "source": "payroll",
+          "fields": [
+            { "id": "directoryUserId", "label": "Employee" },
+            { "id": "month", "label": "Month" },
+            { "id": "year", "label": "Year" },
+            { "id": "currency", "label": "Currency" },
+            { "id": "netMinor", "label": "Net" },
+            { "id": "status", "label": "Status" }
+          ],
+          "options": { "pageSize": 50, "selectable": false }
+        }
+      ]
+    },
+    {
+      "id": "attendance",
+      "title": "Staff attendance",
+      "routePath": "attendance",
+      "permission": "wattanam.human-resources.attendance.manage",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "attendance",
+          "method": "GET",
+          "path": "attendance",
+          "permission": "wattanam.human-resources.attendance.manage"
+        },
+        {
+          "id": "mark",
+          "method": "POST",
+          "path": "attendance",
+          "permission": "wattanam.human-resources.attendance.manage"
+        }
+      ],
+      "components": [
+        {
+          "id": "mark",
+          "type": "form",
+          "title": "Mark attendance",
+          "source": "mark",
+          "fields": [
+            {
+              "id": "directoryUserId",
+              "type": "text",
+              "label": "Employee directory user ID",
+              "required": true
+            },
+            { "id": "date", "type": "date", "label": "Date", "required": true },
+            {
+              "id": "session",
+              "type": "number",
+              "label": "Session",
+              "required": true,
+              "min": 1
+            },
+            {
+              "id": "status",
+              "type": "select",
+              "label": "Status",
+              "required": true,
+              "options": [
+                { "label": "Present", "value": "PRESENT" },
+                { "label": "Late", "value": "LATE" },
+                { "label": "Absent", "value": "ABSENT" },
+                { "label": "Excused", "value": "EXCUSED" }
+              ]
+            }
+          ],
+          "options": {
+            "submitLabel": "Save attendance",
+            "successMessage": "Attendance saved"
+          }
+        },
+        {
+          "id": "attendance",
+          "type": "table",
+          "title": "Attendance records",
+          "source": "attendance",
+          "fields": [
+            { "id": "directoryUserId", "label": "Employee" },
+            { "id": "date", "label": "Date" },
+            { "id": "session", "label": "Session" },
+            { "id": "status", "label": "Status" }
+          ],
+          "options": { "pageSize": 100, "selectable": false }
+        }
+      ]
+    }
+  ]
+}
