@@ -100,14 +100,17 @@ test('employee and employer profile editor can update the complete workforce rec
   const save = page.dataSources.find(item => item.id === 'save');
   const form = page.components.find(item => item.id === 'save');
   const relations = page.dataSources.find(item => item.id === 'relations');
+  const workspace = page.components.find(item => item.id === 'profile-workspace');
   assert.equal(save.method, 'PUT');
   assert.equal(save.path, 'employees/:id');
   assert.equal(relations.path, 'employees/:id/relations');
+  assert.equal(workspace.type, 'profile-manager');
+  assert.deepEqual(workspace.options, { relationsSource:'relations', saveSource:'save' });
   assert.deepEqual(form.fields.map(field => field.id), [
     'employmentType','employeeNumber','fullName','photoUrl','email','phone','positionId','position','department','startDate','employmentStatus',
     'dateOfBirth','gender','nationalId','address','emergencyContactName','emergencyContactPhone','notes',
   ]);
-  assert.deepEqual(page.components.slice(3).map(component => component.title), [
+  assert.deepEqual(page.components.filter(component => ['id-card','salary','rewards','deductions','permissions','discipline','promotions','payroll-history'].includes(component.id)).map(component => component.title), [
     'Your ID Card','Salary & Employment','Rewards & Bonuses','Salary & Wage Deductions','Permissions & Leave',
     'Disciplinary Actions','Job Promotion History','Salary & Payroll History',
   ]);

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.17.9
+
+- Replaced the stacked profile blocks with a professional three-column employee and employer workspace.
+- Added integrated profile image, editable employment details, salary summary, ID card, and interactive HR lifecycle panels.
+
 ## 0.17.8
 
 - Corrected universal table column identifiers so the lifecycle profile installs on customer hosts.

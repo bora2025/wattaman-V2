@@ -8,7 +8,7 @@ const { sha256 } = require('../util');
 const UNIVERSAL_UI_COMPONENTS = new Set([
   'heading', 'text', 'workflow', 'status', 'card', 'metric', 'table', 'form',
   'detail', 'chart', 'file', 'print', 'document', 'designer', 'scanner',
-  'filter', 'actions', 'id-card-manager', 'session-manager',
+  'filter', 'actions', 'id-card-manager', 'session-manager', 'profile-manager',
 ]);
 
 /**
