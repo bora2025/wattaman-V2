@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.17.10
+
+- Made every Workforce Profiles row open the unified employee/employer HR lifecycle workspace.
+- Added an explicit Edit employee/employer HR lifecycle action without introducing a separate lifecycle destination.
+
 ## 0.17.9
 
 - Replaced the stacked profile blocks with a professional three-column employee and employer workspace.

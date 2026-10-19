@@ -116,6 +116,16 @@ test('employee and employer profile editor can update the complete workforce rec
   ]);
 });
 
+test('workforce directory rows open the single unified HR lifecycle profile', () => {
+  const descriptor = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'frontend', 'page.json'), 'utf8'));
+  const directory = descriptor.pages.find(item => item.id === 'workforce-directory');
+  const table = directory.components.find(item => item.id === 'profiles');
+  assert.equal(table.options.rowClickable, true);
+  assert.equal(table.options.rowActionLabel, 'Edit employee/employer HR lifecycle');
+  assert.equal(table.options.rowRoute, 'profiles/:id');
+  assert.equal(descriptor.pages.filter(item => item.routePath === 'profiles/:id').length, 1);
+});
+
 test('employee relations profile separates rewards and deductions and includes HR history', async () => {
   const responses = [
     [{ id:'employee-1', fullName:'Example Person', employeeNumber:'EMP-1', positionTitle:'Manager', department:'Operations', qrIdentifier:'secure-qr' }],
