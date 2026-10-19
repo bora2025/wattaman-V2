@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.22.0
+
+- Completed UX-driven CRUD controls for positions, workforce members, HR calendar items, and compensation adjustments.
+- Added guarded bulk actions, clickable edit rows, and a dedicated reward/deduction editor.
+- Preserved audit integrity with workforce archival, audited calendar soft deletion, assigned-position protection, and payroll-linked adjustment protection.
+
 ## 0.21.0
 
 - Completed Employee and Employer Salary Terms CRUD with explicit configured-state tracking.

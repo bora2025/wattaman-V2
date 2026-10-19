@@ -397,6 +397,23 @@ test('calendar update stores a before-change audit snapshot', async () => {
   assert.match(calls[1].sql, /UPDATE plugin_wattanam_organizing_management_calendar_event/);
 });
 
+test('mutable workforce modules expose guarded delete or archive routes', async () => {
+  const database = { query: async () => [], execute: async () => ({ count: 1 }), transaction: async callback => callback({ query: async () => [], execute: async () => ({ count: 1 }) }) };
+  const { context, routes } = harness(database); registerWorkforce(context); registerPayroll(context);
+  for (const route of ['DELETE positions/:id','DELETE employees/:id','DELETE calendar/:id','GET compensation/:id','PUT compensation/:id','DELETE compensation/:id']) assert.equal(typeof routes.get(route), 'function', `${route} should be registered`);
+});
+
+test('CRUD list pages provide clickable edit rows and guarded bulk actions', () => {
+  const ui = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'frontend', 'page.json'), 'utf8'));
+  for (const pageId of ['positions','employees','hr-calendar','compensation']) {
+    const page = ui.pages.find(item => item.id === pageId), table = page.components.find(item => item.id === 'list'), actions = page.components.find(item => item.type === 'actions');
+    assert.equal(table.options.selectable, true, `${pageId} should support selection`);
+    assert.equal(table.options.rowClickable, true, `${pageId} should open its edit or profile view`);
+    assert.ok(actions?.options?.actions?.some(action => action.destructive), `${pageId} should expose a guarded remove/archive action`);
+  }
+  assert.ok(ui.pages.some(page => page.id === 'compensation-edit'));
+});
+
 test('general workforce directory does not expose QR or sensitive profile fields', async () => {
   let sql = '';
   const database = { query: async value => { sql = value; return []; }, execute: async () => ({ count: 1 }) };
