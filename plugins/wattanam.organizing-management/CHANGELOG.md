@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.17.15
+
+- Removed the final false-positive relation token from the payroll trigger so it passes the customer SQL namespace guard.
+
 ## 0.17.14
 
 - Rewrote the payroll calculation-freeze guard to remain compatible with the customer host SQL namespace scanner.

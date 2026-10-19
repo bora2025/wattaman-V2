@@ -14,7 +14,7 @@ DECLARE
   employee_salary_basis TEXT;
   employee_base_salary INTEGER;
 BEGIN
-  IF TG_OP<>'INSERT' AND NEW."status" IS DISTINCT FROM OLD."status" THEN
+  IF TG_OP<>'INSERT' AND NEW."status"<>OLD."status" THEN
     RETURN NEW;
   END IF;
   SELECT COALESCE("workDays", '[1,2,3,4,5]'::jsonb) INTO configured_work_days
