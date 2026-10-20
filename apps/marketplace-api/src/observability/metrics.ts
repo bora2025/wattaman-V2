@@ -27,7 +27,13 @@ export function createMetricsRegistry(prisma: PrismaClient) {
   new client.Gauge({
     name: 'release_version_info', help: 'Always 1; the app_version label identifies the running release',
     labelNames: ['app_version'], registers: [registry],
-  }).set({ app_version: process.env.RAILWAY_GIT_COMMIT_SHA?.trim() || process.env.npm_package_version || 'unknown' }, 1);
+  }).set({
+    app_version: process.env.RAILWAY_GIT_COMMIT_SHA?.trim()
+      || process.env.RELEASE_VERSION?.trim()
+      || process.env.APP_VERSION?.trim()
+      || process.env.npm_package_version
+      || 'unknown',
+  }, 1);
 
   new client.Gauge({
     name: 'db_up', help: '1 if a database round trip on this scrape succeeded, 0 otherwise', registers: [registry],

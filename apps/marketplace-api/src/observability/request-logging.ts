@@ -24,7 +24,11 @@ export function requestLoggingMiddleware(metrics: MetricsRegistry) {
         statusCode: response.statusCode,
         durationMs: Math.round(durationSeconds * 1000),
         actorId: accountId ?? null,
-        releaseVersion: process.env.RAILWAY_GIT_COMMIT_SHA?.trim() || process.env.npm_package_version || 'unknown',
+        releaseVersion: process.env.RAILWAY_GIT_COMMIT_SHA?.trim()
+          || process.env.RELEASE_VERSION?.trim()
+          || process.env.APP_VERSION?.trim()
+          || process.env.npm_package_version
+          || 'unknown',
         action: `${request.method} ${route}`,
         outcome: response.statusCode < 400 ? 'success' : 'failure',
       });

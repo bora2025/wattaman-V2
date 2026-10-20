@@ -1,4 +1,4 @@
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 WORKDIR /workspace/apps/marketplace-api
 RUN apk add --no-cache openssl
 COPY packages/marketplace-contracts /workspace/packages/marketplace-contracts
@@ -9,7 +9,7 @@ COPY apps/marketplace-api/tsconfig.json ./
 COPY apps/marketplace-api/src ./src
 RUN npm run build
 
-FROM node:20-alpine AS runtime
+FROM node:22-alpine AS runtime
 ENV NODE_ENV=production
 WORKDIR /workspace/apps/marketplace-api
 RUN apk add --no-cache openssl su-exec

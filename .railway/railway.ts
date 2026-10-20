@@ -12,8 +12,7 @@ export default defineRailway(() => {
   });
   const marketplaceApi = service("marketplace-api", {
     build: { buildEnvironment: "V3", builder: "RAILPACK" },
-    replicas: { "asia-southeast1-eqsg3a": 1 },
-    volumeMounts: { "/data": marketplaceApiVolume },
+    replicas: { "asia-southeast1-eqsg3a": 2 },
   });
 
   return project("marketplace", {
