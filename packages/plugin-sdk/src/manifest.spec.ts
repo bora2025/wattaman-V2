@@ -1,4 +1,4 @@
-import { PLUGIN_CAPABILITIES, PLUGIN_CAPABILITIES_V1_1, PLUGIN_CAPABILITIES_V1_2, PLUGIN_SDK_VERSION, PLUGIN_RUNTIME_VERSION, parsePluginManifest } from './manifest';
+import { PLUGIN_CAPABILITIES, PLUGIN_CAPABILITIES_V1_1, PLUGIN_CAPABILITIES_V1_2, PLUGIN_CAPABILITIES_V1_3, PLUGIN_SDK_VERSION, PLUGIN_RUNTIME_VERSION, parsePluginManifest } from './manifest';
 
 // Twin of backend/src/plugins/plugin-sdk-contract.spec.ts -- keep both lists
 // identical by hand; a mismatch here or there is exactly the drift this
@@ -18,6 +18,7 @@ describe('SDK 1.0 frozen contract surface (twin of the backend pinning test)', (
     expect(PLUGIN_RUNTIME_VERSION).toBe('1.0.0');
     expect([...PLUGIN_CAPABILITIES_V1_1].sort()).toEqual(['accounts.guardian.assign', 'accounts.parent.resolve', 'accounts.student.create', 'accounts.student.update', 'crypto.hash', 'events.durable', 'readmodels.publish', 'readmodels.read']);
     expect([...PLUGIN_CAPABILITIES_V1_2]).toEqual(['accounts.staff.create']);
+    expect([...PLUGIN_CAPABILITIES_V1_3]).toEqual(['database.transaction']);
   });
 });
 
@@ -73,5 +74,11 @@ describe('parsePluginManifest', () => {
     };
     expect(parsePluginManifest(validManifest({ operational })).operational?.dataClassification).toEqual(['personal-data']);
     expect(() => parsePluginManifest(validManifest({ operational: { ...operational, pricing: 'embedded' } }))).toThrow('pricing');
+  });
+
+  it('validates versioned data contracts using the same capability rules as the host', () => {
+    const contracts = { schemaVersion: 1, deprecationNoticeDays: 180, events: { publishes: { 'acme.widget.changed': [2, 1, 2] }, subscribes: {} }, readModels: { publishes: {}, reads: {} } };
+    expect(parsePluginManifest(validManifest({ capabilities: ['events.durable'], contracts })).contracts?.events.publishes['acme.widget.changed']).toEqual([1, 2]);
+    expect(() => parsePluginManifest(validManifest({ capabilities: ['events.durable'] }))).toThrow('requires at least one durable event');
   });
 });

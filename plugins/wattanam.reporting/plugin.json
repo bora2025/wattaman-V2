@@ -3,7 +3,7 @@
   "id": "wattanam.reporting",
   "name": "Reporting",
   "description": "Privacy-minimized cross-module school reports composed from versioned read models.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -22,6 +22,7 @@
     "wattanam.communication": ">=0.1.0 <1.0.0",
     "wattanam.human-resources": ">=0.1.1 <1.0.0"
   },
+  "contracts": { "schemaVersion": 1, "deprecationNoticeDays": 180, "events": { "publishes": {}, "subscribes": {} }, "readModels": { "publishes": {}, "reads": { "wattanam.attendance-manager.student-attendance-summary": [1], "wattanam.finance.student-fee-balance": [1], "wattanam.examination.student-grade-summary": [1], "wattanam.transportation.student-transport-summary": [1], "wattanam.communication.student-communication-summary": [1], "wattanam.human-resources.staff-attendance-summary": [1] } } },
   "migrations": [],
   "navigation": [
     { "id": "student-summary", "label": "Student summary reports", "href": "/plugins/wattanam.reporting/student-summaries", "permission": "wattanam.reporting.student-summary.view" },

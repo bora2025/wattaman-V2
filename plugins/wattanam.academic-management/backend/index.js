@@ -1736,7 +1736,7 @@ module.exports = {
             [studentId, resolvedAt, resolvedBy, id],
           );
           await tx.publish({
-            event: 'academic.registration.approved.v2', version: 2, subjectKey: id,
+            event: 'wattanam.academic-management.registration.approved', version: 2, subjectKey: id,
             payload: { registrationId: id, classId: reg.classId, studentId, userId: account.id, resolvedBy, resolvedAt },
             idempotencyKey: `academic-registration-approved-${id}`,
           });

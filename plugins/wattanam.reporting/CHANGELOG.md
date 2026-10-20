@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1
+
+- Declare every consumed student and staff reporting read model.
+
 ## 0.2.0
 
 - Upgrade student and class reporting workspaces to the universal SDK 1.3 declarative UI contract.

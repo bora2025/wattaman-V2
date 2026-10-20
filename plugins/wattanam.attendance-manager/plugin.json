@@ -3,7 +3,7 @@
   "id": "wattanam.attendance-manager",
   "name": "Attendance Manager",
   "description": "Study years and student school-day attendance with camera/QR, USB scanning, corrections, reports, printing, and exports.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -11,10 +11,29 @@
   "frontendEntry": "frontend/page.json",
   "sdkVersion": "1.3.0",
   "runtimeVersion": "1.0.0",
-  "capabilities": ["api.routes", "database.read", "database.write", "directory.read", "events.durable", "events.publish", "jobs.schedule", "navigation.register", "notifications.send", "permissions.register", "readmodels.publish", "realtime.notify", "settings.read", "ui.pages"],
+  "capabilities": ["api.routes", "database.read", "database.write", "database.transaction", "directory.read", "events.durable", "events.publish", "jobs.schedule", "navigation.register", "notifications.send", "permissions.register", "readmodels.publish", "realtime.notify", "settings.read", "ui.pages"],
   "permissions": ["wattanam.attendance-manager.view", "wattanam.attendance-manager.scan", "wattanam.attendance-manager.mark", "wattanam.attendance-manager.correct", "wattanam.attendance-manager.report", "wattanam.attendance-manager.print", "wattanam.attendance-manager.configure", "wattanam.attendance-manager.devices.manage", "wattanam.attendance-manager.manage", "wattanam.attendance-manager.export"],
   "dependencies": { "wattanam.academic-management": ">=0.1.0 <1.0.0" },
   "optionalDependencies": {},
+  "contracts": {
+    "schemaVersion": 1,
+    "deprecationNoticeDays": 180,
+    "events": {
+      "publishes": {
+        "wattanam.attendance-manager.attendance.corrected": [1],
+        "wattanam.attendance-manager.attendance.recorded": [1],
+        "wattanam.attendance-manager.study-year.created": [1],
+        "wattanam.attendance-manager.study-year.deleted": [1],
+        "wattanam.attendance-manager.study-year.set-current": [1],
+        "wattanam.attendance-manager.study-year.updated": [1]
+      },
+      "subscribes": {}
+    },
+    "readModels": {
+      "publishes": { "study-year": [1], "student-attendance-summary": [1] },
+      "reads": {}
+    }
+  },
   "migrations": [
     { "id": "001_create_attendance_manager", "path": "migrations/001_create_attendance_manager.sql", "checksum": "d02277c13ddbf7b0237f7059fb389f3fef36184edbfb907ff536515ef0b69233", "destructive": false },
     { "id": "002_add_study_year_branding", "path": "migrations/002_add_study_year_branding.sql", "checksum": "60bd63b69994e9e3154dfb687d28c372a8f30214d7da2dd47e48e34f80cf4faf", "destructive": false },

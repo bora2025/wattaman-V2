@@ -10,6 +10,40 @@ const UNIVERSAL_UI_COMPONENTS = new Set([
   'detail', 'chart', 'file', 'print', 'document', 'designer', 'scanner',
   'filter', 'actions', 'id-card-manager', 'session-manager', 'profile-manager',
 ]);
+const UI_ID = /^[a-z0-9][a-zA-Z0-9._-]*$/;
+
+function validateUniversalUi(value) {
+  if (!value || value.schemaVersion !== 2 || value.kind !== 'declarative-ui') throw new Error('unsupported schemaVersion or kind');
+  if (value.portability !== 'universal') throw new Error('portability must be universal');
+  if (!Array.isArray(value.pages) || value.pages.length < 1 || value.pages.length > 50) throw new Error('pages must contain 1 to 50 entries');
+  const fragments = value.fragments || {};
+  if (!fragments || typeof fragments !== 'object' || Array.isArray(fragments) || Object.keys(fragments).length > 50) throw new Error('fragments are invalid');
+  const expand = (items, stack = [], prefix = '') => {
+    if (!Array.isArray(items)) throw new Error('components must be an array');
+    return items.flatMap((item) => {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error('component must be an object');
+      if (!item.use) return [{ ...item, id: `${prefix}${item.id || ''}` }];
+      if (!UI_ID.test(item.use) || !Array.isArray(fragments[item.use])) throw new Error(`unknown fragment ${item.use}`);
+      if (stack.includes(item.use) || stack.length >= 5) throw new Error(`cyclic or deeply nested fragment ${item.use}`);
+      const localPrefix = item.idPrefix || '';
+      if (localPrefix && !UI_ID.test(localPrefix)) throw new Error('fragment idPrefix is invalid');
+      return expand(fragments[item.use], [...stack, item.use], `${prefix}${localPrefix}`);
+    });
+  };
+  for (const page of value.pages) {
+    if (!page || !UI_ID.test(page.id) || typeof page.title !== 'string' || !page.title.trim()) throw new Error('page id or title is invalid');
+    const sources = new Set((page.dataSources || []).map((source) => source?.id));
+    const components = expand(page.components);
+    if (components.length < 1 || components.length > 100) throw new Error('page must expand to 1 to 100 components');
+    const ids = new Set();
+    for (const component of components) {
+      if (!UI_ID.test(component.id) || ids.has(component.id)) throw new Error(`component id is invalid or duplicated: ${component.id}`);
+      ids.add(component.id);
+      if (!UNIVERSAL_UI_COMPONENTS.has(component.type)) throw new Error(`component is not universal: ${component.type}`);
+      if (component.source && !sources.has(component.source)) throw new Error(`component references unknown source: ${component.source}`);
+    }
+  }
+}
 
 /**
  * The compatibility test kit: validates a plugin directory the same way the
@@ -66,14 +100,17 @@ async function run(argv, options = {}) {
     if (manifest.frontendEntry && fs.existsSync(path.join(root, manifest.frontendEntry))) {
       try {
         const descriptor = JSON.parse(fs.readFileSync(path.join(root, manifest.frontendEntry), 'utf8'));
-        const componentTypes = [...new Set((descriptor.pages || []).flatMap((page) => (page.components || []).map((component) => component.type)))];
         const universal = descriptor.schemaVersion === 2 && descriptor.kind === 'declarative-ui' && descriptor.portability === 'universal';
         const sdkParts = String(manifest.sdkVersion || '0.0.0').split('.').map(Number);
         const sdkRequiresUniversal = sdkParts[0] > 1 || (sdkParts[0] === 1 && sdkParts[1] >= 3);
         check('frontend UI descriptor declares its portability', !(requireUniversalUi || sdkRequiresUniversal) || universal, `portability=${descriptor.portability || 'legacy'}, sdk=${manifest.sdkVersion || 'unspecified'}`);
         if (universal) {
-          const unsupported = componentTypes.filter((type) => !UNIVERSAL_UI_COMPONENTS.has(type));
-          check('frontend contains only universal UI components', unsupported.length === 0, unsupported.length ? `unsupported: ${unsupported.join(', ')}` : `${componentTypes.length} component types`);
+          try {
+            validateUniversalUi(descriptor);
+            check('frontend contains valid universal UI', true);
+          } catch (error) {
+            check('frontend contains valid universal UI', false, error.message);
+          }
         }
       } catch (error) {
         check('frontend descriptor is valid JSON', false, error.message);
@@ -118,4 +155,4 @@ async function run(argv, options = {}) {
   if (failures > 0) throw new Error(`${failures} check(s) failed: ${failedLabels.join(', ')}`);
 }
 
-module.exports = { run };
+module.exports = { run, validateUniversalUi };

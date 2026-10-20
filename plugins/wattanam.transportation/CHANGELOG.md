@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1
+
+- Declare the transport summary read model and the database transaction capability.
+
 ## 0.2.0
 
 - Upgrade vehicle, route, tracking, and parent transportation workspaces to the universal SDK 1.3 declarative UI contract.

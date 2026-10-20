@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.23.1
+
+- Replace the unused durable-event grant with the least-privilege database transaction capability.
+
 ## 0.23.0
 
 - Moved CRUD commands into the Actions column of each record row.

@@ -3,7 +3,7 @@
   "id": "wattanam.academic-management",
   "name": "Academic Management",
   "description": "Official Wattanam academic structures, profiles, admissions, enrollment, and roster contracts.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -23,6 +23,7 @@
     "crypto.hash",
     "database.read",
     "database.write",
+    "database.transaction",
     "directory.read",
     "events.durable",
     "events.publish",
@@ -31,7 +32,6 @@
     "notifications.send",
     "permissions.register",
     "readmodels.publish",
-    "readmodels.read",
     "realtime.notify",
     "settings.read",
     "settings.write",
@@ -60,6 +60,37 @@
   ],
   "dependencies": {},
   "optionalDependencies": {},
+  "contracts": {
+    "schemaVersion": 1,
+    "deprecationNoticeDays": 180,
+    "events": {
+      "publishes": {
+        "wattanam.academic-management.attendance.staff-recorded": [1],
+        "wattanam.academic-management.attendance.student-self-recorded": [1],
+        "wattanam.academic-management.class.created": [1],
+        "wattanam.academic-management.class.deleted": [1],
+        "wattanam.academic-management.class.updated": [1],
+        "wattanam.academic-management.department.created": [1],
+        "wattanam.academic-management.department.deleted": [1],
+        "wattanam.academic-management.department.updated": [1],
+        "wattanam.academic-management.identity.detached": [1],
+        "wattanam.academic-management.registration.approved": [2],
+        "wattanam.academic-management.student.added-to-class": [1],
+        "wattanam.academic-management.student.created": [1],
+        "wattanam.academic-management.student.imported": [1],
+        "wattanam.academic-management.student.removed-from-class": [1],
+        "wattanam.academic-management.student.updated": [1],
+        "wattanam.academic-management.students.cleaned-up": [1],
+        "wattanam.academic-management.subject.created": [1],
+        "wattanam.academic-management.subject.updated": [1]
+      },
+      "subscribes": {}
+    },
+    "readModels": {
+      "publishes": { "study-year": [1], "student-attendance-summary": [1] },
+      "reads": {}
+    }
+  },
   "migrations": [
     {
       "id": "001_create_department",

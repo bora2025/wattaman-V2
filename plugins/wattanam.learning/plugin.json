@@ -3,7 +3,7 @@
   "id": "wattanam.learning",
   "name": "Learning",
   "description": "Courses, lessons, assignments, interactive learning, engagement and course attendance.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -11,7 +11,7 @@
   "frontendEntry": "frontend/page.json",
   "sdkVersion": "1.3.0",
   "runtimeVersion": "1.0.0",
-  "capabilities": ["api.routes", "database.read", "database.write", "directory.read", "navigation.register", "notifications.send", "permissions.register", "ui.pages"],
+  "capabilities": ["api.routes", "database.read", "database.write", "database.transaction", "directory.read", "navigation.register", "notifications.send", "permissions.register", "ui.pages"],
   "permissions": ["wattanam.learning.courses.view", "wattanam.learning.courses.manage", "wattanam.learning.assignments.view", "wattanam.learning.assignments.manage", "wattanam.learning.student.participate", "wattanam.learning.grading.manage"],
   "dependencies": { "wattanam.academic-management": ">=0.1.0 <1.0.0" },
   "migrations": [

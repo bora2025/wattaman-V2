@@ -36,7 +36,23 @@ describe('wattanam-plugin check', () => {
     descriptor.pages[0].components = [{ id: 'private', type: 'organizing-dashboard' }];
     fs.writeFileSync(descriptorPath, JSON.stringify(descriptor, null, 2));
     await expect(check([dir, '--require-universal-ui'])).rejects.toThrow('check(s) failed');
-    expect(logs.join('')).toContain('unsupported: organizing-dashboard');
+    expect(logs.join('')).toContain('component is not universal: organizing-dashboard');
+  });
+
+  it('expands reusable universal UI fragments and rejects cycles', async () => {
+    const descriptorPath = path.join(dir, 'frontend', 'page.json');
+    const descriptor = JSON.parse(fs.readFileSync(descriptorPath, 'utf8'));
+    descriptor.fragments = { summary: [{ id: 'title', type: 'heading', title: 'Summary' }] };
+    descriptor.pages[0].components = [{ use: 'summary', idPrefix: 'records-' }];
+    fs.writeFileSync(descriptorPath, JSON.stringify(descriptor, null, 2));
+    await check([dir, '--require-universal-ui']);
+    expect(logs.join('')).toContain('frontend contains valid universal UI');
+
+    logs.length = 0;
+    descriptor.fragments.summary = [{ use: 'summary' }];
+    fs.writeFileSync(descriptorPath, JSON.stringify(descriptor, null, 2));
+    await expect(check([dir, '--require-universal-ui'])).rejects.toThrow('check(s) failed');
+    expect(logs.join('')).toContain('cyclic or deeply nested fragment summary');
   });
 
   it('requires universal UI automatically for SDK 1.3 plugins', async () => {

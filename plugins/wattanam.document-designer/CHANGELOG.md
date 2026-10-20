@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1
+
+- Declare the optional HR document-profile read model and use the explicit database transaction capability.
+
 ## 0.2.0
 
 - Certify templates, asset management, preview, printing, and visual editing as universal SDK 1.3 declarative UI.

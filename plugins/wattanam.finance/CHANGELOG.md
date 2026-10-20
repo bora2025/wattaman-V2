@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1
+
+- Declare the student fee-balance read model and the database transaction capability.
+
 ## 0.2.0
 
 - Upgrade fee management and finance settings to the universal SDK 1.3 declarative UI contract.

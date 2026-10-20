@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1
+
+- Declare the database transaction capability used by assignment and attempt workflows.
+
 ## 0.2.0
 
 - Upgrade course, lesson, assignment, quiz, session, attendance, and learner workspaces to the universal SDK 1.3 declarative UI contract.

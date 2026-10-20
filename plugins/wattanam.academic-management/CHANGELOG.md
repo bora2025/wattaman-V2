@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1
+
+- Declare every durable event and published read model, and use the explicit database transaction capability.
+- Namespace the registration-approved durable event without changing stored customer data.
+
 ## 0.2.0
 
 - Upgrade the plugin UI contract to the SDK 1.3 universal declarative architecture.

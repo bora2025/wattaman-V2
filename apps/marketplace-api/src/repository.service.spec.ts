@@ -68,10 +68,12 @@ describe('repository channel promotion', () => {
       ]) },
       coreRelease: { findMany: jest.fn().mockResolvedValue([]) },
       securityAdvisory: { findMany: jest.fn().mockResolvedValue([]) },
+      publisherKey: { findMany: jest.fn().mockResolvedValue([{ keyId: 'retired-2025', publisher: { slug: 'wattanam' } }]) },
     } as any;
     const result: any = await new RepositoryService(prisma, repositoryConfig()).signedIndex('1.5.0', 'stable');
     expect(result.payload.pluginReleases.map((release: any) => release.pluginId)).toEqual(['compatible']);
     expect(prisma.pluginVersion.findMany.mock.calls[0][0].where.channel.in).toEqual(['STABLE']);
     expect(result.signatures).toHaveLength(1);
+    expect(result.payload.revokedPublisherKeys).toEqual(['wattanam:retired-2025']);
   });
 });

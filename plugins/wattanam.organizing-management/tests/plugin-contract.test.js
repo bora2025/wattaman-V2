@@ -92,16 +92,17 @@ test('complete profile creation is consolidated into the workforce directory', (
   assert.equal(manifest.navigation.some(item => item.id === 'create-workforce-profile'), false);
 });
 
-test('transactional handlers declare the durable-events capability', () => {
+test('transactional handlers declare the least-privilege database transaction capability', () => {
   const backendDirectory = path.join(__dirname, '..', 'backend');
   const transactionalFiles = fs.readdirSync(backendDirectory)
     .filter(file => file.endsWith('.js'))
     .filter(file => fs.readFileSync(path.join(backendDirectory, file), 'utf8').includes('database.transaction'));
   assert.ok(transactionalFiles.length > 0, 'expected at least one transactional backend handler');
   assert.ok(
-    manifest.capabilities.includes('events.durable'),
-    `events.durable is required by transactional handlers: ${transactionalFiles.join(', ')}`,
+    manifest.capabilities.includes('database.transaction'),
+    `database.transaction is required by transactional handlers: ${transactionalFiles.join(', ')}`,
   );
+  assert.equal(manifest.capabilities.includes('events.durable'), false, 'unused durable-event access must not be granted');
 });
 
 test('attendance scanner casts raw timestamp parameters for PostgreSQL', () => {

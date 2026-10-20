@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1
+
+- Declare the student grade summary read model and the database transaction capability.
+
 ## 0.2.0
 
 - Upgrade examination and score-sheet workspaces to the universal SDK 1.3 declarative UI contract.

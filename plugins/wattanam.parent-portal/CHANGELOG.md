@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1
+
+- Declare all optional child-summary read models and the database transaction capability.
+
 ## 0.2.0
 
 - Upgrade children, parent-link request, and administrator request-list pages to the universal SDK 1.3 declarative UI contract.

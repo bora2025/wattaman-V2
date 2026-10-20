@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1
+
+- Declare durable attendance events and read models and use the explicit database transaction capability.
+
 ## 0.2.0
 
 - Certify the existing attendance, scanner, correction, alert, report, study-year, and settings workspaces as universal SDK 1.3 declarative UI.

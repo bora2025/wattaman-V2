@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1
+
+- Replace the unused durable-event grant with the least-privilege database transaction capability.
+
 ## 0.2.0
 
 - Upgrade timetable, subject, classroom, teacher, lesson, schedule, and attendance workspaces to the universal SDK 1.3 declarative UI contract.

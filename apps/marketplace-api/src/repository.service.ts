@@ -188,13 +188,14 @@ export class RepositoryService {
     const channel = requestedChannel.toUpperCase();
     if (!['STABLE', 'BETA'].includes(channel)) throw new HttpError(400, 'channel must be stable or beta');
     const allowedChannels: ReleaseChannel[] = channel === 'BETA' ? ['STABLE', 'BETA'] : ['STABLE'];
-    const [versions, coreReleases, advisories] = await Promise.all([
+    const [versions, coreReleases, advisories, revokedPublisherKeys] = await Promise.all([
       this.prisma.pluginVersion.findMany({
         where: { reviewStatus: 'APPROVED', withdrawnAt: null, channel: { in: allowedChannels }, plugin: { status: 'APPROVED' } },
         include: { artifact: true, plugin: { include: { publisher: { include: { keys: { where: { revokedAt: null } } } } } } },
       }),
       this.prisma.coreRelease.findMany({ where: { withdrawnAt: null, channel: { in: allowedChannels } } }),
       this.prisma.securityAdvisory.findMany({ where: { withdrawnAt: null }, orderBy: { publishedAt: 'desc' } }),
+      this.prisma.publisherKey.findMany({ where: { revokedAt: { not: null } }, select: { keyId: true, publisher: { select: { slug: true } } }, orderBy: [{ publisher: { slug: 'asc' } }, { keyId: 'asc' }] }),
     ]);
     const releases = versions
       .filter((item) => item.artifact && semver.satisfies(coreVersion, item.requiresCore))
@@ -222,6 +223,7 @@ export class RepositoryService {
         releaseNotes: item.releaseNotes, migrationNotes: item.migrationNotes, publishedAt: item.publishedAt.toISOString(),
       })),
       pluginReleases: releases,
+      revokedPublisherKeys: revokedPublisherKeys.map((key) => `${key.publisher.slug}:${key.keyId}`),
       advisories: advisories.map((item) => ({
         id: item.id, pluginId: item.pluginId, title: item.title, severity: item.severity.toLowerCase(),
         affectedVersions: item.affectedVersions, fixedVersion: item.fixedVersion,
