@@ -5,6 +5,8 @@
     "name": "Wattanam Marketplace Production",
     "railwayProjectId": "1c5b1561-512d-44bd-b6ae-b2486b8d18a4"
   },
+  "iacPath": "/.railway/railway.ts",
+  "variables": "unmanaged",
   "databaseService": "Postgres",
   "services": {
     "marketplace-api": {

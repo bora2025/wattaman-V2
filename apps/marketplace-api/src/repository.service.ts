@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { MarketplaceConfig } from './config';
 import { HttpError } from './http-error';
 import { verifyPluginPackage } from './package-verifier';
-import { repositoryPublicKey, signEnvelopeWithKeys } from './signing';
+import { createRepositorySigner, RepositorySigner } from './repository-signer';
 import { ArtifactStorage, createArtifactStorage } from './artifact-storage';
 
 const publisherInput = z.object({
@@ -60,13 +60,14 @@ const corePromotionInput = z.object({ version: z.string().refine((value) => semv
 
 export class RepositoryService {
   private readonly artifacts: ArtifactStorage;
-  constructor(private readonly prisma: PrismaClient, private readonly config: MarketplaceConfig, artifacts?: ArtifactStorage) { this.artifacts = artifacts || createArtifactStorage(config); }
+  private readonly signer: RepositorySigner;
+  constructor(private readonly prisma: PrismaClient, private readonly config: MarketplaceConfig, artifacts?: ArtifactStorage, signer?: RepositorySigner) {
+    this.artifacts = artifacts || createArtifactStorage(config);
+    this.signer = signer || createRepositorySigner(config);
+  }
 
   keyDocument() {
-    return {
-      schemaVersion: 1, activeKeyId: this.config.signingKeyId, algorithm: 'ed25519',
-      keys: this.config.signingKeys.map((key) => ({ keyId: key.keyId, publicKeyPem: repositoryPublicKey(key.privateKey) })),
-    };
+    return this.signer.keyDocument();
   }
 
   async health() {
@@ -231,7 +232,7 @@ export class RepositoryService {
         communicationUrl: item.communicationUrl, publishedAt: item.publishedAt.toISOString(),
       })),
     };
-    return signEnvelopeWithKeys(payload, this.config.signingKeys);
+    return this.signer.sign(payload);
   }
 
   async artifact(sha256: string) {

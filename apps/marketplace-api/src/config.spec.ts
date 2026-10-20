@@ -47,6 +47,21 @@ describe('marketplace signing configuration', () => {
     expect(readConfig(env).signingKeys.map((key) => key.keyId)).toEqual(['repository-1', 'repository-old']);
   });
 
+  it('supports a remote KMS adapter without loading repository private keys', () => {
+    const repository = generateKeyPairSync('ed25519');
+    const publicKeyPem = repository.publicKey.export({ type: 'spki', format: 'pem' }).toString();
+    const env = environment(privateKey(), privateKey()) as Record<string, string>;
+    delete env.METADATA_SIGNING_PRIVATE_KEY;
+    env.METADATA_SIGNING_PROVIDER = 'remote';
+    env.METADATA_SIGNING_ENDPOINT = 'https://signer.example/v1/sign';
+    env.METADATA_SIGNING_BEARER_TOKEN = 's'.repeat(32);
+    env.METADATA_SIGNING_PUBLIC_KEYS_JSON = JSON.stringify({ 'repository-1': publicKeyPem });
+    const config = readConfig(env);
+    expect(config.signingProvider).toBe('remote');
+    expect(config.signingPrivateKey).toBeUndefined();
+    expect(config.signingPublicKeys).toEqual([{ keyId: 'repository-1', publicKeyPem }]);
+  });
+
   it('requires both SendGrid credentials when transactional email is enabled', () => {
     const env = environment(privateKey(), privateKey());
     (env as Record<string, string>).TRANSACTIONAL_EMAIL_PROVIDER = 'sendgrid';

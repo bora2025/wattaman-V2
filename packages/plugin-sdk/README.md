@@ -39,6 +39,8 @@ const manifest = parsePluginManifest(JSON.parse(fs.readFileSync('plugin.json', '
 
 `PLUGIN_CAPABILITIES` is the frozen, complete list of the twelve SDK 1.0 capabilities. It's identical to `backend/src/plugins/plugin-manifest.ts`'s `PLUGIN_CAPABILITIES` by convention (kept in sync via a "twin pinning" test in each repo, not a runtime dependency) — see the freeze policy in `package-and-runtime.md`.
 
+Backend packages may explicitly declare `executionMode` as `in-process` or `isolated`. `in-process` is accepted only for operator allow-listed publishers. `isolated` is a reserved fail-closed declaration until the host has a separately deployed and certified execution runtime. Packages without `backendEntry` use `declarative` mode and execute no plugin JavaScript in the host process. Older manifests remain compatible: the parser derives `in-process` when a backend entry exists and `declarative` otherwise.
+
 ## Local test harness
 
 ```ts

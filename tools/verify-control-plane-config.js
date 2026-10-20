@@ -13,11 +13,19 @@ function verify() {
   const marketplace = readJson('infrastructure/railway/marketplace-api.railway.json');
   const admin = readJson('infrastructure/railway/platform-admin.railway.json');
   const root = readJson('railway.json');
+  const iac = fs.readFileSync(path.join(repositoryRoot, '.railway/railway.ts'), 'utf8');
 
   const expectedProjectId = '1c5b1561-512d-44bd-b6ae-b2486b8d18a4';
   if (contract.canonicalProject?.railwayProjectId !== expectedProjectId) {
     errors.push('canonical production Railway project id changed without updating the deployment guard');
   }
+  if (contract.iacPath !== '/.railway/railway.ts' || contract.variables !== 'unmanaged') {
+    errors.push('control plane must declare Railway IaC with externally managed secrets');
+  }
+  for (const resource of ['Postgres', 'marketplace-api', 'platform-admin-web', 'marketplace-api-volume']) {
+    if (!iac.includes(`\"${resource}\"`)) errors.push(`Railway IaC is missing ${resource}`);
+  }
+  if (!iac.includes('variables: { managed: false }')) errors.push('Railway IaC must not import or manage service secrets');
   if (contract.services?.['marketplace-api']?.databaseUrl !== '${{Postgres.DATABASE_URL}}') {
     errors.push('marketplace-api must use the canonical project Postgres reference');
   }

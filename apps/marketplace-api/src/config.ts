@@ -13,9 +13,14 @@ const schema = z.object({
   MARKETPLACE_SECONDARY_ADMIN_TOKENS_JSON: z.string().optional(),
   METADATA_SIGNING_PRIVATE_KEY_FILE: z.string().min(1).optional(),
   METADATA_SIGNING_PRIVATE_KEY: z.string().min(1).optional(),
+  METADATA_SIGNING_PROVIDER: z.enum(['local', 'remote']).default('local'),
   METADATA_SIGNING_KEY_ID: z.string().regex(/^[a-zA-Z0-9._-]{1,100}$/),
   METADATA_SECONDARY_SIGNING_KEYS_JSON: z.string().optional(),
   METADATA_SECONDARY_SIGNING_KEYS_BASE64: z.string().optional(),
+  METADATA_SIGNING_PUBLIC_KEYS_JSON: z.string().optional(),
+  METADATA_SIGNING_ENDPOINT: z.string().url().optional(),
+  METADATA_SIGNING_BEARER_TOKEN: z.string().min(32).optional(),
+  METADATA_SIGNING_TIMEOUT_MS: z.coerce.number().int().min(100).max(30_000).default(5_000),
   ENTITLEMENT_SIGNING_PRIVATE_KEY_FILE: z.string().min(1).optional(),
   ENTITLEMENT_SIGNING_PRIVATE_KEY: z.string().min(1).optional(),
   ENTITLEMENT_SIGNING_KEY_ID: z.string().regex(/^[a-zA-Z0-9._-]{1,100}$/),
@@ -43,9 +48,12 @@ export type MarketplaceConfig = {
    * ones from MARKETPLACE_SECONDARY_ADMIN_TOKENS_JSON, so rotating doesn't instantly 401 every
    * caller (CI secrets, operator .env files, scripts) the moment the new value goes live. */
   adminTokens: string[];
-  signingPrivateKey: string;
+  signingProvider: 'local' | 'remote';
+  signingPrivateKey?: string;
   signingKeyId: string;
   signingKeys: Array<{ privateKey: string; keyId: string }>;
+  signingPublicKeys: Array<{ publicKeyPem: string; keyId: string }>;
+  remoteSigning?: { endpoint: string; bearerToken: string; timeoutMs: number };
   entitlementPrivateKey: string;
   entitlementKeyId: string;
   /** Every currently-valid webhook signing secret -- the active one plus any still-trusted
@@ -79,19 +87,29 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): MarketplaceCon
   if (value.ARTIFACT_STORAGE_PROVIDER === 's3' && (!value.ARTIFACT_S3_BUCKET || !value.ARTIFACT_S3_REGION)) throw new Error('ARTIFACT_S3_BUCKET and ARTIFACT_S3_REGION are required for S3 artifact storage');
   if (!!value.ARTIFACT_S3_ACCESS_KEY_ID !== !!value.ARTIFACT_S3_SECRET_ACCESS_KEY) throw new Error('Both S3 access key variables must be configured together');
   const signingPrivateKey = readPrivateKey(value.METADATA_SIGNING_PRIVATE_KEY_FILE, value.METADATA_SIGNING_PRIVATE_KEY);
-  if (!signingPrivateKey) throw new Error('METADATA_SIGNING_PRIVATE_KEY_FILE or METADATA_SIGNING_PRIVATE_KEY is required');
+  if (value.METADATA_SIGNING_PROVIDER === 'local' && !signingPrivateKey) throw new Error('METADATA_SIGNING_PRIVATE_KEY_FILE or METADATA_SIGNING_PRIVATE_KEY is required for local signing');
   const entitlementPrivateKey = readPrivateKey(value.ENTITLEMENT_SIGNING_PRIVATE_KEY_FILE, value.ENTITLEMENT_SIGNING_PRIVATE_KEY);
   if (!entitlementPrivateKey) throw new Error('ENTITLEMENT_SIGNING_PRIVATE_KEY_FILE or ENTITLEMENT_SIGNING_PRIVATE_KEY is required');
-  if (publicKey(signingPrivateKey) === publicKey(entitlementPrivateKey)) throw new Error('Repository and entitlement signing keys must be distinct');
+  if (signingPrivateKey && publicKey(signingPrivateKey) === publicKey(entitlementPrivateKey)) throw new Error('Repository and entitlement signing keys must be distinct');
   if (value.METADATA_SIGNING_KEY_ID === value.ENTITLEMENT_SIGNING_KEY_ID) throw new Error('Repository and entitlement key IDs must be distinct');
   if (value.METADATA_SECONDARY_SIGNING_KEYS_JSON && value.METADATA_SECONDARY_SIGNING_KEYS_BASE64) throw new Error('Configure only one secondary repository key transport');
   const secondaryJson = value.METADATA_SECONDARY_SIGNING_KEYS_BASE64
     ? Buffer.from(value.METADATA_SECONDARY_SIGNING_KEYS_BASE64, 'base64').toString('utf8')
     : value.METADATA_SECONDARY_SIGNING_KEYS_JSON;
   const secondaryKeys = parseSecondaryKeys(secondaryJson);
-  const signingKeys = [{ privateKey: signingPrivateKey, keyId: value.METADATA_SIGNING_KEY_ID }, ...secondaryKeys];
+  const signingKeys = signingPrivateKey ? [{ privateKey: signingPrivateKey, keyId: value.METADATA_SIGNING_KEY_ID }, ...secondaryKeys] : [];
+  const remotePublicKeys = parsePublicKeys(value.METADATA_SIGNING_PUBLIC_KEYS_JSON);
+  if (value.METADATA_SIGNING_PROVIDER === 'remote') {
+    if (!value.METADATA_SIGNING_ENDPOINT || !value.METADATA_SIGNING_BEARER_TOKEN) throw new Error('Remote signing requires METADATA_SIGNING_ENDPOINT and METADATA_SIGNING_BEARER_TOKEN');
+    if (value.NODE_ENV === 'production' && !value.METADATA_SIGNING_ENDPOINT.startsWith('https://')) throw new Error('METADATA_SIGNING_ENDPOINT must use HTTPS in production');
+    if (!remotePublicKeys.some((key) => key.keyId === value.METADATA_SIGNING_KEY_ID)) throw new Error('Remote signing public keys must include METADATA_SIGNING_KEY_ID');
+  }
   if (new Set(signingKeys.map((key) => key.keyId)).size !== signingKeys.length) throw new Error('Repository signing key IDs must be unique');
-  const publicKeys = signingKeys.map((key) => publicKey(key.privateKey));
+  const signingPublicKeys = value.METADATA_SIGNING_PROVIDER === 'remote'
+    ? remotePublicKeys
+    : signingKeys.map((key) => ({ keyId: key.keyId, publicKeyPem: publicKey(key.privateKey) }));
+  if (new Set(signingPublicKeys.map((key) => key.keyId)).size !== signingPublicKeys.length) throw new Error('Repository signing key IDs must be unique');
+  const publicKeys = signingPublicKeys.map((key) => key.publicKeyPem);
   if (new Set(publicKeys).size !== publicKeys.length) throw new Error('Repository signing keys must be distinct');
   if (publicKeys.includes(publicKey(entitlementPrivateKey))) throw new Error('Repository and entitlement signing keys must be distinct');
   if (value.NODE_ENV === 'production' && !value.PUBLIC_BASE_URL.startsWith('https://')) {
@@ -103,9 +121,12 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): MarketplaceCon
     databaseUrl: value.DATABASE_URL,
     publicBaseUrl: value.PUBLIC_BASE_URL,
     adminTokens: [normalizeBearerSecret(value.MARKETPLACE_ADMIN_TOKEN), ...parseSecondaryTokens(value.MARKETPLACE_SECONDARY_ADMIN_TOKENS_JSON, 'MARKETPLACE_SECONDARY_ADMIN_TOKENS_JSON').map(normalizeBearerSecret)],
+    signingProvider: value.METADATA_SIGNING_PROVIDER,
     signingPrivateKey,
     signingKeyId: value.METADATA_SIGNING_KEY_ID,
     signingKeys,
+    signingPublicKeys,
+    remoteSigning: value.METADATA_SIGNING_PROVIDER === 'remote' ? { endpoint: value.METADATA_SIGNING_ENDPOINT!, bearerToken: value.METADATA_SIGNING_BEARER_TOKEN!, timeoutMs: value.METADATA_SIGNING_TIMEOUT_MS } : undefined,
     entitlementPrivateKey,
     entitlementKeyId: value.ENTITLEMENT_SIGNING_KEY_ID,
     paymentWebhookSecrets: [value.PAYMENT_WEBHOOK_SECRET, ...parseSecondaryTokens(value.PAYMENT_WEBHOOK_SECONDARY_SECRETS_JSON, 'PAYMENT_WEBHOOK_SECONDARY_SECRETS_JSON')],
@@ -139,6 +160,18 @@ function parseSecondaryKeys(raw: string | undefined) {
   try { value = JSON.parse(raw); } catch { throw new Error('METADATA_SECONDARY_SIGNING_KEYS_JSON must be valid JSON'); }
   const parsed = z.record(z.string().regex(/^[a-zA-Z0-9._-]{1,100}$/), z.string().min(1)).parse(value);
   return Object.entries(parsed).map(([keyId, privateKey]) => ({ keyId, privateKey: privateKey.replace(/\\n/g, '\n') }));
+}
+
+function parsePublicKeys(raw: string | undefined) {
+  if (!raw?.trim()) return [];
+  let value: unknown;
+  try { value = JSON.parse(raw); } catch { throw new Error('METADATA_SIGNING_PUBLIC_KEYS_JSON must be valid JSON'); }
+  const parsed = z.record(z.string().regex(/^[a-zA-Z0-9._-]{1,100}$/), z.string().min(1)).parse(value);
+  return Object.entries(parsed).map(([keyId, publicKeyPem]) => {
+    const normalized = publicKeyPem.replace(/\\n/g, '\n');
+    if (!normalized.includes('PUBLIC KEY')) throw new Error('Remote signing public keys must be PEM public keys');
+    return { keyId, publicKeyPem: normalized };
+  });
 }
 
 function readPrivateKey(file: string | undefined, inline: string | undefined) {

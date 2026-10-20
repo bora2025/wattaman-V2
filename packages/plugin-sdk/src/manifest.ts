@@ -65,6 +65,7 @@ export interface PluginManifest {
   publisher: string;
   license: string;
   backendEntry?: string;
+  executionMode?: 'declarative' | 'in-process' | 'isolated';
   frontendEntry?: string;
   capabilities: string[];
   permissions: string[];
@@ -261,6 +262,11 @@ export function parsePluginManifest(value: unknown): PluginManifest {
   requiresContract('readmodels.publish', Object.keys(contracts?.readModels.publishes || {}).length, 'published read-model');
   requiresContract('readmodels.read', Object.keys(contracts?.readModels.reads || {}).length, 'consumed read-model');
 
+  const backendEntry = safeEntry(input.backendEntry, 'backendEntry');
+  const executionMode = input.executionMode === undefined ? (backendEntry ? 'in-process' : 'declarative') : String(input.executionMode);
+  if (!['declarative', 'in-process', 'isolated'].includes(executionMode)) throw new Error('executionMode is invalid');
+  if (!backendEntry && executionMode !== 'declarative') throw new Error('Plugins without backendEntry must use declarative executionMode');
+  if (backendEntry && executionMode === 'declarative') throw new Error('Plugins with backendEntry cannot use declarative executionMode');
   return {
     schemaVersion: 1,
     id,
@@ -270,7 +276,8 @@ export function parsePluginManifest(value: unknown): PluginManifest {
     requiresCore,
     publisher,
     license: text(input.license, 'license', 80),
-    backendEntry: safeEntry(input.backendEntry, 'backendEntry'),
+    backendEntry,
+    executionMode: executionMode as PluginManifest['executionMode'],
     frontendEntry: safeEntry(input.frontendEntry, 'frontendEntry'),
     capabilities: [...new Set(capabilities as string[])],
     permissions: [...new Set(permissions as string[])],

@@ -27,5 +27,8 @@
     "marketplace:bootstrap:catalog": "node tools/complete-plugin-catalog-bootstrap.js",
     "marketplace:fix-now": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/fix-marketplace-catalog.ps1"
   },
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "railway": "^3.16.0"
+  }
 }

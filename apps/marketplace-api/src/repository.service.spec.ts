@@ -3,7 +3,7 @@ import { generateKeyPairSync } from 'node:crypto';
 
 function serviceWith(tx: any) {
   const prisma = { $transaction: jest.fn((work: (client: any) => unknown) => work(tx)) } as any;
-  return new RepositoryService(prisma, {} as any);
+  return new RepositoryService(prisma, repositoryConfig());
 }
 
 function repositoryConfig() {
