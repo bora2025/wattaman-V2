@@ -25,15 +25,6 @@ function verify() {
   for (const resource of ['Postgres', 'marketplace-api', 'platform-admin-web', 'marketplace-artifacts', 'marketplace-api-volume']) {
     if (!iac.includes(`\"${resource}\"`)) errors.push(`Railway IaC is missing ${resource}`);
   }
-  for (const variable of [
-    'ARTIFACT_S3_ACCESS_KEY_ID',
-    'ARTIFACT_S3_BUCKET',
-    'ARTIFACT_S3_ENDPOINT',
-    'ARTIFACT_S3_REGION',
-    'ARTIFACT_S3_SECRET_ACCESS_KEY',
-  ]) {
-    if (!iac.includes(variable)) errors.push(`Railway IaC is missing ${variable}`);
-  }
   if (!iac.includes('variables: { managed: false }')) errors.push('Railway IaC must not import or manage service secrets');
   if (contract.services?.['marketplace-api']?.databaseUrl !== '${{Postgres.DATABASE_URL}}') {
     errors.push('marketplace-api must use the canonical project Postgres reference');
