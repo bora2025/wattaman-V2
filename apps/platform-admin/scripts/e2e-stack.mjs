@@ -32,7 +32,7 @@ const children = [];
 let torndown = false;
 
 function run(command, args, options = {}) {
-  const result = spawnSync(command, args, { stdio: 'pipe', encoding: 'utf8', shell: true, ...options });
+  const result = spawnSync(command, args, { stdio: 'pipe', encoding: 'utf8', shell: process.platform === 'win32', ...options });
   if (result.status !== 0 && !options.allowFailure) {
     throw new Error(`${command} ${args.join(' ')} failed:\n${result.stderr || result.stdout}`);
   }
@@ -41,7 +41,7 @@ function run(command, args, options = {}) {
 
 function startBackground(command, args, options) {
   const child = spawn(command, args, {
-    stdio: ['ignore', 'pipe', 'pipe'], shell: true,
+    stdio: ['ignore', 'pipe', 'pipe'], shell: process.platform === 'win32',
     // Its own process group on POSIX, so teardown's negative-pid signal reaches the server and not
     // just the shell that launched it.
     detached: process.platform !== 'win32',
@@ -73,7 +73,7 @@ function startBackground(command, args, options) {
  */
 function runForeground(command, args, options) {
   return new Promise((resolve) => {
-    const child = spawn(command, args, { stdio: 'inherit', shell: true, ...options });
+    const child = spawn(command, args, { stdio: 'inherit', shell: process.platform === 'win32', ...options });
     children.push(child);
     child.on('exit', (code) => resolve(code ?? 1));
   });
@@ -152,7 +152,7 @@ async function main() {
   run('docker', ['rm', '-f', CONTAINER], { allowFailure: true });
   run('docker', ['run', '-d', '--name', CONTAINER, '-e', 'POSTGRES_PASSWORD=postgres', '-p', `${PG_PORT}:5432`, 'postgres:16']);
   await waitFor('postgres', async () => run('docker', ['exec', CONTAINER, 'pg_isready', '-U', 'postgres'], { allowFailure: true }).status === 0, null);
-  run('docker', ['exec', CONTAINER, 'psql', '-U', 'postgres', '-c', '"CREATE DATABASE platform_e2e;"']);
+  run('docker', ['exec', CONTAINER, 'psql', '-U', 'postgres', '-c', 'CREATE DATABASE platform_e2e;']);
 
   const env = apiEnvironment();
 
@@ -163,10 +163,10 @@ async function main() {
   run('npm', ['run', 'build'], { cwd: apiDir, env });
 
   console.log('› seeding operators');
-  run('npx', ['tsx', 'scripts/bootstrap-platform-owner.ts', '--email', 'owner@e2e.test', '--name', '"E2E Owner"'], {
+  run('npx', ['tsx', 'scripts/bootstrap-platform-owner.ts', '--email', 'owner@e2e.test', '--name', 'E2E Owner'], {
     cwd: apiDir, env: { ...env, PLATFORM_OWNER_PASSWORD: 'E2EOwnerPass123!' },
   });
-  run('npx', ['tsx', 'scripts/seed-platform-e2e.ts', '--out', `"${FIXTURES}"`], { cwd: apiDir, env });
+  run('npx', ['tsx', 'scripts/seed-platform-e2e.ts', '--out', FIXTURES], { cwd: apiDir, env });
 
   console.log('› starting marketplace API');
   const api = startBackground('node', ['dist/main.js'], { cwd: apiDir, env, label: 'api' });

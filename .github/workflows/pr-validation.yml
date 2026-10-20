@@ -115,7 +115,9 @@ jobs:
 
   artifact-s3-compatibility:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # The first cold build of the pinned MinIO source can exceed 15 minutes on a two-core hosted
+    # runner. Keep the source version immutable while allowing enough time for that cold cache.
+    timeout-minutes: 30
     env:
       ARTIFACT_S3_BUCKET: wattanam-ci-artifacts
       ARTIFACT_S3_REGION: us-east-1
