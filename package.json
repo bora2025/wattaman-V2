@@ -16,6 +16,7 @@
     "test:cli": "npm --prefix packages/plugin-cli test -- --runInBand",
     "test:marketplace": "npm --prefix apps/marketplace-api test",
     "test:tools": "node --test tools/*.test.js",
+    "preplugins:check:universal": "npm run build:sdk",
     "plugins:check:universal": "node tools/check-universal-plugin-catalog.js",
     "test:official-plugins": "node apps/marketplace-api/node_modules/jest/bin/jest.js --config tools/official-plugin-jest.config.js --runInBand && node --test plugins/*/tests/*.test.js",
     "verify:control-plane": "node tools/verify-control-plane-config.js",
