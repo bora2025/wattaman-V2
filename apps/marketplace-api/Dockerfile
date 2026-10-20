@@ -18,6 +18,7 @@ COPY apps/marketplace-api/package.json apps/marketplace-api/package-lock.json ./
 COPY apps/marketplace-api/prisma ./prisma
 COPY apps/marketplace-api/scripts/seed-platform-rbac.js ./scripts/seed-platform-rbac.js
 COPY apps/marketplace-api/scripts/ensure-plugin-pricing-permission.js ./scripts/ensure-plugin-pricing-permission.js
+COPY apps/marketplace-api/scripts/migrate-artifacts-to-s3.js ./scripts/migrate-artifacts-to-s3.js
 RUN npm ci --omit=dev && chown -R node:node /workspace
 COPY --from=build --chown=node:node /workspace/apps/marketplace-api/dist ./dist
 RUN mkdir -p /data/artifacts && chown node:node /data/artifacts
