@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import * as client from 'prom-client';
+import * as client from '@prometheus-io/client';
 
 /**
  * Every domain gauge here is read fresh from the database on every scrape rather than
