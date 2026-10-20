@@ -1,8 +1,11 @@
 /** @type {import('next').NextConfig} */
+const path = require('node:path');
+
 const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
   poweredByHeader: false,
+  turbopack: { root: path.resolve(__dirname, '../..') },
   async headers() {
     // The operator control plane is never embedded, never framed, and never referrer-leaks an
     // operator's location to a third party (plan §12: "security headers, and separate

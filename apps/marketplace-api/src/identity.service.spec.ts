@@ -224,7 +224,7 @@ describe('password reset', () => {
   it('never reveals whether an email exists in production', async () => {
     const txKnown = {
       marketplaceAccount: { findUnique: jest.fn().mockResolvedValue({ id: 'account-1' }) },
-      marketplacePasswordReset: { updateMany: jest.fn().mockResolvedValue({}), create: jest.fn().mockResolvedValue({}) },
+      marketplacePasswordReset: { count: jest.fn().mockResolvedValue(0), updateMany: jest.fn().mockResolvedValue({}), create: jest.fn().mockResolvedValue({}) },
       marketplaceAuditEvent: { create: jest.fn().mockResolvedValue({}) },
     };
     const txUnknown = { marketplaceAccount: { findUnique: jest.fn().mockResolvedValue(null) } };
@@ -232,6 +232,20 @@ describe('password reset', () => {
     const serviceProdUnknown = new IdentityService(prismaWith(txUnknown), config('production'));
     await expect(serviceProd.requestPasswordReset({ email: 'owner@school.example' })).resolves.toEqual({ requested: true, passwordResetToken: undefined });
     await expect(serviceProdUnknown.requestPasswordReset({ email: 'nobody@school.example' })).resolves.toEqual({ requested: true, passwordResetToken: undefined });
+  });
+
+  it('rate limits repeated reset email generation using shared database state without revealing the account', async () => {
+    const tx = {
+      marketplaceAccount: { findUnique: jest.fn().mockResolvedValue({ id: 'account-1', email: 'owner@school.example' }) },
+      marketplacePasswordReset: { count: jest.fn().mockResolvedValue(3), updateMany: jest.fn(), create: jest.fn() },
+      marketplaceAuditEvent: { create: jest.fn().mockResolvedValue({}) },
+    };
+    const email = { send: jest.fn() };
+    const service = new IdentityService(prismaWith(tx), { ...config('production'), transactionalEmail: { provider: 'sendgrid' } } as any, email);
+    await expect(service.requestPasswordReset({ email: 'owner@school.example' })).resolves.toEqual({ requested: true, passwordResetToken: undefined });
+    expect(tx.marketplacePasswordReset.create).not.toHaveBeenCalled();
+    expect(email.send).not.toHaveBeenCalled();
+    expect(tx.marketplaceAuditEvent.create).toHaveBeenCalledWith({ data: { accountId: 'account-1', action: 'password_reset_rate_limited', success: false } });
   });
 
   it('resets the password, consumes the token, and revokes existing sessions', async () => {

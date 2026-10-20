@@ -12,6 +12,8 @@ const DUMMY_PASSWORD_HASH = 'scrypt:16384:8:1:00000000000000000000000000000000:0
 const SESSION_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
 const EMAIL_VERIFICATION_LIFETIME_MS = 24 * 60 * 60 * 1000;
 const PASSWORD_RESET_LIFETIME_MS = 30 * 60 * 1000;
+const PASSWORD_RESET_RATE_WINDOW_MS = 15 * 60 * 1000;
+const PASSWORD_RESET_RATE_LIMIT = 3;
 const LOCKOUT_THRESHOLD = 5;
 
 const emailField = z.string().trim().toLowerCase().email().max(200);
@@ -178,6 +180,13 @@ export class IdentityService {
     const rawToken = await this.prisma.$transaction(async (tx) => {
       const account = await tx.marketplaceAccount.findUnique({ where: { email: input.email }, select: { id: true, email: true } });
       if (!account) return undefined;
+      const recentRequests = await tx.marketplacePasswordReset.count({
+        where: { accountId: account.id, createdAt: { gte: new Date(now.getTime() - PASSWORD_RESET_RATE_WINDOW_MS) } },
+      });
+      if (recentRequests >= PASSWORD_RESET_RATE_LIMIT) {
+        await this.audit(tx, { accountId: account.id, action: 'password_reset_rate_limited', success: false });
+        return undefined;
+      }
       await tx.marketplacePasswordReset.updateMany({ where: { accountId: account.id, consumedAt: null }, data: { consumedAt: now } });
       await tx.marketplacePasswordReset.create({
         data: { accountId: account.id, tokenHash: token.hash, expiresAt: new Date(now.getTime() + PASSWORD_RESET_LIFETIME_MS) },
