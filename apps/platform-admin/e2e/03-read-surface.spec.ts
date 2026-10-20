@@ -131,7 +131,7 @@ test('the dashboard reports counts drawn from the seeded records', async ({ page
   await page.goto('/dashboard');
   await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
   await expect(page.getByText('Registered installations')).toBeVisible();
-  await expect(page.getByText('Orders awaiting settlement')).toBeVisible();
+  await expect(page.getByRole('link', { name: /Review orders/ })).toContainText('awaiting settlement');
   // Counts are real, not placeholders: three installations were seeded.
   const installations = page.locator('div.pa-card', { hasText: 'Registered installations' });
   await expect(installations).toContainText('3');

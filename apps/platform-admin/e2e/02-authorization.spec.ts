@@ -14,12 +14,12 @@ const EXPECTED_NAV: Record<string, string[]> = {
   // customer records, or commerce. That absence is a designed property, not an oversight.
   'owner2@e2e.test': ['Dashboard', 'Operators', 'Operations', 'Exports', 'Audit'],
   'support@e2e.test': [
-    'Dashboard', 'Customers', 'Customer schools', 'School provisioning', 'School installations', 'School plugin requests',
+    'Dashboard', 'Customers', 'Account requests', 'Customer schools', 'School provisioning', 'School installations', 'School plugin requests',
   ],
   'finance@e2e.test': ['Dashboard', 'School billing plans', 'Orders', 'Entitlements'],
   'reviewer@e2e.test': ['Dashboard', 'Plugins', 'Submissions'],
   'auditor@e2e.test': [
-    'Dashboard', 'Customers', 'Customer schools', 'School billing plans', 'School provisioning',
+    'Dashboard', 'Customers', 'Account requests', 'Customer schools', 'School billing plans', 'School provisioning',
     'School installations', 'Publishers', 'Plugins',
     'Starter bundles', 'School plugin requests', 'Orders', 'Entitlements', 'Advisories', 'Operations', 'Exports', 'Audit',
   ],
@@ -55,7 +55,7 @@ for (const { email, api, screen, navLabel } of DENIED) {
 
     // …hand-typing the URL renders a refusal instead of the data…
     await page.goto(screen);
-    await expect(page.getByRole('alert')).toBeVisible();
+    await expect(page.locator('p[role="alert"]')).toBeVisible();
 
     // …because the API refuses it, which is where the decision actually lives.
     expect((await apiCall(page, api)).status).toBe(403);
