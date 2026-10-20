@@ -130,10 +130,10 @@ test('advisories list shows the open advisory', async ({ page }) => {
 test('the dashboard reports counts drawn from the seeded records', async ({ page }) => {
   await page.goto('/dashboard');
   await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
-  await expect(page.getByText('Customer schools')).toBeVisible();
   await expect(page.getByRole('link', { name: /Review orders/ })).toContainText('awaiting settlement');
   // Counts are real, not placeholders: three installations were seeded.
   const installations = page.getByRole('link', { name: /Customer schools/ });
+  await expect(installations).toBeVisible();
   await expect(installations).toContainText('3');
 });
 
