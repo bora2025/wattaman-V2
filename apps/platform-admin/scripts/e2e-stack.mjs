@@ -150,9 +150,8 @@ async function main() {
 
   console.log('› starting disposable PostgreSQL');
   run('docker', ['rm', '-f', CONTAINER], { allowFailure: true });
-  run('docker', ['run', '-d', '--name', CONTAINER, '-e', 'POSTGRES_PASSWORD=postgres', '-p', `${PG_PORT}:5432`, 'postgres:16']);
-  await waitFor('postgres', async () => run('docker', ['exec', CONTAINER, 'pg_isready', '-U', 'postgres'], { allowFailure: true }).status === 0, null);
-  run('docker', ['exec', CONTAINER, 'psql', '-U', 'postgres', '-c', 'CREATE DATABASE platform_e2e;']);
+  run('docker', ['run', '-d', '--name', CONTAINER, '-e', 'POSTGRES_PASSWORD=postgres', '-e', 'POSTGRES_DB=platform_e2e', '-p', `${PG_PORT}:5432`, 'postgres:16']);
+  await waitFor('postgres', async () => run('docker', ['exec', CONTAINER, 'psql', '-U', 'postgres', '-d', 'platform_e2e', '-tAc', 'SELECT 1'], { allowFailure: true }).stdout.trim() === '1', null);
 
   const env = apiEnvironment();
 
