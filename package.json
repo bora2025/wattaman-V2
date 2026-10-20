@@ -13,6 +13,7 @@
     "test": "npm run test:contracts && npm run test:sdk && npm run test:cli && npm run test:marketplace && npm run test:tools",
     "test:contracts": "npm --prefix packages/marketplace-contracts test",
     "test:sdk": "npm --prefix packages/plugin-sdk test -- --runInBand",
+    "pretest:cli": "npm run build:sdk",
     "test:cli": "npm --prefix packages/plugin-cli test -- --runInBand",
     "test:marketplace": "npm --prefix apps/marketplace-api test",
     "test:tools": "node --test tools/*.test.js",

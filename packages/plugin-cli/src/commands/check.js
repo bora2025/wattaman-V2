@@ -12,6 +12,16 @@ const UNIVERSAL_UI_COMPONENTS = new Set([
 ]);
 const UI_ID = /^[a-z0-9][a-zA-Z0-9._-]*$/;
 
+function loadPluginSdk() {
+  try { return require('@wattanam/plugin-sdk'); }
+  catch (error) {
+    if (error?.code !== 'MODULE_NOT_FOUND') throw error;
+    // Clean monorepo installs may not materialize npm's local file link. The
+    // published CLI still resolves its declared package dependency normally.
+    return require(path.resolve(__dirname, '..', '..', '..', 'plugin-sdk', 'dist'));
+  }
+}
+
 function validateUniversalUi(value) {
   if (!value || value.schemaVersion !== 2 || value.kind !== 'declarative-ui') throw new Error('unsupported schemaVersion or kind');
   if (value.portability !== 'universal') throw new Error('portability must be universal');
@@ -62,7 +72,7 @@ async function run(argv, options = {}) {
   const root = path.resolve(dir);
   const requireUniversalUi = argv.includes('--require-universal-ui');
   // eslint-disable-next-line global-require
-  const { parsePluginManifest, createTestContext } = require('@wattanam/plugin-sdk');
+  const { parsePluginManifest, createTestContext } = loadPluginSdk();
 
   let failures = 0;
   const failedLabels = [];
