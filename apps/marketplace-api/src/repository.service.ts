@@ -56,6 +56,14 @@ const pluginPromotionInput = z.object({
   version: z.string().refine((value) => semver.valid(value) !== null),
 }).strict();
 
+const pluginCertificationInput = pluginPromotionInput.extend({
+  artifactSha256: z.string().regex(/^[a-f0-9]{64}$/),
+  marketplaceCommit: z.string().regex(/^[a-f0-9]{40}$/),
+  customerSchoolCommit: z.string().regex(/^[a-f0-9]{40}$/),
+  checks: z.array(z.enum(['universal-catalog', 'official-plugin-behavior', 'released-host-install-activate-lifecycle', 'universal-ui-schema'])).length(4)
+    .refine((checks) => new Set(checks).size === 4, 'all four distinct certification checks are required'),
+}).strict();
+
 const corePromotionInput = z.object({ version: z.string().refine((value) => semver.valid(value) !== null) }).strict();
 
 export class RepositoryService {
@@ -85,6 +93,9 @@ export class RepositoryService {
 
   async publishPlugin(fields: unknown, packageBuffer: Buffer, reviewStatus: 'APPROVED' | 'IN_REVIEW' = 'APPROVED') {
     const input = releaseInput.parse(fields);
+    if (input.channel !== 'BETA') {
+      throw new HttpError(400, 'Direct stable publication is prohibited; publish a beta release and promote the identical certified artifact');
+    }
     const packageHash = createHash('sha256').update(packageBuffer).digest('hex');
     const duplicate = await this.prisma.packageArtifact.findUnique({ where: { sha256: packageHash } });
     if (duplicate) throw new HttpError(409, 'This immutable artifact is already published');
@@ -162,14 +173,34 @@ export class RepositoryService {
     return this.prisma.$transaction(async (tx) => {
       const beta = await tx.pluginVersion.findUnique({
         where: { pluginId_version_channel: { pluginId: input.pluginId, version: input.version, channel: 'BETA' } },
-        include: { artifact: true },
+        include: { artifact: true, reviews: true },
       });
       if (!beta?.artifact || beta.reviewStatus !== 'APPROVED' || beta.withdrawnAt) throw new HttpError(404, 'Promotable beta plugin release not found');
+    const certified = beta.reviews.some((review) => review.status === 'APPROVED' && review.reviewer === 'release-certification'
+      && review.notes?.includes(beta.artifact!.sha256));
+    if (!certified) throw new HttpError(409, 'Beta release must pass released-host certification before stable promotion');
       const stable = await tx.pluginVersion.findUnique({ where: { pluginId_version_channel: { pluginId: input.pluginId, version: input.version, channel: 'STABLE' } } });
       if (stable) throw new HttpError(409, 'Stable plugin release already exists');
       const promoted = await tx.pluginVersion.update({ where: { id: beta.id }, data: { channel: 'STABLE' }, include: { artifact: true } });
       return { pluginId: promoted.pluginId, version: promoted.version, channel: promoted.channel, sha256: promoted.artifact!.sha256, rebuilt: false };
     });
+  }
+
+  async certifyPluginRelease(value: unknown) {
+    const input = pluginCertificationInput.parse(value);
+    const beta = await this.prisma.pluginVersion.findUnique({
+      where: { pluginId_version_channel: { pluginId: input.pluginId, version: input.version, channel: 'BETA' } },
+      include: { artifact: true },
+    });
+    if (!beta?.artifact || beta.reviewStatus !== 'APPROVED' || beta.withdrawnAt) throw new HttpError(404, 'Certifiable beta plugin release not found');
+    if (beta.artifact.sha256 !== input.artifactSha256) throw new HttpError(409, 'Certification artifact digest does not match the beta release');
+    return this.prisma.versionReview.create({ data: {
+      pluginVersionId: beta.id,
+      status: 'APPROVED',
+      reviewer: 'release-certification',
+      notes: JSON.stringify({ artifactSha256: input.artifactSha256, marketplaceCommit: input.marketplaceCommit, customerSchoolCommit: input.customerSchoolCommit, checks: [...new Set(input.checks)].sort() }),
+      reviewedAt: new Date(),
+    } });
   }
 
   async promoteCoreRelease(value: unknown) {

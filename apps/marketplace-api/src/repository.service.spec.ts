@@ -12,8 +12,13 @@ function repositoryConfig() {
 }
 
 describe('repository channel promotion', () => {
+  it('rejects direct stable plugin publication before accepting artifact bytes', async () => {
+    await expect(serviceWith({}).publishPlugin({ channel: 'STABLE', paid: 'false' }, Buffer.from('not-a-package')))
+      .rejects.toThrow('Direct stable publication is prohibited');
+  });
+
   it('promotes a beta plugin by moving the existing artifact row without rebuilding bytes', async () => {
-    const beta = { id: 'version-1', pluginId: 'wattanam.announcements', version: '1.1.0', reviewStatus: 'APPROVED', withdrawnAt: null, artifact: { sha256: 'a'.repeat(64) } };
+    const beta = { id: 'version-1', pluginId: 'wattanam.announcements', version: '1.1.0', reviewStatus: 'APPROVED', withdrawnAt: null, artifact: { sha256: 'a'.repeat(64) }, reviews: [{ status: 'APPROVED', reviewer: 'release-certification', notes: 'a'.repeat(64) }] };
     const tx = { pluginVersion: {
       findUnique: jest.fn().mockResolvedValueOnce(beta).mockResolvedValueOnce(null),
       update: jest.fn().mockResolvedValue({ ...beta, channel: 'STABLE' }),
@@ -22,6 +27,13 @@ describe('repository channel promotion', () => {
       pluginId: beta.pluginId, version: beta.version, channel: 'STABLE', sha256: beta.artifact.sha256, rebuilt: false,
     });
     expect(tx.pluginVersion.update).toHaveBeenCalledWith({ where: { id: beta.id }, data: { channel: 'STABLE' }, include: { artifact: true } });
+  });
+
+  it('rejects stable promotion without released-host certification', async () => {
+    const beta = { id: 'version-1', pluginId: 'wattanam.announcements', version: '1.1.0', reviewStatus: 'APPROVED', withdrawnAt: null, artifact: { sha256: 'a'.repeat(64) }, reviews: [] };
+    const tx = { pluginVersion: { findUnique: jest.fn().mockResolvedValue(beta) } };
+    await expect(serviceWith(tx).promotePluginRelease({ pluginId: beta.pluginId, version: beta.version }))
+      .rejects.toThrow('must pass released-host certification');
   });
 
   it('promotes core metadata without changing immutable image digests', async () => {

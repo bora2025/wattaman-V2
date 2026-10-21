@@ -3,6 +3,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { loadMarketplaceEnv } = require('./marketplace-env-loader');
+const { certify } = require('./certify-plugin-release');
 
 function required(name) {
   const value = process.env[name];
@@ -27,7 +28,7 @@ function usage() {
       '',
       'Optional env:',
       '  PLUGIN_PACKAGES_DIR   Directory containing .wtp files (default: ./tmp/plugin-packages)',
-      '  CHANNEL               STABLE or BETA (default: STABLE)',
+      '  CHANNEL               Must be BETA (default: BETA). Stable releases are promoted without rebuilding.',
       '  PAID                  true/false (default: false)',
       '  CHANGELOG             Changelog text (default: Automated publish)',
       '  MARKETPLACE_ENV_FILE  Optional env file path (default lookup: ./.env.marketplace.local, ./.env.local, ./.env)',
@@ -70,6 +71,15 @@ async function publishOne(baseUrl, token, filePath, fields) {
   return { ok: false, status: response.status, error: String(errorMessage), payload };
 }
 
+async function certifyPublished(baseUrl, token, published, certification) {
+  const response = await fetch(new URL('/admin/v1/plugin-releases/certify', baseUrl), {
+    method: 'POST',
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ pluginId: published.pluginId, version: published.version, artifactSha256: published.sha256, marketplaceCommit: certification.marketplaceCommit, customerSchoolCommit: certification.customerSchoolCommit, checks: certification.checks }),
+  });
+  if (!response.ok) throw new Error(`Published beta certification failed (${response.status}): ${await response.text()}`);
+}
+
 async function main() {
   if (process.argv.includes('--help') || process.argv.includes('-h')) {
     usage();
@@ -77,16 +87,17 @@ async function main() {
   }
 
   loadMarketplaceEnv();
+  const certification = certify();
 
   const baseUrl = new URL(required('MARKETPLACE_URL'));
   const token = required('MARKETPLACE_ADMIN_TOKEN');
   const packagesDir = path.resolve(process.cwd(), process.env.PLUGIN_PACKAGES_DIR || './tmp/plugin-packages');
-  const channel = (process.env.CHANNEL || 'STABLE').toUpperCase();
+  const channel = (process.env.CHANNEL || 'BETA').toUpperCase();
   const paid = readBool('PAID', false);
   const changelog = process.env.CHANGELOG || 'Automated publish';
 
-  if (!['STABLE', 'BETA'].includes(channel)) {
-    throw new Error('CHANNEL must be STABLE or BETA');
+  if (channel !== 'BETA') {
+    throw new Error('Direct stable publication is prohibited. Publish BETA, certify that exact artifact, then promote it to STABLE.');
   }
 
   if (!fs.existsSync(packagesDir)) {
@@ -111,6 +122,7 @@ async function main() {
     process.stdout.write(`- ${path.basename(filePath)} ... `);
     const result = await publishOne(baseUrl, token, filePath, { channel, paid, changelog });
     if (result.ok) {
+      await certifyPublished(baseUrl, token, result.payload, certification);
       success += 1;
       const id = result.payload && typeof result.payload === 'object' ? result.payload.pluginId : '';
       const version = result.payload && typeof result.payload === 'object' ? result.payload.version : '';

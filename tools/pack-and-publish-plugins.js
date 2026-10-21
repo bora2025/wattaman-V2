@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { loadMarketplaceEnv } = require('./marketplace-env-loader');
+const { certify } = require('./certify-plugin-release');
 
 function required(name) {
   const value = process.env[name];
@@ -39,7 +40,7 @@ function usage() {
       '  PLUGIN_SOURCES        Comma-separated plugin source directories.',
       '                        Default: all direct children under ./plugins containing plugin.json',
       '  PLUGIN_PACKAGES_DIR   Output directory for .wtp packages (default: ./tmp/plugin-packages)',
-      '  CHANNEL               STABLE or BETA (default: STABLE)',
+      '  CHANNEL               Must be BETA (default: BETA). Stable releases are promoted without rebuilding.',
       '  PAID                  true/false publish flag for all packages (default: false)',
       '  CHANGELOG             Publish changelog (default: Automated pack+publish)',
       '  PUBLISH_ONLY          true/false. Skip packing and publish existing .wtp files (default: false)',
@@ -155,6 +156,15 @@ async function publishOne(baseUrl, token, filePath, fields) {
   return { ok: false, status: response.status, error: String(errorMessage), payload };
 }
 
+async function certifyPublished(baseUrl, token, published, certification) {
+  const response = await fetch(new URL('/admin/v1/plugin-releases/certify', baseUrl), {
+    method: 'POST',
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ pluginId: published.pluginId, version: published.version, artifactSha256: published.sha256, marketplaceCommit: certification.marketplaceCommit, customerSchoolCommit: certification.customerSchoolCommit, checks: certification.checks }),
+  });
+  if (!response.ok) throw new Error(`Published beta certification failed (${response.status}): ${await response.text()}`);
+}
+
 function collectPackages(packagesDir) {
   if (!fs.existsSync(packagesDir)) return [];
   return fs
@@ -171,6 +181,7 @@ async function main() {
   }
 
   loadMarketplaceEnv();
+  const certification = certify();
 
   const rootDir = process.cwd();
   const baseUrl = new URL(required('MARKETPLACE_URL'));
@@ -179,13 +190,13 @@ async function main() {
   const keyId = optional('PLUGIN_SIGNING_KEY_ID', '');
   const sourceList = optional('PLUGIN_SOURCES', '');
   const packagesDir = path.resolve(rootDir, optional('PLUGIN_PACKAGES_DIR', './tmp/plugin-packages'));
-  const channel = optional('CHANNEL', 'STABLE').toUpperCase();
+  const channel = optional('CHANNEL', 'BETA').toUpperCase();
   const paid = parseBool(optional('PAID', 'false'), false);
   const changelog = optional('CHANGELOG', 'Automated pack+publish');
   const publishOnly = parseBool(optional('PUBLISH_ONLY', 'false'), false);
 
-  if (!['STABLE', 'BETA'].includes(channel)) {
-    throw new Error('CHANNEL must be STABLE or BETA');
+  if (channel !== 'BETA') {
+    throw new Error('Direct stable publication is prohibited. Publish BETA, certify that exact artifact, then promote it to STABLE.');
   }
 
   if (!publishOnly) {
@@ -227,6 +238,7 @@ async function main() {
     process.stdout.write(`- ${path.basename(filePath)} ... `);
     const result = await publishOne(baseUrl, token, filePath, { channel, paid, changelog });
     if (result.ok) {
+      await certifyPublished(baseUrl, token, result.payload, certification);
       success += 1;
       const id = result.payload && typeof result.payload === 'object' ? result.payload.pluginId : '';
       const version = result.payload && typeof result.payload === 'object' ? result.payload.version : '';

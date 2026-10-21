@@ -1,0 +1,21 @@
+name: Published catalog verification
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  verify-production-catalog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24 }
+      - name: Verify signed index, release identities, downloads, and artifact digests
+        env:
+          MARKETPLACE_URL: ${{ vars.MARKETPLACE_PUBLIC_URL }}
+          CORE_VERSION: ${{ vars.CUSTOMER_SCHOOL_CORE_VERSION }}
+          MARKETPLACE_DOWNLOAD_TOKEN: ${{ secrets.CATALOG_VERIFICATION_DOWNLOAD_TOKEN }}
+        run: npm run marketplace:verify:published

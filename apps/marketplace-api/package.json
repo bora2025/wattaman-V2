@@ -70,5 +70,8 @@
     "roots": [
       "<rootDir>/src"
     ]
+  },
+  "allowScripts": {
+    "@swc/core@1.16.18": true
   }
 }
