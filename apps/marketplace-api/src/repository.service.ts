@@ -72,7 +72,7 @@ export class RepositoryService {
 
   async health() {
     await this.prisma.$queryRaw`SELECT 1`;
-    return { status: 'ready', service: 'wattanam-marketplace-api', version: '0.1.0' };
+    return { status: 'ready', service: 'wattanam-marketplace-api', version: this.config.appVersion || '0.1.0-dev' };
   }
 
   async createOfficialPublisher(value: unknown) {

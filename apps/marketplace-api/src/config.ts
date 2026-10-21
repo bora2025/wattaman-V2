@@ -6,6 +6,7 @@ import { parseSecretEncryptionKeys, SecretEncryptionKey } from './secret-encrypt
 
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  APP_VERSION: z.string().trim().min(1).max(100).default('0.1.0-dev'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3010),
   DATABASE_URL: z.string().min(1),
   PUBLIC_BASE_URL: z.string().url().refine((value) => !value.endsWith('/'), 'must not end with /'),
@@ -41,6 +42,7 @@ const schema = z.object({
 
 export type MarketplaceConfig = {
   nodeEnv: 'development' | 'test' | 'production';
+  appVersion: string;
   port: number;
   databaseUrl: string;
   publicBaseUrl: string;
@@ -117,6 +119,7 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): MarketplaceCon
   }
   return {
     nodeEnv: value.NODE_ENV,
+    appVersion: value.APP_VERSION,
     port: value.PORT,
     databaseUrl: value.DATABASE_URL,
     publicBaseUrl: value.PUBLIC_BASE_URL,

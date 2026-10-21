@@ -3,10 +3,11 @@ import { createApp } from './app';
 
 describe('marketplace API discovery root', () => {
   it('identifies the API and advertises its public verification endpoints', async () => {
-    const response = await request(createApp({} as never, {} as never)).get('/').expect(200);
+    const response = await request(createApp({} as never, { appVersion: '0.1.0-test.1' } as never)).get('/').expect(200);
 
     expect(response.body).toEqual(expect.objectContaining({
       service: 'wattanam-marketplace-api',
+      version: '0.1.0-test.1',
       status: 'online',
       endpoints: expect.objectContaining({
         live: '/health/live',

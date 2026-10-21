@@ -21,6 +21,13 @@ describe('marketplace signing configuration', () => {
   it('accepts independently generated repository and entitlement keys', () => {
     const config = readConfig(environment(privateKey(), privateKey()));
     expect(config.entitlementKeyId).toBe('entitlement-1');
+    expect(config.appVersion).toBe('0.1.0-dev');
+  });
+
+  it('exposes traceable release metadata to runtime health responses', () => {
+    const env = environment(privateKey(), privateKey()) as Record<string, string>;
+    env.APP_VERSION = '0.1.0-135fc74';
+    expect(readConfig(env).appVersion).toBe('0.1.0-135fc74');
   });
 
   it('normalizes an accidental UTF-8 BOM around the admin bearer token', () => {

@@ -121,7 +121,7 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
 
   app.get('/', (_request, response) => response.json({
     service: 'wattanam-marketplace-api',
-    version: '0.1.0',
+    version: config.appVersion || '0.1.0-dev',
     status: 'online',
     message: 'Wattanam Marketplace API is running. This service provides JSON APIs, not a browser storefront.',
     endpoints: {
