@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased — 2026-10-20
+## 1.3.0 — 2026-10-20
 
 - Added the backward-compatible `executionMode` manifest declaration. Third-party isolated execution remains fail closed until a separate runtime is configured and certified.
 
