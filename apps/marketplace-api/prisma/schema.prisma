@@ -18,6 +18,14 @@ enum MarketplaceAccountRequestStatus {
   REJECTED
 }
 
+enum MarketplaceEmailDeliveryStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+  DEAD
+}
+
 enum SchoolPluginRequestType {
   FREE_APPROVAL
   PURCHASE_ASSISTANCE
@@ -350,6 +358,28 @@ model MarketplaceEmailVerification {
   account    MarketplaceAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   @@index([accountId, consumedAt])
+}
+
+/// Encrypted transactional-email outbox. Secret-bearing verification/reset links never appear in
+/// plaintext database columns. A unique caller-supplied key makes request retries idempotent, while
+/// the claim fields let multiple API replicas safely share delivery work.
+model MarketplaceEmailDelivery {
+  id                 String                         @id @default(uuid())
+  deduplicationKey   String                         @unique
+  encryptedMessage   String
+  status             MarketplaceEmailDeliveryStatus @default(PENDING)
+  attempts           Int                            @default(0)
+  nextAttemptAt      DateTime                       @default(now())
+  claimedAt          DateTime?
+  claimToken         String?
+  attemptedAt        DateTime?
+  sentAt             DateTime?
+  failureMessage     String?
+  createdAt          DateTime                       @default(now())
+  updatedAt          DateTime                       @updatedAt
+
+  @@index([status, nextAttemptAt, createdAt])
+  @@index([claimToken])
 }
 
 model MarketplacePasswordReset {

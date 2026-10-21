@@ -9,7 +9,7 @@ import { HttpError } from './http-error';
 import { RepositoryService } from './repository.service';
 import { PaymentWebhookService } from './payment-webhook.service';
 import { IdentityService } from './identity.service';
-import { createTransactionalEmailService } from './transactional-email.service';
+import { createDurableTransactionalEmailService } from './transactional-email.service';
 import { InstallationRegistrationService } from './installation-registration.service';
 import { InstallationLinkService } from './installation-link.service';
 import { InstallationEntitlementAccessService } from './installation-entitlement-access.service';
@@ -76,7 +76,7 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   const repository = new RepositoryService(prisma, config);
   const commerce = new CommerceService(prisma, config);
   const paymentWebhooks = new PaymentWebhookService(prisma, config);
-  const transactionalEmail = createTransactionalEmailService(config);
+  const transactionalEmail = createDurableTransactionalEmailService(prisma, config);
   const identity = new IdentityService(prisma, config, transactionalEmail);
   const installationRegistration = new InstallationRegistrationService(prisma, config);
   const installationLink = new InstallationLinkService(prisma, config);
@@ -100,6 +100,7 @@ export function createApp(prisma: PrismaClient, config: MarketplaceConfig) {
   const schoolBilling = new SchoolBillingService(prisma, transactionalEmail, config, commerce);
   const starterBundles = new StarterBundleService(prisma);
   app.locals.schoolBilling = schoolBilling;
+  app.locals.transactionalEmail = transactionalEmail;
   const upload = multer({ storage: multer.memoryStorage(), limits: { files: 1, fileSize: config.maxArtifactBytes, fields: 10 } });
   const metrics = createMetricsRegistry(prisma);
   app.disable('x-powered-by');

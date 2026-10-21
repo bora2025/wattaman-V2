@@ -7,6 +7,14 @@ async function main() {
   const prisma = new PrismaClient({ datasourceUrl: config.databaseUrl });
   await prisma.$connect();
   const app = createApp(prisma, config);
+  const dispatchTransactionalEmail = () => app.locals.transactionalEmail.dispatchPending().then((result: unknown) => {
+    console.log(JSON.stringify({ level: 'info', message: 'transactional email outbox sweep complete', result }));
+  }).catch((error: unknown) => {
+    console.error(JSON.stringify({ level: 'error', message: 'transactional email outbox sweep failed', error: error instanceof Error ? error.message : String(error) }));
+  });
+  void dispatchTransactionalEmail();
+  const transactionalEmailTimer = setInterval(dispatchTransactionalEmail, 60 * 1000);
+  transactionalEmailTimer.unref();
   const dispatchBillingAlerts = () => app.locals.schoolBilling.dispatchDueAlerts().catch((error: unknown) => {
     console.error(JSON.stringify({ level: 'error', message: 'school billing alert dispatch failed', error: error instanceof Error ? error.message : String(error) }));
   });
@@ -30,6 +38,7 @@ async function main() {
     console.log(JSON.stringify({ level: 'info', message: 'marketplace listening', port: config.port }));
   });
   const shutdown = async () => {
+    clearInterval(transactionalEmailTimer);
     clearInterval(billingAlertTimer);
     clearInterval(billingCycleTimer);
     server.close();

@@ -1,4 +1,4 @@
-import { SendGridTransactionalEmailService } from './transactional-email.service';
+import { DurableTransactionalEmailService, SendGridTransactionalEmailService } from './transactional-email.service';
 
 describe('SendGrid transactional email', () => {
   afterEach(() => jest.restoreAllMocks());
@@ -30,5 +30,63 @@ describe('SendGrid transactional email', () => {
       to: 'invalid@example', subject: 'Reset', text: 'reset', html: '<p>reset</p>',
     })).rejects.toThrow('HTTP 400');
     expect(request).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('durable transactional email outbox', () => {
+  const key = { keyId: 'identity-1', key: Buffer.alloc(32, 7) };
+
+  it('encrypts secret-bearing messages and retains provider failures for retry', async () => {
+    let row: any;
+    const prisma = {
+      marketplaceEmailDelivery: {
+        upsert: jest.fn(async ({ create }: any) => {
+          row = { id: 'delivery-1', status: 'PENDING', attempts: 0, nextAttemptAt: new Date(0), claimedAt: null, claimToken: null, ...create };
+          return { id: row.id };
+        }),
+        findUnique: jest.fn(async () => row),
+        updateMany: jest.fn(async ({ data }: any) => {
+          row = { ...row, ...data, attempts: data.attempts?.increment ? row.attempts + data.attempts.increment : row.attempts };
+          return { count: 1 };
+        }),
+      },
+    } as any;
+    const provider = { send: jest.fn().mockRejectedValue(new Error('provider unavailable')) };
+    const service = new DurableTransactionalEmailService(prisma, provider, { identityEncryptionKeys: [key] } as any);
+
+    await expect(service.send({
+      to: 'owner@example.com', subject: 'Reset', text: 'secret-token', html: '<p>secret-token</p>', deduplicationKey: 'reset:hash',
+    })).resolves.toBeUndefined();
+
+    const create = prisma.marketplaceEmailDelivery.upsert.mock.calls[0][0].create;
+    expect(create.encryptedMessage).toMatch(/^enc:v1:/);
+    expect(create.encryptedMessage).not.toContain('secret-token');
+    expect(row.status).toBe('FAILED');
+    expect(row.failureMessage).toBe('provider unavailable');
+  });
+
+  it('uses an idempotency key and records successful delivery', async () => {
+    const now = new Date('2026-10-21T00:00:00.000Z');
+    let row: any;
+    const prisma = {
+      marketplaceEmailDelivery: {
+        upsert: jest.fn(async ({ create }: any) => {
+          row = { id: 'delivery-2', status: 'PENDING', attempts: 0, nextAttemptAt: new Date(0), claimedAt: null, claimToken: null, ...create };
+          return { id: row.id };
+        }),
+        findUnique: jest.fn(async () => row),
+        updateMany: jest.fn(async ({ data }: any) => {
+          row = { ...row, ...data, attempts: data.attempts?.increment ? row.attempts + data.attempts.increment : row.attempts };
+          return { count: 1 };
+        }),
+      },
+    } as any;
+    const provider = { send: jest.fn().mockResolvedValue(undefined) };
+    const service = new DurableTransactionalEmailService(prisma, provider, { identityEncryptionKeys: [key] } as any);
+    await service.send({ to: 'owner@example.com', subject: 'Verify', text: 'text', html: '<p>text</p>', deduplicationKey: 'verify:hash' });
+    expect(prisma.marketplaceEmailDelivery.upsert).toHaveBeenCalledWith(expect.objectContaining({ where: { deduplicationKey: 'verify:hash' } }));
+    expect(provider.send).toHaveBeenCalledWith({ to: 'owner@example.com', subject: 'Verify', text: 'text', html: '<p>text</p>' });
+    expect(row.status).toBe('SENT');
+    expect(row.sentAt.getTime()).toBeGreaterThanOrEqual(now.getTime());
   });
 });

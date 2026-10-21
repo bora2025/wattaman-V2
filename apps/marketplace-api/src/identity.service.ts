@@ -69,6 +69,7 @@ export class IdentityService {
           subject: 'Verify your Wattanam Marketplace account',
           text: `Verify your account: ${url}`,
           html: `<p>Verify your Wattanam Marketplace account:</p><p><a href="${url}">Verify email</a></p>`,
+          deduplicationKey: `email-verification:${verification.hash}`,
         });
       }
       return { account, emailVerificationToken: this.config.nodeEnv === 'production' ? undefined : verification.raw };
@@ -201,6 +202,7 @@ export class IdentityService {
         subject: 'Reset your Wattanam Marketplace password',
         text: `Reset your password: ${url}`,
         html: `<p>A password reset was requested for your account.</p><p><a href="${url}">Reset password</a></p>`,
+        deduplicationKey: `password-reset:${token.hash}`,
       });
     }
     return { requested: true, passwordResetToken: this.config.nodeEnv === 'production' ? undefined : rawToken?.raw };
