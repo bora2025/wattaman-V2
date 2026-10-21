@@ -12,7 +12,6 @@ function verify() {
   const contract = readJson('infrastructure/railway/control-plane-contract.json');
   const marketplace = readJson('infrastructure/railway/marketplace-api.railway.json');
   const admin = readJson('infrastructure/railway/platform-admin.railway.json');
-  const root = readJson('railway.json');
   const iac = fs.readFileSync(path.join(repositoryRoot, '.railway/railway.ts'), 'utf8');
 
   const expectedProjectId = '1c5b1561-512d-44bd-b6ae-b2486b8d18a4';
@@ -44,8 +43,10 @@ function verify() {
   if (admin.deploy?.healthcheckPath !== '/login') {
     errors.push('platform-admin-web must gate deployment on /login');
   }
-  if (root.build?.dockerfilePath === marketplace.build?.dockerfilePath || root.build?.dockerfilePath === admin.build?.dockerfilePath) {
-    errors.push('root railway.json must remain distinct; control-plane services require their explicit config paths');
+  for (const obsoletePath of ['railway.json', 'apps/marketplace-api/railway.json', 'apps/platform-admin/railway.json']) {
+    if (fs.existsSync(path.join(repositoryRoot, obsoletePath))) {
+      errors.push(`${obsoletePath} is ambiguous; control-plane services must use only their canonical infrastructure config paths`);
+    }
   }
   for (const [service, settings] of Object.entries(contract.services || {})) {
     if (settings.rootDirectory !== '/') errors.push(`${service} must use repository-root build context`);

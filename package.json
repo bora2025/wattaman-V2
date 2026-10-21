@@ -21,6 +21,7 @@
     "plugins:check:universal": "node tools/check-universal-plugin-catalog.js",
     "test:official-plugins": "node apps/marketplace-api/node_modules/jest/bin/jest.js --config tools/official-plugin-jest.config.js --runInBand && node --test plugins/*/tests/*.test.js",
     "verify:control-plane": "node tools/verify-control-plane-config.js",
+    "verify:production-external-controls": "node tools/verify-production-external-controls.js",
     "marketplace:publish:packages": "node tools/publish-plugin-packages.js",
     "marketplace:pack-and-publish": "node tools/pack-and-publish-plugins.js",
     "marketplace:check-publish-env": "node tools/check-marketplace-publish-env.js",
