@@ -7,11 +7,11 @@ export default defineRailway(() => {
   const postgresVolume = volume("postgres-volume", { alerts: { usage: { "100": {}, "80": {}, "95": {} } }, allowOnlineResize: true, region: "asia-southeast1-eqsg3a", sizeMB: 50000 });
   const marketplaceArtifacts = bucket("marketplace-artifacts", { region: "sin" });
   const platformAdminWeb = service("platform-admin-web", {
-    build: { buildEnvironment: "V3", builder: "RAILPACK" },
+    build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "apps/platform-admin/Dockerfile" },
     replicas: { "asia-southeast1-eqsg3a": 1 },
   });
   const marketplaceApi = service("marketplace-api", {
-    build: { buildEnvironment: "V3", builder: "RAILPACK" },
+    build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "apps/marketplace-api/Dockerfile" },
     replicas: { "asia-southeast1-eqsg3a": 2 },
   });
 
