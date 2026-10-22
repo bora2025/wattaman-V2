@@ -28,6 +28,9 @@ function verify() {
   if (!iac.includes('MARKETPLACE_API_IMAGE') || !iac.includes('source: marketplaceRelease')) {
     errors.push('marketplace-api must deploy from a digest-pinned immutable release image');
   }
+  if (!iac.includes('PLATFORM_ADMIN_IMAGE') || !iac.includes('source: platformAdminRelease')) {
+    errors.push('platform-admin-web must deploy from a digest-pinned immutable release image');
+  }
   if (contract.services?.['marketplace-api']?.databaseUrl !== '${{Postgres.DATABASE_URL}}') {
     errors.push('marketplace-api must use the canonical project Postgres reference');
   }

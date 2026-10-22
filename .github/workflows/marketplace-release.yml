@@ -33,16 +33,28 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/wattanam-marketplace-api:${{ inputs.version }}
           labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
-      - name: Sign immutable image
+      - id: platform_admin
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/platform-admin
+          file: apps/platform-admin/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/wattanam-platform-admin:${{ inputs.version }}
+          labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
+      - name: Sign immutable images
         env:
           API_IMAGE: ghcr.io/${{ github.repository_owner }}/wattanam-marketplace-api@${{ steps.marketplace_api.outputs.digest }}
-        run: cosign sign --yes "$API_IMAGE"
+          ADMIN_IMAGE: ghcr.io/${{ github.repository_owner }}/wattanam-platform-admin@${{ steps.platform_admin.outputs.digest }}
+        run: |
+          cosign sign --yes "$API_IMAGE"
+          cosign sign --yes "$ADMIN_IMAGE"
       - name: Generate release blueprint
         env:
           RELEASE_VERSION: ${{ inputs.version }}
           API_IMAGE: ghcr.io/${{ github.repository_owner }}/wattanam-marketplace-api@${{ steps.marketplace_api.outputs.digest }}
+          ADMIN_IMAGE: ghcr.io/${{ github.repository_owner }}/wattanam-platform-admin@${{ steps.platform_admin.outputs.digest }}
         run: |
-          node -e "const fs=require('fs'); const release={schemaVersion:1,release:{version:process.env.RELEASE_VERSION,commit:process.env.GITHUB_SHA,repository:process.env.GITHUB_REPOSITORY},services:{marketplaceApi:{image:process.env.API_IMAGE}}}; fs.writeFileSync('marketplace-release.json', JSON.stringify(release,null,2)+'\n');"
+          node -e "const fs=require('fs'); const release={schemaVersion:1,release:{version:process.env.RELEASE_VERSION,commit:process.env.GITHUB_SHA,repository:process.env.GITHUB_REPOSITORY},services:{marketplaceApi:{image:process.env.API_IMAGE},platformAdmin:{image:process.env.ADMIN_IMAGE}}}; fs.writeFileSync('marketplace-release.json', JSON.stringify(release,null,2)+'\n');"
       - uses: actions/upload-artifact@v4
         with:
           name: marketplace-release-${{ inputs.version }}
