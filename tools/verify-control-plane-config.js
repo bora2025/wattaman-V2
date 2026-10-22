@@ -25,6 +25,9 @@ function verify() {
     if (!iac.includes(`\"${resource}\"`)) errors.push(`Railway IaC is missing ${resource}`);
   }
   if (!iac.includes('variables: { managed: false }')) errors.push('Railway IaC must not import or manage service secrets');
+  if (!iac.includes('MARKETPLACE_API_IMAGE') || !iac.includes('source: marketplaceRelease')) {
+    errors.push('marketplace-api must deploy from a digest-pinned immutable release image');
+  }
   if (contract.services?.['marketplace-api']?.databaseUrl !== '${{Postgres.DATABASE_URL}}') {
     errors.push('marketplace-api must use the canonical project Postgres reference');
   }
