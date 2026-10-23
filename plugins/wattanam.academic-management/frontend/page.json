@@ -1543,6 +1543,15 @@
             {
               "id": "nameKh",
               "label": "Khmer name"
+            },
+            {
+              "id": "sex",
+              "label": "Sex"
+            },
+            {
+              "id": "dateOfBirth",
+              "label": "Date of birth",
+              "format": "date"
             }
           ],
           "options": {
@@ -1607,6 +1616,13 @@
             }
           ],
           "options": {
+            "actionMenu": "student-create",
+            "actionMenuOrder": 2,
+            "actionMenuLabel": "Add student",
+            "actionMenuTitle": "Add students",
+            "actionMenuDescription": "Create one student, import a CSV roster, or enroll an existing profile.",
+            "actionDescription": "Upload a CSV file to create and enroll many students at once.",
+            "actionMenuIcon": "CSV",
             "collapsible": true,
             "defaultCollapsed": true,
             "triggerLabel": "Import CSV",
@@ -1657,6 +1673,13 @@
             { "id": "generation", "type": "text", "label": "Generation", "maxLength": 120 }
           ],
           "options": {
+            "actionMenu": "student-create",
+            "actionMenuOrder": 1,
+            "actionMenuLabel": "Add student",
+            "actionMenuTitle": "Add students",
+            "actionMenuDescription": "Create one student, import a CSV roster, or enroll an existing profile.",
+            "actionDescription": "Create a student account, profile, QR identity, and class enrollment.",
+            "actionMenuIcon": "+",
             "collapsible": true,
             "defaultCollapsed": true,
             "triggerLabel": "Add new student",
@@ -1682,6 +1705,13 @@
             }
           ],
           "options": {
+            "actionMenu": "student-create",
+            "actionMenuOrder": 3,
+            "actionMenuLabel": "Add student",
+            "actionMenuTitle": "Add students",
+            "actionMenuDescription": "Create one student, import a CSV roster, or enroll an existing profile.",
+            "actionDescription": "Enroll a student profile that already exists in the school.",
+            "actionMenuIcon": "ID",
             "collapsible": true,
             "defaultCollapsed": true,
             "triggerLabel": "Enroll existing student",

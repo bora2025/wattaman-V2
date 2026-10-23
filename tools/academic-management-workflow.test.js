@@ -25,6 +25,18 @@ test('Academic Management uses the universal SDK 1.3 UI contract', () => {
   assert.ok(components.reduce((count, component) => count + (component.options?.rowActions?.length || 0), 0) >= 10);
 });
 
+test('class roster groups single, CSV, and existing-student creation behind one action menu', () => {
+  const descriptor = JSON.parse(fs.readFileSync(path.join(root, 'frontend', 'page.json'), 'utf8'));
+  const roster = descriptor.pages.find((page) => page.id === 'class-students');
+  const forms = roster.components
+    .filter((component) => component.type === 'form' && component.options?.actionMenu === 'student-create')
+    .sort((left, right) => left.options.actionMenuOrder - right.options.actionMenuOrder);
+  assert.deepEqual(forms.map((form) => form.source), ['createStudent', 'bulkUploadStudents', 'addStudent']);
+  assert.ok(forms.every((form) => form.options.actionMenuLabel === 'Add student'));
+  assert.ok(roster.components.some((component) => component.type === 'table' && component.options?.rowClickable));
+  assert.ok(roster.components.some((component) => component.type === 'print' && component.options?.formats.includes('xlsx')));
+});
+
 function tamperSignedToken(token) {
   const [payload, signature] = token.split('.');
   return `${payload}.${signature[0] === 'A' ? 'B' : 'A'}${signature.slice(1)}`;

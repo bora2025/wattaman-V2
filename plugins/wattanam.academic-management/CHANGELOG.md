@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.4
+
+- Upgrade the class student roster with a unified Add Student menu for single creation, CSV import, and existing-profile enrollment.
+- Add searchable and sortable student sex and date-of-birth columns while retaining row-level edit and removal actions.
+- Adopt the universal host's modern list filters and compact creation workflow across Academic Management pages.
+
 ## 0.2.3
 
 - Add bounded CSV file import directly to each class roster, with per-row success and error results.
