@@ -1468,6 +1468,13 @@
           "permission": "wattanam.academic-management.manage"
         },
         {
+          "id": "bulkUploadStudents",
+          "method": "POST",
+          "path": "classes/:id/students/bulk-csv",
+          "autoload": false,
+          "permission": "wattanam.academic-management.manage"
+        },
+        {
           "id": "removeStudent",
           "method": "DELETE",
           "path": "classes/:id/students/:studentId",
@@ -1558,6 +1565,73 @@
                 "destructive": true
               }
             ]
+          }
+        },
+        {
+          "id": "class-students-export",
+          "type": "print",
+          "title": "Class roster export",
+          "source": "students",
+          "fields": [
+            { "label": "Student number", "path": "studentNumber" },
+            { "label": "Name", "path": "user.name" },
+            { "label": "Khmer name", "path": "nameKh" },
+            { "label": "Sex", "path": "sex" },
+            { "label": "Date of birth", "path": "dateOfBirth" },
+            { "label": "Email", "path": "user.email" },
+            { "label": "Phone", "path": "user.phone" },
+            { "label": "Address", "path": "address" },
+            { "label": "Generation", "path": "generation" }
+          ],
+          "options": {
+            "formats": ["xlsx", "csv", "print"],
+            "filename": "class-student-roster",
+            "maximumRows": 10000,
+            "showPreview": false
+          }
+        },
+        {
+          "id": "bulk-student-import",
+          "type": "form",
+          "title": "Import students from CSV",
+          "source": "bulkUploadStudents",
+          "fields": [
+            {
+              "id": "csv",
+              "type": "file",
+              "label": "Student CSV file",
+              "required": true,
+              "accept": ".csv,text/csv",
+              "maxBytes": 2097152,
+              "helpText": "Maximum 2,000 students. Required column: Name. Optional columns: ID, Khmer Name, Sex, Email, Phone, Password, Date of Birth (YYYY-MM-DD), Photo, Address, and Generation."
+            }
+          ],
+          "options": {
+            "collapsible": true,
+            "defaultCollapsed": true,
+            "triggerLabel": "Import CSV",
+            "submitLabel": "Import students",
+            "confirmation": "Import these students and enroll them in this class? Existing matching student numbers in this class will be updated.",
+            "successMessage": "CSV import completed. Review the refreshed class roster and import result."
+          }
+        },
+        {
+          "id": "bulk-student-import-results",
+          "type": "table",
+          "title": "Latest CSV import result",
+          "source": "bulkUploadStudents",
+          "fields": [
+            { "id": "row", "label": "CSV row" },
+            { "id": "id", "label": "Student number" },
+            { "id": "name", "label": "Name" },
+            { "id": "email", "label": "Email" },
+            { "id": "status", "label": "Status" },
+            { "id": "error", "label": "Message" }
+          ],
+          "options": {
+            "itemsPath": "details",
+            "pageSize": 20,
+            "selectable": false
           }
         },
         {

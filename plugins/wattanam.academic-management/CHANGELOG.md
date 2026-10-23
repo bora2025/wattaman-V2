@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.3
+
+- Add bounded CSV file import directly to each class roster, with per-row success and error results.
+- Add Excel, CSV, and print exports for class student rosters.
+
 ## 0.2.2
 
 - Restore class overview navigation to student management and class editing.
