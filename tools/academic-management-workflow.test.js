@@ -197,6 +197,15 @@ test('Academic Management exposes the streamlined administration and attendance 
   assert.ok(classes.components.some((component) => component.type === 'table' && component.options?.rowActions?.some((action) => action.source === 'deleteClass')), 'missing per-record class action');
   assert.ok(classes.dataSources.some((source) => source.id === 'createClassStudent' && source.path === 'classes/:classId/students/create'), 'missing direct class student creation source');
   assert.ok(classes.dataSources.some((source) => source.id === 'bulkUploadClassStudents'), 'missing bounded class spreadsheet import source');
+  const classDetail = ui.pages.find((candidate) => candidate.id === 'class-detail');
+  const classStudents = ui.pages.find((candidate) => candidate.id === 'class-students');
+  const classEdit = ui.pages.find((candidate) => candidate.id === 'class-edit');
+  assert.ok(classDetail?.components.some((component) => component.type === 'workflow' && component.options?.steps?.some((step) => step.route === 'classes/:id/students')), 'class overview must link to student management');
+  assert.ok(classDetail?.components.some((component) => component.type === 'workflow' && component.options?.steps?.some((step) => step.route === 'classes/edit/:id')), 'class overview must link to class editing');
+  assert.ok(classStudents?.dataSources.some((source) => source.id === 'createStudent' && source.path === 'classes/:id/students/create'), 'class student page must declare direct student creation');
+  assert.ok(classStudents?.components.some((component) => component.type === 'form' && component.source === 'createStudent' && component.options?.idempotencyField === 'commandKey'), 'class student page must provide idempotent student creation');
+  assert.ok(classStudents?.components.some((component) => component.type === 'table' && component.options?.rowClickable && component.options?.rowRoute === 'classes/:id/students/:studentId'), 'class student rows must open the student editor');
+  assert.ok(classEdit?.components.some((component) => component.type === 'form' && component.source === 'saveClass' && component.options?.initialSource === 'class'), 'class edit page must provide an initialized edit form');
   const officers = ui.pages.find((candidate) => candidate.id === 'officers');
   assert.ok(officers.components.some((component) => component.type === 'form' && component.source === 'createOfficer'), 'missing universal officer creation workflow');
   assert.ok(officers.components.some((component) => component.type === 'table' && component.options?.rowActions?.some((action) => action.source === 'deactivateOfficer')), 'missing per-record officer action');

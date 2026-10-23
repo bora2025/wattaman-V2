@@ -1181,7 +1181,7 @@
           { "id": "studyYear.label", "path": "studyYear.label", "label": "Academic year" },
           { "id": "registrationStatus", "label": "Registration", "filterable": true },
           { "id": "studentCount", "path": "_count.students", "label": "Students", "format": "number" }
-        ], "options": { "pageSize": 30, "selectable": false, "rowClickable": true, "rowActionLabel": "Open class", "rowRoute": "classes/:id", "rowParameterMap": { "id": "id" }, "rowActions": [
+        ], "options": { "pageSize": 30, "selectable": false, "rowClickable": true, "rowActionLabel": "Manage class", "rowRoute": "classes/:id", "rowParameterMap": { "id": "id" }, "rowActions": [
           { "id": "delete-class", "label": "Delete", "source": "deleteClass", "idField": "id", "idParameter": "classId", "confirmation": "Delete this class only if it has no protected enrollment history?", "destructive": true }
         ] } }
       ]
@@ -1207,6 +1207,23 @@
         }
       ],
       "components": [
+        {
+          "id": "class-workflow",
+          "type": "workflow",
+          "title": "Manage Class",
+          "options": {
+            "eyebrow": "Academic management",
+            "description": "Review class details, manage enrolled students, and edit class settings.",
+            "dashboardRoute": "classes",
+            "dashboardLabel": "All classes",
+            "activeStep": 0,
+            "steps": [
+              { "label": "Overview", "route": "classes/:id" },
+              { "label": "Students", "route": "classes/:id/students" },
+              { "label": "Edit class", "route": "classes/edit/:id" }
+            ]
+          }
+        },
         {
           "id": "heading",
           "type": "heading",
@@ -1295,6 +1312,23 @@
       ],
       "components": [
         {
+          "id": "class-workflow",
+          "type": "workflow",
+          "title": "Edit Class",
+          "options": {
+            "eyebrow": "Academic management",
+            "description": "Update teaching assignments, academic year, schedule, registration, and public class details.",
+            "dashboardRoute": "classes",
+            "dashboardLabel": "All classes",
+            "activeStep": 2,
+            "steps": [
+              { "label": "Overview", "route": "classes/:id" },
+              { "label": "Students", "route": "classes/:id/students" },
+              { "label": "Edit class", "route": "classes/edit/:id" }
+            ]
+          }
+        },
+        {
           "id": "heading",
           "type": "heading",
           "title": "Edit Class"
@@ -1340,9 +1374,9 @@
             },
             {
               "id": "schedule",
-              "type": "textarea",
+              "type": "json",
               "label": "Schedule",
-              "maxLength": 2000
+              "jsonShape": "object"
             },
             {
               "id": "registrationStatus",
@@ -1428,6 +1462,12 @@
           "permission": "wattanam.academic-management.manage"
         },
         {
+          "id": "createStudent",
+          "method": "POST",
+          "path": "classes/:id/students/create",
+          "permission": "wattanam.academic-management.manage"
+        },
+        {
           "id": "removeStudent",
           "method": "DELETE",
           "path": "classes/:id/students/:studentId",
@@ -1445,6 +1485,23 @@
         }
       ],
       "components": [
+        {
+          "id": "class-workflow",
+          "type": "workflow",
+          "title": "Class Students",
+          "options": {
+            "eyebrow": "Academic management",
+            "description": "Create student accounts, enroll existing students, and maintain each student profile.",
+            "dashboardRoute": "classes",
+            "dashboardLabel": "All classes",
+            "activeStep": 1,
+            "steps": [
+              { "label": "Overview", "route": "classes/:id" },
+              { "label": "Students", "route": "classes/:id/students" },
+              { "label": "Edit class", "route": "classes/edit/:id" }
+            ]
+          }
+        },
         {
           "id": "heading",
           "type": "heading",
@@ -1484,6 +1541,8 @@
           "options": {
             "pageSize": 20,
             "selectable": false,
+            "rowClickable": true,
+            "rowActionLabel": "Edit student",
             "rowRoute": "classes/:id/students/:studentId",
             "rowParameterMap": {
               "studentId": "id"
@@ -1502,9 +1561,42 @@
           }
         },
         {
+          "id": "create-student-form",
+          "type": "form",
+          "title": "Create and enroll a new student",
+          "source": "createStudent",
+          "fields": [
+            { "id": "name", "type": "text", "label": "Full name", "required": true, "maxLength": 160 },
+            { "id": "nameKh", "type": "text", "label": "Khmer name", "maxLength": 160 },
+            { "id": "studentNumber", "type": "text", "label": "Student number (automatic when blank)", "maxLength": 100 },
+            { "id": "email", "type": "email", "label": "Email address" },
+            { "id": "phone", "type": "text", "label": "Phone number", "maxLength": 80 },
+            { "id": "password", "type": "password", "label": "Temporary password", "required": true, "minLength": 6, "maxLength": 200 },
+            { "id": "sex", "type": "select", "label": "Sex", "options": [
+              { "label": "Male", "value": "MALE" },
+              { "label": "Female", "value": "FEMALE" },
+              { "label": "Other", "value": "OTHER" }
+            ] },
+            { "id": "dateOfBirth", "type": "date", "label": "Date of birth" },
+            { "id": "photo", "type": "text", "label": "Photo URL", "maxLength": 500 },
+            { "id": "address", "type": "textarea", "label": "Address", "maxLength": 1000 },
+            { "id": "generation", "type": "text", "label": "Generation", "maxLength": 120 }
+          ],
+          "options": {
+            "collapsible": true,
+            "defaultCollapsed": true,
+            "triggerLabel": "Add new student",
+            "submitLabel": "Create and enroll student",
+            "confirmation": "Create this student login and enroll the student in this class?",
+            "successMessage": "Student account, profile, QR identity, and enrollment created",
+            "idempotencyField": "commandKey",
+            "idempotencyPrefix": "academic-class-student"
+          }
+        },
+        {
           "id": "add-student-form",
           "type": "form",
-          "title": "Add student to class",
+          "title": "Enroll an existing student",
           "source": "addStudent",
           "fields": [
             {
@@ -1516,8 +1608,11 @@
             }
           ],
           "options": {
-            "submitLabel": "Add",
-            "successMessage": "Student added"
+            "collapsible": true,
+            "defaultCollapsed": true,
+            "triggerLabel": "Enroll existing student",
+            "submitLabel": "Enroll student",
+            "successMessage": "Existing student enrolled"
           }
         }
       ]
@@ -1554,6 +1649,23 @@
         }
       ],
       "components": [
+        {
+          "id": "class-workflow",
+          "type": "workflow",
+          "title": "Edit Student",
+          "options": {
+            "eyebrow": "Academic management",
+            "description": "Update this student's class profile while preserving enrollment and account history.",
+            "dashboardRoute": "classes",
+            "dashboardLabel": "All classes",
+            "activeStep": 1,
+            "steps": [
+              { "label": "Overview", "route": "classes/:id" },
+              { "label": "Students", "route": "classes/:id/students" },
+              { "label": "Edit class", "route": "classes/edit/:id" }
+            ]
+          }
+        },
         {
           "id": "heading",
           "type": "heading",
