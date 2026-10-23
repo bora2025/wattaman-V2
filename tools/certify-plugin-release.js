@@ -5,7 +5,9 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
 function run(command, args, options = {}) {
-  const result = spawnSync(command, args, { cwd: options.cwd || process.cwd(), env: options.env || process.env, stdio: 'inherit', shell: false });
+  // Windows exposes npm as a .cmd shim, which CreateProcess cannot execute directly. The shell is
+  // only enabled for this fixed, repository-owned command path; Linux/macOS keep direct spawning.
+  const result = spawnSync(command, args, { cwd: options.cwd || process.cwd(), env: options.env || process.env, stdio: 'inherit', shell: process.platform === 'win32' });
   if (result.status !== 0) throw new Error(`${command} ${args.join(' ')} failed with exit code ${result.status}`);
 }
 
