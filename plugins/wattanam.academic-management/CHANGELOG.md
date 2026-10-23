@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.2
+
+- Restore class overview navigation to student management and class editing.
+- Restore direct student account creation, existing-student enrollment, and per-student editing.
+- Add retry-safe idempotency to universal student creation forms.
+
 ## 0.2.1
 
 - Declare every durable event and published read model, and use the explicit database transaction capability.
