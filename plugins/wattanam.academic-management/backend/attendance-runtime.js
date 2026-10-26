@@ -428,7 +428,7 @@ module.exports = {
       const body = request?.body || {}; const year = Number(body.year); if (!Number.isInteger(year) || year < 2000 || year > 2100) throw new Error('year is invalid');
       const id = crypto.randomUUID();
       const created = await context.database.transaction(async (tx) => {
-        await tx.execute(`INSERT INTO ${YEAR} ("id","year","label","startDate","endDate","schoolName","logoUrl") VALUES ($1,$2,$3,$4,$5,$6,$7)`, [id, year, body.label || `${year}-${year + 1}`, body.startDate || null, body.endDate || null, body.schoolName || null, body.logoUrl || null]);
+        await tx.execute(`INSERT INTO ${YEAR} ("id","year","label","startDate","endDate","schoolName","logoUrl") VALUES ($1,$2,$3,$4::timestamptz,$5::timestamptz,$6,$7)`, [id, year, body.label || `${year}-${year + 1}`, body.startDate || null, body.endDate || null, body.schoolName || null, body.logoUrl || null]);
         const row = await tx.query(`SELECT * FROM ${YEAR} WHERE "id"=$1 LIMIT 1`, [id]).then((rows) => rows[0]);
         await tx.publish({
           event: 'wattanam.attendance-manager.study-year.created', version: 1, subjectKey: row.id,
@@ -446,7 +446,7 @@ module.exports = {
       const body = request?.body || {};
       const sets = []; const params = [];
       for (const field of ['label', 'startDate', 'endDate', 'schoolName', 'logoUrl']) {
-        if (body[field] !== undefined) { params.push(body[field] || null); sets.push(`"${field}"=$${params.length}`); }
+        if (body[field] !== undefined) { params.push(body[field] || null); sets.push(`"${field}"=$${params.length}${field === 'startDate' || field === 'endDate' ? '::timestamptz' : ''}`); }
       }
       if (body.year !== undefined) {
         const year = Number(body.year); if (!Number.isInteger(year) || year < 2000 || year > 2100) throw new Error('year is invalid');

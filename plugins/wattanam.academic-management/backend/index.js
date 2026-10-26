@@ -354,7 +354,7 @@ module.exports = {
         if (!Number.isInteger(year) || year < 2020 || year > 2100) throw new Error('year must be between 2020 and 2100');
         if (body.startDate && body.endDate && String(body.startDate) > String(body.endDate)) throw new Error('endDate must be on or after startDate');
         const id = crypto.randomUUID();
-        await context.database.execute(`INSERT INTO ${STUDY_YEAR} ("id", "year", "label", "startDate", "endDate", "schoolName", "logoUrl") VALUES ($1,$2,$3,$4,$5,$6,$7)`, [id, year, String(body.label || '').trim() || `${year}-${year + 1}`, body.startDate || null, body.endDate || null, body.schoolName || null, body.logoUrl || null]);
+        await context.database.execute(`INSERT INTO ${STUDY_YEAR} ("id", "year", "label", "startDate", "endDate", "schoolName", "logoUrl") VALUES ($1,$2,$3,$4::timestamptz,$5::timestamptz,$6,$7)`, [id, year, String(body.label || '').trim() || `${year}-${year + 1}`, body.startDate || null, body.endDate || null, body.schoolName || null, body.logoUrl || null]);
         return context.database.query(`${studyYearSelect} WHERE y."id" = $1 GROUP BY y."id" LIMIT 1`, [id]).then((rows) => rows[0]);
       },
     });
@@ -367,7 +367,7 @@ module.exports = {
         const year = Number(body.year);
         if (!Number.isInteger(year) || year < 2020 || year > 2100) throw new Error('year must be between 2020 and 2100');
         if (body.startDate && body.endDate && String(body.startDate) > String(body.endDate)) throw new Error('endDate must be on or after startDate');
-        const changed = await context.database.execute(`UPDATE ${STUDY_YEAR} SET "year"=$1,"label"=$2,"startDate"=$3,"endDate"=$4,"schoolName"=$5,"logoUrl"=$6,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=$7`, [year, String(body.label || '').trim() || `${year}-${year + 1}`, body.startDate || null, body.endDate || null, body.schoolName || null, body.logoUrl || null, id]);
+        const changed = await context.database.execute(`UPDATE ${STUDY_YEAR} SET "year"=$1,"label"=$2,"startDate"=$3::timestamptz,"endDate"=$4::timestamptz,"schoolName"=$5,"logoUrl"=$6,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=$7`, [year, String(body.label || '').trim() || `${year}-${year + 1}`, body.startDate || null, body.endDate || null, body.schoolName || null, body.logoUrl || null, id]);
         if (!changed.count) throw new Error('Study year not found');
         return context.database.query(`${studyYearSelect} WHERE y."id" = $1 GROUP BY y."id" LIMIT 1`, [id]).then((rows) => rows[0]);
       },

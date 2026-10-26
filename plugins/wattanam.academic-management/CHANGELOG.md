@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.5
+
+- Fix Academic Year create and update operations by explicitly casting date inputs to PostgreSQL timestamps.
+- Cover both the primary Academic Management routes and the compatibility attendance runtime.
+
 ## 0.2.4
 
 - Upgrade the class student roster with a unified Add Student menu for single creation, CSV import, and existing-profile enrollment.

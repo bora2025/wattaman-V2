@@ -162,6 +162,21 @@ test('activated authoritative reports use Academic Management enrollment rosters
   assert.deepEqual(report.people.map((person) => person.id), ['student-1']);
 });
 
+test('Academic Year writes cast browser date strings to PostgreSQL timestamps', async () => {
+  const writes = [];
+  const database = {
+    query: async (sql) => sql.includes('_study_year') ? [{ id: 'year-1', year: 2026 }] : [],
+    execute: async (sql, params) => { writes.push({ sql, params }); return { count: 1 }; },
+    transaction: async (work) => work({ query: async () => [{ id: 'year-1', year: 2026 }], execute: async (sql, params) => { writes.push({ sql, params }); return { count: 1 }; }, publish: async () => {} }),
+  };
+  const { routes } = await activate(undefined, database);
+  const principal = { role: 'SUPER_ADMIN', userId: 'admin-1' };
+  await routes.get('POST study-years').handler({ principal, body: { year: 2026, startDate: '2026-10-26', endDate: '2026-12-31' } });
+  await routes.get('PUT study-years/:id').handler({ principal, params: { id: 'year-1' }, body: { year: 2026, startDate: '2026-10-26', endDate: '2026-12-31' } });
+  assert.match(writes[0].sql, /\$4::timestamptz,\$5::timestamptz/);
+  assert.match(writes[1].sql, /"startDate"=\$3::timestamptz,"endDate"=\$4::timestamptz/);
+});
+
 test('Academic Management exposes the streamlined administration and attendance workflows', async () => {
   const { routes, permissions, navigation } = await activate();
   for (const route of [
