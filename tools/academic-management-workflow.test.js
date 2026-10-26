@@ -14,7 +14,7 @@ const { registerSelfAttendance } = require(path.join(root, 'backend', 'self-atte
 test('Academic Management uses the universal SDK 1.3 UI contract', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'plugin.json'), 'utf8'));
   const descriptor = JSON.parse(fs.readFileSync(path.join(root, 'frontend', 'page.json'), 'utf8'));
-  const universal = new Set(['heading','text','workflow','status','card','metric','table','form','detail','chart','file','print','document','designer','scanner','filter','actions','id-card-manager','session-manager','profile-manager','class-manager']);
+  const universal = new Set(['heading','text','workflow','status','card','metric','table','form','detail','chart','file','print','document','designer','scanner','filter','actions','id-card-manager','session-manager','profile-manager','class-manager','officer-manager']);
   const components = descriptor.pages.flatMap((page) => page.components || []);
   assert.equal(manifest.sdkVersion, '1.3.0');
   assert.deepEqual(manifest.hostContracts, ['wattanam.academic.directory.v1', 'wattanam.academic.identity.v1']);
@@ -22,7 +22,9 @@ test('Academic Management uses the universal SDK 1.3 UI contract', () => {
   assert.ok(components.every((component) => universal.has(component.type)), 'host-specific component remains in universal descriptor');
   assert.equal(components.filter((component) => component.type === 'actions').length, 0);
   assert.equal(components.filter((component) => component.type === 'table' && component.options?.selectable).length, 0);
-  assert.ok(components.reduce((count, component) => count + (component.options?.rowActions?.length || 0), 0) >= 10);
+  const recordActions = components.reduce((count, component) => count + (component.options?.rowActions?.length || 0), 0)
+    + components.filter((component) => component.type === 'officer-manager' && component.options?.deactivateSource).length;
+  assert.ok(recordActions >= 10);
 });
 
 test('class roster groups single, CSV, and existing-student creation behind one action menu', () => {
@@ -247,8 +249,13 @@ test('Academic Management exposes the streamlined administration and attendance 
   assert.ok(classStudents?.components.some((component) => component.type === 'table' && component.options?.rowClickable && component.options?.rowRoute === 'classes/:id/students/:studentId'), 'class student rows must open the student editor');
   assert.ok(classEdit?.components.some((component) => component.type === 'form' && component.source === 'saveClass' && component.options?.initialSource === 'class'), 'class edit page must provide an initialized edit form');
   const officers = ui.pages.find((candidate) => candidate.id === 'officers');
-  assert.ok(officers.components.some((component) => component.type === 'form' && component.source === 'createOfficer'), 'missing universal officer creation workflow');
-  assert.ok(officers.components.some((component) => component.type === 'table' && component.options?.rowActions?.some((action) => action.source === 'deactivateOfficer')), 'missing per-record officer action');
+  const officerManager = officers.components.find((component) => component.type === 'officer-manager');
+  assert.ok(officerManager, 'missing guided officer management workflow');
+  assert.equal(officerManager.options.departmentsSource, 'officerDepartments');
+  assert.equal(officerManager.options.createSource, 'createOfficer');
+  assert.equal(officerManager.options.deactivateSource, 'deactivateOfficer');
+  const officerEdit = ui.pages.find((candidate) => candidate.id === 'officer-edit');
+  assert.ok(officerEdit.components.some((component) => component.type === 'form' && component.fields?.some((field) => field.id === 'photoUrl' && field.type === 'url')), 'officer edit must expose a secure photo URL');
   const settings = ui.pages.find((candidate) => candidate.id === 'attendance-settings');
   assert.ok(settings.components.some((component) => component.type === 'session-manager'), 'missing dedicated Session Time Settings workspace');
   const attendance = ui.pages.find((candidate) => candidate.id === 'attendance-records');
@@ -366,7 +373,7 @@ test('officer creation derives a valid deterministic command key from the email'
   const { routes } = await activate(undefined, database, accounts);
   const request = {
     principal: { userId: 'admin-1', role: 'ADMIN' },
-    body: { name: 'Teacher One', email: 'Teacher.One@example.com', password: 'Password1', position: 'TEACHER' },
+    body: { name: 'Teacher One', email: 'Teacher.One@example.com', password: 'Password1', position: 'TEACHER', photoUrl: 'https://images.example.test/teacher-one.jpg' },
   };
   await routes.get('POST officers').handler(request);
   await routes.get('POST officers').handler(request);
@@ -374,13 +381,14 @@ test('officer creation derives a valid deterministic command key from the email'
   assert.match(calls[0].commandKey, /^officer:[a-f0-9]{32}$/);
   assert.equal(calls[0].commandKey, calls[1].commandKey);
   assert.equal(calls[0].email, 'teacher.one@example.com');
+  assert.equal(calls[0].photo, 'https://images.example.test/teacher-one.jpg');
 });
 
 test('officer creation casts bound UUID and date values for PostgreSQL', () => {
   const source = fs.readFileSync(path.join(root, 'backend', 'index.js'), 'utf8');
   assert.match(
     source,
-    /INSERT INTO \$\{OFFICER\}[\s\S]*?VALUES \(\$1::uuid,\$2::uuid,\$3,\$4,\$5::uuid,\$6,\$7::date,\$8::date,\$9\)/,
+    /INSERT INTO \$\{OFFICER\}[\s\S]*?VALUES \(\$1::uuid,\$2::uuid,\$3,\$4,\$5::uuid,\$6,\$7::date,\$8::date,\$9,\$10\)/,
   );
 });
 

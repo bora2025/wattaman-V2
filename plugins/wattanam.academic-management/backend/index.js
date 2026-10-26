@@ -1766,7 +1766,13 @@ module.exports = {
         };
       });
     };
-    const officerSelect = `SELECT o."id", o."userId", o."employeeNumber", o."position", o."departmentId", o."employmentStatus", o."startedAt", o."endedAt", o."notes", o."createdAt", o."updatedAt" FROM ${OFFICER} o`;
+    const officerSelect = `SELECT o."id", o."userId", o."employeeNumber", o."position", o."departmentId", o."employmentStatus", o."startedAt", o."endedAt", o."photoUrl", o."notes", o."createdAt", o."updatedAt" FROM ${OFFICER} o`;
+    const officerPhotoUrl = (value) => {
+      const photoUrl = String(value || '').trim();
+      if (!photoUrl) return null;
+      if (photoUrl.length > 2048 || !/^https:\/\//i.test(photoUrl)) throw new Error('photoUrl must be a secure HTTPS URL');
+      return photoUrl;
+    };
     context.routes.register({
       method: 'GET', path: 'officers', permission: 'wattanam.academic-management.view',
       handler: async (request) => {
@@ -1801,7 +1807,8 @@ module.exports = {
           if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('email is invalid');
           if (password.length < 8 || password.length > 200) throw new Error('password must contain 8-200 characters');
           if (!/^[a-zA-Z0-9][a-zA-Z0-9:._-]{0,199}$/.test(commandKey)) throw new Error('commandKey is required');
-          const account = await context.accounts.createStaff({ commandKey, name, email, phone: String(body.phone || '').trim() || null, photo: String(body.photo || '').trim() || null, passwordHash: await context.crypto.hashBcrypt(password), role: String(body.position || '').toUpperCase() === 'TEACHER' ? 'TEACHER' : 'STAFF' });
+          const photoUrl = officerPhotoUrl(body.photoUrl ?? body.photo);
+          const account = await context.accounts.createStaff({ commandKey, name, email, phone: String(body.phone || '').trim() || null, photo: photoUrl, passwordHash: await context.crypto.hashBcrypt(password), role: String(body.position || '').toUpperCase() === 'TEACHER' ? 'TEACHER' : 'STAFF' });
           userId = account.id;
           user = account;
         } else user = (await context.directory.lookupUsers([userId]))[0];
@@ -1818,7 +1825,7 @@ module.exports = {
         if (startedAt && endedAt && endedAt < startedAt) throw new Error('endedAt must be on or after startedAt');
         const id = crypto.randomUUID();
         await context.database.transaction(async (tx) => {
-          await tx.execute(`INSERT INTO ${OFFICER} ("id", "userId", "employeeNumber", "position", "departmentId", "employmentStatus", "startedAt", "endedAt", "notes") VALUES ($1::uuid,$2::uuid,$3,$4,$5::uuid,$6,$7::date,$8::date,$9)`, [id, userId, String(body.employeeNumber || '').trim() || null, String(body.position || '').trim() || null, body.departmentId || null, employmentStatus, startedAt, endedAt, String(body.notes || '').trim() || null]);
+          await tx.execute(`INSERT INTO ${OFFICER} ("id", "userId", "employeeNumber", "position", "departmentId", "employmentStatus", "startedAt", "endedAt", "photoUrl", "notes") VALUES ($1::uuid,$2::uuid,$3,$4,$5::uuid,$6,$7::date,$8::date,$9,$10)`, [id, userId, String(body.employeeNumber || '').trim() || null, String(body.position || '').trim() || null, body.departmentId || null, employmentStatus, startedAt, endedAt, officerPhotoUrl(body.photoUrl ?? body.photo), String(body.notes || '').trim() || null]);
           await tx.execute(`INSERT INTO ${ATTENDANCE_IDENTIFIER} ("id","code","personId","personType","createdById") VALUES ($1,$2,$3,'STAFF',$4)`, [crypto.randomUUID(), newCardCode('staff'), id, request?.principal?.userId || null]);
         });
         context.events.publish('wattanam.academic-management.officer.created.v1', { officerId: id, userId, employmentStatus });
@@ -1881,7 +1888,7 @@ module.exports = {
         const startedAt = body.startedAt ? requireDate(body.startedAt, 'startedAt') : existing[0].startedAt;
         const endedAt = body.endedAt ? requireDate(body.endedAt, 'endedAt') : (body.endedAt === null ? null : existing[0].endedAt);
         if (startedAt && endedAt && String(endedAt).slice(0, 10) < String(startedAt).slice(0, 10)) throw new Error('endedAt must be on or after startedAt');
-        await context.database.execute(`UPDATE ${OFFICER} SET "employeeNumber"=$2, "position"=$3, "departmentId"=$4::uuid, "employmentStatus"=$5, "startedAt"=$6::date, "endedAt"=$7::date, "notes"=$8, "updatedAt"=CURRENT_TIMESTAMP WHERE "id"=$1::uuid`, [id, body.employeeNumber === undefined ? existing[0].employeeNumber : (String(body.employeeNumber || '').trim() || null), body.position === undefined ? existing[0].position : (String(body.position || '').trim() || null), body.departmentId === undefined ? existing[0].departmentId : (body.departmentId || null), employmentStatus, startedAt, endedAt, body.notes === undefined ? existing[0].notes : (String(body.notes || '').trim() || null)]);
+        await context.database.execute(`UPDATE ${OFFICER} SET "employeeNumber"=$2, "position"=$3, "departmentId"=$4::uuid, "employmentStatus"=$5, "startedAt"=$6::date, "endedAt"=$7::date, "photoUrl"=$8, "notes"=$9, "updatedAt"=CURRENT_TIMESTAMP WHERE "id"=$1::uuid`, [id, body.employeeNumber === undefined ? existing[0].employeeNumber : (String(body.employeeNumber || '').trim() || null), body.position === undefined ? existing[0].position : (String(body.position || '').trim() || null), body.departmentId === undefined ? existing[0].departmentId : (body.departmentId || null), employmentStatus, startedAt, endedAt, body.photoUrl === undefined && body.photo === undefined ? existing[0].photoUrl : officerPhotoUrl(body.photoUrl ?? body.photo), body.notes === undefined ? existing[0].notes : (String(body.notes || '').trim() || null)]);
         context.events.publish('wattanam.academic-management.officer.updated.v1', { officerId: id, employmentStatus });
         return context.database.query(`${officerSelect} WHERE o."id" = $1::uuid LIMIT 1`, [id]).then(decorateOfficerRows).then((items) => items[0]);
       },

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.8
+
+- Upgrade officer management with a unified directory, search, department and position filters, guided creation, responsive states, and clearer actions.
+- Add secure officer photo URLs to create and edit workflows, directory portraits, printable cards, and staff ID-card data.
+- Keep officer photos in the Academic profile so edits remain available independently of the account directory.
+
 ## 0.2.7
 
 - Replace raw class teacher, administrator, and academic-year IDs with named selection controls.

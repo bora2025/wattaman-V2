@@ -477,34 +477,18 @@
         }
       ],
       "components": [
-        { "id": "officers-heading", "type": "heading", "title": "Manage Officers" },
-        { "id": "create-officer", "type": "form", "title": "Add officer", "source": "createOfficer", "fields": [
-          { "id": "name", "type": "text", "label": "Full name", "required": true, "maxLength": 160 },
-          { "id": "email", "type": "email", "label": "Email", "required": true },
-          { "id": "password", "type": "password", "label": "Temporary password", "required": true, "minLength": 8, "maxLength": 200 },
-          { "id": "phone", "type": "text", "label": "Phone" },
-          { "id": "employeeNumber", "type": "text", "label": "Employee number" },
-          { "id": "position", "type": "select", "label": "Position", "required": true, "options": [
-            { "label": "Teacher", "value": "TEACHER" }, { "label": "Officer", "value": "OFFICER" }, { "label": "Staff", "value": "STAFF" }, { "label": "Office Head", "value": "OFFICE_HEAD" }, { "label": "Department Head", "value": "DEPARTMENT_HEAD" }, { "label": "Principal", "value": "SECONDARY_SCHOOL_PRINCIPAL" }
-          ] },
-          { "id": "departmentId", "type": "text", "label": "Department ID" },
-          { "id": "employmentStatus", "type": "select", "label": "Status", "required": true, "defaultValue": "ACTIVE", "options": [
-            { "label": "Active", "value": "ACTIVE" }, { "label": "Inactive", "value": "INACTIVE" }, { "label": "Suspended", "value": "SUSPENDED" }
-          ] },
-          { "id": "startedAt", "type": "date", "label": "Start date" },
-          { "id": "notes", "type": "textarea", "label": "Notes", "maxLength": 1000 }
-        ], "options": { "collapsible": true, "defaultCollapsed": true, "triggerLabel": "Add officer", "submitLabel": "Create officer", "successMessage": "Officer and attendance ID created" } },
-        { "id": "officers-table", "type": "table", "title": "Officer directory", "source": "officers", "fields": [
-          { "id": "employeeNumber", "label": "Employee number", "filterable": true },
-          { "id": "name", "label": "Name", "filterable": true },
-          { "id": "email", "label": "Email", "filterable": true },
-          { "id": "phone", "label": "Phone" },
-          { "id": "position", "label": "Position", "filterable": true },
-          { "id": "department.name", "path": "department.name", "label": "Department" },
-          { "id": "employmentStatus", "label": "Status", "filterable": true }
-        ], "options": { "pageSize": 30, "selectable": false, "rowClickable": true, "rowActionLabel": "View / Edit", "rowRoute": "officers/edit/:id", "rowParameterMap": { "id": "id" }, "rowActions": [
-          { "id": "deactivate-officer", "label": "Deactivate", "source": "deactivateOfficer", "idField": "id", "idParameter": "officerId", "body": { "employmentStatus": "INACTIVE" }, "confirmation": "Deactivate this officer? Login and attendance history will be preserved.", "destructive": true }
-        ] } }
+        {
+          "id": "officer-manager",
+          "type": "officer-manager",
+          "source": "officers",
+          "options": {
+            "departmentsSource": "officerDepartments",
+            "createSource": "createOfficer",
+            "deactivateSource": "deactivateOfficer",
+            "editRoute": "officers/edit",
+            "departmentsRoute": "departments"
+          }
+        }
       ]
     },
     {
@@ -592,6 +576,13 @@
               "id": "endedAt",
               "type": "date",
               "label": "End date"
+            },
+            {
+              "id": "photoUrl",
+              "type": "url",
+              "label": "Officer photo URL",
+              "maxLength": 2048,
+              "placeholder": "Paste a secure HTTPS photo URL"
             },
             {
               "id": "notes",
