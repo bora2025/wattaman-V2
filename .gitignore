@@ -73,6 +73,8 @@ jspm_packages/
 Thumbs.db
 
 # Local scratch files
+.env.compose.local
+.local-secrets/
 .release-*/
 .tmp/
 400

@@ -1,0 +1,65 @@
+name: wattanam-marketplace
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: marketplace
+      POSTGRES_USER: marketplace
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U marketplace -d marketplace"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - marketplace-postgres:/var/lib/postgresql/data
+    networks: [control-plane]
+
+  marketplace-api:
+    build:
+      context: .
+      dockerfile: apps/marketplace-api/Dockerfile
+    restart: unless-stopped
+    env_file: [.env.compose.local]
+    environment:
+      DATABASE_URL: postgresql://marketplace:${POSTGRES_PASSWORD}@postgres:5432/marketplace
+      METADATA_SIGNING_PRIVATE_KEY_FILE: /run/secrets/repository-signing-private.pem
+      ENTITLEMENT_SIGNING_PRIVATE_KEY_FILE: /run/secrets/entitlement-signing-private.pem
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3010/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    ports: ["3010:3010"]
+    volumes:
+      - marketplace-artifacts:/data/artifacts
+      - ./.local-secrets/repository-signing-private.pem:/run/secrets/repository-signing-private.pem:ro
+      - ./.local-secrets/entitlement-signing-private.pem:/run/secrets/entitlement-signing-private.pem:ro
+    networks: [control-plane]
+
+  platform-admin:
+    build:
+      context: apps/platform-admin
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3020
+      MARKETPLACE_API_URL: http://marketplace-api:3010
+    depends_on:
+      marketplace-api:
+        condition: service_healthy
+    ports: ["3020:3020"]
+    networks: [control-plane]
+
+networks:
+  control-plane:
+
+volumes:
+  marketplace-postgres:
+  marketplace-artifacts:

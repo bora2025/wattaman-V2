@@ -27,7 +27,7 @@ interface Discovery {
 }
 
 /**
- * Railway-first adoption for schools deployed before Platform-first provisioning existed.
+ * Provider-neutral adoption for schools deployed before Platform-first provisioning existed.
  *
  * Discovery is read-only and the operator confirms every identity decision explicitly: the whole
  * point of the flow is that the record is built from what the deployment says about itself rather
@@ -114,12 +114,12 @@ export default function AdoptSchoolPage() {
   const canAdopt = Boolean(discovery && discovery.outcome !== 'CONFLICT' && discovery.ready && identityConfirmed && reason.trim().length >= 3);
 
   if (permission === 'loading') return <p className="text-sm text-slate-500">Loading…</p>;
-  if (permission === 'denied') return <p role="alert" className="rounded-lg bg-red-50 p-4 text-sm text-red-700">You need the schools.manage permission to adopt a Railway school.</p>;
+  if (permission === 'denied') return <p role="alert" className="rounded-lg bg-red-50 p-4 text-sm text-red-700">You need the schools.manage permission to connect an existing school.</p>;
 
   return <div className="space-y-4">
     <div>
       <Link className="text-sm text-indigo-700 hover:underline" href="/schools">← Customer schools</Link>
-      <h1 className="mt-2 text-xl font-bold">Adopt an existing Railway school</h1>
+      <h1 className="mt-2 text-xl font-bold">Connect an existing school</h1>
       <p className="text-sm text-slate-500">For schools deployed before platform-managed provisioning. Discovery only reads the gateway&apos;s public status endpoints; it never touches the school&apos;s database.</p>
     </div>
 
@@ -129,11 +129,11 @@ export default function AdoptSchoolPage() {
         <div>
           <label className="text-xs font-medium text-slate-600" htmlFor="gateway">Gateway origin <span aria-hidden="true">*</span></label>
           <input id="gateway" required type="url" className="pa-input mt-1" value={gatewayOrigin} aria-describedby="gateway-hint"
-            placeholder="https://gateway-production-26d3.up.railway.app" onChange={event => changeDeployment('gateway', event.target.value)} />
+            placeholder="https://school.example.com" onChange={event => changeDeployment('gateway', event.target.value)} />
           <p id="gateway-hint" className="mt-1 text-xs text-slate-500">HTTPS origin only, no path. Private and loopback addresses are refused.</p>
         </div>
         <div>
-          <label className="text-xs font-medium text-slate-600" htmlFor="project">Railway project ID</label>
+          <label className="text-xs font-medium text-slate-600" htmlFor="project">Hosting project ID (optional)</label>
           <input id="project" className="pa-input mt-1" value={railwayProjectId} aria-describedby="project-hint"
             placeholder="b5b07c38-6569-4bee-ab88-6b134998c77d" onChange={event => changeDeployment('project', event.target.value)} />
           <p id="project-hint" className="mt-1 text-xs text-slate-500">Optional. Infrastructure metadata only — it is not proof of ownership.</p>
@@ -168,7 +168,7 @@ export default function AdoptSchoolPage() {
         </>}
         {discovery.outcome === 'MATCH' && discovery.match && <p className="mt-1 text-sm text-slate-600">
           Matches the existing record <Link className="text-indigo-700 hover:underline" href={`/schools/${discovery.match.id}`}>{discovery.match.name}</Link> on {[
-            discovery.matchedBy?.slug && 'slug', discovery.matchedBy?.railwayProjectId && 'Railway project', discovery.matchedBy?.gatewayOrigin && 'gateway',
+            discovery.matchedBy?.slug && 'slug', discovery.matchedBy?.railwayProjectId && 'hosting project', discovery.matchedBy?.gatewayOrigin && 'gateway',
           ].filter(Boolean).join(', ')}. Adopting records this infrastructure against it.
         </p>}
         {discovery.outcome === 'CREATE' && <p className="mt-1 text-sm text-slate-600">No existing record matches. Adopting creates one from the detected identity above.</p>}

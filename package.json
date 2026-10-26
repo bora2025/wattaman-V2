@@ -29,7 +29,10 @@
     "marketplace:check-publish-env": "node tools/check-marketplace-publish-env.js",
     "marketplace:verify:published": "node tools/verify-published-catalog.js",
     "marketplace:bootstrap:catalog": "node tools/complete-plugin-catalog-bootstrap.js",
-    "marketplace:fix-now": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/fix-marketplace-catalog.ps1"
+    "marketplace:fix-now": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/fix-marketplace-catalog.ps1",
+    "local:bootstrap": "node tools/bootstrap-local-marketplace.js",
+    "local:up": "docker compose --env-file .env.compose.local -f docker-compose.marketplace.yml up --build",
+    "local:down": "docker compose --env-file .env.compose.local -f docker-compose.marketplace.yml down"
   },
   "license": "ISC",
   "devDependencies": {

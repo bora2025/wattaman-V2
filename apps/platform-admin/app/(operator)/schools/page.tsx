@@ -52,15 +52,15 @@ export default function SchoolsPage() {
       <div><p className="text-xs font-bold uppercase tracking-[.2em] text-indigo-600">Customer operations</p><h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">Customer schools</h1><p className="mt-2 max-w-2xl text-sm text-slate-600">Provision, connect, bill, and support every school installation from a single operational directory.</p></div>
       {canManage && <div className="flex gap-2">
         <Link className="pa-btn-secondary" href="/schools/provisioning">Provision a new school</Link>
-        <Link className="pa-btn-secondary" href="/schools/adopt">Adopt existing Railway school</Link>
+        <Link className="pa-btn-secondary" href="/schools/adopt">Connect existing school</Link>
         <button className="pa-btn-primary" onClick={() => setShowCreate(value => !value)}>{showCreate ? 'Cancel' : 'Create customer school'}</button>
       </div>}
     </div>
 
-    <div className="grid gap-4 md:grid-cols-3"><Link href="/schools/provisioning" className="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-5 transition hover:border-indigo-300"><div className="text-sm font-bold text-indigo-950">01 · Provision</div><p className="mt-2 text-xs leading-5 text-indigo-700">Create an isolated school environment and platform record.</p></Link><Link href="/schools/adopt" className="rounded-2xl border border-cyan-100 bg-cyan-50/60 p-5 transition hover:border-cyan-300"><div className="text-sm font-bold text-cyan-950">02 · Connect</div><p className="mt-2 text-xs leading-5 text-cyan-700">Adopt an existing Railway deployment and verify its gateway.</p></Link><Link href="/billing-plans" className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-5 transition hover:border-emerald-300"><div className="text-sm font-bold text-emerald-950">03 · Bill</div><p className="mt-2 text-xs leading-5 text-emerald-700">Assign a recurring plan and receive manual payments.</p></Link></div>
+    <div className="grid gap-4 md:grid-cols-3"><Link href="/schools/provisioning" className="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-5 transition hover:border-indigo-300"><div className="text-sm font-bold text-indigo-950">01 · Provision</div><p className="mt-2 text-xs leading-5 text-indigo-700">Create an isolated school environment and platform record.</p></Link><Link href="/schools/adopt" className="rounded-2xl border border-cyan-100 bg-cyan-50/60 p-5 transition hover:border-cyan-300"><div className="text-sm font-bold text-cyan-950">02 · Connect</div><p className="mt-2 text-xs leading-5 text-cyan-700">Connect an existing Docker, VPS, cloud, or Railway deployment and verify its gateway.</p></Link><Link href="/billing-plans" className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-5 transition hover:border-emerald-300"><div className="text-sm font-bold text-emerald-950">03 · Bill</div><p className="mt-2 text-xs leading-5 text-emerald-700">Assign a recurring plan and receive manual payments.</p></Link></div>
 
     {showCreate && <form className="pa-card space-y-4" onSubmit={createSchool}>
-      <div><h2 className="font-semibold">New customer school</h2><p className="mt-1 text-xs text-slate-500">This creates the audited platform record. Railway deployment remains a separate controlled operation.</p></div>
+      <div><h2 className="font-semibold">New customer school</h2><p className="mt-1 text-xs text-slate-500">This creates the audited platform record. Infrastructure deployment remains a separate controlled operation.</p></div>
       <div className="grid gap-4 md:grid-cols-2">
         <Field label="School name" required value={form.name} onChange={value => set('name', value)} />
         <Field label="Slug" required value={form.slug} placeholder="bora-school" onChange={value => set('slug', value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-'))} />
@@ -71,8 +71,8 @@ export default function SchoolsPage() {
         <Field label="Timezone" value={form.timezone} onChange={value => set('timezone', value)} />
         <Field label="Locale" value={form.locale} onChange={value => set('locale', value)} />
         <Field label="Currency (ISO 4217)" required value={form.currency} maxLength={3} onChange={value => set('currency', value.toUpperCase())} />
-        <Field label="Railway project ID" value={form.railwayProjectId} placeholder="b5b07c38-6569-4bee-ab88-6b134998c77d" hint="Optional. One Railway project holds one school, so this cannot be shared." onChange={value => set('railwayProjectId', value.trim())} />
-        <Field label="Gateway origin" type="url" value={form.gatewayOrigin} placeholder="https://gateway-production-26d3.up.railway.app" hint="Optional. The school's public entry point, scheme included." onChange={value => set('gatewayOrigin', value.trim())} />
+        <Field label="Hosting project ID" value={form.railwayProjectId} placeholder="Optional provider project or deployment ID" hint="Optional compatibility field for provider-managed installations." onChange={value => set('railwayProjectId', value.trim())} />
+        <Field label="Gateway origin" type="url" value={form.gatewayOrigin} placeholder="https://school.example.com" hint="Optional. The school's public entry point, scheme included." onChange={value => set('gatewayOrigin', value.trim())} />
         <label className="text-xs font-medium text-slate-600 md:col-span-2">Notes<textarea className="pa-input mt-1 min-h-20" value={form.notes} onChange={event => set('notes', event.target.value)} /></label>
         <label className="text-xs font-medium text-slate-600 md:col-span-2">Internal reason <span aria-hidden="true">*</span><textarea required minLength={3} className="pa-input mt-1 min-h-20" value={form.internalReason} onChange={event => set('internalReason', event.target.value)} placeholder="New signed customer agreement" /></label>
       </div>
