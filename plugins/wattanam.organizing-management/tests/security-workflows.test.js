@@ -311,7 +311,8 @@ test('employers and employees page uses an expandable form with profile navigati
   const create = page.components.find(item => item.id === 'create');
   const table = page.components.find(item => item.id === 'list');
   const exporter = page.components.find(item => item.id === 'export');
-  assert.deepEqual([create.options.collapsible, create.options.defaultCollapsed, create.options.triggerLabel], [true, true, 'Add employer / employee']);
+  assert.deepEqual([create.options.collapsible, create.options.defaultCollapsed, create.options.triggerLabel], [true, true, 'Add person']);
+  assert.deepEqual([table.options.variant, table.options.compactActions], ['workforce', true]);
   assert.deepEqual([table.options.rowClickable, table.options.rowRoute], [true, 'profiles/:id']);
   assert.deepEqual(exporter.options.formats, ['print', 'xlsx']);
   assert.equal(exporter.options.showPreview, false);

@@ -99,7 +99,7 @@ test('complete profile creation is consolidated into the workforce directory', (
   assert.ok(employeesPage, 'employees page must exist');
   assert.equal(createForm?.options.collapsible, true);
   assert.equal(createForm?.options.defaultCollapsed, true);
-  assert.equal(createForm?.options.triggerLabel, 'Add employer / employee');
+  assert.equal(createForm?.options.triggerLabel, 'Add person');
   for (const field of ['employmentType', 'employeeNumber', 'fullName', 'photoUrl', 'positionId', 'dateOfBirth', 'gender', 'nationalId', 'address', 'emergencyContactName', 'emergencyContactPhone', 'notes']) {
     assert.ok(fieldIds.has(field), `merged profile form is missing ${field}`);
   }

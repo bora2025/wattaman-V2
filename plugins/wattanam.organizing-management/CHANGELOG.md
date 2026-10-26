@@ -341,3 +341,8 @@
 - Resolve linked positions by ID, code, or exact title while preserving the free-text position label.
 - Remove the unsafe raw Position ID fields from the standard employee forms.
 
+# 0.24.1
+
+- Redesigned the workforce directory with a modern company HR visual system, live workforce KPIs, richer employee identity rows, focused search, and compact accessible actions.
+- Simplified people-management language across the directory and profile-creation workflow.
+

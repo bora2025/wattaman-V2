@@ -444,10 +444,10 @@
         {
           "id": "workflow",
           "type": "workflow",
-          "title": "Employers & Employees",
+          "title": "Company Workforce",
           "options": {
-            "eyebrow": "People operations",
-            "description": "Add employers, employees, contractors, and interns, then maintain their employment records.",
+            "eyebrow": "Company · People & culture",
+            "description": "Manage leadership, employees, contractors, and interns from one modern workforce workspace.",
             "activeStep": 1,
             "steps": [
               { "label": "Setup", "route": "organization" },
@@ -462,7 +462,7 @@
         {
           "id": "create",
           "type": "form",
-          "title": "Create employee / employer profile",
+          "title": "Add a workforce member",
           "source": "create",
           "fields": [
             {
@@ -590,7 +590,7 @@
           "options": {
             "collapsible": true,
             "defaultCollapsed": true,
-            "triggerLabel": "Add employer / employee",
+            "triggerLabel": "Add person",
             "submitLabel": "Create workforce profile",
             "confirmation": "Create this workforce profile and generate its secure attendance identity?",
             "successMessage": "Employee / employer profile created successfully",
@@ -622,7 +622,7 @@
         {
           "id": "list",
           "type": "table",
-          "title": "Workforce directory",
+          "title": "People directory",
           "source": "list",
           "fields": [
             { "id": "employeeNumber", "label": "Number", "filterable": true },
@@ -634,9 +634,11 @@
           ],
           "options": {
             "pageSize": 50,
+            "variant": "workforce",
+            "compactActions": true,
             "selectable": false,
             "rowClickable": true,
-            "rowActionLabel": "View employee/employer profile",
+            "rowActionLabel": "Open profile",
             "rowRoute": "profiles/:id",
             "rowParameterMap": { "id": "id" },
             "rowActions": [
