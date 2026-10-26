@@ -113,7 +113,7 @@ function selfScanHarness(overrides = {}) {
   return { handler: routes.get('POST student/self-scan').handler, token, claims, audits, records, now };
 }
 
-async function activate(directory = { lookupUsers: async () => [], resolveAudience: async () => [] }, databaseOverride = null) {
+async function activate(directory = { lookupUsers: async () => [], resolveAudience: async () => [] }, databaseOverride = null, accountsOverride = null) {
   const routes = new Map();
   const permissions = [];
   const navigation = [];
@@ -130,7 +130,7 @@ async function activate(directory = { lookupUsers: async () => [], resolveAudien
     notifications: { notifyInApp: async () => {}, sendEmail: async () => ({ sent: true }) },
     readModels: { read: async () => [], publish: async () => {} },
     crypto: { hashBcrypt: async (value) => `hash:${value}` },
-    accounts: { createStaff: async (input) => ({ id: 'staff-user-1', name: input.name, email: input.email, phone: input.phone, role: input.role }), createStudent: async () => ({}), updateStudent: async () => ({}) },
+    accounts: accountsOverride || { createStaff: async (input) => ({ id: 'staff-user-1', name: input.name, email: input.email, phone: input.phone, role: input.role }), createStudent: async () => ({}), updateStudent: async () => ({}) },
   });
   return { routes, permissions, navigation };
 }
@@ -337,6 +337,34 @@ test('officer workflow rejects student identities before storing a profile', asy
     routes.get('POST officers').handler({ principal: { userId: 'admin-1', role: 'ADMIN' }, body: { userId: 'student-1' } }),
     /cannot be assigned to student or parent accounts/,
   );
+});
+
+test('officer creation derives a valid deterministic command key from the email', async () => {
+  const calls = [];
+  const database = {
+    query: async () => [],
+    execute: async () => ({ count: 1 }),
+    transaction: async (work) => work({ execute: async () => ({ count: 1 }) }),
+  };
+  const accounts = {
+    createStaff: async (input) => {
+      calls.push(input);
+      return { id: '11111111-1111-4111-8111-111111111111', name: input.name, email: input.email, role: input.role };
+    },
+    createStudent: async () => ({}),
+    updateStudent: async () => ({}),
+  };
+  const { routes } = await activate(undefined, database, accounts);
+  const request = {
+    principal: { userId: 'admin-1', role: 'ADMIN' },
+    body: { name: 'Teacher One', email: 'Teacher.One@example.com', password: 'Password1', position: 'TEACHER' },
+  };
+  await routes.get('POST officers').handler(request);
+  await routes.get('POST officers').handler(request);
+  assert.equal(calls.length, 2);
+  assert.match(calls[0].commandKey, /^officer:[a-f0-9]{32}$/);
+  assert.equal(calls[0].commandKey, calls[1].commandKey);
+  assert.equal(calls[0].email, 'teacher.one@example.com');
 });
 
 test('officer creation casts bound UUID and date values for PostgreSQL', () => {

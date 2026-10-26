@@ -1795,7 +1795,8 @@ module.exports = {
           const name = String(body.name || '').trim();
           const email = String(body.email || '').trim().toLowerCase();
           const password = String(body.password || '');
-          const commandKey = String(body.commandKey || `officer:${email}`).trim();
+          const defaultCommandKey = `officer:${crypto.createHash('sha256').update(email).digest('hex').slice(0, 32)}`;
+          const commandKey = String(body.commandKey || defaultCommandKey).trim();
           if (!name || name.length > 160) throw new Error('name is required');
           if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('email is invalid');
           if (password.length < 8 || password.length > 200) throw new Error('password must contain 8-200 characters');

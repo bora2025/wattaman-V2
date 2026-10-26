@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.6
+
+- Fix officer account creation when the universal form omits an explicit command key.
+- Derive a deterministic, retry-safe command key from the normalized email without forbidden characters.
+- Disambiguate the custom-field table heading from its form label for mobile and assistive navigation.
+
 ## 0.2.5
 
 - Fix Academic Year create and update operations by explicitly casting date inputs to PostgreSQL timestamps.
