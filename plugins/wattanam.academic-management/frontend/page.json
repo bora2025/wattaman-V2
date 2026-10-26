@@ -2479,98 +2479,17 @@
         }
       ],
       "components": [
-        { "id": "attendance-heading", "type": "heading", "title": "Student Attendance" },
-        { "id": "attendance-filter", "type": "filter", "fields": [
-          { "id": "classId", "type": "text", "label": "Class ID" },
-          { "id": "date", "type": "date", "label": "Attendance date" },
-          { "id": "session", "type": "select", "label": "Session", "options": [
-            { "label": "Session 1", "value": "1" }, { "label": "Session 2", "value": "2" }, { "label": "Session 3", "value": "3" }, { "label": "Session 4", "value": "4" }
-          ] }
-        ], "options": { "sources": ["records", "classStudents"], "applyLabel": "Load attendance", "clearLabel": "Clear" } },
-        { "id": "mark-attendance", "type": "form", "title": "Record student attendance", "source": "saveRecord", "fields": [
-          { "id": "personId", "type": "text", "label": "Student profile ID", "required": true },
-          { "id": "classId", "type": "text", "label": "Class ID", "required": true },
-          { "id": "date", "type": "date", "label": "Date", "required": true },
-          { "id": "session", "type": "number", "label": "Session", "required": true, "min": 1, "max": 4 },
-          { "id": "status", "type": "select", "label": "Status", "required": true, "options": [
-            { "label": "Present", "value": "PRESENT" }, { "label": "Late", "value": "LATE" }, { "label": "Absent", "value": "ABSENT" }, { "label": "Permission", "value": "PERMISSION" }
-          ] },
-          { "id": "permissionType", "type": "text", "label": "Permission type", "visibleWhen": { "field": "status", "equals": "PERMISSION" } }
-        ], "options": { "collapsible": true, "defaultCollapsed": true, "triggerLabel": "Record attendance", "submitLabel": "Save attendance", "successMessage": "Attendance saved" } },
-        { "id": "student-roster", "type": "table", "title": "Class students", "source": "classStudents", "fields": [
-          { "id": "studentNumber", "label": "Student number" }, { "id": "user.name", "path": "user.name", "label": "Student" }, { "id": "user.email", "path": "user.email", "label": "Email" }
-        ], "options": { "pageSize": 50, "selectable": false } },
-        { "id": "attendance-records-table", "type": "table", "title": "Attendance records", "source": "records", "fields": [
-          { "id": "date", "label": "Date", "format": "date" }, { "id": "personNameSnapshot", "label": "Student" }, { "id": "personNumberSnapshot", "label": "Student number" }, { "id": "classNameSnapshot", "label": "Class" }, { "id": "session", "label": "Session" }, { "id": "status", "label": "Status", "filterable": true }, { "id": "checkInTime", "label": "Check in", "format": "datetime" }
-        ], "options": { "pageSize": 50, "selectable": false } }
-      ]
-    },
-    {
-      "id": "attendance-scanner",
-      "title": "Attendance Scanner",
-      "routePath": "scanner",
-      "permission": "wattanam.academic-management.attendance.scan",
-      "parameters": [],
-      "dataSources": [
         {
-          "id": "scan",
-          "method": "POST",
-          "path": "scan",
-          "permission": "wattanam.academic-management.attendance.scan"
-        }
-      ],
-      "components": [
-        {
-          "id": "heading",
-          "type": "heading",
-          "title": "Camera / USB attendance scanner"
-        },
-        {
-          "id": "scanner",
-          "type": "scanner",
-          "title": "Scan ID",
-          "source": "scan",
+          "id": "take-student-attendance",
+          "type": "take-attendance",
+          "title": "Take Student Attendance",
+          "source": "classes",
           "options": {
-            "modes": [
-              "camera",
-              "keyboard"
-            ],
-            "field": "code",
-            "minLength": 4,
-            "maxLength": 100,
-            "debounceMs": 1000,
-            "contextFields": [
-              {
-                "id": "classId",
-                "type": "text",
-                "label": "Class ID",
-                "required": true
-              },
-              {
-                "id": "session",
-                "type": "select",
-                "label": "Session",
-                "required": true,
-                "options": [
-                  {
-                    "label": "Session 1",
-                    "value": 1
-                  },
-                  {
-                    "label": "Session 2",
-                    "value": 2
-                  },
-                  {
-                    "label": "Session 3",
-                    "value": 3
-                  },
-                  {
-                    "label": "Session 4",
-                    "value": 4
-                  }
-                ]
-              }
-            ]
+            "sessionsSource": "sessions",
+            "recordsSource": "records",
+            "studentsSource": "classStudents",
+            "saveSource": "saveRecord",
+            "scanSource": "scan"
           }
         }
       ]

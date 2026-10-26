@@ -21,7 +21,7 @@ test('officer photo migration declares its constraint replacement as destructive
 test('Academic Management uses the universal SDK 1.3 UI contract', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'plugin.json'), 'utf8'));
   const descriptor = JSON.parse(fs.readFileSync(path.join(root, 'frontend', 'page.json'), 'utf8'));
-  const universal = new Set(['heading','text','workflow','status','card','metric','table','form','detail','chart','file','print','document','designer','scanner','filter','actions','id-card-manager','session-manager','profile-manager','class-manager','officer-manager']);
+  const universal = new Set(['heading','text','workflow','status','card','metric','table','form','detail','chart','file','print','document','designer','scanner','filter','actions','id-card-manager','session-manager','profile-manager','class-manager','officer-manager','take-attendance']);
   const components = descriptor.pages.flatMap((page) => page.components || []);
   assert.equal(manifest.sdkVersion, '1.3.0');
   assert.deepEqual(manifest.hostContracts, ['wattanam.academic.directory.v1', 'wattanam.academic.identity.v1']);
@@ -214,16 +214,16 @@ test('Academic Management exposes the streamlined administration and attendance 
   assert.ok(permissions.some((permission) => permission.id === 'wattanam.academic-management.attendance.self.scan'));
   assert.deepEqual(
     navigation.map((item) => item.id),
-    ['study-years', 'classes', 'student-id-cards', 'officers', 'staff-id-cards', 'attendance-records', 'attendance-scanner', 'attendance-corrections', 'attendance-alerts', 'attendance-reports', 'attendance-settings', 'staff-attendance-scanner', 'staff-attendance-reports'],
+    ['study-years', 'classes', 'student-id-cards', 'officers', 'staff-id-cards', 'attendance-records', 'attendance-corrections', 'attendance-alerts', 'attendance-reports', 'attendance-settings', 'staff-attendance-scanner', 'staff-attendance-reports'],
   );
+  assert.equal(navigation.find((item) => item.id === 'attendance-records')?.label, 'Student Attendance');
   assert.equal(navigation.find((item) => item.id === 'attendance-reports')?.label, 'Student Attendance Reports');
-  assert.equal(navigation.find((item) => item.id === 'attendance-scanner')?.label, 'Student Attendance Scanner');
 
   const ui = JSON.parse(fs.readFileSync(path.join(root, 'frontend', 'page.json'), 'utf8'));
   const dashboard = ui.pages.find((candidate) => candidate.id === 'attendance-dashboard');
   assert.ok(dashboard?.components.some((component) => component.type === 'metric'), 'missing universal Attendance Dashboard metrics');
   assert.ok(dashboard?.components.some((component) => component.type === 'table' && component.options?.itemsPath === 'classProgress'), 'missing universal class attendance progress');
-  for (const page of ['study-years', 'classes', 'officers', 'officer-edit', 'officer-attendance', 'attendance-records', 'attendance-scanner', 'attendance-corrections', 'attendance-reports', 'attendance-settings', 'attendance-windows', 'student-attendance-scan', 'attendance-self-review', 'staff-attendance-scanner', 'staff-attendance-reports']) {
+  for (const page of ['study-years', 'classes', 'officers', 'officer-edit', 'officer-attendance', 'attendance-records', 'attendance-corrections', 'attendance-reports', 'attendance-settings', 'attendance-windows', 'student-attendance-scan', 'attendance-self-review', 'staff-attendance-scanner', 'staff-attendance-reports']) {
     assert.ok(ui.pages.some((candidate) => candidate.id === page), `missing UI page ${page}`);
   }
   const studyYears = ui.pages.find((candidate) => candidate.id === 'study-years');
@@ -271,9 +271,16 @@ test('Academic Management exposes the streamlined administration and attendance 
   const settings = ui.pages.find((candidate) => candidate.id === 'attendance-settings');
   assert.ok(settings.components.some((component) => component.type === 'session-manager'), 'missing dedicated Session Time Settings workspace');
   const attendance = ui.pages.find((candidate) => candidate.id === 'attendance-records');
-  assert.ok(attendance.components.some((component) => component.type === 'form' && component.source === 'saveRecord'), 'missing universal Take Attendance form');
-  assert.ok(attendance.components.some((component) => component.type === 'table' && component.source === 'records'), 'missing universal attendance records table');
+  const takeAttendance = attendance.components.find((component) => component.type === 'take-attendance');
+  assert.ok(takeAttendance, 'missing guided student attendance station');
+  assert.equal(takeAttendance.source, 'classes');
+  assert.deepEqual(
+    [takeAttendance.options?.sessionsSource, takeAttendance.options?.recordsSource, takeAttendance.options?.studentsSource, takeAttendance.options?.saveSource, takeAttendance.options?.scanSource],
+    ['sessions', 'records', 'classStudents', 'saveRecord', 'scan'],
+    'student attendance station must connect class, roster, session, record, and scan sources',
+  );
   assert.ok(attendance.dataSources.some((source) => source.id === 'classStudents' && source.autoload === false), 'missing runtime class roster source');
+  assert.equal(ui.pages.some((candidate) => candidate.id === 'attendance-scanner'), false, 'legacy student scanner page must be removed');
   const studentScanner = ui.pages.find((candidate) => candidate.id === 'student-attendance-scan');
   assert.ok(studentScanner?.components.some((component) => component.type === 'scanner'), 'student scanner must use the universal scanner workspace');
   assert.ok(studentScanner?.dataSources.some((source) => source.id === 'selfScan' && source.path === 'student/self-scan'), 'student scanner must submit to the secure self-scan route');

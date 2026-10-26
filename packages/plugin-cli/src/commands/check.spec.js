@@ -39,6 +39,21 @@ describe('wattanam-plugin check', () => {
     expect(logs.join('')).toContain('component is not universal: organizing-dashboard');
   });
 
+  it('accepts the portable guided attendance station', async () => {
+    const descriptorPath = path.join(dir, 'frontend', 'page.json');
+    const descriptor = JSON.parse(fs.readFileSync(descriptorPath, 'utf8'));
+    descriptor.pages[0].dataSources = ['classes', 'sessions', 'records', 'students', 'save', 'scan'].map((id) => ({ id, method: 'GET', path: id, permission: 'acme.widget.view' }));
+    descriptor.pages[0].components = [{
+      id: 'attendance',
+      type: 'take-attendance',
+      source: 'classes',
+      options: { sessionsSource: 'sessions', recordsSource: 'records', studentsSource: 'students', saveSource: 'save', scanSource: 'scan' },
+    }];
+    fs.writeFileSync(descriptorPath, JSON.stringify(descriptor, null, 2));
+    await check([dir, '--require-universal-ui']);
+    expect(logs.join('')).toContain('frontend contains valid universal UI');
+  });
+
   it('expands reusable universal UI fragments and rejects cycles', async () => {
     const descriptorPath = path.join(dir, 'frontend', 'page.json');
     const descriptor = JSON.parse(fs.readFileSync(descriptorPath, 'utf8'));

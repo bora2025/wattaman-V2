@@ -132,11 +132,11 @@ function attendanceContext(context) {
     },
     permissions: { register: (items) => context.permissions.register(items.map((item) => ({ ...item, id: attendancePermission(item.id) }))) },
     navigation: { register: (items) => context.navigation.register(items
-      .filter((item) => item.id !== 'study-years')
+      .filter((item) => !['study-years', 'scanner'].includes(item.id))
       .map((item) => ({
         ...item,
         id: item.id === 'attendance' ? 'attendance-records' : `attendance-${item.id}`,
-        label: item.id === 'scanner' ? 'Student Attendance Scanner' : item.id === 'reports' ? 'Student Attendance Reports' : item.label,
+        label: item.id === 'attendance' ? 'Student Attendance' : item.id === 'reports' ? 'Student Attendance Reports' : item.label,
         href: item.href.replace('/wattanam.attendance-manager/', '/wattanam.academic-management/'),
         permission: attendancePermission(item.permission),
         dashboard: item.dashboard ? { ...item.dashboard, title: 'Academic Attendance' } : undefined,

@@ -3,7 +3,7 @@
   "id": "wattanam.academic-management",
   "name": "Academic Management",
   "description": "Official Wattanam academic structures, profiles, admissions, enrollment, and roster contracts.",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -492,7 +492,7 @@
     },
     {
       "id": "attendance-records",
-      "label": "Attendance",
+      "label": "Student Attendance",
       "href": "/plugins/wattanam.academic-management/attendance",
       "permission": "wattanam.academic-management.attendance.view"
     },

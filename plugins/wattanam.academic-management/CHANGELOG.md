@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.3
+
+- Remove the separate legacy Student Attendance Scanner navigation entry.
+- Upgrade Student Attendance to the guided camera/USB attendance station with class selection, automatic session detection, roster photos, full-screen scanning, and attended-today feedback.
+- Keep the dedicated Staff Attendance Station available alongside the student workflow.
+
 ## 0.3.2
 
 - Restore Student Attendance Scanner to the Academic Management navigation.
