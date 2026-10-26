@@ -269,7 +269,8 @@ module.exports = {
       const users = await lookupUserMap(rows.map((row) => row.userId));
       return rows.map((row) => {
         const user = users.get(row.userId) || null;
-        return { ...row, user, name: user?.name || null, email: user?.email || null, phone: user?.phone || null };
+        const name = user?.name || row.nameKh || null;
+        return { ...row, user, name, email: user?.email || null, phone: user?.phone || null, displayLabel: [name || 'Unnamed student', row.studentNumber, row.currentClassName ? `Current: ${row.currentClassName}` : 'Not enrolled'].filter(Boolean).join(' · ') };
       });
     };
     const requireRole = async (userId, role, message) => {
@@ -808,8 +809,8 @@ module.exports = {
               }
             }
             const existing = await context.database.query(
-              `SELECT s."id", s."userId" FROM ${STUDENT_PROFILE} s JOIN ${ENROLLMENT} e ON e."studentId" = s."id" AND e."validTo" IS NULL WHERE e."classId" = $1 AND s."studentNumber" = $2 LIMIT 1`,
-              [classId, studentNumber],
+              `SELECT s."id", s."userId", e."classId" FROM ${STUDENT_PROFILE} s LEFT JOIN ${ENROLLMENT} e ON e."studentId" = s."id" AND e."validTo" IS NULL WHERE s."studentNumber" = $1 LIMIT 1`,
+              [studentNumber],
             ).then((rows) => rows[0] || null);
             let account;
             if (existing) {
@@ -818,10 +819,22 @@ module.exports = {
                 commandKey: `csv-update:${classId}:${studentNumber}:${identityHash}`, userId: existing.userId,
                 name, email: email || null, phone: phone || null,
               });
-              await context.database.execute(
-                `UPDATE ${STUDENT_PROFILE} SET "nameKh" = $2, "photo" = $3, "sex" = $4, "dateOfBirth" = $5, "address" = $6, "generation" = $7, "updatedAt" = CURRENT_TIMESTAMP WHERE "id" = $1`,
-                [existing.id, value(indexes.nameKh) || null, value(indexes.photo) || null, normalizedCsvSex(value(indexes.sex)), dateOfBirth || null, value(indexes.address) || null, value(indexes.generation) || null],
-              );
+              await context.database.transaction(async (tx) => {
+                await tx.execute(
+                  `UPDATE ${STUDENT_PROFILE} SET "nameKh" = $2, "photo" = $3, "sex" = $4, "dateOfBirth" = $5::date, "address" = $6, "generation" = $7, "updatedAt" = CURRENT_TIMESTAMP WHERE "id" = $1`,
+                  [existing.id, value(indexes.nameKh) || null, value(indexes.photo) || null, normalizedCsvSex(value(indexes.sex)), dateOfBirth || null, value(indexes.address) || null, value(indexes.generation) || null],
+                );
+                if (existing.classId !== classId) {
+                  await tx.execute(`DELETE FROM ${ENROLLMENT} WHERE "studentId" = $1 AND "validTo" IS NULL AND "validFrom" = CURRENT_DATE`, [existing.id]);
+                  await tx.execute(`UPDATE ${ENROLLMENT} SET "validTo" = CURRENT_DATE - INTERVAL '1 day', "updatedAt" = CURRENT_TIMESTAMP WHERE "studentId" = $1 AND "validTo" IS NULL AND "validFrom" < CURRENT_DATE`, [existing.id]);
+                  await tx.execute(`INSERT INTO ${ENROLLMENT} ("id", "studentId", "classId", "validFrom", "source", "createdAt", "updatedAt") VALUES ($1, $2, $3, CURRENT_DATE, 'plugin', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`, [crypto.randomUUID(), existing.id, classId]);
+                }
+                await tx.publish({
+                  event: 'wattanam.academic-management.student.imported', version: 1, subjectKey: existing.id,
+                  payload: { studentId: existing.id, userId: existing.userId, classId, studentNumber, reusedProfile: true },
+                  idempotencyKey: `academic-student-imported-${classId}-${studentNumber}`,
+                });
+              });
             } else {
               const password = value(indexes.password) || `student${studentNumber}`;
               if (password.length < 6 || password.length > 200) throw new Error('Password must contain 6-200 characters');
@@ -900,7 +913,8 @@ module.exports = {
         const exists = await context.database.query(`SELECT "id" FROM ${CLASS} WHERE "id" = $1 LIMIT 1`, [classId]);
         if (!exists.length) throw new Error('Class not found');
         const rows = await context.database.query(
-          `SELECT s."id", s."userId", s."studentNumber", s."nameKh", s."qrCode", s."photo", s."sex" FROM ${STUDENT_PROFILE} s LEFT JOIN ${ENROLLMENT} e ON e."studentId" = s."id" AND e."validTo" IS NULL WHERE e."studentId" IS NULL ORDER BY s."studentNumber" ASC LIMIT 500`,
+          `SELECT s."id", s."userId", s."studentNumber", s."nameKh", s."qrCode", s."photo", s."sex", e."classId" AS "currentClassId", c."name" AS "currentClassName" FROM ${STUDENT_PROFILE} s LEFT JOIN ${ENROLLMENT} e ON e."studentId" = s."id" AND e."validTo" IS NULL LEFT JOIN ${CLASS} c ON c."id" = e."classId" WHERE e."classId" IS NULL OR e."classId" <> $1 ORDER BY s."studentNumber" ASC LIMIT 500`,
+          [classId],
         );
         return decorateStudentRows(rows);
       },

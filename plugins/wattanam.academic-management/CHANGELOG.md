@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1
+
+- Replace the raw existing-student ID field with an eligible student selector that clearly identifies current enrollment.
+- Allow administrators to transfer an existing student into the selected class through the standard enrollment action.
+- Make CSV imports reuse existing profiles by student number and safely update their current class enrollment instead of creating duplicate accounts.
+
 ## 0.3.0
 
 - Complete officer CRUD with guarded permanent profile removal and preserved login accounts.

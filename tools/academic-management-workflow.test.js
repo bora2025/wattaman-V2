@@ -249,9 +249,11 @@ test('Academic Management exposes the streamlined administration and attendance 
   assert.ok(classDetail?.components.some((component) => component.type === 'workflow' && component.options?.steps?.some((step) => step.route === 'classes/edit/:id')), 'class overview must link to class editing');
   assert.ok(classStudents?.dataSources.some((source) => source.id === 'createStudent' && source.path === 'classes/:id/students/create'), 'class student page must declare direct student creation');
   assert.ok(classStudents?.dataSources.some((source) => source.id === 'bulkUploadStudents' && source.path === 'classes/:id/students/bulk-csv'), 'class student page must declare bounded CSV import');
+  assert.ok(classStudents?.dataSources.some((source) => source.id === 'availableStudents' && source.path === 'classes/:id/available-students'), 'class student page must load eligible existing profiles');
   assert.ok(classStudents?.components.some((component) => component.type === 'form' && component.source === 'createStudent' && component.options?.idempotencyField === 'commandKey'), 'class student page must provide idempotent student creation');
   assert.ok(classStudents?.components.some((component) => component.type === 'form' && component.source === 'bulkUploadStudents' && component.fields?.some((field) => field.id === 'csv' && field.type === 'file' && field.maxBytes === 2097152)), 'class student page must provide bounded CSV file import');
   assert.ok(classStudents?.components.some((component) => component.type === 'table' && component.source === 'bulkUploadStudents' && component.options?.itemsPath === 'details'), 'class student page must show per-row CSV import results');
+  assert.ok(classStudents?.components.some((component) => component.type === 'form' && component.source === 'addStudent' && component.fields?.some((field) => field.id === 'studentId' && field.type === 'select' && field.optionsSource === 'availableStudents')), 'existing student enrollment must use a named profile selector');
   assert.ok(classStudents?.components.some((component) => component.type === 'print' && component.source === 'students' && component.options?.formats?.includes('xlsx')), 'class student page must provide Excel roster export');
   assert.ok(classStudents?.components.some((component) => component.type === 'table' && component.options?.rowClickable && component.options?.rowRoute === 'classes/:id/students/:studentId'), 'class student rows must open the student editor');
   assert.ok(classEdit?.components.some((component) => component.type === 'form' && component.source === 'saveClass' && component.options?.initialSource === 'class'), 'class edit page must provide an initialized edit form');
@@ -316,6 +318,13 @@ test('direct class student creation casts date-of-birth input to PostgreSQL date
     /classes\/:id\/students\/create[\s\S]*?"dateOfBirth"[\s\S]*?\$8::date/,
     'student creation must cast the bound date string before inserting it into a DATE column',
   );
+});
+
+test('CSV student import reuses profiles globally and transfers their current enrollment', () => {
+  const source = fs.readFileSync(path.join(root, 'backend', 'index.js'), 'utf8');
+  assert.match(source, /LEFT JOIN \$\{ENROLLMENT\} e ON e\."studentId" = s\."id" AND e\."validTo" IS NULL WHERE s\."studentNumber" = \$1/);
+  assert.match(source, /if \(existing\.classId !== classId\)[\s\S]*?DELETE FROM \$\{ENROLLMENT\}[\s\S]*?INSERT INTO \$\{ENROLLMENT\}/);
+  assert.match(source, /reusedProfile: true/);
 });
 
 test('merged attendance resolves class rosters from Academic Management tables', () => {

@@ -1456,6 +1456,12 @@
           "permission": "wattanam.academic-management.view"
         },
         {
+          "id": "availableStudents",
+          "method": "GET",
+          "path": "classes/:id/available-students",
+          "permission": "wattanam.academic-management.view"
+        },
+        {
           "id": "addStudent",
           "method": "POST",
           "path": "classes/:id/students",
@@ -1698,10 +1704,14 @@
           "fields": [
             {
               "id": "studentId",
-              "type": "text",
-              "label": "Student user ID",
+              "type": "select",
+              "label": "Student",
               "required": true,
-              "maxLength": 36
+              "optionsSource": "availableStudents",
+              "optionValuePath": "id",
+              "optionLabelPath": "displayLabel",
+              "searchable": true,
+              "helpText": "Choose an existing student. If enrolled elsewhere, the student will be transferred to this class."
             }
           ],
           "options": {
