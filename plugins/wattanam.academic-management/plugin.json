@@ -3,7 +3,7 @@
   "id": "wattanam.academic-management",
   "name": "Academic Management",
   "description": "Official Wattanam academic structures, profiles, admissions, enrollment, and roster contracts.",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -65,7 +65,13 @@
     "deprecationNoticeDays": 180,
     "events": {
       "publishes": {
+        "wattanam.academic-management.attendance.corrected": [1],
+        "wattanam.academic-management.attendance.recorded": [1],
         "wattanam.academic-management.attendance.staff-recorded": [1],
+        "wattanam.academic-management.attendance.study-year.created": [1],
+        "wattanam.academic-management.attendance.study-year.deleted": [1],
+        "wattanam.academic-management.attendance.study-year.set-current": [1],
+        "wattanam.academic-management.attendance.study-year.updated": [1],
         "wattanam.academic-management.attendance.student-self-recorded": [1],
         "wattanam.academic-management.class.created": [1],
         "wattanam.academic-management.class.deleted": [1],
@@ -457,6 +463,12 @@
       "path": "migrations/061_add_officer_photo_url.sql",
       "checksum": "163e37ae89dd10f4f3eb05eb798b4075c7b5480c661bf279a959882972942d15",
       "destructive": true
+    },
+    {
+      "id": "062_seed_student_attendance_sessions",
+      "path": "migrations/062_seed_student_attendance_sessions.sql",
+      "checksum": "a2a57f89e2b1d60b9381e8b8f91e57f472c43af6627aad69452356b41ef9cc0c",
+      "destructive": false
     }
   ],
   "navigation": [

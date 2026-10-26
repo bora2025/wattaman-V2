@@ -54,7 +54,9 @@ function attendanceSql(sql) {
 
 function attendancePermission(value) {
   if (!value) return value;
-  return String(value).replace('wattanam.attendance-manager.', 'wattanam.academic-management.attendance.');
+  return String(value)
+    .replace('wattanam.attendance-manager.attendance.', 'wattanam.academic-management.attendance.')
+    .replace('wattanam.attendance-manager.', 'wattanam.academic-management.attendance.');
 }
 
 function attendanceContext(context) {

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.4
+
+- Seed four default student attendance sessions so Camera and USB controls work immediately after installation.
+- Fix the durable student attendance event namespace that caused Submit and scanner requests to return Internal server error.
+- Declare student attendance, correction, and Study Year durable event contracts explicitly.
+
 ## 0.3.3
 
 - Remove the separate legacy Student Attendance Scanner navigation entry.

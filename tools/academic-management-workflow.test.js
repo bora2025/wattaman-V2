@@ -438,6 +438,7 @@ test('staff attendance defaults and current Study Year repair are migrated', () 
   const removeStudentOnlyConstraint = fs.readFileSync(path.join(root, 'migrations', '058_seed_staff_attendance_sessions.sql'), 'utf8');
   const allowStaffSessions = fs.readFileSync(path.join(root, 'migrations', '059_allow_staff_attendance_sessions.sql'), 'utf8');
   const staffSessions = fs.readFileSync(path.join(root, 'migrations', '060_seed_staff_attendance_sessions.sql'), 'utf8');
+  const studentSessions = fs.readFileSync(path.join(root, 'migrations', '062_seed_student_attendance_sessions.sql'), 'utf8');
   assert.match(currentYear, /NOT EXISTS[\s\S]*?"isCurrent" = TRUE/);
   assert.match(removeStudentOnlyConstraint, /DROP CONSTRAINT IF EXISTS academic_management_attendance_session_student_only/);
   assert.match(allowStaffSessions, /"scope" IN \('STUDENT', 'TEACHER', 'STAFF'\)/);
@@ -446,6 +447,19 @@ test('staff attendance defaults and current Study Year repair are migrated', () 
   assert.match(staffSessions, /2, 'CHECK_OUT'/);
   assert.match(staffSessions, /3, 'CHECK_IN'/);
   assert.match(staffSessions, /4, 'CHECK_OUT'/);
+  assert.equal((studentSessions.match(/'STUDENT'/g) || []).length, 4);
+  assert.match(studentSessions, /1, 'CHECK_IN'/);
+  assert.match(studentSessions, /2, 'CHECK_OUT'/);
+  assert.match(studentSessions, /3, 'CHECK_IN'/);
+  assert.match(studentSessions, /4, 'CHECK_OUT'/);
+});
+
+test('embedded attendance durable events map to the declared Academic namespace', () => {
+  const index = fs.readFileSync(path.join(root, 'backend', 'index.js'), 'utf8');
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, 'plugin.json'), 'utf8'));
+  assert.match(index, /replace\('wattanam\.attendance-manager\.attendance\.', 'wattanam\.academic-management\.attendance\.'\)/);
+  assert.deepEqual(manifest.contracts.events.publishes['wattanam.academic-management.attendance.recorded'], [1]);
+  assert.deepEqual(manifest.contracts.events.publishes['wattanam.academic-management.attendance.corrected'], [1]);
 });
 
 test('staff navigation exposes one canonical attendance workflow', () => {
