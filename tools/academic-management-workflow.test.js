@@ -30,7 +30,7 @@ test('Academic Management uses the universal SDK 1.3 UI contract', () => {
   assert.equal(components.filter((component) => component.type === 'actions').length, 0);
   assert.equal(components.filter((component) => component.type === 'table' && component.options?.selectable).length, 0);
   const recordActions = components.reduce((count, component) => count + (component.options?.rowActions?.length || 0), 0)
-    + components.filter((component) => component.type === 'officer-manager' && component.options?.deactivateSource).length;
+    + components.filter((component) => component.type === 'officer-manager' && component.options?.deactivateSource && component.options?.deleteSource).length;
   assert.ok(recordActions >= 10);
 });
 
@@ -261,6 +261,8 @@ test('Academic Management exposes the streamlined administration and attendance 
   assert.equal(officerManager.options.departmentsSource, 'officerDepartments');
   assert.equal(officerManager.options.createSource, 'createOfficer');
   assert.equal(officerManager.options.deactivateSource, 'deactivateOfficer');
+  assert.equal(officerManager.options.deleteSource, 'deleteOfficer');
+  assert.ok(officers.dataSources.some((source) => source.id === 'deleteOfficer' && source.method === 'DELETE'), 'officer CRUD requires a guarded delete source');
   const officerEdit = ui.pages.find((candidate) => candidate.id === 'officer-edit');
   assert.ok(officerEdit.components.some((component) => component.type === 'form' && component.fields?.some((field) => field.id === 'photoUrl' && field.type === 'url')), 'officer edit must expose a secure photo URL');
   const settings = ui.pages.find((candidate) => candidate.id === 'attendance-settings');

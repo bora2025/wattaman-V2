@@ -77,6 +77,20 @@ test('component titles satisfy the customer host contract', () => {
   assert.deepEqual(invalid, []);
 });
 
+test('workforce creation uses live named position choices', () => {
+  for (const pageId of ['employees', 'create-workforce-profile']) {
+    const page = pages.pages.find(candidate => candidate.id === pageId);
+    const form = page.components.find(component => component.type === 'form' && component.source === 'create');
+    const position = form.fields.find(field => field.id === 'positionId');
+    assert.equal(position.type, 'select');
+    assert.equal(position.optionsSource, 'positionOptions');
+    assert.equal(position.optionValuePath, 'id');
+    assert.equal(position.optionLabelPath, 'title');
+    assert.equal(position.searchable, true);
+    assert.ok(page.dataSources.some(source => source.id === 'positionOptions' && source.method === 'GET' && source.path === 'positions'));
+  }
+});
+
 test('complete profile creation is consolidated into the workforce directory', () => {
   const employeesPage = pages.pages.find(page => page.id === 'employees');
   const createForm = employeesPage?.components.find(component => component.id === 'create');

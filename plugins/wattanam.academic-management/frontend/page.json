@@ -474,6 +474,14 @@
           "parameters": ["officerId"],
           "autoload": false,
           "permission": "wattanam.academic-management.manage"
+        },
+        {
+          "id": "deleteOfficer",
+          "method": "DELETE",
+          "path": "officers/:officerId",
+          "parameters": ["officerId"],
+          "autoload": false,
+          "permission": "wattanam.academic-management.manage"
         }
       ],
       "components": [
@@ -485,6 +493,7 @@
             "departmentsSource": "officerDepartments",
             "createSource": "createOfficer",
             "deactivateSource": "deactivateOfficer",
+            "deleteSource": "deleteOfficer",
             "editRoute": "officers/edit",
             "departmentsRoute": "departments"
           }

@@ -1893,6 +1893,23 @@ module.exports = {
         return context.database.query(`${officerSelect} WHERE o."id" = $1::uuid LIMIT 1`, [id]).then(decorateOfficerRows).then((items) => items[0]);
       },
     });
+    context.routes.register({
+      method: 'DELETE', path: 'officers/:id', permission: 'wattanam.academic-management.manage',
+      handler: async (request) => {
+        await requireAdministrativePrincipal(request);
+        const id = String(request?.params?.id || '').trim();
+        const existing = await context.database.query(`${officerSelect} WHERE o."id" = $1::uuid LIMIT 1`, [id]);
+        if (!existing.length) throw new Error('Officer profile not found');
+        const attendance = await context.database.query(`SELECT COUNT(*)::int AS "count" FROM ${OFFICER_ATTENDANCE} WHERE "officerId"=$1::uuid`, [id]);
+        if (Number(attendance[0]?.count || 0) > 0) throw new Error('Officer has attendance history and cannot be deleted. Deactivate the officer instead.');
+        await context.database.transaction(async (tx) => {
+          await tx.execute(`DELETE FROM ${ATTENDANCE_IDENTIFIER} WHERE "personId"=$1 AND "personType"='STAFF'`, [id]);
+          await tx.execute(`DELETE FROM ${OFFICER} WHERE "id"=$1::uuid`, [id]);
+        });
+        context.events.publish('wattanam.academic-management.officer.deleted.v1', { officerId: id, userId: existing[0].userId });
+        return { deleted: true, id, accountPreserved: true };
+      },
+    });
     const attendanceRows = async (date) => {
       const rows = await context.database.query(`SELECT a."id", a."officerId", a."attendanceDate", a."status", a."checkInAt", a."checkOutAt", a."note", a."recordedBy", a."correctedBy", a."correctedAt", a."createdAt", a."updatedAt", o."userId", o."employeeNumber", o."position", o."departmentId", o."employmentStatus" FROM ${OFFICER_ATTENDANCE} a JOIN ${OFFICER} o ON o."id" = a."officerId" WHERE a."attendanceDate" = $1::date ORDER BY a."createdAt" DESC`, [date]);
       return decorateOfficerRows(rows);

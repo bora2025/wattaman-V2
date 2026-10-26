@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.24.0
+
+- Upgrade workforce creation with named position selection backed by the live organization structure.
+- Align employee and employer forms with Academic Management's guided, responsive workflow patterns.
+- Add reusable dynamic select sources to the universal host form contract.
+
 ## 0.23.1
 
 - Replace the unused durable-event grant with the least-privilege database transaction capability.

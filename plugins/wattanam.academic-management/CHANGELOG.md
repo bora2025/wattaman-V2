@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0
+
+- Complete officer CRUD with guarded permanent profile removal and preserved login accounts.
+- Prevent deletion when attendance history exists and guide administrators to deactivate instead.
+- Add an explicit, confirmation-protected removal workspace to Manage Officers.
+
 ## 0.2.9
 
 - Declare the officer photo URL constraint refresh as a reviewed destructive migration so hosts can install it safely.
