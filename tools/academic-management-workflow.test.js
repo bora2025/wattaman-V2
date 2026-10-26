@@ -14,7 +14,7 @@ const { registerSelfAttendance } = require(path.join(root, 'backend', 'self-atte
 test('Academic Management uses the universal SDK 1.3 UI contract', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'plugin.json'), 'utf8'));
   const descriptor = JSON.parse(fs.readFileSync(path.join(root, 'frontend', 'page.json'), 'utf8'));
-  const universal = new Set(['heading','text','workflow','status','card','metric','table','form','detail','chart','file','print','document','designer','scanner','filter','actions','id-card-manager','session-manager','profile-manager']);
+  const universal = new Set(['heading','text','workflow','status','card','metric','table','form','detail','chart','file','print','document','designer','scanner','filter','actions','id-card-manager','session-manager','profile-manager','class-manager']);
   const components = descriptor.pages.flatMap((page) => page.components || []);
   assert.equal(manifest.sdkVersion, '1.3.0');
   assert.deepEqual(manifest.hostContracts, ['wattanam.academic.directory.v1', 'wattanam.academic.identity.v1']);
@@ -220,8 +220,17 @@ test('Academic Management exposes the streamlined administration and attendance 
   assert.ok(studyYears.components.some((component) => component.type === 'form' && component.source === 'createStudyYear'), 'missing universal Academic Year creation workflow');
   assert.ok(studyYears.components.some((component) => component.type === 'table' && component.options?.rowActions?.some((action) => action.source === 'setCurrentStudyYear')), 'missing per-record current Academic Year action');
   const classes = ui.pages.find((candidate) => candidate.id === 'classes');
-  assert.ok(classes.components.some((component) => component.type === 'form' && component.source === 'createClass'), 'missing universal class creation workflow');
-  assert.ok(classes.components.some((component) => component.type === 'table' && component.options?.rowActions?.some((action) => action.source === 'deleteClass')), 'missing per-record class action');
+  const classManager = classes.components.find((component) => component.type === 'class-manager');
+  assert.ok(classManager, 'missing guided class management workflow');
+  assert.equal(classManager.source, 'classes');
+  assert.deepEqual(
+    [classManager.options?.teachersSource, classManager.options?.classAdminsSource, classManager.options?.studyYearsSource],
+    ['teachers', 'classAdmins', 'studyYears'],
+    'class create and edit workflows must use named directory selectors',
+  );
+  assert.equal(classManager.options?.createSource, 'createClass');
+  assert.equal(classManager.options?.updateSource, 'updateClass');
+  assert.equal(classManager.options?.deleteSource, 'deleteClass');
   assert.ok(classes.dataSources.some((source) => source.id === 'createClassStudent' && source.path === 'classes/:classId/students/create'), 'missing direct class student creation source');
   assert.ok(classes.dataSources.some((source) => source.id === 'bulkUploadClassStudents'), 'missing bounded class spreadsheet import source');
   const classDetail = ui.pages.find((candidate) => candidate.id === 'class-detail');

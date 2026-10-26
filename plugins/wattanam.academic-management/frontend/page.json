@@ -1161,29 +1161,29 @@
         }
       ],
       "components": [
-        { "id": "classes-heading", "type": "heading", "title": "Classes" },
-        { "id": "create-class", "type": "form", "title": "Add class", "source": "createClass", "fields": [
-          { "id": "name", "type": "text", "label": "Class name", "required": true, "maxLength": 160 },
-          { "id": "subject", "type": "text", "label": "Subject" },
-          { "id": "teacherId", "type": "text", "label": "Teacher user ID", "required": true },
-          { "id": "classAdminId", "type": "text", "label": "Class administrator user ID" },
-          { "id": "studyYearId", "type": "text", "label": "Academic year ID" },
-          { "id": "registrationStatus", "type": "select", "label": "Registration status", "required": true, "defaultValue": "HIDDEN", "options": [
-            { "label": "Available", "value": "AVAILABLE" }, { "label": "Unavailable", "value": "UNAVAILABLE" }, { "label": "Hidden", "value": "HIDDEN" }
-          ] },
-          { "id": "schedule", "type": "json", "label": "Weekly schedule", "jsonShape": "object", "defaultValue": { "week": ["MON", "TUE", "WED", "THU", "FRI"] } },
-          { "id": "description", "type": "textarea", "label": "Description", "maxLength": 2000 }
-        ], "options": { "collapsible": true, "defaultCollapsed": true, "triggerLabel": "Add class", "submitLabel": "Create class", "successMessage": "Class created" } },
-        { "id": "classes-table", "type": "table", "title": "Class directory", "source": "classes", "fields": [
-          { "id": "name", "label": "Class", "filterable": true, "sortable": true },
-          { "id": "subject", "label": "Subject", "filterable": true },
-          { "id": "teacher.name", "path": "teacher.name", "label": "Teacher" },
-          { "id": "studyYear.label", "path": "studyYear.label", "label": "Academic year" },
-          { "id": "registrationStatus", "label": "Registration", "filterable": true },
-          { "id": "studentCount", "path": "_count.students", "label": "Students", "format": "number" }
-        ], "options": { "pageSize": 30, "selectable": false, "rowClickable": true, "rowActionLabel": "Manage class", "rowRoute": "classes/:id", "rowParameterMap": { "id": "id" }, "rowActions": [
-          { "id": "delete-class", "label": "Delete", "source": "deleteClass", "idField": "id", "idParameter": "classId", "confirmation": "Delete this class only if it has no protected enrollment history?", "destructive": true }
-        ] } }
+        {
+          "id": "class-manager",
+          "type": "class-manager",
+          "title": "Manage Classes",
+          "source": "classes",
+          "options": {
+            "studyYearsSource": "studyYears",
+            "teachersSource": "teachers",
+            "classAdminsSource": "classAdmins",
+            "createSource": "createClass",
+            "updateSource": "updateClass",
+            "deleteSource": "deleteClass",
+            "studentsSource": "classStudents",
+            "availableStudentsSource": "availableStudents",
+            "addStudentSource": "addClassStudent",
+            "createStudentSource": "createClassStudent",
+            "removeStudentSource": "removeClassStudent",
+            "bulkUploadSource": "bulkUploadClassStudents",
+            "detailRoute": "classes",
+            "editRoute": "classes/edit",
+            "attendanceRoute": "attendance-records"
+          }
+        }
       ]
     },
     {

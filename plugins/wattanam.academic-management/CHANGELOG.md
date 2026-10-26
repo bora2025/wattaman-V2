@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.7
+
+- Replace raw class teacher, administrator, and academic-year IDs with named selection controls.
+- Replace weekly schedule JSON with guided weekday selection and common schedule presets.
+- Apply the same guided assignments and schedule experience to class editing.
+
 ## 0.2.6
 
 - Fix officer account creation when the universal form omits an explicit command key.
