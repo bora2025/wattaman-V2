@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.2
+
+- Restore Student Attendance Scanner to the Academic Management navigation.
+- Expose the existing camera and USB/keyboard scanner workflow under a clearly labeled student attendance entry.
+
 ## 0.3.1
 
 - Replace the raw existing-student ID field with an eligible student selector that clearly identifies current enrollment.

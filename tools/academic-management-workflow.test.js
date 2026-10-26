@@ -214,9 +214,10 @@ test('Academic Management exposes the streamlined administration and attendance 
   assert.ok(permissions.some((permission) => permission.id === 'wattanam.academic-management.attendance.self.scan'));
   assert.deepEqual(
     navigation.map((item) => item.id),
-    ['study-years', 'classes', 'student-id-cards', 'officers', 'staff-id-cards', 'attendance-records', 'attendance-corrections', 'attendance-alerts', 'attendance-reports', 'attendance-settings', 'staff-attendance-scanner', 'staff-attendance-reports'],
+    ['study-years', 'classes', 'student-id-cards', 'officers', 'staff-id-cards', 'attendance-records', 'attendance-scanner', 'attendance-corrections', 'attendance-alerts', 'attendance-reports', 'attendance-settings', 'staff-attendance-scanner', 'staff-attendance-reports'],
   );
   assert.equal(navigation.find((item) => item.id === 'attendance-reports')?.label, 'Student Attendance Reports');
+  assert.equal(navigation.find((item) => item.id === 'attendance-scanner')?.label, 'Student Attendance Scanner');
 
   const ui = JSON.parse(fs.readFileSync(path.join(root, 'frontend', 'page.json'), 'utf8'));
   const dashboard = ui.pages.find((candidate) => candidate.id === 'attendance-dashboard');
