@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.9
+
+- Declare the officer photo URL constraint refresh as a reviewed destructive migration so hosts can install it safely.
+- Preserve the published migration SQL and checksum while correcting its release metadata.
+
 ## 0.2.8
 
 - Upgrade officer management with a unified directory, search, department and position filters, guided creation, responsive states, and clearer actions.

@@ -11,6 +11,13 @@ const plugin = require(path.join(root, 'backend', 'index.js'));
 const { registerAuthoritativeReports } = require(path.join(root, 'backend', 'authoritative-reports.js'));
 const { registerSelfAttendance } = require(path.join(root, 'backend', 'self-attendance.js'));
 
+test('officer photo migration declares its constraint replacement as destructive', () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, 'plugin.json'), 'utf8'));
+  const migration = manifest.migrations.find((item) => item.id === '061_add_officer_photo_url');
+  assert.ok(migration, 'officer photo migration is missing');
+  assert.equal(migration.destructive, true);
+});
+
 test('Academic Management uses the universal SDK 1.3 UI contract', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'plugin.json'), 'utf8'));
   const descriptor = JSON.parse(fs.readFileSync(path.join(root, 'frontend', 'page.json'), 'utf8'));
