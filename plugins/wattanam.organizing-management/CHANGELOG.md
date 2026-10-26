@@ -346,3 +346,9 @@
 - Redesigned the workforce directory with a modern company HR visual system, live workforce KPIs, richer employee identity rows, focused search, and compact accessible actions.
 - Simplified people-management language across the directory and profile-creation workflow.
 
+# 0.25.0
+
+- Applied a consistent modern company design system across all 34 Organizing Management pages.
+- Improved page hierarchy, workflow navigation, guidance, forms, data tables, headings, action density, responsive spacing, and accessible interaction states.
+- Preserved the specialized workforce KPI and employee identity experience introduced in 0.24.1.
+
