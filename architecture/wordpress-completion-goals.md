@@ -113,3 +113,13 @@ Only after each existing school is moved to plugins (reform plan §8 and §13).
   - The rules apply to admins too.
   - No force-pushes or deletion of `main`.
   Releases still run by workflow_dispatch on `main`.
+- 2026-11-06 — Monitoring and backups:
+  - Catalog verification re-enabled; its first run passed (15 releases, signatures and digests).
+  - School core 0.1.18 deployed (plan 0/4/0): nightly recovery sets are now encrypted (AES-256-GCM)
+    and copied to Cloudflare R2 bucket `wattanam-angkor-school-backups`.
+  - Restore tool `fetch-offsite-backup.js` ships in the image; runbook in
+    `docs/operations/offsite-backups.md`. Verified on a real S3 API: identical bytes, wrong key rejected.
+  - New `Backup freshness` monitor fails above 26h. Its first run correctly reported "no off-site
+    set yet"; the first set lands at 02:00 UTC.
+  - Scheduled recovery drill now installs the official Railway CLI. It still needs the
+    `RAILWAY_TOKEN` secret and a `recovery-drill` rehearsal database (user decision).
