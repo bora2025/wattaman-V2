@@ -80,3 +80,10 @@ Only after each existing school is moved to plugins (reform plan §8 and §13).
 - 2026-11-06 — Paused the scheduled workflows that target deleted hosts. Patched high backend and
   frontend advisories. The core web image now ships only traced dependencies (802 MB → 50 MB
   node_modules), and the blocking CI audit covers exactly what the core image ships.
+- 2026-11-06 — Found the live Railway hosts (`wattanam-v2`, `customer-school`, recreated 2026-10-26).
+  Released signed core 0.1.16 (commit 1cfaec1) and deployed it to `customer-school`: plan was
+  0 add / 4 image changes / 0 destroy. The live school (Angkor School) passes the same page, asset
+  and health checks as before, with no pending migrations. Rollback = re-apply the 0.1.15 digests.
+  `APP_VERSION` stays at 0.1.14 (as in the 0.1.15 deploy); fixing the version bookkeeping is open.
+  Live catalog has only Academic Management and Organizing Management; the other 12 plugins are
+  unpublished (G2 decision).
