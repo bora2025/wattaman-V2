@@ -107,3 +107,9 @@ Only after each existing school is moved to plugins (reform plan §8 and §13).
   from `apps/marketplace-api` to the unrelated project "Seong Kimseng".
   Still open: branch protection on `main` (both repos), CSP with a report endpoint, KMS for signing
   keys, re-enabling the two paused scheduled workflows, APP_VERSION bookkeeping.
+- 2026-11-06 — Protected `main` in both repos:
+  - Changes go through pull requests; 0 approvals required, so a solo maintainer can merge.
+  - Every pr-validation job must pass, on a branch that is up to date with `main`.
+  - The rules apply to admins too.
+  - No force-pushes or deletion of `main`.
+  Releases still run by workflow_dispatch on `main`.
