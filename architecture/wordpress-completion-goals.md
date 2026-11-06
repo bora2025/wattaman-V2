@@ -123,3 +123,7 @@ Only after each existing school is moved to plugins (reform plan §8 and §13).
     set yet"; the first set lands at 02:00 UTC.
   - Scheduled recovery drill now installs the official Railway CLI. It still needs the
     `RAILWAY_TOKEN` secret and a `recovery-drill` rehearsal database (user decision).
+- 2026-11-06 — Core 0.1.19: report-only Content-Security-Policy at the gateway, with a minimized
+  `/api/csp-report` endpoint. A real Chromium run and the first real-user reports show only Next.js
+  inline scripts as violations; Google Fonts (Khmer) are allowed. Next: collect reports from
+  logged-in traffic, then phase 2 (per-request nonces, then switch to enforcing).
