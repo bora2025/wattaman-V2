@@ -87,3 +87,15 @@ Only after each existing school is moved to plugins (reform plan §8 and §13).
   `APP_VERSION` stays at 0.1.14 (as in the 0.1.15 deploy); fixing the version bookkeeping is open.
   Live catalog has only Academic Management and Organizing Management; the other 12 plugins are
   unpublished (G2 decision).
+- 2026-11-06 — Security review. Deployed school core 0.1.17 (commit 4223bc4; plan 0 add / 5 change /
+  0 destroy):
+  - The login rate limit was shared by the whole school (5 per minute for every user combined).
+    It now counts per real client via `TRUST_PROXY_HOPS=2` (Railway edge + gateway).
+  - Audit-log IPs can no longer be spoofed through X-Forwarded-For.
+  - API, worker and web now listen on both IPv4 and IPv6. Gateway connection failures went from
+    about 20 per 20 minutes to 0.
+  - The gateway now sends HSTS, nosniff, X-Frame-Options and Permissions-Policy, and no longer
+    sends X-Powered-By.
+  Marketplace 0.1.2 (zod 4, body-parser/multer patches, partial-update default bug fixed) is built
+  and signed but not deployed yet. Still open: remove public api/web/worker domains, branch
+  protection, CSP with a report endpoint, KMS for signing keys.
