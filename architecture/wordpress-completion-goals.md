@@ -53,6 +53,10 @@ Only after each existing school is moved to plugins (reform plan §8 and §13).
 - [ ] Per module, delete the backend module, admin pages and tables once its plugin owns them:
       attendance, study-years, holidays, classes, class-registrations, courses, assignments, exam,
       scoring, timetable, fees, salary, staff-cv, bus, announcements, posts, card-*, reports, parent.
+- [ ] Delete the legacy card designer (`frontend/app/admin/card-designer`, `components/card-designer`)
+      and drop `@imgly/background-removal`. Its nested zod 3.25 has an unpatched high advisory
+      (GHSA-mrhx-c7xc-m3w5); it is not in the core image, so CI reports it without blocking.
+      First check whether Document Designer needs background removal; if so, that becomes a plugin task.
 - [ ] Remove the `legacy-full` distribution flag.
 
 ## G5 — Third-party plugin runtime (optional; needed only for outside publishers)
@@ -73,3 +77,6 @@ Only after each existing school is moved to plugins (reform plan §8 and §13).
 - 2026-11-05 — Goals created. G1 started.
 - 2026-11-05 — Local marketplace running; 14 plugins published as free beta. First build
   attempt hit an npm network reset (ECONNRESET); a retry passed.
+- 2026-11-06 — Paused the scheduled workflows that target deleted hosts. Patched high backend and
+  frontend advisories. The core web image now ships only traced dependencies (802 MB → 50 MB
+  node_modules), and the blocking CI audit covers exactly what the core image ships.
