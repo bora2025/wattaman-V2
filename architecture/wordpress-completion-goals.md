@@ -99,3 +99,11 @@ Only after each existing school is moved to plugins (reform plan §8 and §13).
   Marketplace 0.1.2 (zod 4, body-parser/multer patches, partial-update default bug fixed) is built
   and signed but not deployed yet. Still open: remove public api/web/worker domains, branch
   protection, CSP with a report endpoint, KMS for signing keys.
+- 2026-11-06 — Deployed marketplace 0.1.2 (commit 71e9d25; plan 0/2/0; no new migrations). Health,
+  admin and catalog match the baseline, validation errors come back as structured 400s, and
+  school→marketplace calls keep working. Removed the hand-added public domains on school
+  api/web/worker, so the gateway is now the only ingress (the direct URLs return 404, the gateway
+  still returns 200, and there are no 5xx responses or errors). Removed a stray local Railway link
+  from `apps/marketplace-api` to the unrelated project "Seong Kimseng".
+  Still open: branch protection on `main` (both repos), CSP with a report endpoint, KMS for signing
+  keys, re-enabling the two paused scheduled workflows, APP_VERSION bookkeeping.
