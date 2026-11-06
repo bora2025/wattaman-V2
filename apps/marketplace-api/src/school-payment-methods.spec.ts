@@ -64,6 +64,21 @@ describe('SchoolBillingService payment methods (operator)', () => {
     expect(audit.metadata).toMatchObject({ before: { active: true }, after: { active: false } });
   });
 
+  // Zod 4 applies .default() inside .partial(); a label-only edit must not re-activate an archived
+  // account or move it to position 0.
+  it('changes only the fields sent: renaming an archived account keeps it archived', async () => {
+    const existing = { id: METHOD_ID, ...method, active: false, position: 3 };
+    const { tx, prisma } = harness(existing);
+    await new SchoolBillingService(prisma).updatePaymentMethod(METHOD_ID, 'operator-1', { label: 'ABA Bank — USD (old)', internalReason: 'Rename archived account.' }, context);
+    expect(tx.schoolPaymentMethod.update.mock.calls[0][0].data).toEqual({ label: 'ABA Bank — USD (old)' });
+  });
+
+  it('still applies create defaults: a new account is active at position 0', async () => {
+    const { tx, prisma } = harness();
+    await new SchoolBillingService(prisma).createPaymentMethod('operator-1', method, context);
+    expect(tx.schoolPaymentMethod.create.mock.calls[0][0].data).toMatchObject({ active: true, position: 0 });
+  });
+
   it('refuses an update that changes nothing', async () => {
     const { prisma } = harness({ id: METHOD_ID, ...method });
     await expect(new SchoolBillingService(prisma).updatePaymentMethod(METHOD_ID, 'operator-1', { internalReason: 'No change.' }, context)).rejects.toThrow(/At least one/);

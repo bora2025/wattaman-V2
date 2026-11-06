@@ -59,13 +59,17 @@ const paymentInput = z.object({
 
 const voidInput = z.object({ internalReason: reason }).strict();
 const notifyInput = z.object({ internalReason: reason }).strict();
-const planInput = z.object({
+// Field definitions carry no defaults. Zod 4 applies .default() even inside .partial(), so an update
+// schema derived from a schema with defaults would silently reset omitted fields (re-activating a
+// disabled plan, resetting dueDays). Defaults are added to the create schema only.
+const planFields = {
   slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(80), name: z.string().trim().min(2).max(120),
   currency: z.string().regex(/^[A-Z]{3}$/), amountMinor: z.number().int().positive().max(2_000_000_000),
-  billingInterval: z.enum(['MONTHLY', 'ANNUAL']), dueDays: z.number().int().min(1).max(90).default(14),
-  active: z.boolean().default(true), internalReason: reason,
-}).strict();
-const planUpdateInput = planInput.partial().extend({ internalReason: reason }).strict();
+  billingInterval: z.enum(['MONTHLY', 'ANNUAL']), dueDays: z.number().int().min(1).max(90),
+  active: z.boolean(), internalReason: reason,
+};
+const planInput = z.object({ ...planFields, dueDays: planFields.dueDays.default(14), active: planFields.active.default(true) }).strict();
+const planUpdateInput = z.object(planFields).partial().extend({ internalReason: reason }).strict();
 const assignPlanInput = z.object({
   planId: z.string().uuid(),
   /** Where the subscription renews from. Defaults to the start of today, UTC. */
@@ -84,7 +88,8 @@ const paymentSubmissionInput = z.object({
 }).strict();
 const paymentSubmissionDecision = z.object({ internalReason: reason, rejectionReason: z.string().trim().min(3).max(2000).optional() }).strict();
 
-const paymentMethodInput = z.object({
+// No defaults on the shared fields; see planFields.
+const paymentMethodFields = {
   label: z.string().trim().min(2).max(120),
   bankName: z.string().trim().min(2).max(120),
   accountName: z.string().trim().min(2).max(160),
@@ -92,11 +97,12 @@ const paymentMethodInput = z.object({
   currency: z.string().regex(/^[A-Z]{3}$/),
   qrImage: z.string().max(170_000).nullable().optional(),
   instructions: z.string().trim().max(1000).nullable().optional(),
-  active: z.boolean().default(true),
-  position: z.number().int().min(0).max(1000).default(0),
+  active: z.boolean(),
+  position: z.number().int().min(0).max(1000),
   internalReason: reason,
-}).strict();
-const paymentMethodUpdateInput = paymentMethodInput.partial().extend({ internalReason: reason }).strict();
+};
+const paymentMethodInput = z.object({ ...paymentMethodFields, active: paymentMethodFields.active.default(true), position: paymentMethodFields.position.default(0) }).strict();
+const paymentMethodUpdateInput = z.object(paymentMethodFields).partial().extend({ internalReason: reason }).strict();
 /** What the school's own admin panel sends: the portal's fields, plus who sent it. */
 const schoolPaymentSubmissionInput = paymentSubmissionInput.extend({ submittedBy: z.string().trim().min(1).max(200).optional() }).strict();
 

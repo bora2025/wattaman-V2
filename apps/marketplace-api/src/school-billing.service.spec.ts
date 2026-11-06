@@ -53,6 +53,16 @@ describe('SchoolBillingService', () => {
     expect(tx.platformAuditEvent.create.mock.calls[0][0].data.action).toBe('school_billing_plan_updated');
   });
 
+  // Zod 4 applies .default() inside .partial(); a rename must not re-activate an archived plan or
+  // reset its due days to 14.
+  it('updates only the plan fields sent', async () => {
+    const existing = { id: '11111111-1111-4111-8111-111111111111', slug: 'standard', active: false, dueDays: 30 };
+    const tx = { schoolBillingPlan: { findUnique: jest.fn().mockResolvedValue(existing), update: jest.fn().mockImplementation(({ data }: any) => ({ ...existing, ...data })) }, platformAuditEvent: { create: jest.fn() } };
+    const prisma = { $transaction: jest.fn((work: any) => work(tx)) } as any;
+    await new SchoolBillingService(prisma).updatePlan(existing.id, 'operator-1', { name: 'Standard (2026)', internalReason: 'Rename archived plan.' }, context);
+    expect(tx.schoolBillingPlan.update.mock.calls[0][0].data).toEqual({ name: 'Standard (2026)' });
+  });
+
   it('deletes only an unused billing plan and audits the deletion', async () => {
     const plan = { id: 'plan-1', slug: 'trial', name: 'Trial', currency: 'USD', amountMinor: 100, _count: { schools: 0, invoices: 0, invoiceLines: 0 } };
     const tx = { schoolBillingPlan: { findUnique: jest.fn().mockResolvedValue(plan), delete: jest.fn().mockResolvedValue(plan) }, platformAuditEvent: { create: jest.fn() } };
