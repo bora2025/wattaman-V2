@@ -43,5 +43,15 @@ if (!fs.existsSync(envPath)) {
   fs.writeFileSync(envPath, env, { mode: 0o600 });
 }
 
+// Customer MFA secrets are encrypted with this keyring; without it the marketplace refuses to
+// enroll MFA at all. Added to existing local env files too (they predate this key).
+const current = fs.readFileSync(envPath, 'utf8');
+if (!/^IDENTITY_ENCRYPTION_KEYS_JSON=/m.test(current)) {
+  const keyring = JSON.stringify({ 'local-identity': randomBytes(32).toString('base64') });
+  const addition = `IDENTITY_ENCRYPTION_KEYS_JSON=${keyring}\nIDENTITY_ENCRYPTION_ACTIVE_KEY_ID=local-identity\n`;
+  fs.writeFileSync(envPath, `${current.replace(/\n?$/, '\n')}${addition}`, { mode: 0o600 });
+  process.stdout.write('Added a local identity encryption keyring to the existing env file.\n');
+}
+
 process.stdout.write('Local Marketplace credentials and distinct Ed25519 keys are ready.\n');
 process.stdout.write('Run: npm run local:up\n');
