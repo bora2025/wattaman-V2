@@ -127,3 +127,10 @@ Only after each existing school is moved to plugins (reform plan §8 and §13).
   `/api/csp-report` endpoint. A real Chromium run and the first real-user reports show only Next.js
   inline scripts as violations; Google Fonts (Khmer) are allowed. Next: collect reports from
   logged-in traffic, then phase 2 (per-request nonces, then switch to enforcing).
+- 2026-11-06 — Published the 12 remaining official plugins (free) to the live marketplace:
+  certify (107 + 61 + 54 tests) → BETA → promote to STABLE. The live catalog now has 14/14,
+  and verification passes on all 27 releases.
+- 2026-11-10 — Deployed school core 0.1.20 (plan 1 add / 5 change / 0 destroy): a `recovery-drill`
+  rehearsal Postgres service is declared in IaC, the worker points at it, and the drill creates its
+  `recovery_drill` database on first run. Off-site backup freshness has passed every run since
+  2026-11-07. The drill itself still needs the `RAILWAY_TOKEN` GitHub secret (user action).
