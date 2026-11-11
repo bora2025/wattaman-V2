@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.26.0
+
+- The plugin now ships its own Attendance Settings and Employee / Employer Profile screens (`ui/`), instead of using screens built into the school core. They run in the core's sandboxed plugin frame and call this plugin's API only.
+- Attendance Settings checks that each session ends after it starts and that at least one working day is chosen before saving.
+- Requires school core 0.1.29 or newer. No database changes.
+
 ## 0.25.1
 
 - Add covering indexes for 4 foreign keys (migrations 065-068) so lookups, cascades and parent deletes stay fast as school data grows. Additive only; no data changes.

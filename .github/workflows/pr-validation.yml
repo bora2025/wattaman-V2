@@ -213,7 +213,9 @@ jobs:
       - name: Run browser control-plane tests
         working-directory: apps/platform-admin
         run: |
-          npx playwright install --with-deps chromium
+          # Browser only. `--with-deps` runs apt, which failed or hung whenever Ubuntu's mirrors
+          # could not be resolved; the hosted runner image already ships Chromium's system libraries.
+          npx playwright install chromium
           npm run e2e
       - name: Upload browser failure evidence
         if: failure()

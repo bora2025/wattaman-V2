@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Workforce Attendance Settings</title>
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <main id="app" aria-busy="true">
+    <header>
+      <h1>Workforce Attendance Settings</h1>
+      <p class="muted">Configure session windows, attendance rules, and weekly workdays</p>
+    </header>
+    <p class="muted">Configure organization-wide check-in and check-out windows for employers and employees.</p>
+    <span class="badge">🏢 Admin scope: Global organization</span>
+    <div id="message" class="notice success" role="status" hidden></div>
+    <div id="error" class="notice danger" role="alert" hidden></div>
+
+    <div id="sessions" class="sessions"></div>
+
+    <div class="panel row">
+      <div>
+        <h2>📊 Attendance Format Rules</h2>
+        <p class="muted small">Convert accumulated lates/permissions into absences for workforce reports</p>
+      </div>
+      <label class="toggle"><input type="checkbox" id="format-rules"> <span id="format-rules-label">Disabled</span></label>
+    </div>
+
+    <section class="panel">
+      <div class="row">
+        <div>
+          <h2>🗓️ Weekly Work Schedule</h2>
+          <p class="muted small">Mark days when the workforce is not expected to work. Days off are excluded from attendance reports.</p>
+        </div>
+      </div>
+      <div id="days" class="days"></div>
+      <div class="quick">
+        <button type="button" data-days="MON,TUE,WED,THU,FRI">Mon–Fri</button>
+        <button type="button" data-days="MON,TUE,WED,THU,FRI,SAT">Mon–Sat</button>
+        <button type="button" data-days="MON,TUE,WED,THU,FRI,SAT,SUN">All 7 days</button>
+      </div>
+    </section>
+
+    <div class="actions">
+      <button type="button" id="save" class="primary">💾 Save Workforce Settings</button>
+      <button type="button" id="reset" class="link">↩ Reset to Default</button>
+    </div>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="settings.js"></script>
+</body>
+</html>

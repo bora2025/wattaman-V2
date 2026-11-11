@@ -277,22 +277,39 @@ test('employee and employer profile editor can update the complete workforce rec
   const descriptor = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'frontend', 'page.json'), 'utf8'));
   const page = descriptor.pages.find(item => item.id === 'profile-edit');
   const save = page.dataSources.find(item => item.id === 'save');
-  const form = page.components.find(item => item.id === 'save');
   const relations = page.dataSources.find(item => item.id === 'relations');
   const workspace = page.components.find(item => item.id === 'profile-workspace');
   assert.equal(save.method, 'PUT');
   assert.equal(save.path, 'employees/:id');
   assert.equal(relations.path, 'employees/:id/relations');
-  assert.equal(workspace.type, 'profile-manager');
-  assert.deepEqual(workspace.options, { relationsSource:'relations', saveSource:'save' });
-  assert.deepEqual(form.fields.map(field => field.id), [
+  // Since 0.26.0 the profile is the plugin's own screen (ui/profile), not a screen built into the core.
+  assert.equal(workspace.type, 'app');
+  assert.equal(workspace.options.entry, 'ui/profile/index.html');
+  assert.deepEqual(page.components.map(component => component.id), ['profile-workspace']);
+  const ui = path.join(__dirname, '..', 'ui', 'profile');
+  const sandbox = { window: {} };
+  require('node:vm').runInNewContext(fs.readFileSync(path.join(ui, 'fields.js'), 'utf8'), sandbox);
+  assert.deepEqual(Array.from(sandbox.window.ORGANIZING_PROFILE_FIELDS, field => field.id), [
     'employmentType','employeeNumber','fullName','photoUrl','email','phone','positionId','position','department','startDate','employmentStatus',
     'dateOfBirth','gender','nationalId','address','emergencyContactName','emergencyContactPhone','notes',
   ]);
-  assert.deepEqual(page.components.filter(component => ['id-card','salary','rewards','deductions','permissions','discipline','promotions','payroll-history'].includes(component.id)).map(component => component.title), [
-    'Your ID Card','Salary & Employment','Rewards & Bonuses','Salary & Wage Deductions','Permissions & Leave',
-    'Disciplinary Actions','Job Promotion History','Salary & Payroll History',
-  ]);
+  const script = fs.readFileSync(path.join(ui, 'profile.js'), 'utf8');
+  for (const key of ['rewards','deductions','permissions','disciplinaryActions','promotions','payroll']) assert.ok(script.includes(`'${key}'`), `profile screen shows ${key}`);
+  for (const call of ["ui.api.get(path)", "ui.api.get(path + '/relations')", "ui.api.put('employees/'"]) assert.ok(script.includes(call), `profile screen calls ${call}`);
+});
+
+test('workforce attendance settings are the plugin\'s own screen', () => {
+  const descriptor = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'frontend', 'page.json'), 'utf8'));
+  const page = descriptor.pages.find(item => item.routePath === 'attendance-settings');
+  const screen = page.components.find(item => item.id === 'workforce-session-settings');
+  assert.equal(screen.type, 'app');
+  assert.equal(screen.options.entry, 'ui/attendance-settings/index.html');
+  const script = fs.readFileSync(path.join(__dirname, '..', 'ui', 'attendance-settings', 'settings.js'), 'utf8');
+  for (const route of ["'attendance/sessions'", "'attendance/session-settings'"]) assert.ok(script.includes(route), `settings screen calls ${route}`);
+  // No screen in this plugin depends on a domain screen built into the school core any more,
+  // except the shared ID-card manager, which still needs host printing support.
+  const coreBuilt = descriptor.pages.flatMap(item => item.components.map(component => component.type)).filter(type => ['session-manager','profile-manager','officer-manager','class-manager','take-attendance'].includes(type));
+  assert.deepEqual(coreBuilt, []);
 });
 
 test('workforce directory rows open the single unified HR lifecycle profile', () => {
