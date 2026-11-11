@@ -134,3 +134,13 @@ Only after each existing school is moved to plugins (reform plan §8 and §13).
   rehearsal Postgres service is declared in IaC, the worker points at it, and the drill creates its
   `recovery_drill` database on first run. Off-site backup freshness has passed every run since
   2026-11-07. The drill itself still needs the `RAILWAY_TOKEN` GitHub secret (user action).
+- 2026-11-11 — Closed the three High review risks. CSRF: school session cookies are SameSite=Lax
+  and an origin guard refuses cross-site writes (core 0.1.25; lifecycle e2e 25/25, live probe 403).
+  Marketplace DB backup: nightly encrypted `marketplace-backup` cron service (marketplace 0.1.3;
+  restore rehearsal matched all 67 tables), waiting on the R2 bucket and keys. Uptime: 5-minute
+  monitor workflow.
+- 2026-11-11 — Plugin styling: pages declare an allow-listed `appearance` (theme, layout, accent;
+  width, surface, tone) that the core maps to its own Tailwind classes (core 0.1.26; guide in
+  Customer-School `docs/plugin-ui-appearance.md`). Core 0.1.27 fixes "[object Object]" under plugin
+  metrics. Academic Management 0.3.5 (grid attendance dashboard) certified, published and promoted
+  to STABLE; catalog verification passes on 28 releases.
