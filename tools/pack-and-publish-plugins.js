@@ -199,6 +199,7 @@ async function main() {
     throw new Error('Direct stable publication is prohibited. Publish BETA, certify that exact artifact, then promote it to STABLE.');
   }
 
+  const packed = [];
   if (!publishOnly) {
     if (!privateKeyPath) throw new Error('PLUGIN_SIGNING_PRIVATE_KEY is required when PUBLISH_ONLY is false');
     if (!keyId) throw new Error('PLUGIN_SIGNING_KEY_ID is required when PUBLISH_ONLY is false');
@@ -218,15 +219,21 @@ async function main() {
       const outPath = path.join(packagesDir, outName);
       process.stdout.write(`- ${path.basename(sourceDir)} -> ${outName} ... `);
       runPack({ rootDir, sourceDir, privateKeyPath, keyId, outputPath: outPath });
+      packed.push(outPath);
       process.stdout.write('OK\n');
     }
 
     process.stdout.write('\n');
   }
 
-  const packageFiles = collectPackages(packagesDir);
+  const available = collectPackages(packagesDir);
+  const packageFiles = packagesToPublish({ publishOnly, packed, available });
   if (!packageFiles.length) {
     throw new Error(`No .wtp files found in ${packagesDir}`);
+  }
+  const leftovers = available.filter((file) => !packageFiles.includes(file));
+  if (leftovers.length) {
+    process.stdout.write(`Ignoring ${leftovers.length} package(s) in ${packagesDir} that this run did not build: ${leftovers.map((file) => path.basename(file)).join(', ')}\n`);
   }
 
   process.stdout.write(`Publishing ${packageFiles.length} package(s) from ${packagesDir}\n`);
@@ -253,7 +260,22 @@ async function main() {
   if (failures.length) process.exitCode = 1;
 }
 
-main().catch((error) => {
-  process.stderr.write(`${error.message}\n`);
-  process.exit(1);
-});
+/**
+ * A packing run publishes exactly the packages it just built. Files left in the packages folder by
+ * earlier runs (other versions, other plugins) are never published by accident. PUBLISH_ONLY=true
+ * is the explicit "publish this folder of pre-built packages" mode.
+ */
+function packagesToPublish({ publishOnly, packed, available }) {
+  if (publishOnly) return available;
+  const built = new Set(packed.map((file) => path.resolve(file)));
+  return available.filter((file) => built.has(path.resolve(file)));
+}
+
+if (require.main === module) {
+  main().catch((error) => {
+    process.stderr.write(`${error.message}\n`);
+    process.exit(1);
+  });
+}
+
+module.exports = { packagesToPublish };
