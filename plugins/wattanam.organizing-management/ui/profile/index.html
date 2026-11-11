@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Employee / Employer Profile</title>
+  <link rel="stylesheet" href="profile.css">
+</head>
+<body>
+  <form id="app" class="card" aria-busy="true" novalidate>
+    <header class="top">
+      <div>
+        <p class="eyebrow">People operations</p>
+        <h1 id="name">Employee / Employer Profile</h1>
+        <p class="muted" id="mode-help">Review this profile. Select Edit to change employee or employer information.</p>
+      </div>
+      <div class="top-actions">
+        <span class="status" id="status">ACTIVE</span>
+        <button type="button" id="cancel" class="secondary" hidden>Cancel</button>
+        <button type="submit" id="save" class="primary" hidden>Save changes</button>
+        <button type="button" id="edit" class="primary">Edit profile</button>
+      </div>
+    </header>
+
+    <section class="guide"><strong>Profile guide:</strong> Review the saved identity and HR lifecycle first. Select <strong>Edit profile</strong> to unlock information, then choose <strong>Save changes</strong>. Use <strong>Cancel</strong> to discard unsaved edits.</section>
+    <div id="message" class="notice success" role="status" hidden></div>
+    <div id="error" class="notice danger" role="alert" hidden></div>
+
+    <div class="columns">
+      <aside class="left">
+        <div class="photo"><img id="photo" alt="Profile" hidden><div id="initials" class="initials">E</div></div>
+        <label class="caption">Profile image URL
+          <input id="photo-url" type="text" disabled>
+        </label>
+        <p class="hint" id="photo-hint" hidden>This image link cannot be previewed here. It is still saved with the profile.</p>
+        <div class="facts">
+          <div><p class="fact-label">Workforce number</p><p class="fact" id="fact-number">—</p></div>
+          <div><p class="fact-label">Profile type</p><p class="fact" id="fact-type">—</p></div>
+          <div><p class="fact-label">Department</p><p class="fact" id="fact-department">—</p></div>
+          <div><p class="fact-label">Start date</p><p class="fact" id="fact-start">—</p></div>
+        </div>
+        <div class="idcard">
+          <p class="fact-label">Your ID card</p>
+          <p class="idcard-name" id="card-name">—</p>
+          <p class="idcard-detail" id="card-detail">—</p>
+        </div>
+      </aside>
+
+      <main class="middle">
+        <h2>Employee details</h2>
+        <p class="muted" id="details-help">Profile information is read-only until you select Edit profile.</p>
+        <div id="fields" class="fields"></div>
+      </main>
+
+      <aside class="right">
+        <div class="salary">
+          <p class="salary-label">Salary &amp; employment</p>
+          <p class="salary-amount" id="salary">Not configured</p>
+          <p class="salary-basis" id="salary-basis">Salary not configured</p>
+        </div>
+        <h2 class="lifecycle-title">HR lifecycle</h2>
+        <div id="lifecycle" class="lifecycle"></div>
+        <section class="records">
+          <h3 id="records-title">Rewards &amp; bonuses</h3>
+          <div id="records"></div>
+        </section>
+      </aside>
+    </div>
+  </form>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="fields.js"></script>
+  <script src="profile.js"></script>
+</body>
+</html>
