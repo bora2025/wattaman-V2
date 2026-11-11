@@ -3,7 +3,7 @@
   "id": "wattanam.attendance-manager",
   "name": "Attendance Manager",
   "description": "Study years and student school-day attendance with camera/QR, USB scanning, corrections, reports, printing, and exports.",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -40,7 +40,10 @@
     { "id": "003_enforce_student_boundary", "path": "migrations/003_enforce_student_boundary.sql", "checksum": "ed92bab5dd405713b6dbbff4a40d40e0d608bb68a97d2733fd8bd084c20eb91c", "destructive": false },
     { "id": "004_add_corrections_scans_alerts_snapshots", "path": "migrations/004_add_corrections_scans_alerts_snapshots.sql", "checksum": "3d1b4733339a53a66c67a511a1ea769abcf8656882d671978261542f2891b682", "destructive": false },
     { "id": "005_add_alert_delivery_ledger", "path": "migrations/005_add_alert_delivery_ledger.sql", "checksum": "d7772013527176050539349faff053af05fe36f08845d12036fd2d977ac14c8d", "destructive": false },
-    { "id": "006_add_legacy_adoption_fields", "path": "migrations/006_add_legacy_adoption_fields.sql", "checksum": "fc36b516cf8f3079a5a075527e2219108456a4c7133e9561eb70f41844c821c9", "destructive": false }
+    { "id": "006_add_legacy_adoption_fields", "path": "migrations/006_add_legacy_adoption_fields.sql", "checksum": "fc36b516cf8f3079a5a075527e2219108456a4c7133e9561eb70f41844c821c9", "destructive": false },
+    { "id": "007_index_alert_ruleid", "path": "migrations/007_index_alert_ruleid.sql", "checksum": "ad125f9a56f219a0881cdf9f1ed17302232bc5739768d44e72b1df24b6a7b8b6", "destructive": false },
+    { "id": "008_index_record_studyyearid", "path": "migrations/008_index_record_studyyearid.sql", "checksum": "b55822eb820ed38dbeb4062c307bbd435adae196ce14c4674d1d3e4863f2a1ea", "destructive": false },
+    { "id": "009_index_scan_recordid", "path": "migrations/009_index_scan_recordid.sql", "checksum": "c01f66ada88775942027f9bbe040fc3caada713aa7bfc312183a288dd460cb9e", "destructive": false }
   ],
   "navigation": [
     { "id": "attendance", "label": "Attendance", "href": "/plugins/wattanam.attendance-manager/attendance", "permission": "wattanam.attendance-manager.view" },

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.2
+
+- Add covering indexes for 3 foreign keys (migrations 006-008) so lookups, cascades and parent deletes stay fast as school data grows. Additive only; no data changes.
+
 ## 0.2.1
 
 - Declare the transport summary read model and the database transaction capability.

@@ -3,7 +3,7 @@
   "id": "wattanam.learning",
   "name": "Learning",
   "description": "Courses, lessons, assignments, interactive learning, engagement and course attendance.",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -28,7 +28,15 @@
     { "id": "011_create_course_session", "path": "migrations/011_create_course_session.sql", "checksum": "02b1e8076e6c6627349b8d614beea5818cb7cf099f9fe5e93f2b4bfa8d7e4ebe", "destructive": false },
     { "id": "012_create_course_attendance", "path": "migrations/012_create_course_attendance.sql", "checksum": "7ba9ccac14cda6fde43401d3f4503068cfd11b92671640f0a64a091c55b7038a", "destructive": false },
     { "id": "013_create_lesson_view", "path": "migrations/013_create_lesson_view.sql", "checksum": "ca32d5ba66b23da4020b2fb3ba4e00a7dd6ffb1c7d0181ec2c56011f1b832ab4", "destructive": false },
-    { "id": "014_allow_assignment_attempts", "path": "migrations/014_allow_assignment_attempts.sql", "checksum": "c2de1c777e44831826cda233897ce3af7650307ee64e89038a48c18b310dbdef", "destructive": true }
+    { "id": "014_allow_assignment_attempts", "path": "migrations/014_allow_assignment_attempts.sql", "checksum": "c2de1c777e44831826cda233897ce3af7650307ee64e89038a48c18b310dbdef", "destructive": true },
+    { "id": "015_index_course_session_courseid", "path": "migrations/015_index_course_session_courseid.sql", "checksum": "a15173d33922f4ef59939718846ae1406412dc5eb2866274f9e1b5c992b7010f", "destructive": false },
+    { "id": "016_index_course_session_lessonid", "path": "migrations/016_index_course_session_lessonid.sql", "checksum": "f22a8aa3b22b023ef92499083f67ea6cfaf906ca2d423995a829c5a3ab6def8d", "destructive": false },
+    { "id": "017_index_lesson_courseid", "path": "migrations/017_index_lesson_courseid.sql", "checksum": "b827da75afed88db9007266ef1e63a1c0ab7caea821155796f49c86a64466e9f", "destructive": false },
+    { "id": "018_index_lesson_attempt_lessonid", "path": "migrations/018_index_lesson_attempt_lessonid.sql", "checksum": "6831d651a6df7361cee40713262b391dac01b665ec49e248f6587e7e7c3d0b44", "destructive": false },
+    { "id": "019_index_lesson_page_lessonid", "path": "migrations/019_index_lesson_page_lessonid.sql", "checksum": "e312a8d68b997248cd2ba79dbc8c8ba4066179007b270d8d766d6a92ade0c8cb", "destructive": false },
+    { "id": "020_index_page_response_pageid", "path": "migrations/020_index_page_response_pageid.sql", "checksum": "b7f0ea8075b9195f7d8a3db0d994a14ba0e5e24f4abd61f302b84092873eeaea", "destructive": false },
+    { "id": "021_index_quiz_answer_questionid", "path": "migrations/021_index_quiz_answer_questionid.sql", "checksum": "44f0afd57e7e77b6023ac40e29b43c08328173102d4293fcd9cbcc49ce7b79f7", "destructive": false },
+    { "id": "022_index_quiz_question_assignmentid", "path": "migrations/022_index_quiz_question_assignmentid.sql", "checksum": "1b207bd1a1cdd43092c97387603ee38d3251a3acad94ddcad3ddd9fe1c2c55ee", "destructive": false }
   ],
   "navigation": [
     { "id": "courses", "label": "Courses", "href": "/plugins/wattanam.learning/courses", "permission": "wattanam.learning.courses.view" },

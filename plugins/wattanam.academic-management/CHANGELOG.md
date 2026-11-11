@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.6
+
+- Add covering indexes for 5 foreign keys (migrations 063-067) so lookups, cascades and parent deletes stay fast as school data grows. Additive only; no data changes.
+
 ## 0.3.5
 
 - Attendance Dashboard uses the core appearance vocabulary: a grid page with the brand heading accent and the four attendance metrics two per row on wide screens. Schools on core 0.1.25 or older keep the previous stacked layout.

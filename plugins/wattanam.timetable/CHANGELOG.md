@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.2
+
+- Add covering indexes for 14 foreign keys (migrations 011-024) so lookups, cascades and parent deletes stay fast as school data grows. Additive only; no data changes.
+
 ## 0.2.1
 
 - Replace the unused durable-event grant with the least-privilege database transaction capability.

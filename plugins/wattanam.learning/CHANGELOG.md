@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.2
+
+- Add covering indexes for 8 foreign keys (migrations 015-022) so lookups, cascades and parent deletes stay fast as school data grows. Additive only; no data changes.
+
 ## 0.2.1
 
 - Declare the database transaction capability used by assignment and attempt workflows.
