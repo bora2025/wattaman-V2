@@ -1,0 +1,32 @@
+name: Marketplace backup freshness
+
+# Every 6 hours: is the newest encrypted off-site marketplace backup (Railway cron service
+# `marketplace-backup`, 02:15 UTC daily) younger than 26h and complete? Reads only latest.json with
+# a READ-ONLY R2 key. A failed run makes GitHub email the repo owner.
+on:
+  schedule:
+    - cron: '40 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: marketplace-backup-freshness
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24 }
+      - name: Newest marketplace backup is fresh
+        env:
+          MARKETPLACE_BACKUP_S3_ENDPOINT: ${{ vars.MARKETPLACE_BACKUP_S3_ENDPOINT }}
+          MARKETPLACE_BACKUP_S3_BUCKET: ${{ vars.MARKETPLACE_BACKUP_S3_BUCKET }}
+          MARKETPLACE_BACKUP_READ_ACCESS_KEY_ID: ${{ secrets.MARKETPLACE_BACKUP_READ_ACCESS_KEY_ID }}
+          MARKETPLACE_BACKUP_READ_SECRET_ACCESS_KEY: ${{ secrets.MARKETPLACE_BACKUP_READ_SECRET_ACCESS_KEY }}
+        run: node tools/check-marketplace-backup-freshness.js
