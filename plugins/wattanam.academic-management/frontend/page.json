@@ -7,6 +7,7 @@
       "id": "attendance-dashboard",
       "title": "Attendance Dashboard",
       "routePath": "dashboard",
+      "appearance": { "layout": "grid", "accent": "brand" },
       "permission": "wattanam.academic-management.attendance.view",
       "parameters": [],
       "dataSources": [
@@ -18,10 +19,10 @@
       ],
       "components": [
         { "id": "dashboard-heading", "type": "heading", "title": "Attendance Dashboard" },
-        { "id": "student-expected", "type": "metric", "title": "Expected student sessions", "source": "dashboardAuthoritative", "options": { "valuePath": "student.expected", "format": "number" } },
-        { "id": "student-present", "type": "metric", "title": "Students present", "source": "dashboardAuthoritative", "options": { "valuePath": "student.present", "format": "number" } },
-        { "id": "student-absent", "type": "metric", "title": "Students absent", "source": "dashboardAuthoritative", "options": { "valuePath": "student.absent", "format": "number" } },
-        { "id": "staff-present", "type": "metric", "title": "Staff present", "source": "dashboardAuthoritative", "options": { "valuePath": "staff.present", "format": "number" } },
+        { "id": "student-expected", "type": "metric", "appearance": { "width": "half" }, "title": "Expected student sessions", "source": "dashboardAuthoritative", "options": { "valuePath": "student.expected", "format": "number" } },
+        { "id": "student-present", "type": "metric", "appearance": { "width": "half" }, "title": "Students present", "source": "dashboardAuthoritative", "options": { "valuePath": "student.present", "format": "number" } },
+        { "id": "student-absent", "type": "metric", "appearance": { "width": "half" }, "title": "Students absent", "source": "dashboardAuthoritative", "options": { "valuePath": "student.absent", "format": "number" } },
+        { "id": "staff-present", "type": "metric", "appearance": { "width": "half" }, "title": "Staff present", "source": "dashboardAuthoritative", "options": { "valuePath": "staff.present", "format": "number" } },
         { "id": "class-progress", "type": "table", "title": "Today's class attendance", "source": "dashboardAuthoritative", "fields": [
           { "id": "className", "label": "Class" },
           { "id": "students", "label": "Students", "format": "number" },
