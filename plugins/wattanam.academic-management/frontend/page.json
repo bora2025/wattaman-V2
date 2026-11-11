@@ -3065,12 +3065,12 @@
       "components": [
         {
           "id": "session-settings-workspace",
-          "type": "session-manager",
-          "source": "sessions",
+          "type": "app",
+          "title": "Session Time Settings",
           "options": {
-            "settingsSource": "sessionSettings",
-            "saveSessionSource": "saveSession",
-            "saveSettingsSource": "saveSessionSettings"
+            "entry": "ui/sessions/index.html",
+            "height": "auto",
+            "minHeight": 400
           }
         },
         {

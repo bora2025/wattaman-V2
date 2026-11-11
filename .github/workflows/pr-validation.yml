@@ -53,6 +53,9 @@ jobs:
         working-directory: customer-school/backend
         env:
           PLUGIN_SOURCE_CATALOG: ${{ github.workspace }}/marketplace/plugins
+          # Packages are checked against the exact core version checked out above: a plugin that
+          # needs a newer core than schools run must wait until that core is released and deployed.
+          PLUGIN_HOST_CORE_VERSION: ${{ vars.CUSTOMER_SCHOOL_CORE_VERSION }}
         run: >-
           npm test -- --runInBand
           src/plugins/all-plugin-package-lifecycle.spec.ts

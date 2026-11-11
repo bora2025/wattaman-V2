@@ -60,3 +60,35 @@ test('registers a status route', async () => {
 `createTestContext()` returns `{ context, routes, jobs, permissions, navigation, events, notifications, realtime }` — call your plugin's `activate(context)`, then inspect the recorder arrays to assert what it did. `settings`/`storage` are real in-memory stores (round-trip correctly); `database`/`directory` default to empty/no-op responses — pass `overrides` to `createTestContext({ database: { ... } })` to supply your own fixture data for a specific test. Overrides replace a whole sub-object (`database`, `directory`, etc.), not individual methods within it.
 
 This harness never talks to a real database or a running backend — it's for testing your plugin's own logic in isolation. Use `wattanam-plugin check <dir>` (from `@wattanam/plugin-cli`) for full manifest+migration+entry-point validation before packaging.
+
+## Plugin-owned screens (`ui/`)
+
+A plugin can ship its own screens. Put static files under `ui/` in the plugin folder and declare an `app` component in `frontend/page.json`:
+
+```json
+{ "id": "sessions-app", "type": "app", "title": "Session Time Settings",
+  "options": { "entry": "ui/sessions/index.html", "height": "auto", "minHeight": 400 } }
+```
+
+The school core (0.1.29 or newer, so set `"requiresCore": ">=0.1.29 <1.0.0"`) shows the screen in a sandboxed iframe:
+- It has no network access and no access to school cookies, storage or the school page.
+- It talks to the host through `ui/wattanam-plugin-ui.js`. Copy that file from this package into your plugin's `ui/` folder.
+
+```html
+<script src="../wattanam-plugin-ui.js"></script>
+<script src="app.js"></script>
+```
+
+```js
+const host = await WattanamPluginUI.connect();           // { pluginId, pluginVersion, params, language, theme }
+const rows = await WattanamPluginUI.api.get('sessions');  // YOUR plugin's API only, as the signed-in user
+await WattanamPluginUI.api.put('session-settings', { ... });
+WattanamPluginUI.navigate('settings');                    // another page of this plugin
+WattanamPluginUI.autoResize();                            // frame follows the content height
+```
+
+- **Theme colours:** the host's colours arrive as CSS variables named `--host-primary`, `--host-text` and so on.
+- **Scripts:** inline `<script>` blocks are blocked, so put your code in separate `.js` files.
+- **Checking before you publish:** `wattanam-plugin check` validates the entry, the file types and inline scripts.
+
+See the Customer School guide `docs/plugin-ui-apps.md` for the full security model.

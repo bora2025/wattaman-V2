@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Session Time Settings</title>
+  <link rel="stylesheet" href="sessions.css">
+</head>
+<body>
+  <main id="app" aria-busy="true">
+    <header>
+      <h1>Session Time Settings</h1>
+      <p class="muted">Configure time windows</p>
+    </header>
+    <div class="tabs" role="tablist" aria-label="Session type">
+      <button type="button" role="tab" id="tab-student" aria-selected="true">Class Sessions</button>
+      <button type="button" role="tab" id="tab-staff" aria-selected="false">Staff Sessions</button>
+    </div>
+    <p id="scope-help" class="muted"></p>
+    <span class="badge">🏢 Admin scope: Global organization</span>
+    <div id="message" class="notice success" role="status" hidden></div>
+    <div id="error" class="notice danger" role="alert" hidden></div>
+
+    <section id="student-only">
+      <div class="notice info">
+        <strong>How class attendance settings work</strong>
+        <p>Session Settings controls the global check-in/check-out times. Each class's Study Days and optional attendance format are managed in Manage Classes. A class marked Off today cannot scan or submit attendance and is excluded from absence reports.</p>
+      </div>
+      <h2 class="section-title">Quick Presets — Choose Attendance Format</h2>
+      <div id="presets" class="presets"></div>
+    </section>
+
+    <div id="sessions" class="sessions"></div>
+
+    <div class="panel row">
+      <div>
+        <h2>📊 Attendance Format Rules</h2>
+        <p class="muted small" id="rules-help"></p>
+      </div>
+      <label class="toggle"><input type="checkbox" id="format-rules"> <span id="format-rules-label">Disabled</span></label>
+    </div>
+
+    <section id="staff-only" class="panel" hidden>
+      <div class="row">
+        <div>
+          <h2>🗓️ Staff Weekly Schedule</h2>
+          <p class="muted small">Mark days when staff are not expected to work. Days off are excluded from attendance reports.</p>
+        </div>
+      </div>
+      <div id="days" class="days"></div>
+      <div class="quick">
+        <button type="button" data-days="MON,TUE,WED,THU,FRI">Mon–Fri</button>
+        <button type="button" data-days="MON,TUE,WED,THU,FRI,SAT">Mon–Sat</button>
+        <button type="button" data-days="MON,TUE,WED,THU,FRI,SAT,SUN">All 7 days</button>
+      </div>
+    </section>
+
+    <div class="actions">
+      <button type="button" id="save" class="primary">💾 Save Class Settings</button>
+      <button type="button" id="reset" class="link">↩ Reset to Default</button>
+    </div>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="sessions.js"></script>
+</body>
+</html>

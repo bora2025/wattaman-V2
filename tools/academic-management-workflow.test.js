@@ -21,7 +21,7 @@ test('officer photo migration declares its constraint replacement as destructive
 test('Academic Management uses the universal SDK 1.3 UI contract', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'plugin.json'), 'utf8'));
   const descriptor = JSON.parse(fs.readFileSync(path.join(root, 'frontend', 'page.json'), 'utf8'));
-  const universal = new Set(['heading','text','workflow','status','card','metric','table','form','detail','chart','file','print','document','designer','scanner','filter','actions','id-card-manager','session-manager','profile-manager','class-manager','officer-manager','take-attendance']);
+  const universal = new Set(['heading','text','workflow','status','card','metric','table','form','detail','chart','file','print','document','designer','scanner','filter','actions','id-card-manager','session-manager','profile-manager','class-manager','officer-manager','take-attendance','app']);
   const components = descriptor.pages.flatMap((page) => page.components || []);
   assert.equal(manifest.sdkVersion, '1.3.0');
   assert.deepEqual(manifest.hostContracts, ['wattanam.academic.directory.v1', 'wattanam.academic.identity.v1']);
@@ -269,7 +269,9 @@ test('Academic Management exposes the streamlined administration and attendance 
   const officerEdit = ui.pages.find((candidate) => candidate.id === 'officer-edit');
   assert.ok(officerEdit.components.some((component) => component.type === 'form' && component.fields?.some((field) => field.id === 'photoUrl' && field.type === 'url')), 'officer edit must expose a secure photo URL');
   const settings = ui.pages.find((candidate) => candidate.id === 'attendance-settings');
-  assert.ok(settings.components.some((component) => component.type === 'session-manager'), 'missing dedicated Session Time Settings workspace');
+  // Since 0.3.7 Session Time Settings is the plugin's own sandboxed screen, not a core component.
+  assert.ok(settings.components.some((component) => component.type === 'app' && component.options?.entry === 'ui/sessions/index.html'), 'missing dedicated Session Time Settings screen');
+  assert.ok(fs.existsSync(path.join(root, 'ui', 'sessions', 'index.html')), 'Session Time Settings screen files are missing');
   const attendance = ui.pages.find((candidate) => candidate.id === 'attendance-records');
   const takeAttendance = attendance.components.find((component) => component.type === 'take-attendance');
   assert.ok(takeAttendance, 'missing guided student attendance station');

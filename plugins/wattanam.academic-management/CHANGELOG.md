@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.7
+
+- Session Time Settings is now the plugin's own screen (`ui/sessions/`), shown by the school core in a sandboxed frame instead of a screen built into the core. Same behaviour; the screen can now change in plugin releases.
+- Requires school core 0.1.29 or newer.
+
 ## 0.3.6
 
 - Add covering indexes for 5 foreign keys (migrations 063-067) so lookups, cascades and parent deletes stay fast as school data grows. Additive only; no data changes.

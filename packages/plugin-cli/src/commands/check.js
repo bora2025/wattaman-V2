@@ -9,7 +9,35 @@ const UNIVERSAL_UI_COMPONENTS = new Set([
   'heading', 'text', 'workflow', 'status', 'card', 'metric', 'table', 'form',
   'detail', 'chart', 'file', 'print', 'document', 'designer', 'scanner',
   'filter', 'actions', 'id-card-manager', 'session-manager', 'profile-manager', 'class-manager', 'officer-manager', 'take-attendance',
+  'app',
 ]);
+// Plugin-owned screens (`app` component): same rules the school core enforces (core >= 0.1.29).
+const UI_APP_ENTRY = /^ui\/(?:[a-z0-9][a-z0-9_-]*\/)*[a-z0-9][a-z0-9_.-]*\.html$/;
+const UI_FILE_TYPES = new Set(['.html', '.js', '.mjs', '.css', '.json', '.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.woff', '.woff2']);
+
+/** Checks app entries and every ui/ file of a plugin folder; returns a list of problems. */
+function validatePluginUiFiles(root, descriptor) {
+  const problems = [];
+  const entries = [];
+  for (const page of (descriptor && descriptor.pages) || []) {
+    for (const component of page.components || []) {
+      if (component.type !== 'app') continue;
+      const entry = component.options && component.options.entry;
+      if (typeof entry !== 'string' || !UI_APP_ENTRY.test(entry) || entry.includes('..')) problems.push(`app ${component.id}: entry must be ui/<path>.html`);
+      else if (!fs.existsSync(path.join(root, entry))) problems.push(`app ${component.id}: entry ${entry} is missing`);
+      else entries.push(entry);
+    }
+  }
+  const uiRoot = path.join(root, 'ui');
+  const walk = (dir) => fs.existsSync(dir) ? fs.readdirSync(dir, { withFileTypes: true }).flatMap((item) => item.isDirectory() ? walk(path.join(dir, item.name)) : [path.join(dir, item.name)]) : [];
+  for (const file of walk(uiRoot)) {
+    const relative = path.relative(root, file).split(path.sep).join('/');
+    if (relative.split('/').some((segment) => segment.startsWith('.'))) problems.push(`${relative}: hidden files are not served`);
+    else if (!UI_FILE_TYPES.has(path.extname(file).toLowerCase())) problems.push(`${relative}: file type is not served to plugin screens`);
+    else if (/\.html$/i.test(file) && /<script(?![^>]*\bsrc=)[^>]*>\s*\S/i.test(fs.readFileSync(file, 'utf8'))) problems.push(`${relative}: inline <script> is blocked by the screen's security policy; use <script src="...">`);
+  }
+  return { problems, entries };
+}
 const UI_ID = /^[a-z0-9][a-zA-Z0-9._-]*$/;
 // Same allow-list the school core enforces (backend/src/plugins/plugin-ui-appearance.ts). Plugins
 // style pages with these values only; raw CSS or Tailwind class names are refused.
@@ -134,6 +162,8 @@ async function run(argv, options = {}) {
           try {
             validateUniversalUi(descriptor);
             check('frontend contains valid universal UI', true);
+            const screens = validatePluginUiFiles(root, descriptor);
+            if (screens.entries.length || fs.existsSync(path.join(root, 'ui'))) check(`plugin screens (ui/) are servable${screens.entries.length ? `: ${screens.entries.join(', ')}` : ''}`, screens.problems.length === 0, screens.problems.join('; '));
           } catch (error) {
             check('frontend contains valid universal UI', false, error.message);
           }
@@ -181,4 +211,4 @@ async function run(argv, options = {}) {
   if (failures > 0) throw new Error(`${failures} check(s) failed: ${failedLabels.join(', ')}`);
 }
 
-module.exports = { run, validateUniversalUi };
+module.exports = { run, validateUniversalUi, validatePluginUiFiles };
