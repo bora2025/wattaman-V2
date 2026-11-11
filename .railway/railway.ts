@@ -32,9 +32,20 @@ export default defineRailway(() => {
     source: marketplaceRelease,
     replicas: { "asia-southeast1-eqsg3a": 2 },
   });
+  // Nightly encrypted off-site backup of the marketplace database (scripts/offsite-backup.js). A
+  // separate cron service rather than an in-API timer: the API runs 2 replicas and would back up
+  // twice. Same signed image as the API; runs once at 02:15 UTC and exits. Its variables
+  // (DATABASE_URL reference, MARKETPLACE_BACKUP_*) are set on Railway; this project leaves
+  // variables unmanaged.
+  const marketplaceBackup = service("marketplace-backup", {
+    source: marketplaceRelease,
+    startCommand: "node scripts/offsite-backup.js",
+    deploy: { cronSchedule: "15 2 * * *", restartPolicyType: "NEVER" },
+    replicas: { "asia-southeast1-eqsg3a": 1 },
+  });
 
   return project("marketplace", {
     variables: { managed: false },
-    resources: [Postgres, platformAdminWeb, marketplaceApi, marketplaceArtifacts, marketplaceApiVolume, postgresVolume],
+    resources: [Postgres, platformAdminWeb, marketplaceApi, marketplaceBackup, marketplaceArtifacts, marketplaceApiVolume, postgresVolume],
   });
 });
