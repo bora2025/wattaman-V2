@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.25.1
+
+- Add covering indexes for 4 foreign keys (migrations 065-068) so lookups, cascades and parent deletes stay fast as school data grows. Additive only; no data changes.
+
 ## 0.24.0
 
 - Upgrade workforce creation with named position selection backed by the live organization structure.

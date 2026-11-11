@@ -3,7 +3,7 @@
   "id": "wattanam.organizing-management",
   "name": "Organizing Management",
   "description": "Workforce, HR calendar, employee ID cards, QR attendance, corrections, settings, and reporting for companies, shops, stores, and organizations.",
-  "version": "0.25.0",
+  "version": "0.25.1",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -424,6 +424,30 @@
       "id": "064_backfill_salary_configuration_state",
       "path": "migrations/064_backfill_salary_configuration_state.sql",
       "checksum": "55ed54a84b59d6f5d5650eef150dd5d7bdcd8aba046f9e96077e23e5ad41b8b9",
+      "destructive": false
+    },
+    {
+      "id": "065_index_employee_positionid",
+      "path": "migrations/065_index_employee_positionid.sql",
+      "checksum": "14d5154e8cf62b61067dbc8ae078240cbc83d18a1cc2f969d87cb1554ebc3af7",
+      "destructive": false
+    },
+    {
+      "id": "066_index_job_promotion_frompositionid",
+      "path": "migrations/066_index_job_promotion_frompositionid.sql",
+      "checksum": "0dfe6225675672a5724d65735d6440d905fdb2457fbbffecbad24a7f0da90f53",
+      "destructive": false
+    },
+    {
+      "id": "067_index_job_promotion_topositionid",
+      "path": "migrations/067_index_job_promotion_topositionid.sql",
+      "checksum": "49e9f1c54678252f30f018af811d30b0225f6519df647a377c76f6503b4021af",
+      "destructive": false
+    },
+    {
+      "id": "068_index_scan_attempt_recordid",
+      "path": "migrations/068_index_scan_attempt_recordid.sql",
+      "checksum": "2e148be129bd0beb184591e07cf411ebbfed60728feef1b0aec99c0013066b5a",
       "destructive": false
     }
   ],

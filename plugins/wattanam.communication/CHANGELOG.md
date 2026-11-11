@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.2
+
+- Add covering indexes for 1 foreign key (migrations 004-004) so lookups, cascades and parent deletes stay fast as school data grows. Additive only; no data changes.
+
 ## 0.2.1
 
 - Declare the communication summary read model and the database transaction capability.

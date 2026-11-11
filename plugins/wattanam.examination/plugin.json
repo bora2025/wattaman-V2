@@ -3,7 +3,7 @@
   "id": "wattanam.examination",
   "name": "Examination",
   "description": "Examinations, attempts, grading, score sheets and gradebooks.",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -26,7 +26,11 @@
     { "id": "007_create_score_tab", "path": "migrations/007_create_score_tab.sql", "checksum": "3e8e5b131e829e7a6370507f193f5891ba63258ba54a0423774c1ed841e98aa4", "destructive": false },
     { "id": "008_create_score_entry", "path": "migrations/008_create_score_entry.sql", "checksum": "58611407649d7e54cc9d0436893181dd386c46471333f636fdd877c8136a35ec", "destructive": false },
     { "id": "009_add_attempt_directory_user", "path": "migrations/009_add_attempt_directory_user.sql", "checksum": "e5c749b3efb51ad2c86c634ec204a3d3ddd3c5814a1dcc4868d2a29cfd727515", "destructive": false },
-    { "id": "010_add_gradebook_owner", "path": "migrations/010_add_gradebook_owner.sql", "checksum": "ada59456262c5206b6d1057350b8cfbd212e7f735955d2786ea09082b8f82441", "destructive": false }
+    { "id": "010_add_gradebook_owner", "path": "migrations/010_add_gradebook_owner.sql", "checksum": "ada59456262c5206b6d1057350b8cfbd212e7f735955d2786ea09082b8f82441", "destructive": false },
+    { "id": "011_index_question_examid", "path": "migrations/011_index_question_examid.sql", "checksum": "f0424227d5048c29b46978b46250feba802f1bc1fac1b577743ee24b74e66707", "destructive": false },
+    { "id": "012_index_score_entry_subjectid", "path": "migrations/012_index_score_entry_subjectid.sql", "checksum": "500a2e4e8472d00727547fb83fff42ee0037de4bf62e92a4b6feebbfa633a893", "destructive": false },
+    { "id": "013_index_score_subject_scoresheetid", "path": "migrations/013_index_score_subject_scoresheetid.sql", "checksum": "c73a034a61b0f6d104a18ace4fa897eb3044939dfd8dd2a5dfb525555abab6df", "destructive": false },
+    { "id": "014_index_score_tab_scoresheetid", "path": "migrations/014_index_score_tab_scoresheetid.sql", "checksum": "30eed55a586bc938e11808432958bf101573a6af3b3027a8ae4097b8aba4e945", "destructive": false }
   ],
   "navigation": [
     { "id": "exams", "label": "Examinations", "href": "/plugins/wattanam.examination/exams", "permission": "wattanam.examination.exams.view" },

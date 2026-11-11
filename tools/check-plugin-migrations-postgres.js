@@ -3,7 +3,8 @@
 
 // Applies every official plugin's migrations, in dependency order and manifest order, to an EMPTY
 // PostgreSQL database (one transaction per migration, like the school host), then checks that every
-// table lives in its plugin's namespace and has a primary key. CI runs it against a throwaway
+// table lives in its plugin's namespace, has a primary key, and every foreign key has a covering
+// index. CI runs it against a throwaway
 // service container; it refuses a database that already has tables.
 //
 // Usage: node tools/check-plugin-migrations-postgres.js [plugins-dir]
@@ -85,6 +86,16 @@ function main(root = path.resolve(__dirname, '..', 'plugins')) {
     WHERE c.relkind = 'r' AND n.nspname = 'public'
       AND NOT EXISTS (SELECT 1 FROM pg_constraint p WHERE p.conrelid = c.oid AND p.contype = 'p') ORDER BY 1;`).split('\n').filter(Boolean);
   if (withoutPrimaryKey.length) failures.push(`tables without a primary key: ${withoutPrimaryKey.join(', ')}`);
+  // A foreign key without an index whose leading columns are the key makes every parent delete and
+  // every join on it scan the child table; add `CREATE INDEX IF NOT EXISTS ... (<fk columns>)`.
+  const unindexedForeignKeys = query(`SELECT c.conrelid::regclass::text || '(' || (
+      SELECT string_agg(a.attname, ',' ORDER BY k.ord) FROM unnest(c.conkey) WITH ORDINALITY k(attnum, ord)
+      JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum) || ')'
+    FROM pg_constraint c WHERE c.contype = 'f' AND NOT EXISTS (
+      SELECT 1 FROM pg_index i WHERE i.indrelid = c.conrelid
+        AND (i.indkey::int2[])[0:array_length(c.conkey, 1) - 1] @> c.conkey
+        AND c.conkey @> (i.indkey::int2[])[0:array_length(c.conkey, 1) - 1]) ORDER BY 1;`).split('\n').filter(Boolean);
+  if (unindexedForeignKeys.length) failures.push(`foreign keys without a covering index: ${unindexedForeignKeys.join(', ')}`);
 
   console.log(`\napplied ${applied} migrations; ${tables.length} tables`);
   if (failures.length) {

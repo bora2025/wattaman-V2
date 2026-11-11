@@ -3,7 +3,7 @@
   "id": "wattanam.academic-management",
   "name": "Academic Management",
   "description": "Official Wattanam academic structures, profiles, admissions, enrollment, and roster contracts.",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "requiresCore": ">=0.1.0-0 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -468,6 +468,36 @@
       "id": "062_seed_student_attendance_sessions",
       "path": "migrations/062_seed_student_attendance_sessions.sql",
       "checksum": "a2a57f89e2b1d60b9381e8b8f91e57f472c43af6627aad69452356b41ef9cc0c",
+      "destructive": false
+    },
+    {
+      "id": "063_index_attendance_alert_ruleid",
+      "path": "migrations/063_index_attendance_alert_ruleid.sql",
+      "checksum": "9ae78581916019c0edf5c3a859e534be18fcfd5038ad7197b3525362545a0a54",
+      "destructive": false
+    },
+    {
+      "id": "064_index_attendance_record_studyyearid",
+      "path": "migrations/064_index_attendance_record_studyyearid.sql",
+      "checksum": "3f76a08299e66bce5985168249f16188ac5813a729d1b755974aba4ba9ae2116",
+      "destructive": false
+    },
+    {
+      "id": "065_index_attendance_scan_recordid",
+      "path": "migrations/065_index_attendance_scan_recordid.sql",
+      "checksum": "910c9d3bced0c1e3abdf3fe81a4f9b03983a90ad11b8c5354207037f5107bcc1",
+      "destructive": false
+    },
+    {
+      "id": "066_index_attendance_self_scan_recordid",
+      "path": "migrations/066_index_attendance_self_scan_recordid.sql",
+      "checksum": "d8b1e56e58e01358d35e39477ccdef97e39f3830d8ed6fda08d27cd0d98b2368",
+      "destructive": false
+    },
+    {
+      "id": "067_index_user_department_departmentid",
+      "path": "migrations/067_index_user_department_departmentid.sql",
+      "checksum": "464b145abaf2b5ff46d0dc1dc8817caf359a4a39d51b03a069869a7b8258c173",
       "destructive": false
     }
   ],
