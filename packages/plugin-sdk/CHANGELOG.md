@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- `ui/wattanam-plugin-ui.js`: client for plugin-owned screens (`app` component, school core 0.1.29+): bridge to the plugin's own API, navigation, theme variables and auto-resize.
+
 ## 1.3.0 — 2026-10-20
 
 - Added the backward-compatible `executionMode` manifest declaration. Third-party isolated execution remains fail closed until a separate runtime is configured and certified.
