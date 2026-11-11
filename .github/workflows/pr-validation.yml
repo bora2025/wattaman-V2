@@ -29,10 +29,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: marketplace
+      # The exact core release live schools run: the signed core-release workflow tags it
+      # core-v<version>; vars.CUSTOMER_SCHOOL_CORE_VERSION is updated after each core deploy.
+      # A missing tag fails here instead of silently testing unreleased code.
       - name: Check out released Customer School host
         uses: actions/checkout@v4
         with:
           repository: bora2025/Customer-School
+          ref: core-v${{ vars.CUSTOMER_SCHOOL_CORE_VERSION }}
           path: customer-school
       - uses: actions/setup-node@v4
         with:
@@ -53,6 +57,35 @@ jobs:
           npm test -- --runInBand
           src/plugins/all-plugin-package-lifecycle.spec.ts
           src/plugins/plugin-ui-schema.spec.ts
+
+  # Every official plugin's real SQL migrations, in dependency order, on the PostgreSQL major
+  # version schools run (core release blueprint: postgres:18-alpine). Mocked lifecycle tests above
+  # cannot catch SQL that PostgreSQL itself rejects.
+  plugin-migrations-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_PASSWORD: ci-only-throwaway
+          POSTGRES_DB: plugins
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24 }
+      - name: Apply all plugin migrations to an empty database
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: ci-only-throwaway
+          PGDATABASE: plugins
+        run: node tools/check-plugin-migrations-postgres.js plugins
 
   contracts-and-tooling:
     runs-on: ubuntu-latest
