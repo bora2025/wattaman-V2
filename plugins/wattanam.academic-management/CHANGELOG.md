@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.5
+
+- Attendance Dashboard uses the core appearance vocabulary: a grid page with the brand heading accent and the four attendance metrics two per row on wide screens. Schools on core 0.1.25 or older keep the previous stacked layout.
+
 ## 0.3.4
 
 - Seed four default student attendance sessions so Camera and USB controls work immediately after installation.
