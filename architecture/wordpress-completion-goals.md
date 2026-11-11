@@ -144,3 +144,12 @@ Only after each existing school is moved to plugins (reform plan §8 and §13).
   Customer-School `docs/plugin-ui-appearance.md`). Core 0.1.27 fixes "[object Object]" under plugin
   metrics. Academic Management 0.3.5 (grid attendance dashboard) certified, published and promoted
   to STABLE; catalog verification passes on 28 releases.
+- 2026-11-11 — Plugin architecture review, steps 1-5:
+  (1) plugin CI tests against the live core tag (`core-v<version>`, tagged by core-release) and a
+  required real-PostgreSQL migration job; (2) lifecycle e2e upgrades a plugin with data in place
+  (35 checks); (3) every plugin SQL statement runs under its own PostgreSQL role (core 0.1.28;
+  real-PostgreSQL CI proves comma joins, dynamic SQL and file reads into core tables are refused);
+  (4) all 44 unindexed plugin foreign keys indexed, CI fails on new ones; (5) plugin-owned screens:
+  sandboxed `app` component + bridge (core 0.1.29), SDK client, Academic Management 0.3.7 moves
+  Session Time Settings out of the core. 9 releases published; catalog verification 37/37.
+  Remaining: move the other Academic/Organizing screens out of the core plugin by plugin.
