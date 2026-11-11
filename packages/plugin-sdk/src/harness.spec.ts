@@ -75,3 +75,14 @@ describe('createTestContext', () => {
     })).resolves.toBeUndefined();
   });
 });
+
+describe('createTestContext jobs', () => {
+  it('enforces the school host job rules, so a plugin that cannot activate in a school fails its tests', async () => {
+    const { context, jobs } = createTestContext();
+    await expect(context.jobs.register({ id: 'outbox', intervalSeconds: 30, handler: () => undefined })).rejects.toThrow(/interval must be 60\.\.31536000 seconds \(got 30\)/);
+    await expect(context.jobs.register({ id: 'outbox', intervalSeconds: 60.5, handler: () => undefined })).rejects.toThrow(/interval/);
+    await expect(context.jobs.register({ id: 'Bad Id', intervalSeconds: 60, handler: () => undefined })).rejects.toThrow(/id is invalid/);
+    await context.jobs.register({ id: 'outbox', intervalSeconds: 60, handler: () => undefined });
+    expect(jobs.map((job) => job.id)).toEqual(['outbox']);
+  });
+});

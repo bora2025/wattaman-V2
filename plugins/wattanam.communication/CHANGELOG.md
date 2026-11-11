@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.3
+
+- Fix activation in schools: the delivery outbox job ran every 30 seconds, below the school's 60-second minimum, so activation failed with "Plugin job interval must be 60..31536000 seconds". It now runs every 60 seconds; messages are still delivered within about a minute.
+
 ## 0.2.2
 
 - Add covering indexes for 1 foreign key (migrations 004-004) so lookups, cascades and parent deletes stay fast as school data grows. Additive only; no data changes.
