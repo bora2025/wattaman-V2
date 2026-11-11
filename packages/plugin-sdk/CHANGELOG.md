@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Test harness enforces the school host job rules (id format; interval 60..31536000 seconds), so `wattanam-plugin check` and certification catch a job that would stop the plugin from activating in a school.
+
 - `ui/wattanam-plugin-ui.js`: client for plugin-owned screens (`app` component, school core 0.1.29+): bridge to the plugin's own API, navigation, theme variables and auto-resize.
 
 ## 1.3.0 — 2026-10-20

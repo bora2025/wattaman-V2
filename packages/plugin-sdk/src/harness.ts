@@ -59,7 +59,18 @@ export function createTestContext(overrides: ContextOverrides = {}): TestHarness
     },
     durableEvents: { subscribe: () => () => undefined },
     routes: { register: (definition) => { routes.push(definition); return () => undefined; } },
-    jobs: { register: async (definition) => { jobs.push(definition); return () => undefined; } },
+    jobs: {
+      // Same rules the school host enforces in production (plugin-jobs.service.ts), so a plugin that
+      // would fail to activate in a school fails here, in `wattanam-plugin check` and certification.
+      register: async (definition) => {
+        if (!/^[a-z0-9][a-z0-9._-]{0,99}$/.test(definition.id)) throw new Error('Plugin job id is invalid');
+        if (!Number.isInteger(definition.intervalSeconds) || definition.intervalSeconds < 60 || definition.intervalSeconds > 31_536_000) {
+          throw new Error(`Plugin job ${definition.id} interval must be 60..31536000 seconds (got ${definition.intervalSeconds})`);
+        }
+        jobs.push(definition);
+        return () => undefined;
+      },
+    },
     settings: {
       get: async <T,>(key: string, fallback?: T) => (settingsStore.has(key) ? (settingsStore.get(key) as T) : fallback),
       set: async (key, value) => { settingsStore.set(key, value); },
