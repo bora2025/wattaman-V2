@@ -197,14 +197,6 @@ jobs:
   platform-admin:
     runs-on: ubuntu-latest
     timeout-minutes: 35
-    # Playwright's own image already contains Chromium and its system packages. Installing them
-    # with apt on the runner failed (or hung) whenever Ubuntu's mirrors could not be resolved. The
-    # tag must match apps/platform-admin's @playwright/test version (checked below).
-    container:
-      image: mcr.microsoft.com/playwright:v1.62.1-noble
-      options: --ipc=host
-    env:
-      PLAYWRIGHT_IMAGE_VERSION: 1.62.1
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -221,11 +213,9 @@ jobs:
       - name: Run browser control-plane tests
         working-directory: apps/platform-admin
         run: |
-          installed="$(node -p "require('@playwright/test/package.json').version")"
-          if [ "$installed" != "$PLAYWRIGHT_IMAGE_VERSION" ]; then
-            echo "::error::@playwright/test $installed does not match the container image $PLAYWRIGHT_IMAGE_VERSION; update both together."
-            exit 1
-          fi
+          # Browser only. `--with-deps` runs apt, which failed or hung whenever Ubuntu's mirrors
+          # could not be resolved; the hosted runner image already ships Chromium's system libraries.
+          npx playwright install chromium
           npm run e2e
       - name: Upload browser failure evidence
         if: failure()
