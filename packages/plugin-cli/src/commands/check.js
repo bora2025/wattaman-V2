@@ -26,6 +26,8 @@ function validatePluginUiFiles(root, descriptor) {
       if (typeof entry !== 'string' || !UI_APP_ENTRY.test(entry) || entry.includes('..')) problems.push(`app ${component.id}: entry must be ui/<path>.html`);
       else if (!fs.existsSync(path.join(root, entry))) problems.push(`app ${component.id}: entry ${entry} is missing`);
       else entries.push(entry);
+      const devices = component.options && component.options.devices;
+      if (devices !== undefined && (!Array.isArray(devices) || new Set(devices).size !== devices.length || devices.some((device) => !['scanner', 'location'].includes(device)))) problems.push(`app ${component.id}: devices must be a list of scanner, location`);
     }
   }
   const uiRoot = path.join(root, 'ui');
