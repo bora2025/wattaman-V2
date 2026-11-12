@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.27.0
+
+- Workforce ID Cards is now the plugin's own screen (`ui/id-cards`), with the same designs and printed layouts as before.
+- ID card QR codes are drawn by a QR generator bundled with the plugin (`ui/vendor/qrcode.js`, MIT). An uploaded card logo is scaled down to 256 px before it is saved.
+- With this release no Organizing Management page uses a domain screen built into the school core. No database changes.
+
 ## 0.26.0
 
 - The plugin now ships its own Attendance Settings and Employee / Employer Profile screens (`ui/`), instead of using screens built into the school core. They run in the core's sandboxed plugin frame and call this plugin's API only.

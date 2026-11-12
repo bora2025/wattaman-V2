@@ -3784,13 +3784,12 @@
         },
         {
           "id": "cards",
-          "type": "id-card-manager",
+          "type": "app",
           "title": "Workforce ID Cards",
-          "source": "people",
           "options": {
-            "mode": "staff",
-            "templateSource": "template",
-            "saveTemplateSource": "save-template"
+            "entry": "ui/id-cards/staff.html",
+            "height": "auto",
+            "minHeight": 640
           }
         }
       ]

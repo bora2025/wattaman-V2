@@ -488,15 +488,12 @@
       "components": [
         {
           "id": "officer-manager",
-          "type": "officer-manager",
-          "source": "officers",
+          "type": "app",
+          "title": "Manage Officers",
           "options": {
-            "departmentsSource": "officerDepartments",
-            "createSource": "createOfficer",
-            "deactivateSource": "deactivateOfficer",
-            "deleteSource": "deleteOfficer",
-            "editRoute": "officers/edit",
-            "departmentsRoute": "departments"
+            "entry": "ui/officers/index.html",
+            "height": "auto",
+            "minHeight": 520
           }
         }
       ]
@@ -4181,7 +4178,16 @@
         { "id": "ensureStudentCards", "method": "POST", "path": "id-cards/classes/:classId/ensure", "permission": "wattanam.academic-management.manage", "parameters": ["classId"], "autoload": false }
       ],
       "components": [
-        { "id": "student-id-cards", "type": "id-card-manager", "title": "Student ID Cards", "source": "classes", "options": { "mode": "student", "studyYearsSource": "studyYears", "studentsSource": "classStudents", "ensureSource": "ensureStudentCards", "templateSource": "studentCardTemplate", "saveTemplateSource": "saveStudentCardTemplate" } }
+        {
+          "id": "student-id-cards",
+          "type": "app",
+          "title": "Student ID Cards",
+          "options": {
+            "entry": "ui/id-cards/student.html",
+            "height": "auto",
+            "minHeight": 640
+          }
+        }
       ]
     },
     {
@@ -4196,7 +4202,16 @@
         { "id": "saveStaffCardTemplate", "method": "PUT", "path": "id-cards/templates/staff", "permission": "wattanam.academic-management.manage", "autoload": false }
       ],
       "components": [
-        { "id": "staff-id-cards", "type": "id-card-manager", "title": "Staff ID Cards", "source": "staffCards", "options": { "mode": "staff", "templateSource": "staffCardTemplate", "saveTemplateSource": "saveStaffCardTemplate" } }
+        {
+          "id": "staff-id-cards",
+          "type": "app",
+          "title": "Staff ID Cards",
+          "options": {
+            "entry": "ui/id-cards/staff.html",
+            "height": "auto",
+            "minHeight": 640
+          }
+        }
       ]
     }
   ]

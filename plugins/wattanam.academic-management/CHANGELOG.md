@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0
+
+- Manage Officers, Student ID Cards and Staff ID Cards are now the plugin's own screens (`ui/officers`, `ui/id-cards`), shown by the school core in a sandboxed frame instead of screens built into the core. Same features and the same printed card layouts.
+- ID card QR codes are drawn by a QR generator bundled with the plugin (`ui/vendor/qrcode.js`, MIT).
+- An uploaded card logo is scaled down to 256 px before it is saved, so large image files no longer fail to save.
+- Requires school core 0.1.29 or newer. No database changes.
+
 ## 0.3.7
 
 - Session Time Settings is now the plugin's own screen (`ui/sessions/`), shown by the school core in a sandboxed frame instead of a screen built into the core. Same behaviour; the screen can now change in plugin releases.

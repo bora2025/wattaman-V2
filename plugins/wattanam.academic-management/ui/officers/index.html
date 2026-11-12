@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Manage Officers</title>
+  <link rel="stylesheet" href="officers.css">
+</head>
+<body>
+  <main id="app" aria-busy="true">
+    <header class="top">
+      <div>
+        <h1>Manage Officers</h1>
+        <p class="muted" id="summary">0 Officers · 0 Departments</p>
+      </div>
+      <button type="button" id="print-cards" class="secondary no-print">ID Cards</button>
+    </header>
+
+    <div id="cards" class="cards print-only"></div>
+
+    <div class="tabs no-print" role="tablist" aria-label="Officers and departments">
+      <button type="button" role="tab" id="tab-officers" aria-selected="true">Officers (0)</button>
+      <button type="button" role="tab" id="tab-departments" aria-selected="false">Departments (0)</button>
+    </div>
+
+    <div id="message" class="notice success no-print" role="status" hidden></div>
+    <div id="error" class="notice danger no-print" role="alert" hidden></div>
+
+    <section id="departments-view" class="no-print" hidden>
+      <div class="right"><button type="button" id="manage-departments" class="primary">Manage Departments</button></div>
+      <div id="departments" class="department-grid"></div>
+      <p id="departments-empty" class="empty" hidden>No departments yet</p>
+    </section>
+
+    <section id="officers-view" class="no-print">
+      <div class="right"><button type="button" id="toggle-form" class="primary">＋ Add Officer</button></div>
+
+      <form id="form" class="panel" hidden novalidate>
+        <h2>New Officer</h2>
+        <p class="muted">Create the secure login, officer profile, photo, and scannable attendance ID in one workflow.</p>
+        <p id="form-error" class="notice danger" role="alert" hidden></p>
+        <div class="fields">
+          <label>Name *<input id="f-name" placeholder="Full name" required></label>
+          <label>Email *<input id="f-email" type="email" placeholder="email@school.com" required></label>
+          <label>Temporary Password *<input id="f-password" type="password" minlength="8" autocomplete="new-password" required></label>
+          <label>Phone<input id="f-phone" placeholder="012 345 678"></label>
+          <label>Photo URL<input id="f-photo" type="url" placeholder="https://…"></label>
+          <label>Employee Number<input id="f-employeeNumber" placeholder="e.g. EMP-0001"></label>
+          <label>Position *<select id="f-position"></select></label>
+          <label>Department<select id="f-departmentId"></select></label>
+          <label>Employment Status
+            <select id="f-employmentStatus">
+              <option value="ACTIVE">Active</option>
+              <option value="INACTIVE">Inactive</option>
+              <option value="SUSPENDED">Suspended</option>
+            </select>
+          </label>
+          <label>Start Date<input id="f-startedAt" type="date"></label>
+          <label>End Date<input id="f-endedAt" type="date"></label>
+          <label class="wide">Notes<textarea id="f-notes" rows="3"></textarea></label>
+        </div>
+        <div class="form-actions">
+          <button type="button" id="cancel" class="secondary">Cancel</button>
+          <button type="submit" id="create" class="primary">Create Officer</button>
+        </div>
+      </form>
+
+      <div class="filters">
+        <input id="query" type="search" placeholder="Search officers…" aria-label="Search officers">
+        <select id="department-filter" aria-label="Filter by department"></select>
+      </div>
+      <div id="positions" class="chips"></div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Position</th><th>Departments</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+        <p id="rows-empty" class="empty" hidden>No officers match these filters.</p>
+      </div>
+    </section>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="officers.js"></script>
+</body>
+</html>
