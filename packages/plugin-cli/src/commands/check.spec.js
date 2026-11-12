@@ -159,4 +159,12 @@ describe('wattanam-plugin check: plugin-owned screens (app)', () => {
       'ui/server.php: file type is not served to plugin screens',
     ]));
   });
+
+  it('accepts declared device services and reports unknown ones', () => {
+    const withDevices = (devices) => { const value = descriptor('ui/home/index.html'); value.pages[0].components[0].options.devices = devices; return value; };
+    expect(validatePluginUiFiles(root, withDevices(['scanner', 'location'])).problems).toEqual([]);
+    for (const devices of [['camera'], ['scanner', 'scanner'], 'scanner']) {
+      expect(validatePluginUiFiles(root, withDevices(devices)).problems).toEqual(['app screen: devices must be a list of scanner, location']);
+    }
+  });
 });
