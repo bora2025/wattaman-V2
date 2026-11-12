@@ -275,14 +275,14 @@ test('Academic Management exposes the streamlined administration and attendance 
   assert.ok(settings.components.some((component) => component.type === 'app' && component.options?.entry === 'ui/sessions/index.html'), 'missing dedicated Session Time Settings screen');
   assert.ok(fs.existsSync(path.join(root, 'ui', 'sessions', 'index.html')), 'Session Time Settings screen files are missing');
   const attendance = ui.pages.find((candidate) => candidate.id === 'attendance-records');
-  const takeAttendance = attendance.components.find((component) => component.type === 'take-attendance');
-  assert.ok(takeAttendance, 'missing guided student attendance station');
-  assert.equal(takeAttendance.source, 'classes');
-  assert.deepEqual(
-    [takeAttendance.options?.sessionsSource, takeAttendance.options?.recordsSource, takeAttendance.options?.studentsSource, takeAttendance.options?.saveSource, takeAttendance.options?.scanSource],
-    ['sessions', 'records', 'classStudents', 'saveRecord', 'scan'],
-    'student attendance station must connect class, roster, session, record, and scan sources',
-  );
+  // Since 0.5.0 the attendance station is the plugin's own screen; the school page runs the camera for it.
+  const takeAttendance = attendance.components.find((component) => component.type === 'app');
+  assert.equal(takeAttendance?.options?.entry, 'ui/attendance/index.html', 'missing guided student attendance station');
+  assert.deepEqual(takeAttendance.options.devices, ['scanner', 'location'], 'attendance station must declare the scanner and location');
+  const attendanceScreen = fs.readFileSync(path.join(root, 'ui/attendance/attendance.js'), 'utf8');
+  for (const call of ["ui.api.get('classes')", "ui.api.get('sessions')", "ui.api.get('records'", "'/students')", "ui.api.post('records'", "ui.api.post('scan'", 'ui.scanner.start(']) {
+    assert.ok(attendanceScreen.includes(call), `student attendance station must use ${call}`);
+  }
   assert.ok(attendance.dataSources.some((source) => source.id === 'classStudents' && source.autoload === false), 'missing runtime class roster source');
   assert.equal(ui.pages.some((candidate) => candidate.id === 'attendance-scanner'), false, 'legacy student scanner page must be removed');
   const studentScanner = ui.pages.find((candidate) => candidate.id === 'student-attendance-scan');

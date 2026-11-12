@@ -2479,15 +2479,16 @@
       "components": [
         {
           "id": "take-student-attendance",
-          "type": "take-attendance",
+          "type": "app",
           "title": "Take Student Attendance",
-          "source": "classes",
           "options": {
-            "sessionsSource": "sessions",
-            "recordsSource": "records",
-            "studentsSource": "classStudents",
-            "saveSource": "saveRecord",
-            "scanSource": "scan"
+            "entry": "ui/attendance/index.html",
+            "height": "auto",
+            "minHeight": 640,
+            "devices": [
+              "scanner",
+              "location"
+            ]
           }
         }
       ]

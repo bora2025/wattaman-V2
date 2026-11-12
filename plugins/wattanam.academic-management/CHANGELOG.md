@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0
+
+- Take Attendance is now the plugin's own screen (`ui/attendance`). Same workflow: class and session, camera scanning, USB keyboard-mode scanner with test mode, manual marking and Submit.
+- The camera is run by the school page and shown above the screen; the plugin receives only the decoded code, never video. The page declares `devices: scanner, location`.
+- A session you pick by hand now stays selected instead of jumping back to the session that is currently open.
+- USB scanner detection through WebHID is no longer offered (it is not available to plugin screens); keyboard-mode scanners work as before.
+- Requires school core 0.1.34 or newer. No database changes.
+
 ## 0.4.0
 
 - Manage Officers, Student ID Cards and Staff ID Cards are now the plugin's own screens (`ui/officers`, `ui/id-cards`), shown by the school core in a sandboxed frame instead of screens built into the core. Same features and the same printed card layouts.
