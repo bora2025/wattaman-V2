@@ -11,6 +11,7 @@
  *   const rows = await WattanamPluginUI.api.get('sessions');
  *   await WattanamPluginUI.api.post('sessions', { ... });
  *   WattanamPluginUI.navigate('settings');              // another page of this plugin
+ *   WattanamPluginUI.navigate('attendance', { classId: id });   // ...with a query (core 0.1.34+); read it as host.query
  *   WattanamPluginUI.autoResize();                       // keep the frame as tall as the content
  *
  * Devices (school core 0.1.33+, and only when the page declares them in options.devices):
@@ -41,7 +42,7 @@
     if (event.source !== global.parent || !event.data || event.data.protocol !== PROTOCOL) return;
     var data = event.data;
     if (data.type === 'init') {
-      context = { pluginId: data.pluginId, pluginVersion: data.pluginVersion, params: data.params || {}, language: data.language || 'en', theme: data.theme || {}, devices: Array.isArray(data.devices) ? data.devices : [] };
+      context = { pluginId: data.pluginId, pluginVersion: data.pluginVersion, params: data.params || {}, language: data.language || 'en', theme: data.theme || {}, devices: Array.isArray(data.devices) ? data.devices : [], query: data.query && typeof data.query === 'object' ? data.query : {} };
       applyTheme(context.theme);
       waiting.splice(0).forEach(function (resolve) { resolve(context); });
     } else if (data.type === 'scan-result' && scanHandlers) {
@@ -143,7 +144,8 @@
       patch: function (path, body) { return request('PATCH', path, body); },
       delete: function (path, body) { return request('DELETE', path, body); },
     },
-    navigate: function (routePath) { send({ type: 'navigate', routePath: routePath }); },
+    // query (optional, school core 0.1.34+): plain values the opened page reads from context.query.
+    navigate: function (routePath, query) { var message = { type: 'navigate', routePath: routePath }; if (query) message.query = query; send(message); },
     autoResize: autoResize,
     scanner: scanner,
     location: location,
