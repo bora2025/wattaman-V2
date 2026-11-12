@@ -30,7 +30,8 @@ test('Academic Management uses the universal SDK 1.3 UI contract', () => {
   assert.equal(components.filter((component) => component.type === 'actions').length, 0);
   assert.equal(components.filter((component) => component.type === 'table' && component.options?.selectable).length, 0);
   const recordActions = components.reduce((count, component) => count + (component.options?.rowActions?.length || 0), 0)
-    + components.filter((component) => component.type === 'officer-manager' && component.options?.deactivateSource && component.options?.deleteSource).length;
+    // The officers screen is the plugin's own (ui/officers) and carries its edit, deactivate and delete actions.
+    + components.filter((component) => component.type === 'app' && component.options?.entry === 'ui/officers/index.html').length;
   assert.ok(recordActions >= 10);
 });
 
@@ -259,12 +260,13 @@ test('Academic Management exposes the streamlined administration and attendance 
   assert.ok(classStudents?.components.some((component) => component.type === 'table' && component.options?.rowClickable && component.options?.rowRoute === 'classes/:id/students/:studentId'), 'class student rows must open the student editor');
   assert.ok(classEdit?.components.some((component) => component.type === 'form' && component.source === 'saveClass' && component.options?.initialSource === 'class'), 'class edit page must provide an initialized edit form');
   const officers = ui.pages.find((candidate) => candidate.id === 'officers');
-  const officerManager = officers.components.find((component) => component.type === 'officer-manager');
-  assert.ok(officerManager, 'missing guided officer management workflow');
-  assert.equal(officerManager.options.departmentsSource, 'officerDepartments');
-  assert.equal(officerManager.options.createSource, 'createOfficer');
-  assert.equal(officerManager.options.deactivateSource, 'deactivateOfficer');
-  assert.equal(officerManager.options.deleteSource, 'deleteOfficer');
+  // Since 0.4.0 the guided officer workflow is the plugin's own screen, not one built into the core.
+  const officerManager = officers.components.find((component) => component.type === 'app');
+  assert.equal(officerManager?.options?.entry, 'ui/officers/index.html', 'missing guided officer management workflow');
+  const officerScreen = fs.readFileSync(path.join(root, 'ui/officers/officers.js'), 'utf8');
+  for (const call of ["ui.api.get('officers')", "ui.api.get('departments')", "ui.api.post('officers'", "ui.api.patch('officers/'", "ui.api.delete('officers/'", "ui.navigate('officers/edit/'"]) {
+    assert.ok(officerScreen.includes(call), `officer screen must call ${call}`);
+  }
   assert.ok(officers.dataSources.some((source) => source.id === 'deleteOfficer' && source.method === 'DELETE'), 'officer CRUD requires a guarded delete source');
   const officerEdit = ui.pages.find((candidate) => candidate.id === 'officer-edit');
   assert.ok(officerEdit.components.some((component) => component.type === 'form' && component.fields?.some((field) => field.id === 'photoUrl' && field.type === 'url')), 'officer edit must expose a secure photo URL');
@@ -296,9 +298,12 @@ test('Academic Management exposes the streamlined administration and attendance 
   assert.equal(staffScannerComponent?.options?.autoLocation, true, 'staff attendance station must capture location automatically');
   for (const pageId of ['student-id-cards', 'staff-id-cards']) {
     const cards = ui.pages.find((candidate) => candidate.id === pageId);
-    assert.ok(cards?.components.some((component) => component.type === 'id-card-manager'), `missing ${pageId} workspace`);
-    const manager = cards?.components.find((component) => component.type === 'id-card-manager');
-    assert.ok(manager?.options?.templateSource && manager?.options?.saveTemplateSource, `missing editable ${pageId} template sources`);
+    // Since 0.4.0 the card workspace is the plugin's own screen (ui/id-cards); its page names the template routes.
+    const manager = cards?.components.find((component) => component.type === 'app');
+    assert.match(String(manager?.options?.entry), /^ui\/id-cards\/(student|staff)\.html$/, `missing ${pageId} workspace`);
+    const cardScreen = fs.readFileSync(path.join(root, manager.options.entry), 'utf8');
+    assert.match(cardScreen, /data-template="id-cards\/templates\/(student|staff)"/, `missing ${pageId} template route`);
+    assert.match(cardScreen, /data-save-template="id-cards\/templates\/(student|staff)"/, `missing editable ${pageId} template route`);
     assert.ok(navigation.some((entry) => entry.id === pageId), `missing runtime navigation for ${pageId}`);
   }
   for (const pageId of ['attendance-reports', 'staff-attendance-reports']) {

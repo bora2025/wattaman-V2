@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Student ID Cards</title>
+  <link rel="stylesheet" href="id-cards.css">
+</head>
+<body data-mode="student" data-classes="classes" data-years="study-years" data-students="classes/:classId/students" data-ensure="id-cards/classes/:classId/ensure" data-template="id-cards/templates/student" data-save-template="id-cards/templates/student">
+  <main id="app" class="screen" aria-busy="true">
+    <header class="top">
+      <div>
+        <h1 id="title">ID Cards</h1>
+        <p class="muted" id="subtitle"></p>
+      </div>
+      <select id="year" class="year" aria-label="Study year" hidden></select>
+    </header>
+
+    <p id="error" class="notice danger" role="alert" hidden></p>
+    <p id="message" class="notice success" role="status" hidden></p>
+
+    <section class="panel">
+      <h2 id="presets-title">ID Card Templates</h2>
+      <p class="muted" id="presets-help"></p>
+      <div id="presets" class="presets"></div>
+    </section>
+
+    <details class="panel" open>
+      <summary>Design &amp; card information</summary>
+      <p class="muted" id="design-help"></p>
+      <div class="design">
+        <label>School name<input type="text" id="t-schoolName"></label>
+        <label>Card title<input type="text" id="t-cardTitle"></label>
+        <label>Card size
+          <select id="t-cardSize">
+            <option value="cr80-portrait">CR80 Portrait · 54 × 86 mm</option>
+            <option value="cr80-landscape">CR80 Landscape · 86 × 54 mm</option>
+          </select>
+        </label>
+        <label>School logo URL<input type="url" id="t-logoUrl" placeholder="https://school.example/logo.png"></label>
+        <label>Upload school logo<input type="file" id="t-logoFile" accept="image/*"></label>
+        <div class="logo-preview" id="logo-preview"></div>
+        <label>Primary color<input type="color" id="t-primaryColor"></label>
+        <label>Accent color<input type="color" id="t-accentColor"></label>
+        <label>Footer text<input type="text" id="t-footerText"></label>
+        <label>Additional card information<textarea id="t-extraInfo" rows="2" placeholder="School address, validity, emergency contact…"></textarea></label>
+      </div>
+      <div class="toggles">
+        <label><input type="checkbox" id="t-showPhone">Phone</label>
+        <label><input type="checkbox" id="t-showEmail">Email</label>
+        <label><input type="checkbox" id="t-showAddress">Address</label>
+        <label><input type="checkbox" id="t-showDateOfBirth">Date of birth</label>
+      </div>
+      <div class="buttons">
+        <button type="button" id="save-template" class="primary">Save Template</button>
+        <button type="button" id="toggle-samples" class="secondary">Preview 10 sample cards</button>
+        <button type="button" id="reset-design" class="secondary">Reset design</button>
+      </div>
+    </details>
+
+    <section id="classes-view" hidden>
+      <h2 id="classes-title">All Classes</h2>
+      <div id="classes" class="classes" style="margin-top:14px"></div>
+      <p id="classes-empty" class="empty" hidden>No classes in this study year.</p>
+    </section>
+
+    <section id="cards-view" hidden>
+      <div class="toolbar">
+        <button type="button" id="back" class="secondary" hidden>← Back to Classes</button>
+        <div class="grow"><strong id="cards-title"></strong><p class="muted" id="cards-count"></p></div>
+        <input type="search" id="query" aria-label="Search cards">
+        <button type="button" id="print" class="primary">▣ Download / Print Cards</button>
+      </div>
+      <div id="cards" class="id-card-print-grid" style="margin-top:16px"></div>
+      <p id="cards-empty" class="empty" hidden>No cards to show.</p>
+    </section>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="../vendor/qrcode.js"></script>
+  <script src="id-cards.js"></script>
+</body>
+</html>

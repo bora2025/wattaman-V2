@@ -306,9 +306,8 @@ test('workforce attendance settings are the plugin\'s own screen', () => {
   assert.equal(screen.options.entry, 'ui/attendance-settings/index.html');
   const script = fs.readFileSync(path.join(__dirname, '..', 'ui', 'attendance-settings', 'settings.js'), 'utf8');
   for (const route of ["'attendance/sessions'", "'attendance/session-settings'"]) assert.ok(script.includes(route), `settings screen calls ${route}`);
-  // No screen in this plugin depends on a domain screen built into the school core any more,
-  // except the shared ID-card manager, which still needs host printing support.
-  const coreBuilt = descriptor.pages.flatMap(item => item.components.map(component => component.type)).filter(type => ['session-manager','profile-manager','officer-manager','class-manager','take-attendance'].includes(type));
+  // No screen in this plugin depends on a domain screen built into the school core any more.
+  const coreBuilt = descriptor.pages.flatMap(item => item.components.map(component => component.type)).filter(type => ['session-manager','profile-manager','officer-manager','class-manager','take-attendance','id-card-manager'].includes(type));
   assert.deepEqual(coreBuilt, []);
 });
 
