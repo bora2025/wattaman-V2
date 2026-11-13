@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.6.0
+
+- Students get their own **Scan Attendance** screen (`ui/student-attendance`) instead of a generic scanner form with hand-typed device ID, latitude and longitude.
+  - One button opens the camera (run by the school page); location is added automatically.
+  - Every result is explained in plain words: recorded, late, already recorded, sent for review, expired code, wrong class, closed, day off, unregistered device.
+  - Scans made without a connection are kept on the screen and sent automatically with their original time and the same request id, so they are never recorded twice.
+  - "My attendance" shows the student's history with a summary; "This device" registers the device in one tap.
+  - A manual code box remains for when the camera cannot be used.
+- Students see a **Scan Attendance** item in the sidebar.
+- `GET student/attendance-devices?deviceId=` marks which registered device is the caller's own (`thisDevice`). Without the parameter the answer is unchanged.
+- Requires school core 0.1.35 or newer (per-plugin device identifier). No database changes.
+
 ## 0.5.0
 
 - Manage Classes is now the plugin's own screen (`ui/classes`): class list, create and edit, study days, student roster, register student, and Excel/CSV import and export. Editing opens as a full panel instead of a pop-up.

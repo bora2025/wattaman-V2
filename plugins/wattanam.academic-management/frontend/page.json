@@ -3543,159 +3543,18 @@
       ],
       "components": [
         {
-          "id": "heading",
-          "type": "heading",
-          "title": "Scan the classroom attendance QR"
-        },
-        {
-          "id": "self-scanner",
-          "type": "scanner",
-          "title": "Student self-attendance scanner",
-          "source": "selfScan",
+          "id": "student-self-attendance",
+          "type": "app",
+          "title": "Scan Attendance",
           "options": {
-            "modes": [
-              "camera",
-              "keyboard"
-            ],
-            "field": "attendanceToken",
-            "minLength": 40,
-            "maxLength": 1000,
-            "debounceMs": 1000,
-            "contextFields": [
-              {
-                "id": "deviceId",
-                "type": "text",
-                "label": "Registered device ID"
-              },
-              {
-                "id": "networkQuality",
-                "type": "select",
-                "label": "Network quality",
-                "options": [
-                  {
-                    "label": "Online",
-                    "value": "ONLINE"
-                  },
-                  {
-                    "label": "Slow",
-                    "value": "SLOW"
-                  },
-                  {
-                    "label": "Offline sync",
-                    "value": "OFFLINE"
-                  }
-                ]
-              },
-              {
-                "id": "latitude",
-                "type": "number",
-                "label": "Latitude"
-              },
-              {
-                "id": "longitude",
-                "type": "number",
-                "label": "Longitude"
-              },
-              {
-                "id": "accuracyMeters",
-                "type": "number",
-                "label": "GPS accuracy (meters)"
-              }
+            "entry": "ui/student-attendance/index.html",
+            "height": "auto",
+            "minHeight": 560,
+            "devices": [
+              "scanner",
+              "location",
+              "device-id"
             ]
-          }
-        },
-        {
-          "id": "student-history",
-          "type": "table",
-          "title": "My recent attendance",
-          "source": "history",
-          "fields": [
-            {
-              "id": "date",
-              "label": "Date",
-              "format": "date"
-            },
-            {
-              "id": "classNameSnapshot",
-              "label": "Class"
-            },
-            {
-              "id": "session",
-              "label": "Session"
-            },
-            {
-              "id": "status",
-              "label": "Status"
-            },
-            {
-              "id": "source",
-              "label": "Source"
-            },
-            {
-              "id": "reviewStatus",
-              "label": "Review"
-            }
-          ],
-          "options": {
-            "pageSize": 20,
-            "selectable": false
-          }
-        },
-        {
-          "id": "devices-table",
-          "type": "table",
-          "title": "My registered attendance devices",
-          "source": "devices",
-          "fields": [
-            {
-              "id": "label",
-              "label": "Device"
-            },
-            {
-              "id": "active",
-              "label": "Active",
-              "format": "boolean"
-            },
-            {
-              "id": "registeredAt",
-              "label": "Registered",
-              "format": "datetime"
-            },
-            {
-              "id": "lastUsedAt",
-              "label": "Last used",
-              "format": "datetime"
-            }
-          ],
-          "options": {
-            "pageSize": 10,
-            "selectable": false
-          }
-        },
-        {
-          "id": "register-device-form",
-          "type": "form",
-          "title": "Register this device",
-          "source": "registerDevice",
-          "fields": [
-            {
-              "id": "deviceId",
-              "type": "text",
-              "label": "Persistent device ID",
-              "required": true,
-              "minLength": 8,
-              "maxLength": 500
-            },
-            {
-              "id": "label",
-              "type": "text",
-              "label": "Device label",
-              "maxLength": 100
-            }
-          ],
-          "options": {
-            "submitLabel": "Register device",
-            "successMessage": "Device registered"
           }
         }
       ]

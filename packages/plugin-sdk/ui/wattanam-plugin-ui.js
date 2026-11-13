@@ -18,6 +18,7 @@
  *   WattanamPluginUI.scanner.start({ onResult: (text) => ..., onClose: () => ..., onError: (message) => ... });
  *   WattanamPluginUI.scanner.stop();
  *   const position = await WattanamPluginUI.location();  // { latitude, longitude, accuracy }
+ *   const deviceId = await WattanamPluginUI.deviceId();  // per-plugin browser identifier (core 0.1.35+, devices: device-id)
  * The school page runs the camera and shows it above your screen; you receive only decoded text.
  *
  * API calls go to YOUR plugin's API only (paths are relative, e.g. 'classes/42'); they run as the
@@ -98,6 +99,26 @@
     });
   }
 
+  // A request answered by the school page itself (not the plugin API).
+  function hostRequest(type, prefix, unavailable) {
+    return new Promise(function (resolve, reject) {
+      var id = prefix + (++counter) + '_' + Date.now().toString(36);
+      var timer = setTimeout(function () {
+        if (!pending[id]) return;
+        delete pending[id];
+        var error = new Error(unavailable);
+        error.status = 0; reject(error);
+      }, 15000);
+      pending[id] = { resolve: resolve, reject: reject, timer: timer };
+      send({ type: type, id: id });
+    });
+  }
+
+  // This browser's identifier for this plugin (the sandbox has no storage of its own).
+  function deviceId() {
+    return hostRequest('device-id', 'd', 'Device identifier is unavailable (school core older than 0.1.35, or no answer).').then(function (body) { return body && body.deviceId; });
+  }
+
   // One position from the school page (the sandbox has no location API of its own).
   function location() {
     return new Promise(function (resolve, reject) {
@@ -149,5 +170,6 @@
     autoResize: autoResize,
     scanner: scanner,
     location: location,
+    deviceId: deviceId,
   };
 })(window);

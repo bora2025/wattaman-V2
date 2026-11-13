@@ -189,6 +189,9 @@ function registerSelfAttendance(context) {
     { id: selfScan, label: 'Record my own attendance with a signed school QR' },
     { id: review, label: 'Review exceptional student self-attendance scans' },
   ]);
+  context.navigation.register([
+    { id: 'student-attendance-scan', label: 'Scan Attendance', href: '/plugins/wattanam.academic-management/student/attendance-scan', permission: selfScan },
+  ]);
   context.routes.register({
     method: 'GET', path: 'attendance-windows', permission: manage,
     handler: async (request) => {
@@ -439,9 +442,11 @@ function registerSelfAttendance(context) {
     method: 'GET', path: 'student/attendance-devices', permission: selfScan,
     handler: async (request) => {
       if (String(request?.principal?.role || '').toUpperCase() !== 'STUDENT') throw new Error('Student role is required');
+      // ?deviceId= marks which registered device is the caller's own (compared as a hash, as stored).
+      const own = request?.query?.deviceId ? hash(String(request.query.deviceId).slice(0, 500)) : null;
       return context.database.query(
-        `SELECT "id","label","active","registeredAt","lastUsedAt" FROM ${DEVICE} WHERE "directoryUserId"=$1 ORDER BY "registeredAt" DESC`,
-        [request.principal.userId],
+        `SELECT "id","label","active","registeredAt","lastUsedAt",("deviceIdHash"=$2) AS "thisDevice" FROM ${DEVICE} WHERE "directoryUserId"=$1 ORDER BY "registeredAt" DESC`,
+        [request.principal.userId, own],
       );
     },
   });
