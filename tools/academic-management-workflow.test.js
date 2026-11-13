@@ -215,7 +215,7 @@ test('Academic Management exposes the streamlined administration and attendance 
   assert.ok(permissions.some((permission) => permission.id === 'wattanam.academic-management.attendance.self.scan'));
   assert.deepEqual(
     navigation.map((item) => item.id),
-    ['study-years', 'classes', 'student-id-cards', 'officers', 'staff-id-cards', 'attendance-records', 'attendance-corrections', 'attendance-alerts', 'attendance-reports', 'attendance-settings', 'staff-attendance-scanner', 'staff-attendance-reports'],
+    ['study-years', 'classes', 'student-id-cards', 'officers', 'staff-id-cards', 'attendance-records', 'attendance-corrections', 'attendance-alerts', 'attendance-reports', 'attendance-settings', 'student-attendance-scan', 'staff-attendance-scanner', 'staff-attendance-reports'],
   );
   assert.equal(navigation.find((item) => item.id === 'attendance-records')?.label, 'Student Attendance');
   assert.equal(navigation.find((item) => item.id === 'attendance-reports')?.label, 'Student Attendance Reports');
@@ -285,7 +285,14 @@ test('Academic Management exposes the streamlined administration and attendance 
   assert.ok(attendance.dataSources.some((source) => source.id === 'classStudents' && source.autoload === false), 'missing runtime class roster source');
   assert.equal(ui.pages.some((candidate) => candidate.id === 'attendance-scanner'), false, 'legacy student scanner page must be removed');
   const studentScanner = ui.pages.find((candidate) => candidate.id === 'student-attendance-scan');
-  assert.ok(studentScanner?.components.some((component) => component.type === 'scanner'), 'student scanner must use the universal scanner workspace');
+  // Since 0.6.0 students use the plugin's own Scan Attendance screen; the school page runs the camera.
+  const studentScreen = studentScanner?.components.find((component) => component.type === 'app');
+  assert.equal(studentScreen?.options?.entry, 'ui/student-attendance/index.html', 'student scanner must use the student attendance screen');
+  assert.deepEqual(studentScreen.options.devices, ['scanner', 'location', 'device-id'], 'student scanner must declare the camera, location and device identifier');
+  const studentScript = fs.readFileSync(path.join(root, 'ui/student-attendance/student-attendance.js'), 'utf8');
+  for (const call of ["ui.api.post('student/self-scan'", "ui.api.get('student/attendance-history')", "ui.api.get('student/attendance-devices'", "ui.api.post('student/attendance-devices'", 'clientRequestId: newKey()', 'ui.scanner.start(']) {
+    assert.ok(studentScript.includes(call), `student scanner must use ${call}`);
+  }
   assert.ok(studentScanner?.dataSources.some((source) => source.id === 'selfScan' && source.path === 'student/self-scan'), 'student scanner must submit to the secure self-scan route');
   const attendanceWindows = ui.pages.find((candidate) => candidate.id === 'attendance-windows');
   assert.ok(attendanceWindows?.components.some((component) => component.type === 'form' && component.source === 'openWindow'), 'missing universal attendance window creation workflow');

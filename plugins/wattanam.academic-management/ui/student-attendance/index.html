@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scan Attendance</title>
+  <link rel="stylesheet" href="student-attendance.css">
+</head>
+<body>
+  <main id="app" aria-busy="true">
+    <header>
+      <h1>Scan Attendance</h1>
+      <p class="muted">Scan the attendance QR code your teacher shows in class.</p>
+    </header>
+
+    <div class="tabs" role="tablist" aria-label="Attendance">
+      <button type="button" role="tab" id="tab-scan" aria-selected="true">📷 Scan</button>
+      <button type="button" role="tab" id="tab-history" aria-selected="false">🗓️ My attendance</button>
+      <button type="button" role="tab" id="tab-device" aria-selected="false">📱 This device</button>
+    </div>
+
+    <!-- Scan -->
+    <section id="scan-view">
+      <div id="result" class="result idle" role="status" aria-live="assertive">
+        <span class="result-icon" id="result-icon">📷</span>
+        <div>
+          <strong id="result-title">Ready to scan</strong>
+          <p id="result-detail">Press Start camera and point it at the QR code on the screen or board.</p>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button type="button" id="start" class="primary big">📷 Start camera</button>
+        <button type="button" id="stop" class="secondary big" hidden>Stop camera</button>
+      </div>
+
+      <div class="chips">
+        <span class="chip" id="chip-network">● Online</span>
+        <span class="chip" id="chip-location">📍 Location: checking…</span>
+        <span class="chip" id="chip-device">📱 Device: checking…</span>
+      </div>
+
+      <div id="pending" class="notice warning" hidden></div>
+
+      <details class="panel">
+        <summary>Camera not working? Enter the code instead</summary>
+        <form id="manual-form" class="manual" novalidate>
+          <label for="manual">Attendance code</label>
+          <textarea id="manual" rows="3" placeholder="Paste the code shown under the QR"></textarea>
+          <button type="submit" class="secondary">Submit code</button>
+        </form>
+      </details>
+
+      <section class="panel">
+        <h2>Today's scans</h2>
+        <div id="today" class="list"></div>
+        <p id="today-empty" class="empty">No scans yet today.</p>
+      </section>
+    </section>
+
+    <!-- History -->
+    <section id="history-view" hidden>
+      <div class="summary" id="summary"></div>
+      <div id="history" class="list"></div>
+      <p id="history-empty" class="empty" hidden>No attendance recorded yet.</p>
+    </section>
+
+    <!-- Device -->
+    <section id="device-view" hidden>
+      <section class="panel">
+        <h2>This device</h2>
+        <p class="muted" id="device-help">Some attendance sessions only accept scans from a device you registered. Register the phone or tablet you use in class.</p>
+        <p class="device-state" id="device-state">Checking…</p>
+        <form id="device-form" class="manual" novalidate>
+          <label for="device-label">Device name</label>
+          <input id="device-label" maxlength="100" placeholder="e.g. My phone">
+          <button type="submit" id="register" class="primary">Register this device</button>
+        </form>
+      </section>
+      <section class="panel">
+        <h2>My registered devices</h2>
+        <div id="devices" class="list"></div>
+        <p id="devices-empty" class="empty" hidden>No devices registered.</p>
+      </section>
+    </section>
+
+    <div id="error" class="notice danger" role="alert" hidden></div>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="student-attendance.js"></script>
+</body>
+</html>
