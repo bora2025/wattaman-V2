@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Take Attendance</title>
+  <link rel="stylesheet" href="attendance.css">
+</head>
+<body>
+  <main id="app" aria-busy="true">
+    <header>
+      <h1>Take Attendance</h1>
+      <p class="muted" id="summary"></p>
+    </header>
+
+    <div id="error" class="notice danger" role="alert" hidden></div>
+    <div id="message" class="notice success" role="status" hidden></div>
+
+    <section class="panel controls">
+      <div>
+        <strong>🌙 Attendance Session</strong>
+        <span class="muted" id="session-label">No sessions configured</span>
+      </div>
+      <label>Class<select id="class"></select></label>
+      <div id="sessions" class="sessions"></div>
+    </section>
+
+    <div class="info" id="location">📍 Finding location…</div>
+    <div class="info" id="study-day"></div>
+    <div class="notice warning" id="closed" hidden></div>
+
+    <div class="actions">
+      <button type="button" id="open-camera" class="primary">📷 Open Camera</button>
+      <button type="button" id="open-usb" class="secondary">🖱️ USB Scanner</button>
+      <button type="button" id="submit" class="secondary">💾 Submit</button>
+    </div>
+
+    <!-- Camera mode: the school page shows the camera above this screen and sends decoded codes. -->
+    <section id="camera-view" class="panel scan-mode" hidden>
+      <div class="scan-head">
+        <div>
+          <h2>📷 Camera scanning</h2>
+          <p class="muted" id="camera-status">Camera ready — scan student QR code</p>
+        </div>
+        <button type="button" id="close-camera" class="secondary">Close camera</button>
+      </div>
+      <p class="muted" id="camera-counts"></p>
+    </section>
+
+    <section id="usb-view" class="panel scan-mode" hidden>
+      <div class="scan-head">
+        <div>
+          <h2>🖱️ USB Scanner — Attendance</h2>
+          <p class="muted" id="usb-context"></p>
+        </div>
+        <div class="scan-head-actions">
+          <strong id="clock"></strong>
+          <button type="button" id="usb-test" class="secondary" aria-pressed="false">Test</button>
+          <button type="button" id="close-usb" class="secondary">‹ Back</button>
+        </div>
+      </div>
+      <div class="usb-status"><span id="usb-dot" class="dot"></span><strong id="usb-state">Waiting for USB scanner…</strong><span class="muted" id="usb-last">Scan a card to verify</span></div>
+      <h3 id="usb-title">Ready to Scan</h3>
+      <p class="muted" id="usb-help">Point scanner at a student QR card</p>
+      <label for="usb-input">USB scanner input</label>
+      <input id="usb-input" readonly placeholder="Scanner input appears here automatically">
+      <p id="usb-test-result" class="muted" hidden></p>
+      <div class="notice info" id="usb-checklist"><strong>USB scanner not detected — checklist:</strong> Connect a keyboard-mode (HID) scanner, configure an Enter/CR suffix, click inside this screen once, then scan a card. Khmer keyboard layout is supported.</div>
+    </section>
+
+    <section id="activity-view" class="panel" hidden>
+      <div class="roster-head"><div><h2>Student Scan Activity</h2><p class="muted">Name, photo, and scan result</p></div><span class="count" id="activity-count">0</span></div>
+      <div id="activity" class="activity"></div>
+      <p id="activity-empty" class="empty">📋 No student scans yet. Successful, failed, and mismatched scans will appear here.</p>
+    </section>
+
+    <section>
+      <div class="roster-head"><h2>Student Roster</h2><span class="muted" id="recorded"></span></div>
+      <div id="roster" class="roster"></div>
+      <p id="roster-empty" class="empty" hidden>No students are enrolled in this class.</p>
+    </section>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="attendance.js"></script>
+</body>
+</html>
