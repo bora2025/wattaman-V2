@@ -2,6 +2,10 @@
 
 ## 0.5.0
 
+- Manage Classes is now the plugin's own screen (`ui/classes`): class list, create and edit, study days, student roster, register student, and Excel/CSV import and export. Editing opens as a full panel instead of a pop-up.
+- Excel import and export use a small reader and writer bundled with the plugin (`ui/classes/xlsx.js`); no third-party spreadsheet library is loaded. Exported IDs keep their leading zeros.
+- The class list's Attendance button now opens Take Attendance for that class (the old link pointed at a page that did not exist).
+- With this release no Academic Management page uses a domain screen built into the school core.
 - Take Attendance is now the plugin's own screen (`ui/attendance`). Same workflow: class and session, camera scanning, USB keyboard-mode scanner with test mode, manual marking and Submit.
 - The camera is run by the school page and shown above the screen; the plugin receives only the decoded code, never video. The page declares `devices: scanner, location`.
 - A session you pick by hand now stays selected instead of jumping back to the session that is currently open.

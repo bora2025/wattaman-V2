@@ -231,17 +231,16 @@ test('Academic Management exposes the streamlined administration and attendance 
   assert.ok(studyYears.components.some((component) => component.type === 'form' && component.source === 'createStudyYear'), 'missing universal Academic Year creation workflow');
   assert.ok(studyYears.components.some((component) => component.type === 'table' && component.options?.rowActions?.some((action) => action.source === 'setCurrentStudyYear')), 'missing per-record current Academic Year action');
   const classes = ui.pages.find((candidate) => candidate.id === 'classes');
-  const classManager = classes.components.find((component) => component.type === 'class-manager');
-  assert.ok(classManager, 'missing guided class management workflow');
-  assert.equal(classManager.source, 'classes');
-  assert.deepEqual(
-    [classManager.options?.teachersSource, classManager.options?.classAdminsSource, classManager.options?.studyYearsSource],
-    ['teachers', 'classAdmins', 'studyYears'],
-    'class create and edit workflows must use named directory selectors',
-  );
-  assert.equal(classManager.options?.createSource, 'createClass');
-  assert.equal(classManager.options?.updateSource, 'updateClass');
-  assert.equal(classManager.options?.deleteSource, 'deleteClass');
+  // Since 0.5.0 the guided class workflow is the plugin's own screen, not one built into the core.
+  const classManager = classes.components.find((component) => component.type === 'app');
+  assert.equal(classManager?.options?.entry, 'ui/classes/index.html', 'missing guided class management workflow');
+  const classScreen = fs.readFileSync(path.join(root, 'ui/classes/classes.js'), 'utf8');
+  for (const call of ["ui.api.get('teachers')", "ui.api.get('class-admins')", "ui.api.get('study-years')"]) {
+    assert.ok(classScreen.includes(call), `class create and edit workflows must use named directory selectors (${call})`);
+  }
+  for (const call of ["ui.api.post('classes', body)", "ui.api.put(path('classes/', editing.id), body)", "ui.api.delete(path('classes/', row.id))", "'/students/create')", "'/students/bulk-csv')", "ui.navigate('attendance', { classId: row.id })"]) {
+    assert.ok(classScreen.includes(call), `class screen must use ${call}`);
+  }
   assert.ok(classes.dataSources.some((source) => source.id === 'createClassStudent' && source.path === 'classes/:classId/students/create'), 'missing direct class student creation source');
   assert.ok(classes.dataSources.some((source) => source.id === 'bulkUploadClassStudents'), 'missing bounded class spreadsheet import source');
   const classDetail = ui.pages.find((candidate) => candidate.id === 'class-detail');

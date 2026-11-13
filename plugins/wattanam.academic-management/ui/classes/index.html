@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Manage Classes</title>
+  <link rel="stylesheet" href="classes.css">
+</head>
+<body>
+  <main id="app" aria-busy="true">
+    <!-- 1. The class list -->
+    <section id="list-view">
+      <header>
+        <h1>🏫 Manage Classes</h1>
+        <p class="muted">Organize classes, assign teachers, and manage student rosters</p>
+      </header>
+      <div class="toolbar">
+        <input id="query" type="search" placeholder="Search by class name, subject, or teacher…" aria-label="Search classes">
+        <select id="year" aria-label="Study year"></select>
+        <select id="sort" aria-label="Sort classes">
+          <option value="name">Sort: Name</option>
+          <option value="subject">Sort: Subject</option>
+          <option value="students">Sort: Students</option>
+        </select>
+        <div class="view-toggle" role="group" aria-label="Layout">
+          <button type="button" id="view-grid" aria-pressed="true" title="Grid">▦</button>
+          <button type="button" id="view-list" aria-pressed="false" title="List">☰</button>
+        </div>
+        <button type="button" id="add-class" class="primary">＋ Add Class</button>
+      </div>
+      <div id="message" class="notice success" role="status" hidden></div>
+      <div id="error" class="notice danger" role="alert" hidden></div>
+      <div id="classes" class="classes grid"></div>
+      <p id="classes-empty" class="empty" hidden>No classes match these filters.</p>
+    </section>
+
+    <!-- 2. Create or edit a class -->
+    <form id="class-view" class="panel" hidden novalidate>
+      <div class="panel-head">
+        <div><h2 id="class-title">New Class</h2><p class="muted" id="class-help">Update class details, assignments, attendance format, and study days.</p></div>
+        <button type="button" class="secondary" data-close>← Back to classes</button>
+      </div>
+      <p id="class-error" class="notice danger" role="alert" hidden></p>
+      <h3>Class information</h3>
+      <div class="fields">
+        <label>Name *<input id="c-name" required></label>
+        <label>Subject<input id="c-subject"></label>
+        <label>Teacher *<input id="c-teacher" list="teachers" placeholder="Search teacher by name or email…" autocomplete="off"><datalist id="teachers"></datalist></label>
+        <label>Class administrator (optional)<input id="c-admin" list="admins" placeholder="Search administrator…" autocomplete="off"><datalist id="admins"></datalist></label>
+        <label>Academic year<select id="c-year"></select></label>
+        <label>Registration Status <span class="hint">(student self-registration)</span>
+          <select id="c-status">
+            <option value="HIDDEN">Hidden — not shown publicly</option>
+            <option value="AVAILABLE">Open for registration</option>
+            <option value="UNAVAILABLE">Visible — registration closed</option>
+          </select>
+        </label>
+      </div>
+      <h3>Attendance format</h3>
+      <div id="c-presets" class="presets"></div>
+      <h3>Study Days</h3>
+      <p class="muted">Choose every day this class meets. Saturday and Sunday are supported by attendance and reports.</p>
+      <div id="c-days" class="days"></div>
+      <div id="c-day-presets" class="quick"></div>
+      <h3>Public class card</h3>
+      <div class="fields">
+        <label>Thumbnail <span class="hint">(optional)</span>
+          <span class="thumb-row"><img id="c-thumb-preview" alt="Thumbnail preview" hidden><input id="c-thumb" type="file" accept="image/png,image/jpeg,image/webp"><button type="button" id="c-thumb-remove" class="link" hidden>Remove</button></span>
+        </label>
+        <label>Description <span class="hint">(optional)</span><textarea id="c-description" rows="3" placeholder="A short blurb shown on the public registration card…"></textarea></label>
+        <label>Price (USD) <span class="hint">(optional)</span><input id="c-price" type="number" min="0" step="0.01" placeholder="e.g. 39.99"></label>
+        <label class="check"><input id="c-show-price" type="checkbox"> Show price publicly on the card</label>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="secondary" data-close>Cancel</button>
+        <button type="submit" id="class-save" class="primary">Create Class</button>
+      </div>
+    </form>
+
+    <!-- 3. Study days only -->
+    <form id="days-view" class="panel" hidden novalidate>
+      <div class="panel-head">
+        <div><h2>Edit Study Days</h2><p class="muted" id="days-help"></p></div>
+        <button type="button" class="secondary" data-close>← Back to classes</button>
+      </div>
+      <p id="days-error" class="notice danger" role="alert" hidden></p>
+      <div id="d-days" class="days"></div>
+      <div id="d-day-presets" class="quick"></div>
+      <div class="form-actions">
+        <button type="button" class="secondary" data-close>Cancel</button>
+        <button type="submit" id="days-save" class="primary">Save Study Days</button>
+      </div>
+    </form>
+
+    <!-- 4. The students of one class -->
+    <section id="students-view" class="panel" hidden>
+      <div class="panel-head">
+        <div><h2>Manage Students</h2><p class="muted" id="students-help"></p></div>
+        <button type="button" class="secondary" data-close>← Back to classes</button>
+      </div>
+      <div class="buttons">
+        <button type="button" id="new-student" class="primary">＋ Register New Student</button>
+        <button type="button" id="upload" class="secondary">▣ Bulk Upload Excel / CSV</button>
+        <input id="upload-file" type="file" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" hidden>
+        <button type="button" id="template" class="secondary">↓ Download Excel Template</button>
+        <button type="button" id="export" class="secondary">↓ Export Students Excel</button>
+      </div>
+      <p id="students-message" class="notice success" role="status" hidden></p>
+      <p id="students-error" class="notice danger" role="alert" hidden></p>
+
+      <form id="student-form" class="subpanel" hidden novalidate>
+        <h3>Register New Student</h3>
+        <p class="muted">Creates the login, profile, class enrollment, QR identifier, and ID card together.</p>
+        <div class="fields three">
+          <label>Student ID<input id="s-studentNumber"></label>
+          <label>Latin Name *<input id="s-name" required></label>
+          <label>Khmer Name<input id="s-nameKh"></label>
+          <label>Email<input id="s-email" type="email"></label>
+          <label>Phone<input id="s-phone"></label>
+          <label>Temporary Password *<input id="s-password" type="password" minlength="6" autocomplete="new-password" required></label>
+          <label>Sex<select id="s-sex"><option value="">—</option><option value="MALE">Male</option><option value="FEMALE">Female</option><option value="OTHER">Other</option></select></label>
+          <label>Date of Birth<input id="s-dateOfBirth" type="date"></label>
+          <label>Photo URL<input id="s-photo" type="url"></label>
+          <label>Address<input id="s-address"></label>
+          <label>Generation<input id="s-generation"></label>
+        </div>
+        <div class="form-actions">
+          <button type="button" id="student-cancel" class="secondary">Cancel</button>
+          <button type="submit" id="student-save" class="primary">Create Student</button>
+        </div>
+      </form>
+
+      <section id="import-result" class="subpanel" hidden>
+        <h3>Import Result</h3>
+        <p class="muted" id="import-summary"></p>
+        <div class="table-wrap"><table><thead><tr><th>Row</th><th>ID</th><th>Name</th><th>Status</th><th>Message</th></tr></thead><tbody id="import-rows"></tbody></table></div>
+      </section>
+
+      <h3>Available Students</h3>
+      <div id="available" class="available"></div>
+      <h3 id="students-title">Class Students (0)</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>ID</th><th>Photo</th><th>Name Khmer</th><th>Name Latin</th><th>Sex</th><th>DOB</th><th>Phone</th><th>Address</th><th>Actions</th></tr></thead>
+          <tbody id="students"></tbody>
+        </table>
+        <p id="students-empty" class="empty" hidden>No students in this class</p>
+      </div>
+    </section>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="xlsx.js"></script>
+  <script src="classes.js"></script>
+</body>
+</html>

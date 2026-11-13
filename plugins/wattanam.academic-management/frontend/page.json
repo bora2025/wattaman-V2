@@ -1161,25 +1161,12 @@
       "components": [
         {
           "id": "class-manager",
-          "type": "class-manager",
+          "type": "app",
           "title": "Manage Classes",
-          "source": "classes",
           "options": {
-            "studyYearsSource": "studyYears",
-            "teachersSource": "teachers",
-            "classAdminsSource": "classAdmins",
-            "createSource": "createClass",
-            "updateSource": "updateClass",
-            "deleteSource": "deleteClass",
-            "studentsSource": "classStudents",
-            "availableStudentsSource": "availableStudents",
-            "addStudentSource": "addClassStudent",
-            "createStudentSource": "createClassStudent",
-            "removeStudentSource": "removeClassStudent",
-            "bulkUploadSource": "bulkUploadClassStudents",
-            "detailRoute": "classes",
-            "editRoute": "classes/edit",
-            "attendanceRoute": "attendance-records"
+            "entry": "ui/classes/index.html",
+            "height": "auto",
+            "minHeight": 640
           }
         }
       ]
