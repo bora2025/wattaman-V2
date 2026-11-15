@@ -31,7 +31,9 @@ test('Academic Management uses the universal SDK 1.3 UI contract', () => {
   assert.equal(components.filter((component) => component.type === 'table' && component.options?.selectable).length, 0);
   const recordActions = components.reduce((count, component) => count + (component.options?.rowActions?.length || 0), 0)
     // The officers screen is the plugin's own (ui/officers) and carries its edit, deactivate and delete actions.
-    + components.filter((component) => component.type === 'app' && component.options?.entry === 'ui/officers/index.html').length;
+    + components.filter((component) => component.type === 'app' && component.options?.entry === 'ui/officers/index.html').length
+    // So is Academic Years (ui/study-years): set current and delete on each year.
+    + 2 * descriptor.pages.filter((page) => page.id === 'study-years' && page.components.some((component) => component.options?.entry === 'ui/study-years/index.html')).length;
   assert.ok(recordActions >= 10);
 });
 
@@ -172,19 +174,23 @@ test('activated authoritative reports use Academic Management enrollment rosters
   assert.deepEqual(report.people.map((person) => person.id), ['student-1']);
 });
 
-test('Academic Year writes cast browser date strings to PostgreSQL timestamps', async () => {
+test('Academic Year writes keep browser dates as days and save the school name and logo', async () => {
   const writes = [];
   const database = {
-    query: async (sql) => sql.includes('_study_year') ? [{ id: 'year-1', year: 2026 }] : [],
+    query: async (sql) => sql.includes('_study_year') && !sql.includes('"year" = $1') ? [{ id: 'year-1', year: 2026 }] : [],
     execute: async (sql, params) => { writes.push({ sql, params }); return { count: 1 }; },
     transaction: async (work) => work({ query: async () => [{ id: 'year-1', year: 2026 }], execute: async (sql, params) => { writes.push({ sql, params }); return { count: 1 }; }, publish: async () => {} }),
   };
   const { routes } = await activate(undefined, database);
   const principal = { role: 'SUPER_ADMIN', userId: 'admin-1' };
   await routes.get('POST study-years').handler({ principal, body: { year: 2026, startDate: '2026-10-26', endDate: '2026-12-31' } });
-  await routes.get('PUT study-years/:id').handler({ principal, params: { id: 'year-1' }, body: { year: 2026, startDate: '2026-10-26', endDate: '2026-12-31' } });
-  assert.match(writes[0].sql, /\$4::timestamptz,\$5::timestamptz/);
-  assert.match(writes[1].sql, /"startDate"=\$3::timestamptz,"endDate"=\$4::timestamptz/);
+  const logo = 'data:image/png;base64,iVBORw0KGgo=';
+  await routes.get('PUT study-years/:id').handler({ principal, params: { id: 'year-1' }, body: { year: 2026, startDate: '2026-10-26T00:00:00.000Z', endDate: '2026-12-31', schoolName: ' Wattanam High School ', logoUrl: logo } });
+  assert.match(writes[0].sql, /\$4::date,\$5::date/);
+  assert.match(writes[1].sql, /"startDate"=\$3::date,"endDate"=\$4::date/);
+  assert.deepEqual(writes[1].params.slice(2, 6), ['2026-10-26', '2026-12-31', 'Wattanam High School', logo]);
+  await assert.rejects(routes.get('PUT study-years/:id').handler({ principal, params: { id: 'year-1' }, body: { year: 2026, startDate: '2026-12-31', endDate: '2026-10-26' } }), /endDate/);
+  await assert.rejects(routes.get('PUT study-years/:id').handler({ principal, params: { id: 'year-1' }, body: { year: 2026, logoUrl: 'javascript:alert(1)' } }), /logo/);
 });
 
 test('Academic Management exposes the streamlined administration and attendance workflows', async () => {
@@ -215,21 +221,27 @@ test('Academic Management exposes the streamlined administration and attendance 
   assert.ok(permissions.some((permission) => permission.id === 'wattanam.academic-management.attendance.self.scan'));
   assert.deepEqual(
     navigation.map((item) => item.id),
-    ['study-years', 'classes', 'student-id-cards', 'officers', 'staff-id-cards', 'attendance-records', 'attendance-corrections', 'attendance-alerts', 'attendance-reports', 'attendance-settings', 'student-attendance-scan', 'staff-attendance-scanner', 'staff-attendance-reports'],
+    ['attendance-dashboard', 'study-years', 'classes', 'student-id-cards', 'officers', 'staff-id-cards', 'score-sheets', 'score-entry', 'student-ranking', 'year-ranking', 'honor-roll', 'year-honor-roll', 'subject-ranking', 'year-report-cards', 'record-books', 'progress-books', 'student-permissions', 'attendance-records', 'attendance-corrections', 'attendance-alerts', 'attendance-reports', 'attendance-settings', 'student-attendance-scan', 'staff-attendance-scanner', 'staff-attendance-reports'],
   );
   assert.equal(navigation.find((item) => item.id === 'attendance-records')?.label, 'Student Attendance');
   assert.equal(navigation.find((item) => item.id === 'attendance-reports')?.label, 'Student Attendance Reports');
 
   const ui = JSON.parse(fs.readFileSync(path.join(root, 'frontend', 'page.json'), 'utf8'));
   const dashboard = ui.pages.find((candidate) => candidate.id === 'attendance-dashboard');
-  assert.ok(dashboard?.components.some((component) => component.type === 'metric'), 'missing universal Attendance Dashboard metrics');
-  assert.ok(dashboard?.components.some((component) => component.type === 'table' && component.options?.itemsPath === 'classProgress'), 'missing universal class attendance progress');
+  // The Attendance Dashboard is the plugin's own screen (summaries, class progress, trend, milestones).
+  assert.equal(dashboard?.components.find((component) => component.type === 'app')?.options?.entry, 'ui/dashboard/index.html', 'missing Attendance Dashboard screen');
+  const dashboardScript = fs.readFileSync(path.join(root, 'ui/dashboard/dashboard.js'), 'utf8');
+  for (const call of ["ui.api.get('dashboard/day'", "ui.api.get('dashboard/month'", "ui.api.get('dashboard/milestones')"]) assert.ok(dashboardScript.includes(call), `dashboard must use ${call}`);
+  assert.ok(routes.has('GET dashboard/day') && routes.has('GET dashboard/month') && routes.has('GET dashboard/milestones'), 'missing dashboard routes');
   for (const page of ['study-years', 'classes', 'officers', 'officer-edit', 'officer-attendance', 'attendance-records', 'attendance-corrections', 'attendance-reports', 'attendance-settings', 'attendance-windows', 'student-attendance-scan', 'attendance-self-review', 'staff-attendance-scanner', 'staff-attendance-reports']) {
     assert.ok(ui.pages.some((candidate) => candidate.id === page), `missing UI page ${page}`);
   }
   const studyYears = ui.pages.find((candidate) => candidate.id === 'study-years');
-  assert.ok(studyYears.components.some((component) => component.type === 'form' && component.source === 'createStudyYear'), 'missing universal Academic Year creation workflow');
-  assert.ok(studyYears.components.some((component) => component.type === 'table' && component.options?.rowActions?.some((action) => action.source === 'setCurrentStudyYear')), 'missing per-record current Academic Year action');
+  // Since 0.17.0 Academic Years is the plugin's own screen (dates, school name, logo, current year).
+  assert.equal(studyYears.components.find((component) => component.type === 'app')?.options?.entry, 'ui/study-years/index.html', 'missing Academic Years screen');
+  for (const source of ['studyYears', 'createStudyYear', 'saveStudyYear', 'setCurrentStudyYear', 'deleteStudyYear']) assert.ok(studyYears.dataSources.some((s) => s.id === source), `Academic Years must declare ${source}`);
+  const yearScreen = fs.readFileSync(path.join(root, 'ui/study-years/study-years.js'), 'utf8');
+  for (const call of ["ui.api.get('study-years')", "ui.api.post('study-years', body)", "ui.api.put('study-years/' + encodeURIComponent(editing.id), body)", "'/set-current'", "ui.api.delete('study-years/' + encodeURIComponent(item.id))"]) assert.ok(yearScreen.includes(call), `Academic Years screen must use ${call}`);
   const classes = ui.pages.find((candidate) => candidate.id === 'classes');
   // Since 0.5.0 the guided class workflow is the plugin's own screen, not one built into the core.
   const classManager = classes.components.find((component) => component.type === 'app');
@@ -279,7 +291,7 @@ test('Academic Management exposes the streamlined administration and attendance 
   assert.equal(takeAttendance?.options?.entry, 'ui/attendance/index.html', 'missing guided student attendance station');
   assert.deepEqual(takeAttendance.options.devices, ['scanner', 'location'], 'attendance station must declare the scanner and location');
   const attendanceScreen = fs.readFileSync(path.join(root, 'ui/attendance/attendance.js'), 'utf8');
-  for (const call of ["ui.api.get('classes')", "ui.api.get('sessions')", "ui.api.get('records'", "'/students')", "ui.api.post('records'", "ui.api.post('scan'", 'ui.scanner.start(']) {
+  for (const call of ["ui.api.get('my/classes')", "ui.api.get('sessions')", "ui.api.get('records'", "'/students')", "ui.api.post('records'", "ui.api.post('scan'", 'ui.scanner.start(']) {
     assert.ok(attendanceScreen.includes(call), `student attendance station must use ${call}`);
   }
   assert.ok(attendance.dataSources.some((source) => source.id === 'classStudents' && source.autoload === false), 'missing runtime class roster source');
@@ -312,11 +324,19 @@ test('Academic Management exposes the streamlined administration and attendance 
     assert.match(cardScreen, /data-save-template="id-cards\/templates\/(student|staff)"/, `missing editable ${pageId} template route`);
     assert.ok(navigation.some((entry) => entry.id === pageId), `missing runtime navigation for ${pageId}`);
   }
-  for (const pageId of ['attendance-reports', 'staff-attendance-reports']) {
-    const reports = ui.pages.find((candidate) => candidate.id === pageId);
-    assert.ok(reports?.components.some((component) => component.type === 'table'), `missing universal ${pageId} table`);
-    assert.ok(reports?.components.some((component) => component.type === 'print'), `missing universal ${pageId} print workflow`);
+  // Staff attendance reports use the same report screen in staff mode, with their own saved print form.
+  const staffReports = ui.pages.find((candidate) => candidate.id === 'staff-attendance-reports');
+  assert.equal(staffReports?.components.find((component) => component.type === 'app')?.options?.entry, 'ui/reports/staff.html', 'missing staff attendance report screen');
+  assert.match(fs.readFileSync(path.join(root, 'ui/reports/staff.html'), 'utf8'), /data-mode="staff"/, 'staff report page must run the screen in staff mode');
+  assert.ok(routes.has('GET reports/staff-print-template') && routes.has('PUT reports/staff-print-template'), 'missing saved staff report print form routes');
+  // Student attendance reports are the plugin's own screen: daily/period report, print and a saved print form.
+  const studentReports = ui.pages.find((candidate) => candidate.id === 'attendance-reports');
+  assert.equal(studentReports?.components.find((component) => component.type === 'app')?.options?.entry, 'ui/reports/index.html', 'missing attendance report screen');
+  const reportScript = fs.readFileSync(path.join(root, 'ui/reports/reports.js'), 'utf8');
+  for (const call of ["ui.api.get('reports/print-data'", "ui.api.get('staff-attendance/reports'", "'reports/print-template'", "'reports/staff-print-template'", 'ui.api.get(TEMPLATE_PATH)', 'ui.api.put(TEMPLATE_PATH', 'window.print()']) {
+    assert.ok(reportScript.includes(call), `attendance report screen must use ${call}`);
   }
+  assert.ok(routes.has('GET reports/print-template') && routes.has('PUT reports/print-template'), 'missing saved report print form routes');
   assert.ok(routes.has('POST id-cards/classes/:id/ensure'), 'missing student card identifier backfill route');
   assert.ok(routes.has('GET id-cards/staff'), 'missing staff card route');
   assert.ok(routes.has('GET id-cards/templates/:type'), 'missing ID card template read route');
@@ -679,3 +699,19 @@ test('valid student self attendance creates exactly one record across repeated s
   assert.equal(harness.audits.length, 1);
 });
 
+
+test('Academic Management declares its own messages so users see them, and keeps other failures private', async () => {
+  // the message table matches the plugin's source
+  require('node:child_process').execFileSync(process.execPath, [path.join(__dirname, 'generate-academic-public-errors.js'), '--check']);
+  const { routes } = await activate();
+  for (const [key, route] of routes) {
+    assert.equal(route.contract?.version, '1.0', `${key} must declare the error contract`);
+  }
+  const route = routes.get('POST attendance/permissions');
+  assert.equal(route.contract.errors.CLASSID_AND_STUDENTID_ARE_REQUIRED.status, 400);
+  await assert.rejects(route.handler({ principal: { userId: 'u1', role: 'TEACHER' }, body: {} }),
+    (error) => error.isPluginContractError === true && error.code === 'CLASSID_AND_STUDENTID_ARE_REQUIRED');
+  const { publicCode } = require(path.join(root, 'backend', 'public-errors.js'));
+  assert.equal(publicCode('startedAt must be a valid ISO date (YYYY-MM-DD)'), 'X_MUST_BE_A_VALID_ISO_DATE_YYYY_MM_DD');
+  assert.equal(publicCode('relation "plugin_x" does not exist'), null, 'database errors stay private');
+});

@@ -57,7 +57,9 @@
   }
   function timeOf(value) { var date = new Date(value); return isNaN(date.getTime()) ? '' : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
 
+  var STATION_TONE = { success: 'success', warning: 'warning', danger: 'error', working: 'info', idle: 'info' };
   function setResult(tone, icon, title, detail) {
+    if (state.scanning) ui.scanner.feedback(STATION_TONE[tone] || 'info', icon + ' ' + title + (detail && tone !== 'idle' ? ' — ' + detail : ''));
     var node = $('result');
     node.className = 'result ' + tone;
     $('result-icon').textContent = icon; $('result-title').textContent = title; $('result-detail').textContent = detail || '';
@@ -137,6 +139,15 @@
   function render() { renderTabs(); renderChips(); renderToday(); renderHistory(); renderDevices(); }
 
   // ---------- scanning ----------
+  function badgeTone(badge) { return /^(RECORDED|ALREADY_RECORDED)$/.test(badge) ? 'success' : /^(LATE|REQUIRES_REVIEW|SAVED)$/.test(badge) ? 'warning' : 'error'; }
+  // The station's side list: today's scans, newest first (plain text only).
+  function pushActivity() {
+    if (!state.scanning) return;
+    ui.scanner.activity(state.today.slice(0, 50).map(function (entry) {
+      var tone = badgeTone(entry.badge);
+      return { title: entry.title, detail: (tone === 'success' ? '✓ ' : tone === 'warning' ? '⚠ ' : '✕ ') + timeOf(entry.at) + (entry.detail ? ' · ' + entry.detail : ''), tone: tone };
+    }), 'Scanned Today');
+  }
   function locate() {
     return ui.location().then(function (position) {
       state.location = 'on (±' + Math.round(Number(position.accuracy) || 0) + ' m)';
@@ -153,6 +164,7 @@
       entry.done = true;
       state.today.unshift({ at: entry.at, title: view.title, detail: view.detail, badge: (response && response.result) || 'RECORDED' });
       setResult(view.tone, view.icon, view.title, view.detail);
+      pushActivity();
       var ok = view.tone === 'success';
       beep(ok); vibrate(ok ? 180 : [250, 100, 250]);
       if (response && response.recordId) loadHistory();
@@ -164,6 +176,7 @@
       entry.done = true;
       state.today.unshift({ at: entry.at, title: 'Not recorded', detail: error.message || 'The scan was refused.', badge: 'FAILED' });
       setResult('danger', '⛔', 'Not recorded', error.message || 'The scan was refused.');
+      pushActivity();
       beep(false); vibrate([250, 100, 250]);
       return true;
     });
@@ -190,7 +203,7 @@
       return send(entry).then(function (answered) {
         // Done with the camera once the scan is recorded or saved; keep it open after a refusal.
         var finished = !answered || /^(success|warning)$/.test($('result').className.replace('result ', ''));
-        if (finished && state.scanning) stopCamera();
+        if (finished && state.scanning) setTimeout(function () { if (state.scanning) stopCamera(); }, 2500);
         if (!answered) {
           state.queue.push(entry);
           setResult('warning', '💾', 'Saved — waiting for connection', 'Keep this screen open. The scan is sent automatically with its original time.');
@@ -215,7 +228,10 @@
     state.scanning = true;
     setResult('idle', '📷', 'Camera ready', 'Point the camera at the attendance QR code.');
     renderChips();
+    setTimeout(pushActivity, 50);
     ui.scanner.start({
+      layout: 'station',
+      title: 'Scan Attendance — Student',
       onResult: function (text) { submit(text, true); },
       onError: function (message) { setResult('danger', '📷', 'Camera unavailable', message || 'Allow camera access for this site, or enter the code below.'); },
       onClose: function () { state.scanning = false; renderChips(); },

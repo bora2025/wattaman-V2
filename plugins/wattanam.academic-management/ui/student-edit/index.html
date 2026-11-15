@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Edit Student</title>
+  <link rel="stylesheet" href="../classes/classes.css">
+  <style>
+    .profile { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+    .profile .photo { width: 72px; height: 72px; border-radius: 18px; object-fit: cover; background: #e0e7ff; color: #4338ca; display: grid; place-items: center; font-size: 28px; font-weight: 900; }
+    .profile .facts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+    .profile .facts span { border: 1px solid #e2e8f0; background: #f8fafc; border-radius: 999px; padding: 3px 10px; font-size: 12px; color: #475569; }
+    .note { font-size: 12px; color: #64748b; }
+    /* Photo upload (shared helper: ../photo-upload.js) */
+    .photo-upload { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 6px; }
+    .photo-pick { display: inline-flex; align-items: center; border: 1px solid #c7d2fe; background: #eef2ff; color: #3730a3; font-weight: 700; padding: 7px 12px; border-radius: 10px; cursor: pointer; font-size: 13px; }
+    .photo-status { font-size: 13px; color: #047857; font-weight: 600; }
+    .photo-remove { border: 0; background: none; color: #dc2626; font-weight: 600; cursor: pointer; padding: 0; font-size: 13px; }
+    .photo-note { font-size: 12px; color: #64748b; margin: 4px 0 0; grid-column: 1 / -1; }
+    .photo-note.warn { color: #b45309; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <main id="app" aria-busy="true">
+    <section class="panel">
+      <div class="panel-head">
+        <div class="profile">
+          <span class="photo" id="photo-box">?</span>
+          <div>
+            <h2 id="heading">Edit Student</h2>
+            <div class="facts" id="facts"></div>
+          </div>
+        </div>
+        <button type="button" class="secondary" id="back">← Back to students</button>
+      </div>
+      <p id="message" class="notice success" role="status" hidden></p>
+      <p id="error" class="notice danger" role="alert" hidden></p>
+
+      <form id="form" novalidate>
+        <h3>Student information</h3>
+        <p class="muted">The same details as Register New Student. Changes to the name, email and phone also update the student's login.</p>
+        <div class="fields three">
+          <label>Student ID<input id="s-studentNumber" maxlength="100"></label>
+          <label>Latin Name *<input id="s-name" maxlength="160" required></label>
+          <label>Khmer Name<input id="s-nameKh" maxlength="160"></label>
+          <label>Email<input id="s-email" type="email" maxlength="200"></label>
+          <label>Phone<input id="s-phone" maxlength="40"></label>
+          <label>Sex<select id="s-sex"><option value="">—</option><option value="MALE">Male</option><option value="FEMALE">Female</option><option value="OTHER">Other</option></select></label>
+          <label>Date of Birth<input id="s-dateOfBirth" type="date"></label>
+          <label>Photo<input id="s-photo" type="url" placeholder="https://… (or upload below)"></label>
+          <label>Address<input id="s-address" maxlength="500"></label>
+          <label>Generation<input id="s-generation" maxlength="100"></label>
+        </div>
+        <p class="note">The password is not shown or changed here; reset it from User Management.</p>
+        <div class="form-actions">
+          <button type="button" id="cancel" class="secondary">Cancel</button>
+          <button type="submit" id="save" class="primary">Save student</button>
+        </div>
+      </form>
+    </section>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="../photo-upload.js"></script>
+  <script src="student-edit.js"></script>
+</body>
+</html>

@@ -1,0 +1,2 @@
+-- wattanam-plugin-migration: 079_index_transcript_remark_studentid
+CREATE INDEX IF NOT EXISTS plugin_wattanam_academic_management_transcript_remark_studentid_idx ON plugin_wattanam_academic_management_transcript_remark ("studentId");

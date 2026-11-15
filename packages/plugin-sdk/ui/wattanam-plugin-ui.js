@@ -136,7 +136,18 @@
 
   var scanner = {
     // handlers: { onResult(text), onClose(), onError(message) }. Starting again replaces them.
-    start: function (handlers) { scanHandlers = handlers || {}; send({ type: 'scan-start' }); },
+    // layout: 'station' shows the school's full-screen camera station; title names it.
+    start: function (handlers) {
+      scanHandlers = handlers || {};
+      var message = { type: 'scan-start' };
+      if (scanHandlers.layout === 'station') message.layout = 'station';
+      if (scanHandlers.title) message.title = String(scanHandlers.title);
+      send(message);
+    },
+    // Station layout only: the status bubble under the scan box (tone: info|success|warning|error).
+    feedback: function (tone, message) { send({ type: 'scan-feedback', tone: tone, message: String(message || '') }); },
+    // Station layout only: the side list. items: [{ title, detail?, tone, initials? }] (plain text).
+    activity: function (items, title) { var message = { type: 'scan-activity', items: items || [] }; if (title) message.title = String(title); send(message); },
     stop: function () { send({ type: 'scan-stop' }); },
     active: function () { return scanHandlers !== null; },
   };

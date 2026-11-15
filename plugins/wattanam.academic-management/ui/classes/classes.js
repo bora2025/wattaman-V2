@@ -315,6 +315,8 @@
       .catch(function (error) { show('students-error', error.message || 'Student action failed.'); })
       .then(function () { state.busy = ''; renderStudents(); });
   }
+  // Photo: upload a picture (made small, kept with the student) or paste an https link.
+  var photoUpload = window.WattanamPhoto ? window.WattanamPhoto.attach($('s-photo')) : null;
   function createStudent(event) {
     event.preventDefault();
     var row = state.studentsClass, values = {};
@@ -330,6 +332,7 @@
     })).then(function () {
       state.studentOpen = false; state.studentKey = '';
       studentFields.forEach(function (field) { $('s-' + field).value = ''; });
+      if (photoUpload) photoUpload.refresh();
       show('students-message', 'Student login, class enrollment, QR code, and ID card were created.');
       return Promise.all([loadStudents(), loadClasses()]);
     }).catch(function (error) { show('students-error', error.message || 'Student could not be created.'); })
@@ -409,7 +412,13 @@
 
   render();
   ui.autoResize();
-  ui.connect().then(load)
+  ui.connect().then(function (context) {
+    var wanted = String((context.query && context.query.students) || '');
+    return load().then(function () {
+      var row = state.classes.filter(function (item) { return item.id === wanted; })[0];
+      if (row) openStudents(row);
+    });
+  })
     .catch(function (error) { show('error', error.message || 'Classes could not be loaded.'); })
     .then(function () { $('app').setAttribute('aria-busy', 'false'); render(); });
 })();

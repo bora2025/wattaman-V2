@@ -174,7 +174,7 @@
     if (!state.classId) { render(); return Promise.resolve(); }
     state.busy = true; show('error'); render();
     var classId = state.classId, session = state.session;
-    return Promise.all([ui.api.get('classes/' + encodeURIComponent(classId) + '/students'), ui.api.get('records', { classId: classId, date: today() })]).then(function (results) {
+    return Promise.all([ui.api.get('my/classes/' + encodeURIComponent(classId) + '/students'), ui.api.get('records', { classId: classId, date: today() })]).then(function (results) {
       if (classId !== state.classId || session !== state.session) return;
       var records = {};
       rows(results[1]).filter(function (item) { return Number(item.session) === session; }).forEach(function (item) { records[item.personId] = item; });
@@ -186,6 +186,23 @@
 
   function addActivity(entry) { state.history = [entry].concat(state.history).slice(0, 100); }
 
+  // Full-screen camera station (run by the school page): status bubble and side list, plain text only.
+  function stationFeedback(tone, text) { if (state.mode === 'camera') ui.scanner.feedback(tone, text); }
+  function stationActivity() {
+    if (state.mode !== 'camera') return;
+    ui.scanner.activity(state.history.slice(0, 50).map(function (item) {
+      var student = item.student || (item.record ? state.students.filter(function (candidate) { return candidate.id === item.record.personId; })[0] : undefined);
+      var tone = item.outcome === 'SUCCESS' ? (item.record && item.record.status === 'LATE' ? 'warning' : 'success') : item.outcome === 'MISMATCH' ? 'warning' : 'error';
+      var name = student ? displayName(student) : item.outcome === 'MISMATCH' ? 'Student mismatch' : 'Unknown student';
+      var mark = item.outcome === 'SUCCESS' ? '✓ ' + String((item.record && item.record.status) || 'PRESENT').charAt(0) + String((item.record && item.record.status) || 'PRESENT').slice(1).toLowerCase() : item.outcome === 'MISMATCH' ? '⚠ Mismatch' : '✕ Failed';
+      return {
+        title: name + (student && student.studentNumber ? ' · ' + student.studentNumber : ''),
+        detail: mark + ' · ' + item.at.toLocaleTimeString() + (item.outcome === 'SUCCESS' ? '' : ' · ' + item.message),
+        tone: tone, initials: student ? displayName(student).charAt(0).toUpperCase() : undefined,
+      };
+    }), 'Attended Today');
+  }
+
   function scan(code, scanMode) {
     var clean = String(code || '').trim(), detectedAt = Date.now();
     if (!clean || !state.classId || scanLock) return Promise.resolve();
@@ -193,6 +210,7 @@
     if (lastScan.code === clean && detectedAt - lastScan.at < 3000) return Promise.resolve();
     lastScan = { code: clean, at: detectedAt }; scanLock = true;
     show('error'); show('message', 'QR detected — recording attendance…');
+    stationFeedback('info', 'QR detected — recording attendance…');
     var body = { code: clean, classId: state.classId, session: state.session, mode: scanMode, clientTimestamp: new Date().toISOString(), idempotencyKey: newKey() };
     if (state.location) { body.latitude = state.location.latitude; body.longitude = state.location.longitude; }
     return ui.api.post('scan', body).then(function (record) {
@@ -202,11 +220,13 @@
       addActivity({ at: new Date(), code: clean, outcome: 'SUCCESS', message: text, record: record, student: student });
       if (record.personId) { state.records[record.personId] = record; state.statuses[record.personId] = record.status || 'PRESENT'; }
       show('message', text); $('camera-status').textContent = text; vibrate(100);
+      stationFeedback(record.status === 'LATE' ? 'warning' : 'success', '✓ ' + text); stationActivity();
     }).catch(function (error) {
       var text = error.message || 'Code could not be scanned.';
       var mismatch = /class|enrol|student|person type|scope/i.test(text) && !/not found/i.test(text);
       addActivity({ at: new Date(), code: clean, outcome: mismatch ? 'MISMATCH' : 'FAILED', message: text });
       show('message'); show('error', text); $('camera-status').textContent = text; vibrate([80, 60, 80]);
+      stationFeedback(mismatch ? 'warning' : 'error', (mismatch ? '⚠ ' : '✕ ') + text); stationActivity();
     }).then(function () { setTimeout(function () { scanLock = false; }, 900); render(); });
   }
 
@@ -228,11 +248,15 @@
   function openCamera() {
     if (!isStudyDay()) { show('error', offDayMessage()); return; }
     show('error'); state.mode = 'camera'; $('camera-status').textContent = 'Camera ready — scan student QR code'; render();
+    var chosen = selectedClass(), active = activeSession();
     ui.scanner.start({
+      layout: 'station',
+      title: 'Camera — Student Attendance · ' + ((chosen && chosen.name) || 'Class') + ' · S' + state.session + (active && active.type === 'CHECK_OUT' ? ' Check-Out' : ' Check-In'),
       onResult: function (text) { scan(text, 'CAMERA'); },
       onError: function (message) { show('error', message || 'Camera permission was not granted.'); },
       onClose: function () { if (state.mode === 'camera') { state.mode = 'dashboard'; render(); } },
     });
+    setTimeout(stationActivity, 50);
   }
   function closeCamera() { state.mode = 'dashboard'; ui.scanner.stop(); render(); }
   function openUsb() {
@@ -293,7 +317,7 @@
       state.locationText = 'Location active (' + Number(position.latitude).toFixed(4) + ', ' + Number(position.longitude).toFixed(4) + ')';
     }).catch(function (error) { state.locationText = error.status === 503 || error.status === 0 ? 'Location unavailable' : 'Location permission not granted'; })
       .then(renderStatus);
-    return Promise.all([ui.api.get('classes'), ui.api.get('sessions')]);
+    return Promise.all([ui.api.get('my/classes'), ui.api.get('sessions')]);
   }).then(function (results) {
     state.classes = rows(results[0]);
     state.sessions = rows(results[1]).filter(function (item) { return item.scope === 'STUDENT'; });

@@ -1,0 +1,2 @@
+-- wattanam-plugin-migration: 083_index_transcript_subject_parentid
+CREATE INDEX IF NOT EXISTS plugin_wattanam_academic_management_transcript_subject_parentid_idx ON plugin_wattanam_academic_management_transcript_subject ("parentId");

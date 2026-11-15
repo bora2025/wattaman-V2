@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="km">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Progress Books</title>
+  <link rel="stylesheet" href="progress-books.css">
+  <style id="page-style">@page { size: B5 portrait; margin: 0; }</style>
+</head>
+<body>
+  <main id="app" aria-busy="true">
+    <header class="top no-print">
+      <div>
+        <h1>📘 Progress Books · សៀវភៅតាមដានការសិក្សា</h1>
+        <p class="muted">The Student Progress and Communication Book on B5: cover, internal rules, student information and ten monthly result pages for parents.</p>
+      </div>
+      <div class="top-actions">
+        <span id="saved" class="saved" role="status" hidden></span>
+        <button type="button" id="open-settings" class="secondary">⚙️ Book settings</button>
+        <button type="button" id="print" class="primary">🖨️ Print</button>
+      </div>
+    </header>
+
+    <div class="toolbar no-print">
+      <label>Score sheet<select id="sheet"></select></label>
+      <label>Class<select id="class"></select></label>
+      <label>Student<select id="student"></select></label>
+      <label>Print as<select id="print-mode">
+        <option value="a4">Booklet · A4 (A5 pages)</option>
+        <option value="b4">Booklet · B4 (B5 pages)</option>
+        <option value="single">Single B5 pages</option>
+      </select></label>
+      <fieldset class="parts"><legend>Pages</legend>
+        <label><input type="checkbox" id="part-cover" checked> Cover</label>
+        <label><input type="checkbox" id="part-rules" checked> Rules</label>
+        <label><input type="checkbox" id="part-info" checked> Student info</label>
+        <label><input type="checkbox" id="part-months" checked> 10 monthly pages</label>
+      </fieldset>
+    </div>
+    <p id="months-note" class="notice info no-print" hidden></p>
+    <p id="booklet-note" class="notice info no-print" hidden></p>
+    <p id="error" class="notice danger no-print" role="alert" hidden></p>
+    <p id="empty" class="empty no-print" hidden></p>
+
+    <!-- Book settings -->
+    <section id="settings" class="panel no-print" hidden>
+      <div class="panel-head">
+        <div><h2>Book settings</h2><p class="muted">The same for every book of the school.</p></div>
+        <button type="button" id="close-settings" class="secondary">Close</button>
+      </div>
+      <div class="row2">
+        <label>Cover lines (department, level — one per line)<textarea id="f-headerLines" rows="3"></textarea></label>
+        <label>Motto (one line each)<textarea id="f-mottoLines" rows="3"></textarea></label>
+      </div>
+      <div class="row4">
+        <label>School name<input id="f-orgName" maxlength="160" placeholder="e.g. អនុវត្ត"></label>
+        <label>Book title<input id="f-title" maxlength="120"></label>
+        <label>Symbol<input id="f-ornament" maxlength="40"></label>
+        <label>Place (date lines)<input id="f-place" maxlength="200" placeholder="ភ្នំពេញ"></label>
+      </div>
+      <label>Signatures on each monthly page (director, class teacher, parents — one per line)<textarea id="f-signers" rows="3"></textarea></label>
+      <label>Internal rules (សម្រង់បទបញ្ជាផ្ទៃក្នុង) — a line starting with a number (១. ២.) is a heading<textarea id="f-rules" rows="10"></textarea></label>
+      <div>
+        <p class="label">The book's grades (ticked for each subject: the share of the subject's maximum)</p>
+        <table class="mini"><thead><tr><th>Grade</th><th>From %</th></tr></thead><tbody id="f-grades"></tbody></table>
+      </div>
+      <p id="settings-error" class="notice danger" role="alert" hidden></p>
+      <div class="buttons">
+        <button type="button" id="save-settings" class="primary">💾 Save book settings</button>
+        <button type="button" id="reset-rules" class="secondary">↺ Default rules</button>
+      </div>
+    </section>
+
+    <div id="book" class="book"></div>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="../score-math.js"></script>
+  <script src="progress-books.js"></script>
+</body>
+</html>
