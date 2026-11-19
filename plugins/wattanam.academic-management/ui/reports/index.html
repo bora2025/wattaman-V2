@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Attendance Reports</title>
+  <link rel="stylesheet" href="reports.css">
+  <style id="page-size">@page { size: A4 portrait; margin: 12mm; }</style>
+</head>
+<body>
+  <main id="app" aria-busy="true">
+    <section class="controls no-print">
+      <header class="top">
+        <div>
+          <h1>📊 Attendance Reports</h1>
+          <p class="muted">Daily check-in and check-out, or totals for a week, month, year or any range.</p>
+        </div>
+        <div class="top-actions">
+          <button type="button" id="edit-form" class="secondary">✏️ Edit print form</button>
+          <button type="button" id="export" class="secondary">↓ Export CSV</button>
+          <button type="button" id="print" class="primary">🖨️ Print report</button>
+        </div>
+      </header>
+
+      <div class="filters">
+        <label>Class<select id="class"></select></label>
+        <div class="periods" role="group" aria-label="Report period">
+          <button type="button" data-period="daily">📅 Daily</button>
+          <button type="button" data-period="weekly">📆 Weekly</button>
+          <button type="button" data-period="monthly">🗓️ Monthly</button>
+          <button type="button" data-period="yearly">📊 Yearly</button>
+          <button type="button" data-period="custom">🔧 Custom</button>
+        </div>
+        <label id="date-field">Date<input type="date" id="date"></label>
+        <label id="start-field" hidden>From<input type="date" id="start"></label>
+        <label id="end-field" hidden>To<input type="date" id="end"></label>
+      </div>
+
+      <div id="error" class="notice danger" role="alert" hidden></div>
+      <div id="message" class="notice success" role="status" hidden></div>
+      <div id="totals" class="totals"></div>
+    </section>
+
+    <!-- Print form editor -->
+    <section id="editor" class="panel no-print" hidden>
+      <div class="panel-head">
+        <div><h2>Print form</h2><p class="muted">The letterhead, logo and signatures printed on every attendance report. Saved for the whole school.</p></div>
+        <button type="button" id="editor-close" class="secondary">Close</button>
+      </div>
+      <div class="editor-grid">
+        <div class="editor-fields">
+          <label>Report title<input id="t-title" maxlength="120"></label>
+          <label>School / organization name<input id="t-orgName" maxlength="160"></label>
+          <label>Letterhead lines (one per line)<textarea id="t-headerLines" rows="3"></textarea></label>
+          <label>Logo (PNG, JPG, WebP or GIF; it is resized to fit)<input id="t-logoFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></label>
+          <div class="logo-row"><img id="t-logoPreview" alt="Logo preview" hidden><button type="button" id="t-logoRemove" class="link" hidden>Remove logo</button></div>
+          <label>Text under the logo (one per line)<textarea id="t-logoTextLines" rows="2"></textarea></label>
+          <div class="row3">
+            <label>Logo spacing (px)<input id="t-logoGap" type="number" min="0" max="60"></label>
+            <label>Logo text spacing<input id="t-logoTextGap" type="number" min="0" max="60"></label>
+            <label>Letterhead spacing<input id="t-headerGap" type="number" min="0" max="60"></label>
+          </div>
+          <label>Signature names (one per line)<textarea id="t-signers" rows="3"></textarea></label>
+          <div class="row3">
+            <label>Paper<select id="t-paper"><option value="A4">A4 · 210 × 297 mm</option><option value="Letter">Letter · 8.5 × 11 in</option><option value="Legal">Legal · 8.5 × 14 in</option></select></label>
+            <label>Orientation<select id="t-orientation"><option value="portrait">Portrait</option><option value="landscape">Landscape</option></select></label>
+            <label class="check"><input id="t-showAddress" type="checkbox"> Show address column</label>
+          </div>
+          <label>Footer note (optional)<input id="t-footerText" maxlength="200"></label>
+          <p id="editor-error" class="notice danger" role="alert" hidden></p>
+          <div class="buttons">
+            <button type="button" id="editor-save" class="primary">💾 Save print form</button>
+            <button type="button" id="editor-reset" class="secondary">↩ Reset to default</button>
+          </div>
+        </div>
+        <p class="muted small">The preview below updates as you type.</p>
+      </div>
+    </section>
+
+    <!-- The printed document (also the on-screen preview) -->
+    <article id="sheet" class="sheet">
+      <header class="letterhead">
+        <div class="logo-block" id="logo-block">
+          <img id="logo" alt="Logo" hidden>
+          <div id="logo-text"></div>
+        </div>
+        <div class="header-lines" id="header-lines"></div>
+        <div class="logo-spacer" id="logo-spacer"></div>
+      </header>
+      <h2 class="title" id="title">Attendance Report</h2>
+      <div class="meta" id="meta"></div>
+      <div class="table-wrap">
+        <table id="table"><thead id="thead"></thead><tbody id="tbody"></tbody><tfoot id="tfoot"></tfoot></table>
+      </div>
+      <p id="empty" class="empty" hidden>No students in this class.</p>
+      <div class="legend" id="legend"></div>
+      <footer class="sheet-footer"><span id="printed"></span><span id="footer-text"></span></footer>
+      <div class="signers" id="signers"></div>
+    </article>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="reports.js"></script>
+</body>
+</html>

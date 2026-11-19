@@ -1,0 +1,2 @@
+-- wattanam-plugin-migration: 076_index_transcript_score_subjectid
+CREATE INDEX IF NOT EXISTS plugin_wattanam_academic_management_transcript_score_subjectid_idx ON plugin_wattanam_academic_management_transcript_score ("subjectId");

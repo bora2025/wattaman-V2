@@ -1,0 +1,283 @@
+:root {
+  --primary: var(--host-primary, #4f46e5);
+  --text: var(--host-text, #0f172a);
+  --muted: var(--host-text-secondary, #64748b);
+  --border: var(--host-border, #e2e8f0);
+  --font: var(--host-font-family, Inter, ui-sans-serif, system-ui, sans-serif);
+  --khmer: "Khmer OS Battambang", "Khmer OS", "Noto Sans Khmer", "Leelawadee UI", "Khmer UI", var(--font);
+  --khmer-title: "Khmer OS Muol Light", "Khmer OS Muol", "Moul", var(--khmer);
+  --line: #334155;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; padding: 18px; font-family: var(--font); color: var(--text); background: #fff; }
+main { display: grid; gap: 14px; }
+h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.02em; }
+h2 { margin: 0; font-size: 18px; font-weight: 800; }
+p { margin: 0; }
+.muted { color: var(--muted); font-size: 14px; margin-top: 4px; }
+button { font: inherit; cursor: pointer; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+button.primary { border: 0; background: var(--primary); color: #fff; font-weight: 700; padding: 10px 16px; border-radius: 12px; }
+button.secondary { border: 1px solid #cbd5e1; background: #fff; color: #334155; font-weight: 600; padding: 10px 16px; border-radius: 12px; }
+button.secondary[aria-pressed="true"] { background: #eef2ff; border-color: var(--primary); color: var(--primary); }
+.top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.top-actions, .buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.saved { font-size: 13px; font-weight: 700; color: #047857; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 999px; padding: 4px 12px; }
+.saved.bad { color: #b91c1c; background: #fef2f2; border-color: #fecaca; }
+label { display: block; font-size: 13px; font-weight: 600; color: #334155; }
+label.check { display: flex; align-items: center; gap: 8px; padding-top: 24px; }
+label.check input { width: auto; margin: 0; }
+input, select, textarea { display: block; width: 100%; margin-top: 6px; padding: 9px 11px; border: 1px solid #cbd5e1; border-radius: 10px; font: inherit; font-weight: 400; color: inherit; background: #fff; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+.toolbar > label { min-width: 170px; flex: 1 1 170px; }
+.segmented { display: inline-flex; border: 1px solid #cbd5e1; border-radius: 12px; overflow: hidden; }
+.segmented button { border: 0; background: #fff; padding: 10px 14px; font-weight: 600; color: #334155; }
+.segmented button[aria-pressed="true"] { background: var(--primary); color: #fff; }
+.add-tab { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+.inline { display: flex; gap: 8px; } .inline input, .inline select { margin-top: 0; } .inline input { min-width: 200px; }
+.notice { border-radius: 12px; padding: 12px 16px; font-size: 14px; border: 1px solid; }
+.notice.info { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+.notice.danger { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+.empty { padding: 40px 16px; text-align: center; color: var(--muted); border: 1px dashed #cbd5e1; border-radius: 16px; }
+.panel { border: 1px solid var(--border); border-radius: 16px; padding: 16px; display: grid; gap: 12px; background: #f8fafc; }
+.panel-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.row3 { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 900px) { .row3 { grid-template-columns: repeat(3, 1fr); } }
+.stack { display: grid; gap: 8px; }
+
+/* ---------- the document (screen) ---------- */
+.paper-wrap { display: grid; gap: 18px; background: #e2e8f0; border-radius: 16px; padding: 16px; overflow-x: auto; }
+.doc { background: #fff; color: #000; padding: 22px 24px; border-radius: 6px; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.15); font-family: var(--khmer); font-size: 12px; min-width: 980px; }
+.letterhead { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.offices p { font-family: var(--khmer); font-weight: 600; line-height: 1.7; }
+.offices .school { font-family: var(--khmer-title); }
+/* the academic year's logo (Academic Years) */
+.offices .doc-logo { display: block; width: 58px; height: 58px; object-fit: contain; margin: 0 auto 4px; }
+.rb-cover-logo { display: block; width: 96px; height: 96px; object-fit: contain; margin: 10px auto; }
+.motto { text-align: center; }
+.motto p { font-family: var(--khmer-title); font-size: 13px; line-height: 1.8; }
+.motto .ornament { font-size: 11px; letter-spacing: 4px; }
+.doc-title { text-align: center; font-family: var(--khmer-title); font-size: 16px; font-weight: 700; margin: 6px 0 4px; }
+.doc-info { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 26px; font-weight: 600; margin-bottom: 8px; }
+.table-wrap { overflow-x: auto; }
+table.sheet, table.stats { border-collapse: collapse; width: 100%; }
+table.sheet th, table.sheet td, table.stats th, table.stats td { border: 1px solid var(--line); padding: 2px 3px; text-align: center; vertical-align: middle; }
+table.sheet thead th { background: #f1f5f9; font-weight: 700; }
+table.sheet th.vertical { height: 118px; padding: 2px 0; }
+table.sheet th.vertical span { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; display: inline-block; line-height: 1.3; }
+table.sheet th.part { background: #f8fafc; font-weight: 600; }
+table.sheet .meta th { font-weight: 600; font-size: 11px; background: #fafafa; }
+table.sheet td.name { text-align: left; white-space: nowrap; padding-left: 6px; }
+table.sheet td.computed { font-weight: 700; background: #f8fafc; }
+table.sheet td.num { font-variant-numeric: tabular-nums; }
+table.sheet td.avg { font-weight: 700; }
+table.sheet tr.no-scores td { color: #94a3b8; }
+table.sheet td input { width: 100%; min-width: 34px; margin: 0; padding: 2px 1px; border: 1px solid transparent; border-radius: 3px; text-align: center; font: inherit; background: #fffbeb; }
+table.sheet td input:focus { outline: 2px solid var(--primary); background: #fff; }
+table.sheet td input.invalid { border-color: #dc2626; background: #fef2f2; }
+.g-A { color: #047857; } .g-B { color: #0f766e; } .g-C { color: #1d4ed8; } .g-D { color: #7c3aed; } .g-E { color: #b45309; } .g-F { color: #dc2626; }
+.summary { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 40px; margin-top: 10px; font-weight: 600; }
+.summary table { border-collapse: collapse; }
+.summary td { padding: 1px 6px; white-space: nowrap; }
+.summary td.n { text-align: right; min-width: 30px; font-variant-numeric: tabular-nums; }
+.signs { display: grid; gap: 12px; margin-top: 12px; text-align: center; font-weight: 600; }
+.signs .dates { display: flex; justify-content: flex-end; }
+.signs .dates div { text-align: center; min-width: 40%; line-height: 1.8; }
+.signs .row { display: flex; justify-content: space-around; gap: 16px; }
+.signs .signer { min-width: 26%; line-height: 1.8; }
+.signs .signer .role { font-family: var(--khmer-title); }
+.signs .signer .name { margin-top: 56px; }
+.stats-page table.stats { font-size: 11px; }
+.stats-page th { background: #f1f5f9; }
+.stats-page td.subject { text-align: left; white-space: nowrap; }
+.sub-title { font-family: var(--khmer-title); font-size: 13px; margin: 14px 0 6px; }
+
+/* ---------- មេគុណ ---------- */
+.averaging { display: grid; gap: 10px 12px; grid-template-columns: 1fr; align-items: end; border: 1px solid #fde68a; background: #fffbeb; border-radius: 14px; padding: 12px; }
+@media (min-width: 900px) { .averaging { grid-template-columns: 220px 220px auto 1fr; } }
+.averaging input { font-weight: 700; }
+.averaging input.invalid { border-color: #dc2626; background: #fef2f2; }
+.averaging .small { font-size: 12px; margin: 0; }
+
+/* ---------- student ranking ---------- */
+.segmented.views { justify-self: start; }
+.rank-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
+table.rank { border-collapse: collapse; width: 100%; }
+table.rank th, table.rank td { border: 1px solid var(--line); padding: 3px 4px; text-align: center; white-space: nowrap; }
+table.rank thead th { background: #f1f5f9; font-weight: 700; }
+table.rank td.name { text-align: left; padding-left: 6px; }
+table.rank td.avg { font-weight: 700; }
+table.rank tr.rank-top td { background: #fefce8; }
+table.rank tr.no-scores td { color: #94a3b8; }
+
+/* ---------- grade scale ---------- */
+@media (min-width: 900px) { .averaging { grid-template-columns: 220px 220px auto 1fr auto; } }
+.grades-panel { border: 1px solid #c7d2fe; background: #f5f7ff; border-radius: 16px; padding: 16px; display: grid; gap: 12px; }
+.grades-table { border-collapse: collapse; width: 100%; max-width: 720px; }
+.grades-table th { text-align: left; font-size: 12px; color: #475569; padding: 6px; }
+.grades-table td { padding: 4px 6px; border-top: 1px solid #e2e8f0; }
+.grades-table input { margin: 0; padding: 7px 9px; }
+.grades-table input.letter { width: 64px; font-weight: 800; text-align: center; }
+.grades-table input.from { width: 110px; text-align: right; }
+.grades-table input.invalid { border-color: #dc2626; background: #fef2f2; }
+.grades-table td.pct { color: #475569; font-variant-numeric: tabular-nums; }
+.grades-table td.below { color: #64748b; font-size: 13px; }
+
+/* ---------- editing the header on the page ---------- */
+.header-bar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; border: 1px solid #fcd34d; background: #fffbeb; color: #92400e; border-radius: 14px; padding: 10px 14px; font-size: 14px; }
+.editable { outline: 2px dashed #f59e0b; outline-offset: 3px; border-radius: 4px; cursor: text; min-width: 80px; min-height: 1.2em; }
+.editable:hover { background: #fffbeb; }
+.editable:focus { outline: 2px solid #d97706; background: #fffbeb; }
+.editable:empty::before { content: attr(data-placeholder); color: #94a3b8; font-weight: 400; }
+.title-prefix.editable { display: inline-block; padding: 0 4px; }
+.header-bar > p { flex: 1 1 420px; margin: 0; }
+.style-bar { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: end; gap: 10px; border-top: 1px dashed #fcd34d; padding-top: 10px; color: #334155; }
+.style-target { font-weight: 800; color: #92400e; min-width: 190px; align-self: center; }
+.segmented.small button { padding: 7px 10px; font-size: 13px; }
+.segmented.small button[aria-pressed="true"] { background: #d97706; color: #fff; }
+.inline-label { font-size: 12px; }
+.inline-label select, .inline-label input { margin-top: 3px; padding: 6px 8px; }
+.inline-label select { min-width: 190px; }
+.inline-label input[type="number"] { width: 84px; }
+.inline-label input[type="color"] { width: 52px; height: 34px; padding: 2px; }
+.bold-btn { font-weight: 900; padding: 7px 14px !important; }
+.bold-btn[aria-pressed="true"] { background: #d97706 !important; color: #fff !important; border-color: #d97706 !important; }
+.style-bar [data-control]:disabled { opacity: 0.45; }
+.stylable { outline: 2px dotted #94a3b8; outline-offset: 3px; border-radius: 4px; cursor: pointer; }
+.editable.style-selected, .stylable.style-selected { outline: 3px solid #2563eb !important; outline-offset: 3px; background: #eff6ff; }
+.motto-lines.editable, .office-lines.editable { display: block; }
+
+/* ---------- subject ranking ---------- */
+.segmented.views { flex-wrap: wrap; }
+table.subject-rank { font-size: 11px; }
+table.subject-rank th.vertical { height: 128px; }
+table.subject-rank th.rank-col { background: #f8fafc; font-weight: 600; }
+table.subject-rank td.rank-col { color: #475569; font-size: 10px; background: #fafafa; }
+table.subject-rank td.podium-rank { color: #854d0e; font-weight: 800; background: #fefce8; }
+
+/* ---------- honor roll ---------- */
+.doc.honor { max-width: 900px; margin: 0 auto; width: 100%; min-width: 0; }
+.honor-title { font-size: 20px; margin-top: 14px; }
+#h-podium { display: grid; grid-template-columns: 1fr 1fr; gap: 22px 60px; margin: 18px 40px 8px; }
+#h-podium .first { grid-column: 1 / -1; justify-self: center; }
+.honoree { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; }
+.honoree .frame { width: 112px; height: 140px; border: 3px solid #cbd5e1; border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #f8fafc; font-size: 44px; font-weight: 800; color: #94a3b8; }
+.honoree .frame img { width: 100%; height: 100%; object-fit: cover; }
+.honoree.first .frame { width: 140px; height: 175px; }
+.honoree.gold .frame { border-color: #eab308; box-shadow: 0 0 0 4px #fef9c3; }
+.honoree.silver .frame { border-color: #94a3b8; box-shadow: 0 0 0 4px #f1f5f9; }
+.honoree.bronze .frame { border-color: #c2410c; box-shadow: 0 0 0 4px #ffedd5; }
+.honoree .place { font-family: var(--khmer-title); font-size: 15px; padding: 2px 16px; border-radius: 999px; background: #f1f5f9; }
+.honoree.gold .place { background: #fef9c3; color: #854d0e; }
+.honoree.silver .place { background: #e2e8f0; color: #334155; }
+.honoree.bronze .place { background: #ffedd5; color: #9a3412; }
+.honoree .who { font-family: var(--khmer-title); font-size: 15px; }
+.honoree.first .who { font-size: 18px; }
+.honoree .figures { font-size: 12px; color: #334155; }
+#h-podium .none { grid-column: 1 / -1; text-align: center; color: #64748b; padding: 30px; }
+
+/* ---------- footer grid: one column per signer ---------- */
+.sign-grid { display: grid; column-gap: 24px; row-gap: 2px; text-align: center; font-weight: 600; line-height: 1.8; margin-top: 8px; }
+.sign-grid .role { font-family: var(--khmer-title); }
+.sign-grid .name { margin-top: 56px; }
+/* Typed spaces show exactly as typed in the header and footer. */
+.sign-grid p, .offices p, .motto-lines p, .motto .ornament, .title-prefix, .school { white-space: pre-wrap; }
+
+/* ---------- academic year report card (A4 portrait, one per student) ---------- */
+.yearcards { display: grid; gap: 18px; justify-items: center; }
+.doc.yearcard-page { width: 210mm; min-width: 0; min-height: 297mm; padding: 12mm 14mm; font-size: 10.5pt; }
+.card-student { display: grid; grid-template-columns: 1.6fr 1fr; gap: 1mm 8mm; margin: 2mm 0 3mm; }
+.card-student .k { color: #334155; }
+table.card-table { border-collapse: collapse; width: 100%; font-size: 9.5pt; }
+table.card-table th, table.card-table td { border: 1px solid #334155; padding: 0.6mm 1.5mm; text-align: center; }
+table.card-table th { background: #f1f5f9; font-weight: 700; }
+table.card-table td.subject { text-align: left; white-space: nowrap; }
+table.card-table td.subject.part { padding-left: 5mm; color: #475569; }
+table.card-table td.rk { color: #475569; font-size: 8.5pt; }
+table.card-table tr.sum td { font-weight: 700; background: #f8fafc; }
+.card-result { display: flex; flex-wrap: wrap; gap: 2mm 10mm; margin-top: 3mm; }
+.card-result .pass { color: #047857; } .card-result .fail { color: #dc2626; }
+.card-result.absence { margin-top: 1mm; }
+.card-line { margin-top: 2mm; }
+.card-line .v { white-space: pre-wrap; }
+.card-comment { border-bottom: 1px dotted #475569; min-height: 6mm; white-space: pre-wrap; text-indent: 6mm; }
+.parent-lines p { border-bottom: 1px dotted #475569; height: 7mm; margin: 0 4mm; }
+
+/* ---------- student academic record book (A4 landscape, one per student) ---------- */
+.doc.recordbook-page { width: 297mm; min-width: 0; min-height: 210mm; padding: 9mm 11mm; font-size: 9.5pt; }
+.recordbook-page .letterhead { display: grid; grid-template-columns: 1fr auto 1fr; align-items: start; }
+.recordbook-page .letterhead .motto { justify-self: end; }
+.recordbook-page .rb-title { margin: 3mm 0 0; font-size: 17pt; }
+.rb-student { justify-content: flex-start; gap: 1mm 9mm; margin: 2mm 0 3mm; }
+.rb-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 6mm; align-items: start; }
+.rb-section h3 { font-size: 10pt; margin: 1.5mm 0 1mm; font-family: var(--khmer); font-weight: 700; }
+.recordbook-page table.card-table { font-size: 8.6pt; }
+.recordbook-page table.card-table th, .recordbook-page table.card-table td { padding: 0.3mm 1.2mm; }
+.rb-small td { min-width: 14mm; height: 5.6mm; }
+.sign-cell { min-width: 22mm; }
+.rb-exam { font-size: 9pt; margin: 1mm 0; }
+.rb-comments { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; text-align: center; margin-top: 2mm; line-height: 1.7; }
+.rb-comments .role { font-family: var(--khmer-title); font-size: 9.5pt; }
+.rb-comments .rb-comment { color: #1e3a8a; min-height: 10mm; white-space: pre-wrap; }
+.rb-comments .name { margin-top: 12mm; }
+
+/* ---------- record book: cover, guidance, student information (A4 portrait) ---------- */
+.doc.rb-portrait-page { width: 210mm; min-width: 0; min-height: 297mm; padding: 14mm 15mm; font-size: 11pt; display: flex; flex-direction: column; }
+.rb-motto { text-align: center; }
+.rb-motto p { font-family: var(--khmer-title); font-size: 12.5pt; line-height: 1.9; }
+.rb-portrait-page .ornament { text-align: center; letter-spacing: 3px; margin: 1mm 0 3mm; }
+.rb-frame { flex: 1; border: 1.5px solid #1e293b; padding: 14mm 12mm; display: flex; flex-direction: column; align-items: center; }
+.rb-ministry { font-family: var(--khmer-title); font-size: 14pt; text-align: center; margin-top: 6mm; }
+.rb-cover-title { font-family: var(--khmer-title); font-size: 30pt; text-align: center; margin: 26mm 0 8mm; letter-spacing: 1px; }
+.rb-cover-title.small { font-size: 22pt; margin: 6mm 0 2mm; }
+.rb-level { font-family: var(--khmer-title); font-size: 14pt; text-align: center; }
+.rb-cover-fields { width: 100%; margin-top: auto; }
+.rb-field { display: flex; align-items: baseline; gap: 3mm; margin: 2.4mm 0; }
+.rb-field .k { white-space: nowrap; }
+.rb-field .v { flex: 1; border-bottom: 1px dotted #475569; min-height: 1.7em; padding: 0 2mm; color: #1e3a8a; white-space: pre-wrap; }
+.rb-field .v.short { flex: 0 0 22mm; text-align: center; }
+.rb-guidance-title { font-family: var(--khmer-title); font-size: 20pt; text-align: center; margin-top: 4mm; }
+.rb-guidance-text p { text-align: justify; line-height: 2; margin: 0 0 2mm; text-indent: -7mm; padding-left: 7mm; }
+.rb-guidance-text p.sub { padding-left: 14mm; }
+.rb-info-top { display: grid; grid-template-columns: 1fr 40mm; gap: 6mm; align-items: start; margin-bottom: 4mm; }
+.rb-photo { width: 40mm; height: 52mm; border: 1px solid #94a3b8; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 9pt; overflow: hidden; }
+.rb-photo img { width: 100%; height: 100%; object-fit: cover; }
+table.rb-history { margin-top: 6mm; font-size: 9.5pt; }
+table.rb-history td { height: 8mm; }
+
+/* ---------- print: only the document ---------- */
+@media print {
+  body { padding: 0; background: #fff; }
+  main { display: block; }
+  .no-print, .panel { display: none !important; }
+  .paper-wrap { display: block; padding: 0; background: none; overflow: visible; border-radius: 0; }
+  .doc { box-shadow: none; padding: 0; border-radius: 0; min-width: 0; font-size: 7.6pt; }
+  .table-wrap { overflow: visible; }
+  table.sheet th, table.sheet td { padding: 1px 2px; }
+  table.sheet th.vertical { height: 96px; }
+  table.sheet td input { border: 0; background: none; padding: 0; }
+  table.sheet tr { break-inside: avoid; }
+  table.sheet thead { display: table-header-group; }
+  .doc-title { font-size: 12pt; }
+  .motto p { font-size: 9pt; }
+  .summary, .signs { break-inside: avoid; }
+  .signs .signer .name, .sign-grid .name { margin-top: 40px; }
+  .stats-page { break-before: page; }
+  .doc.ranking { font-size: 9pt; }
+  .yearcards { display: block; }
+  .doc.yearcard-page { width: auto; min-height: 0; padding: 0; break-after: page; }
+  .doc.yearcard-page:last-child { break-after: auto; }
+  .doc.recordbook-page { width: auto; min-height: 0; padding: 0; break-after: page; }
+  .doc.recordbook-page:last-child { break-after: auto; }
+  table.card-table tr.sum td { background: none; }
+  .editable, .stylable, .editable.style-selected, .stylable.style-selected { outline: none !important; background: none !important; }
+  .editable:empty::before { content: none; }
+  table.subject-rank { font-size: 6.4pt; }
+  table.subject-rank th.vertical { height: 86px; }
+  table.subject-rank td.rank-col, table.subject-rank td.podium-rank { background: none; font-size: 6pt; }
+  .honoree .frame, .honoree.gold .frame, .honoree.silver .frame, .honoree.bronze .frame { box-shadow: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  table.rank th, table.rank td { padding: 1px 3px; }
+  table.rank tr.rank-top td { background: none; }
+  body.no-stats .stats-page { display: none; }
+}

@@ -11,26 +11,74 @@
       "permission": "wattanam.academic-management.attendance.view",
       "parameters": [],
       "dataSources": [
-        { "id": "dashboardClasses", "method": "GET", "path": "classes", "permission": "wattanam.academic-management.view" },
-        { "id": "dashboardOfficers", "method": "GET", "path": "officers", "permission": "wattanam.academic-management.view" },
-        { "id": "dashboardStudentRecords", "method": "GET", "path": "records", "permission": "wattanam.academic-management.attendance.view" },
-        { "id": "dashboardStaffRecords", "method": "GET", "path": "staff-attendance/records", "permission": "wattanam.academic-management.attendance.staff.scan" },
-        { "id": "dashboardAuthoritative", "method": "GET", "path": "attendance/dashboard-authoritative", "permission": "wattanam.academic-management.attendance.view" }
+        {
+          "id": "dashboardClasses",
+          "method": "GET",
+          "path": "classes",
+          "permission": "wattanam.academic-management.view",
+          "autoload": false
+        },
+        {
+          "id": "dashboardOfficers",
+          "method": "GET",
+          "path": "officers",
+          "permission": "wattanam.academic-management.view",
+          "autoload": false
+        },
+        {
+          "id": "dashboardStudentRecords",
+          "method": "GET",
+          "path": "records",
+          "permission": "wattanam.academic-management.attendance.view",
+          "autoload": false
+        },
+        {
+          "id": "dashboardStaffRecords",
+          "method": "GET",
+          "path": "staff-attendance/records",
+          "permission": "wattanam.academic-management.attendance.staff.scan",
+          "autoload": false
+        },
+        {
+          "id": "dashboardAuthoritative",
+          "method": "GET",
+          "path": "attendance/dashboard-authoritative",
+          "permission": "wattanam.academic-management.attendance.view",
+          "autoload": false
+        },
+        {
+          "id": "dashboardDay",
+          "method": "GET",
+          "path": "dashboard/day",
+          "permission": "wattanam.academic-management.attendance.view",
+          "autoload": false
+        },
+        {
+          "id": "dashboardMonth",
+          "method": "GET",
+          "path": "dashboard/month",
+          "permission": "wattanam.academic-management.attendance.view",
+          "autoload": false
+        },
+        {
+          "id": "dashboardMilestones",
+          "method": "GET",
+          "path": "dashboard/milestones",
+          "permission": "wattanam.academic-management.attendance.view",
+          "autoload": false
+        }
       ],
       "components": [
-        { "id": "dashboard-heading", "type": "heading", "title": "Attendance Dashboard" },
-        { "id": "student-expected", "type": "metric", "appearance": { "width": "half" }, "title": "Expected student sessions", "source": "dashboardAuthoritative", "options": { "valuePath": "student.expected", "format": "number" } },
-        { "id": "student-present", "type": "metric", "appearance": { "width": "half" }, "title": "Students present", "source": "dashboardAuthoritative", "options": { "valuePath": "student.present", "format": "number" } },
-        { "id": "student-absent", "type": "metric", "appearance": { "width": "half" }, "title": "Students absent", "source": "dashboardAuthoritative", "options": { "valuePath": "student.absent", "format": "number" } },
-        { "id": "staff-present", "type": "metric", "appearance": { "width": "half" }, "title": "Staff present", "source": "dashboardAuthoritative", "options": { "valuePath": "staff.present", "format": "number" } },
-        { "id": "class-progress", "type": "table", "title": "Today's class attendance", "source": "dashboardAuthoritative", "fields": [
-          { "id": "className", "label": "Class" },
-          { "id": "students", "label": "Students", "format": "number" },
-          { "id": "present", "label": "Present", "format": "number" },
-          { "id": "late", "label": "Late", "format": "number" },
-          { "id": "absent", "label": "Absent", "format": "number" },
-          { "id": "rate", "label": "Rate (%)", "format": "number" }
-        ], "options": { "itemsPath": "classProgress", "pageSize": 20, "selectable": false } }
+        {
+          "id": "attendance-dashboard-screen",
+          "type": "app",
+          "title": "Attendance Dashboard",
+          "options": {
+            "entry": "ui/dashboard/index.html",
+            "height": "auto",
+            "minHeight": 900
+          }
+        }
       ]
     },
     {
@@ -915,7 +963,7 @@
     },
     {
       "id": "study-years",
-      "title": "Study Years",
+      "title": "Academic Years",
       "routePath": "study-years",
       "permission": "wattanam.academic-management.view",
       "parameters": [],
@@ -924,56 +972,63 @@
           "id": "studyYears",
           "method": "GET",
           "path": "study-years",
-          "permission": "wattanam.academic-management.view"
+          "permission": "wattanam.academic-management.view",
+          "autoload": false
         },
         {
           "id": "createStudyYear",
           "method": "POST",
           "path": "study-years",
-          "permission": "wattanam.academic-management.manage"
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "saveStudyYear",
+          "method": "PUT",
+          "path": "study-years/:id",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
         },
         {
           "id": "setCurrentStudyYear",
           "method": "POST",
-          "path": "study-years/:studyYearId/set-current",
+          "path": "study-years/:id/set-current",
           "parameters": [
-            "studyYearId"
+            "id"
           ],
-          "autoload": false,
-          "permission": "wattanam.academic-management.manage"
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
         },
         {
           "id": "deleteStudyYear",
           "method": "DELETE",
-          "path": "study-years/:studyYearId",
+          "path": "study-years/:id",
           "parameters": [
-            "studyYearId"
+            "id"
           ],
-          "autoload": false,
-          "permission": "wattanam.academic-management.manage"
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
         }
       ],
       "components": [
-        { "id": "study-years-heading", "type": "heading", "title": "Academic Years" },
-        { "id": "create-study-year", "type": "form", "title": "Add academic year", "source": "createStudyYear", "fields": [
-          { "id": "year", "type": "number", "label": "Year", "required": true, "min": 2020, "max": 2100 },
-          { "id": "startDate", "type": "date", "label": "Start date", "required": true },
-          { "id": "endDate", "type": "date", "label": "End date", "required": true }
-        ], "options": { "collapsible": true, "defaultCollapsed": true, "triggerLabel": "Add academic year", "submitLabel": "Create academic year", "successMessage": "Academic year created" } },
-        { "id": "study-years-table", "type": "table", "title": "Academic years", "source": "studyYears", "fields": [
-          { "id": "year", "label": "Year", "format": "number", "sortable": true },
-          { "id": "startDate", "label": "Start date", "format": "date" },
-          { "id": "endDate", "label": "End date", "format": "date" },
-          { "id": "isCurrent", "label": "Current", "format": "boolean" }
-        ], "options": { "pageSize": 20, "selectable": false, "rowClickable": true, "rowActionLabel": "Edit", "rowRoute": "study-years/edit/:id", "rowParameterMap": { "id": "id" }, "rowActions": [
-          { "id": "set-current", "label": "Set current", "source": "setCurrentStudyYear", "idField": "id", "idParameter": "studyYearId", "confirmation": "Set this as the current academic year?" },
-          { "id": "delete-year", "label": "Delete", "source": "deleteStudyYear", "idField": "id", "idParameter": "studyYearId", "confirmation": "Delete this academic year only if it has no dependent records?", "destructive": true }
-        ] } }
+        {
+          "id": "study-years-screen",
+          "type": "app",
+          "title": "Academic Years",
+          "options": {
+            "entry": "ui/study-years/index.html",
+            "height": "auto",
+            "minHeight": 700
+          }
+        }
       ]
     },
     {
       "id": "study-year-edit",
-      "title": "Edit Study Year",
+      "title": "Edit Academic Year",
       "routePath": "study-years/edit/:id",
       "permission": "wattanam.academic-management.manage",
       "parameters": [
@@ -985,71 +1040,59 @@
       ],
       "dataSources": [
         {
-          "id": "studyYear",
+          "id": "studyYears",
           "method": "GET",
-          "path": "study-years/:id",
-          "permission": "wattanam.academic-management.view"
+          "path": "study-years",
+          "permission": "wattanam.academic-management.view",
+          "autoload": false
+        },
+        {
+          "id": "createStudyYear",
+          "method": "POST",
+          "path": "study-years",
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
         },
         {
           "id": "saveStudyYear",
           "method": "PUT",
           "path": "study-years/:id",
-          "permission": "wattanam.academic-management.manage"
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "setCurrentStudyYear",
+          "method": "POST",
+          "path": "study-years/:id/set-current",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "deleteStudyYear",
+          "method": "DELETE",
+          "path": "study-years/:id",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
         }
       ],
       "components": [
         {
-          "id": "heading",
-          "type": "heading",
-          "title": "Edit Study Year"
-        },
-        {
-          "id": "study-year-edit-form",
-          "type": "form",
-          "title": "Study year details",
-          "source": "saveStudyYear",
-          "fields": [
-            {
-              "id": "year",
-              "type": "number",
-              "label": "Year",
-              "required": true,
-              "min": 2020,
-              "max": 2100
-            },
-            {
-              "id": "label",
-              "type": "text",
-              "label": "Label",
-              "maxLength": 120
-            },
-            {
-              "id": "startDate",
-              "type": "date",
-              "label": "Start date"
-            },
-            {
-              "id": "endDate",
-              "type": "date",
-              "label": "End date"
-            },
-            {
-              "id": "schoolName",
-              "type": "text",
-              "label": "School name",
-              "maxLength": 160
-            },
-            {
-              "id": "logoUrl",
-              "type": "text",
-              "label": "Logo URL",
-              "maxLength": 500
-            }
-          ],
+          "id": "study-year-edit-screen",
+          "type": "app",
+          "title": "Academic Years",
           "options": {
-            "initialSource": "studyYear",
-            "submitLabel": "Save",
-            "successMessage": "Study year saved"
+            "entry": "ui/study-years/index.html",
+            "height": "auto",
+            "minHeight": 700
           }
         }
       ]
@@ -1738,7 +1781,8 @@
           "id": "student",
           "method": "GET",
           "path": "classes/:id/students/:studentId",
-          "permission": "wattanam.academic-management.view"
+          "permission": "wattanam.academic-management.view",
+          "autoload": false
         },
         {
           "id": "saveStudent",
@@ -1749,107 +1793,13 @@
       ],
       "components": [
         {
-          "id": "class-workflow",
-          "type": "workflow",
+          "id": "student-edit-screen",
+          "type": "app",
           "title": "Edit Student",
           "options": {
-            "eyebrow": "Academic management",
-            "description": "Update this student's class profile while preserving enrollment and account history.",
-            "dashboardRoute": "classes",
-            "dashboardLabel": "All classes",
-            "activeStep": 1,
-            "steps": [
-              { "label": "Overview", "route": "classes/:id" },
-              { "label": "Students", "route": "classes/:id/students" },
-              { "label": "Edit class", "route": "classes/edit/:id" }
-            ]
-          }
-        },
-        {
-          "id": "heading",
-          "type": "heading",
-          "title": "Edit Student"
-        },
-        {
-          "id": "student-editor",
-          "type": "form",
-          "title": "Student profile",
-          "source": "saveStudent",
-          "fields": [
-            {
-              "id": "nameKh",
-              "type": "text",
-              "label": "Khmer name",
-              "maxLength": 160
-            },
-            {
-              "id": "studentNumber",
-              "type": "text",
-              "label": "Student number",
-              "maxLength": 80
-            },
-            {
-              "id": "sex",
-              "type": "select",
-              "label": "Sex",
-              "options": [
-                {
-                  "label": "Not specified",
-                  "value": ""
-                },
-                {
-                  "label": "Male",
-                  "value": "MALE"
-                },
-                {
-                  "label": "Female",
-                  "value": "FEMALE"
-                },
-                {
-                  "label": "Other",
-                  "value": "OTHER"
-                }
-              ]
-            },
-            {
-              "id": "dateOfBirth",
-              "type": "date",
-              "label": "Date of birth"
-            },
-            {
-              "id": "address",
-              "type": "textarea",
-              "label": "Address",
-              "maxLength": 1000
-            },
-            {
-              "id": "generation",
-              "type": "text",
-              "label": "Generation",
-              "maxLength": 120
-            },
-            {
-              "id": "photo",
-              "type": "text",
-              "label": "Photo URL",
-              "maxLength": 500
-            },
-            {
-              "id": "parentId",
-              "type": "text",
-              "label": "Parent user ID",
-              "maxLength": 36
-            },
-            {
-              "id": "customFieldValues",
-              "type": "json",
-              "label": "Custom fields"
-            }
-          ],
-          "options": {
-            "initialSource": "student",
-            "submitLabel": "Save student",
-            "successMessage": "Student updated"
+            "entry": "ui/student-edit/index.html",
+            "height": "auto",
+            "minHeight": 560
           }
         }
       ]
@@ -2426,7 +2376,7 @@
         {
           "id": "classes",
           "method": "GET",
-          "path": "classes",
+          "path": "my/classes",
           "permission": "wattanam.academic-management.attendance.view"
         },
         {
@@ -2445,7 +2395,7 @@
         {
           "id": "classStudents",
           "method": "GET",
-          "path": "classes/:classId/students",
+          "path": "my/classes/:classId/students",
           "permission": "wattanam.academic-management.attendance.view",
           "parameters": ["classId"],
           "autoload": false
@@ -2763,20 +2713,24 @@
           "id": "reportClasses",
           "method": "GET",
           "path": "classes",
-          "permission": "wattanam.academic-management.attendance.report"
+          "permission": "wattanam.academic-management.attendance.report",
+          "autoload": false
         },
         {
           "id": "reportSessions",
           "method": "GET",
           "path": "sessions",
-          "permission": "wattanam.academic-management.attendance.report"
+          "permission": "wattanam.academic-management.attendance.report",
+          "autoload": false
         },
         {
           "id": "reportStudents",
           "method": "GET",
           "path": "classes/:classId/students",
           "permission": "wattanam.academic-management.attendance.report",
-          "parameters": ["classId"],
+          "parameters": [
+            "classId"
+          ],
           "autoload": false
         },
         {
@@ -2797,184 +2751,54 @@
           "id": "summary",
           "method": "GET",
           "path": "reports/summary",
-          "permission": "wattanam.academic-management.attendance.report"
+          "permission": "wattanam.academic-management.attendance.report",
+          "autoload": false
         },
         {
           "id": "printSummary",
           "method": "GET",
           "path": "reports/print-data",
-          "permission": "wattanam.academic-management.attendance.print"
+          "permission": "wattanam.academic-management.attendance.print",
+          "autoload": false
+        },
+        {
+          "id": "reportHolidays",
+          "method": "GET",
+          "path": "holidays",
+          "permission": "wattanam.academic-management.attendance.view",
+          "autoload": false
+        },
+        {
+          "id": "reportStudyYears",
+          "method": "GET",
+          "path": "study-years",
+          "permission": "wattanam.academic-management.view",
+          "autoload": false
+        },
+        {
+          "id": "printTemplate",
+          "method": "GET",
+          "path": "reports/print-template",
+          "permission": "wattanam.academic-management.attendance.report",
+          "autoload": false
+        },
+        {
+          "id": "savePrintTemplate",
+          "method": "PUT",
+          "path": "reports/print-template",
+          "permission": "wattanam.academic-management.attendance.configure",
+          "autoload": false
         }
       ],
       "components": [
         {
-          "id": "heading",
-          "type": "heading",
-          "title": "Student attendance reports"
-        },
-        {
-          "id": "filters",
-          "type": "filter",
-          "fields": [
-            {
-              "id": "classId",
-              "type": "text",
-              "label": "Class ID"
-            },
-            {
-              "id": "personId",
-              "type": "text",
-              "label": "Student ID"
-            },
-            {
-              "id": "startDate",
-              "type": "date",
-              "label": "Start date"
-            },
-            {
-              "id": "endDate",
-              "type": "date",
-              "label": "End date"
-            },
-            {
-              "id": "session",
-              "type": "select",
-              "label": "Session",
-              "options": [
-                {
-                  "label": "Session 1",
-                  "value": 1
-                },
-                {
-                  "label": "Session 2",
-                  "value": 2
-                },
-                {
-                  "label": "Session 3",
-                  "value": 3
-                },
-                {
-                  "label": "Session 4",
-                  "value": 4
-                }
-              ]
-            },
-            {
-              "id": "status",
-              "type": "select",
-              "label": "Status",
-              "options": [
-                {
-                  "label": "Present",
-                  "value": "PRESENT"
-                },
-                {
-                  "label": "Late",
-                  "value": "LATE"
-                },
-                {
-                  "label": "Absent",
-                  "value": "ABSENT"
-                },
-                {
-                  "label": "Permission",
-                  "value": "PERMISSION"
-                }
-              ]
-            }
-          ],
+          "id": "attendance-report-screen",
+          "type": "app",
+          "title": "Attendance Reports",
           "options": {
-            "sources": [
-              "summary",
-              "printSummary"
-            ],
-            "applyLabel": "Apply report filters",
-            "clearLabel": "Clear filters"
-          }
-        },
-        {
-          "id": "summary",
-          "type": "table",
-          "title": "Attendance summary",
-          "source": "summary",
-          "fields": [
-            {
-              "id": "personType",
-              "label": "People"
-            },
-            {
-              "id": "status",
-              "label": "Status"
-            },
-            {
-              "id": "count",
-              "label": "Records"
-            }
-          ],
-          "options": {
-            "pageSize": 30,
-            "selectable": false
-          }
-        },
-        {
-          "id": "print-summary",
-          "type": "print",
-          "title": "Print or export student attendance",
-          "source": "printSummary",
-          "fields": [
-            {
-              "label": "Date",
-              "path": "date"
-            },
-            {
-              "label": "Student number",
-              "path": "personNumberSnapshot"
-            },
-            {
-              "label": "Student",
-              "path": "personNameSnapshot"
-            },
-            {
-              "label": "Class",
-              "path": "classNameSnapshot"
-            },
-            {
-              "label": "Session",
-              "path": "session"
-            },
-            {
-              "label": "Status",
-              "path": "status"
-            },
-            {
-              "label": "Capture mode",
-              "path": "scanMode"
-            },
-            {
-              "label": "Attendance source",
-              "path": "source"
-            },
-            {
-              "label": "Original scan",
-              "path": "originalScanAt"
-            },
-            {
-              "label": "Synchronized",
-              "path": "synchronizedAt"
-            },
-            {
-              "label": "Review",
-              "path": "reviewStatus"
-            }
-          ],
-          "options": {
-            "formats": [
-              "print",
-              "csv",
-              "pdf"
-            ],
-            "filename": "student-attendance",
-            "maximumRows": 10000
+            "entry": "ui/reports/index.html",
+            "height": "auto",
+            "minHeight": 720
           }
         }
       ]
@@ -3806,19 +3630,22 @@
           "id": "reportStaff",
           "method": "GET",
           "path": "officers",
-          "permission": "wattanam.academic-management.attendance.staff.report"
+          "permission": "wattanam.academic-management.attendance.staff.report",
+          "autoload": false
         },
         {
           "id": "staffReportSessions",
           "method": "GET",
           "path": "sessions",
-          "permission": "wattanam.academic-management.attendance.staff.report"
+          "permission": "wattanam.academic-management.attendance.staff.report",
+          "autoload": false
         },
         {
           "id": "staffReport",
           "method": "GET",
           "path": "staff-attendance/reports",
-          "permission": "wattanam.academic-management.attendance.staff.report"
+          "permission": "wattanam.academic-management.attendance.staff.report",
+          "autoload": false
         },
         {
           "id": "staffAuthoritativeReport",
@@ -3831,181 +3658,61 @@
           "id": "staffSummary",
           "method": "GET",
           "path": "staff-attendance/reports/summary",
-          "permission": "wattanam.academic-management.attendance.staff.report"
+          "permission": "wattanam.academic-management.attendance.staff.report",
+          "autoload": false
+        },
+        {
+          "id": "reportHolidays",
+          "method": "GET",
+          "path": "holidays",
+          "permission": "wattanam.academic-management.attendance.view",
+          "autoload": false
+        },
+        {
+          "id": "reportStudyYears",
+          "method": "GET",
+          "path": "study-years",
+          "permission": "wattanam.academic-management.view",
+          "autoload": false
+        },
+        {
+          "id": "staffDepartments",
+          "method": "GET",
+          "path": "departments",
+          "permission": "wattanam.academic-management.view",
+          "autoload": false
+        },
+        {
+          "id": "staffSessionSettings",
+          "method": "GET",
+          "path": "session-settings",
+          "permission": "wattanam.academic-management.attendance.view",
+          "autoload": false
+        },
+        {
+          "id": "staffPrintTemplate",
+          "method": "GET",
+          "path": "reports/staff-print-template",
+          "permission": "wattanam.academic-management.attendance.staff.report",
+          "autoload": false
+        },
+        {
+          "id": "saveStaffPrintTemplate",
+          "method": "PUT",
+          "path": "reports/staff-print-template",
+          "permission": "wattanam.academic-management.attendance.configure",
+          "autoload": false
         }
       ],
       "components": [
         {
-          "id": "heading",
-          "type": "heading",
-          "title": "Staff attendance reports"
-        },
-        {
-          "id": "staff-report-filters",
-          "type": "filter",
-          "fields": [
-            {
-              "id": "startDate",
-              "type": "date",
-              "label": "Start date"
-            },
-            {
-              "id": "endDate",
-              "type": "date",
-              "label": "End date"
-            }
-          ],
+          "id": "staff-attendance-report-screen",
+          "type": "app",
+          "title": "Staff Attendance Reports",
           "options": {
-            "sources": [
-              "staffReport",
-              "staffSummary"
-            ],
-            "applyLabel": "Apply report period",
-            "clearLabel": "Clear period"
-          }
-        },
-        {
-          "id": "staff-summary",
-          "type": "table",
-          "title": "Staff totals",
-          "source": "staffSummary",
-          "fields": [
-            {
-              "id": "personNameSnapshot",
-              "label": "Officer"
-            },
-            {
-              "id": "personNumberSnapshot",
-              "label": "Officer ID"
-            },
-            {
-              "id": "sessions",
-              "label": "Sessions"
-            },
-            {
-              "id": "present",
-              "label": "Present"
-            },
-            {
-              "id": "late",
-              "label": "Late"
-            },
-            {
-              "id": "absent",
-              "label": "Absent"
-            },
-            {
-              "id": "permission",
-              "label": "Permission"
-            }
-          ],
-          "options": {
-            "pageSize": 50,
-            "selectable": false
-          }
-        },
-        {
-          "id": "staff-grid",
-          "type": "table",
-          "title": "Daily session detail",
-          "source": "staffReport",
-          "fields": [
-            {
-              "id": "date",
-              "label": "Date",
-              "format": "date"
-            },
-            {
-              "id": "personNameSnapshot",
-              "label": "Officer"
-            },
-            {
-              "id": "personNumberSnapshot",
-              "label": "Officer ID"
-            },
-            {
-              "id": "classNameSnapshot",
-              "label": "Department"
-            },
-            {
-              "id": "session",
-              "label": "Session"
-            },
-            {
-              "id": "status",
-              "label": "Status"
-            },
-            {
-              "id": "checkInTime",
-              "label": "Check in",
-              "format": "datetime"
-            },
-            {
-              "id": "checkOutTime",
-              "label": "Check out",
-              "format": "datetime"
-            },
-            {
-              "id": "scanLocation",
-              "label": "Location"
-            }
-          ],
-          "options": {
-            "pageSize": 50,
-            "selectable": false
-          }
-        },
-        {
-          "id": "staff-print",
-          "type": "print",
-          "title": "Print or export staff attendance",
-          "source": "staffReport",
-          "fields": [
-            {
-              "path": "date",
-              "label": "Date"
-            },
-            {
-              "path": "personNameSnapshot",
-              "label": "Officer"
-            },
-            {
-              "path": "personNumberSnapshot",
-              "label": "Officer ID"
-            },
-            {
-              "path": "classNameSnapshot",
-              "label": "Department"
-            },
-            {
-              "path": "session",
-              "label": "Session"
-            },
-            {
-              "path": "status",
-              "label": "Status"
-            },
-            {
-              "path": "checkInTime",
-              "label": "Check in"
-            },
-            {
-              "path": "checkOutTime",
-              "label": "Check out"
-            },
-            {
-              "path": "scanLocation",
-              "label": "Location"
-            }
-          ],
-          "options": {
-            "formats": [
-              "print",
-              "csv",
-              "pdf"
-            ],
-            "filename": "staff-attendance-report",
-            "maximumRows": 10000
+            "entry": "ui/reports/staff.html",
+            "height": "auto",
+            "minHeight": 720
           }
         }
       ]
@@ -4057,6 +3764,688 @@
             "entry": "ui/id-cards/staff.html",
             "height": "auto",
             "minHeight": 640
+          }
+        }
+      ]
+    },
+    {
+      "id": "score-sheets",
+      "title": "Score Sheets",
+      "routePath": "score-sheets",
+      "permission": "wattanam.academic-management.view",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "sheets",
+          "method": "GET",
+          "path": "transcripts/sheets",
+          "permission": "wattanam.academic-management.view",
+          "autoload": false
+        },
+        {
+          "id": "scoreSheetClasses",
+          "method": "GET",
+          "path": "classes",
+          "permission": "wattanam.academic-management.view",
+          "autoload": false
+        },
+        {
+          "id": "scoreSheet",
+          "method": "GET",
+          "path": "transcripts/score-sheet",
+          "permission": "wattanam.academic-management.view",
+          "autoload": false
+        },
+        {
+          "id": "saveScores",
+          "method": "POST",
+          "path": "transcripts/tabs/:id/scores",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.transcripts.edit",
+          "autoload": false
+        },
+        {
+          "id": "addPeriod",
+          "method": "POST",
+          "path": "transcripts/sheets/:id/tabs",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "saveAveraging",
+          "method": "PUT",
+          "path": "transcripts/sheets/:id/averaging",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "saveGrades",
+          "method": "PUT",
+          "path": "transcripts/sheets/:id/grades",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "scoreSheetPrintForm",
+          "method": "GET",
+          "path": "transcripts/score-sheet-print-template",
+          "permission": "wattanam.academic-management.view",
+          "autoload": false
+        },
+        {
+          "id": "saveScoreSheetPrintForm",
+          "method": "PUT",
+          "path": "transcripts/score-sheet-print-template",
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "createSheet",
+          "method": "POST",
+          "path": "transcripts/sheets",
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "saveSheet",
+          "method": "PUT",
+          "path": "transcripts/sheets/:id",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "deleteSheet",
+          "method": "DELETE",
+          "path": "transcripts/sheets/:id",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "addSubject",
+          "method": "POST",
+          "path": "transcripts/sheets/:id/subjects",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "saveSubject",
+          "method": "PUT",
+          "path": "transcripts/subjects/:id",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "deleteSubject",
+          "method": "DELETE",
+          "path": "transcripts/subjects/:id",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "savePeriodDates",
+          "method": "PUT",
+          "path": "transcripts/tabs/:id",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.transcripts.edit",
+          "autoload": false
+        },
+        {
+          "id": "deletePeriod",
+          "method": "DELETE",
+          "path": "transcripts/tabs/:id",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "saveRemark",
+          "method": "PUT",
+          "path": "transcripts/tabs/:id/remarks",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.transcripts.edit",
+          "autoload": false
+        }
+      ],
+      "components": [
+        {
+          "id": "score-sheets-screen",
+          "type": "app",
+          "title": "Score Sheets",
+          "options": {
+            "entry": "ui/score-sheets/index.html",
+            "height": "auto",
+            "minHeight": 900
+          }
+        }
+      ]
+    },
+    {
+      "id": "progress-books",
+      "title": "Progress Books",
+      "routePath": "progress-books",
+      "permission": "wattanam.academic-management.view",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "bookSheets",
+          "method": "GET",
+          "path": "transcripts/sheets",
+          "permission": "wattanam.academic-management.view",
+          "autoload": false
+        },
+        {
+          "id": "bookClasses",
+          "method": "GET",
+          "path": "classes",
+          "permission": "wattanam.academic-management.view",
+          "autoload": false
+        },
+        {
+          "id": "progressBook",
+          "method": "GET",
+          "path": "transcripts/progress-book",
+          "permission": "wattanam.academic-management.view",
+          "autoload": false
+        },
+        {
+          "id": "bookTemplate",
+          "method": "GET",
+          "path": "transcripts/progress-book-template",
+          "permission": "wattanam.academic-management.view",
+          "autoload": false
+        },
+        {
+          "id": "saveBookTemplate",
+          "method": "PUT",
+          "path": "transcripts/progress-book-template",
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        }
+      ],
+      "components": [
+        {
+          "id": "progress-books-screen",
+          "type": "app",
+          "title": "Progress Books",
+          "options": {
+            "entry": "ui/progress-books/index.html",
+            "height": "auto",
+            "minHeight": 900
+          }
+        }
+      ]
+    },
+    {
+      "id": "student-permissions",
+      "title": "Student Permissions",
+      "routePath": "student-permissions",
+      "permission": "wattanam.academic-management.attendance.mark",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "classes",
+          "method": "GET",
+          "path": "my/classes",
+          "permission": "wattanam.academic-management.attendance.view",
+          "autoload": false
+        },
+        {
+          "id": "classStudents",
+          "method": "GET",
+          "path": "my/classes/:classId/students",
+          "parameters": [
+            "classId"
+          ],
+          "permission": "wattanam.academic-management.attendance.view",
+          "autoload": false
+        },
+        {
+          "id": "permissions",
+          "method": "GET",
+          "path": "attendance/permissions",
+          "permission": "wattanam.academic-management.attendance.view",
+          "autoload": false
+        },
+        {
+          "id": "createPermission",
+          "method": "POST",
+          "path": "attendance/permissions",
+          "permission": "wattanam.academic-management.attendance.mark",
+          "autoload": false
+        },
+        {
+          "id": "cancelPermission",
+          "method": "DELETE",
+          "path": "attendance/permissions/:id",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.attendance.mark",
+          "autoload": false
+        }
+      ],
+      "components": [
+        {
+          "id": "student-permissions-screen",
+          "type": "app",
+          "title": "Student Permissions",
+          "options": {
+            "entry": "ui/student-permissions/index.html",
+            "height": "auto",
+            "minHeight": 760
+          }
+        }
+      ]
+    },
+    {
+      "id": "score-entry",
+      "title": "Enter Scores",
+      "routePath": "score-entry",
+      "permission": "wattanam.academic-management.transcripts.edit",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "entrySheets",
+          "method": "GET",
+          "path": "transcripts/entry/sheets",
+          "permission": "wattanam.academic-management.transcripts.edit",
+          "autoload": false
+        },
+        {
+          "id": "entryScoreSheet",
+          "method": "GET",
+          "path": "transcripts/entry/score-sheet",
+          "permission": "wattanam.academic-management.transcripts.edit",
+          "autoload": false
+        },
+        {
+          "id": "entryPrintTemplate",
+          "method": "GET",
+          "path": "transcripts/entry/print-template",
+          "permission": "wattanam.academic-management.transcripts.edit",
+          "autoload": false
+        },
+        {
+          "id": "saveScores",
+          "method": "POST",
+          "path": "transcripts/tabs/:id/scores",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.transcripts.edit",
+          "autoload": false
+        },
+        {
+          "id": "saveRemark",
+          "method": "PUT",
+          "path": "transcripts/tabs/:id/remarks",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.transcripts.edit",
+          "autoload": false
+        },
+        {
+          "id": "savePeriodDates",
+          "method": "PUT",
+          "path": "transcripts/tabs/:id",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.transcripts.edit",
+          "autoload": false
+        },
+        {
+          "id": "saveEntryPrintForm",
+          "method": "PUT",
+          "path": "transcripts/entry/print-template",
+          "permission": "wattanam.academic-management.transcripts.print",
+          "autoload": false
+        }
+      ],
+      "components": [
+        {
+          "id": "score-entry-screen",
+          "type": "app",
+          "title": "Enter Scores",
+          "options": {
+            "entry": "ui/score-sheets/index.html",
+            "height": "auto",
+            "minHeight": 900
+          }
+        }
+      ]
+    },
+    {
+      "id": "my-class",
+      "title": "My Class",
+      "routePath": "my-class",
+      "permission": "wattanam.academic-management.attendance.view",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "myClasses",
+          "method": "GET",
+          "path": "my/classes",
+          "permission": "wattanam.academic-management.attendance.view",
+          "autoload": false
+        },
+        {
+          "id": "classOverview",
+          "method": "GET",
+          "path": "my/classes/:id/overview",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.attendance.view",
+          "autoload": false
+        },
+        {
+          "id": "createClassStudent",
+          "method": "POST",
+          "path": "my/classes/:id/students/create",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.class.students",
+          "autoload": false
+        },
+        {
+          "id": "updateClassStudent",
+          "method": "PATCH",
+          "path": "my/classes/:classId/students/:studentId",
+          "parameters": [
+            "classId",
+            "studentId"
+          ],
+          "permission": "wattanam.academic-management.class.students",
+          "autoload": false
+        },
+        {
+          "id": "removeClassStudent",
+          "method": "DELETE",
+          "path": "my/classes/:id/students/:studentId",
+          "parameters": [
+            "id",
+            "studentId"
+          ],
+          "permission": "wattanam.academic-management.class.students",
+          "autoload": false
+        }
+      ],
+      "components": [
+        {
+          "id": "my-class-screen",
+          "type": "app",
+          "title": "My Class",
+          "options": {
+            "entry": "ui/my-class/index.html",
+            "height": "auto",
+            "minHeight": 760
+          }
+        }
+      ]
+    },
+    {
+      "id": "university-sheets",
+      "title": "University Score Sheets",
+      "routePath": "university-sheets",
+      "permission": "wattanam.academic-management.view",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "universitySheets",
+          "method": "GET",
+          "path": "transcripts/sheets",
+          "permission": "wattanam.academic-management.view",
+          "autoload": false
+        },
+        {
+          "id": "universityClasses",
+          "method": "GET",
+          "path": "classes",
+          "permission": "wattanam.academic-management.view",
+          "autoload": false
+        },
+        {
+          "id": "universityResults",
+          "method": "GET",
+          "path": "transcripts/university/results",
+          "permission": "wattanam.academic-management.view",
+          "autoload": false
+        },
+        {
+          "id": "saveUniversityScores",
+          "method": "POST",
+          "path": "transcripts/tabs/:id/scores",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.transcripts.edit",
+          "autoload": false
+        },
+        {
+          "id": "saveUniversityRemark",
+          "method": "PUT",
+          "path": "transcripts/tabs/:id/remarks",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.transcripts.edit",
+          "autoload": false
+        },
+        {
+          "id": "createUniversitySheet",
+          "method": "POST",
+          "path": "transcripts/sheets",
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "saveUniversitySheet",
+          "method": "PUT",
+          "path": "transcripts/sheets/:id",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "deleteUniversitySheet",
+          "method": "DELETE",
+          "path": "transcripts/sheets/:id",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "saveUniversityGrades",
+          "method": "PUT",
+          "path": "transcripts/sheets/:id/grades",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "addUniversitySubject",
+          "method": "POST",
+          "path": "transcripts/sheets/:id/subjects",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "saveUniversitySubject",
+          "method": "PUT",
+          "path": "transcripts/subjects/:id",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "deleteUniversitySubject",
+          "method": "DELETE",
+          "path": "transcripts/subjects/:id",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "addUniversitySemester",
+          "method": "POST",
+          "path": "transcripts/sheets/:id/tabs",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "deleteUniversitySemester",
+          "method": "DELETE",
+          "path": "transcripts/tabs/:id",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "universityPrintForm",
+          "method": "GET",
+          "path": "transcripts/university-print-template",
+          "permission": "wattanam.academic-management.view",
+          "autoload": false
+        },
+        {
+          "id": "saveUniversityPrintForm",
+          "method": "PUT",
+          "path": "transcripts/university-print-template",
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        }
+      ],
+      "components": [
+        {
+          "id": "university-sheets-screen",
+          "type": "app",
+          "title": "University Score Sheets",
+          "options": {
+            "entry": "ui/university/index.html",
+            "height": "auto",
+            "minHeight": 900
+          }
+        }
+      ]
+    },
+    {
+      "id": "university-entry",
+      "title": "Enter University Scores",
+      "routePath": "university-entry",
+      "permission": "wattanam.academic-management.transcripts.edit",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "entryUniversitySheets",
+          "method": "GET",
+          "path": "transcripts/entry/sheets",
+          "permission": "wattanam.academic-management.transcripts.edit",
+          "autoload": false
+        },
+        {
+          "id": "entryUniversityResults",
+          "method": "GET",
+          "path": "transcripts/entry/university/results",
+          "permission": "wattanam.academic-management.transcripts.edit",
+          "autoload": false
+        },
+        {
+          "id": "saveUniversityScores",
+          "method": "POST",
+          "path": "transcripts/tabs/:id/scores",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.transcripts.edit",
+          "autoload": false
+        },
+        {
+          "id": "saveUniversityRemark",
+          "method": "PUT",
+          "path": "transcripts/tabs/:id/remarks",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.transcripts.edit",
+          "autoload": false
+        },
+        {
+          "id": "entryUniversityPrintForm",
+          "method": "GET",
+          "path": "transcripts/entry/university-print-template",
+          "permission": "wattanam.academic-management.transcripts.edit",
+          "autoload": false
+        },
+        {
+          "id": "saveEntryUniversityPrintForm",
+          "method": "PUT",
+          "path": "transcripts/entry/university-print-template",
+          "permission": "wattanam.academic-management.transcripts.print",
+          "autoload": false
+        }
+      ],
+      "components": [
+        {
+          "id": "university-entry-screen",
+          "type": "app",
+          "title": "Enter University Scores",
+          "options": {
+            "entry": "ui/university/index.html",
+            "height": "auto",
+            "minHeight": 900
           }
         }
       ]

@@ -1,0 +1,2 @@
+-- wattanam-plugin-migration: 074_index_transcript_tab_sheetid
+CREATE INDEX IF NOT EXISTS plugin_wattanam_academic_management_transcript_tab_sheetid_idx ON plugin_wattanam_academic_management_transcript_tab ("sheetId");

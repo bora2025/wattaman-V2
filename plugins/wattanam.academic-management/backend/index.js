@@ -5,6 +5,33 @@ const attendanceRuntime = require('./attendance-runtime');
 const { registerSelfAttendance } = require('./self-attendance');
 const { registerStaffAttendance } = require('./staff-attendance');
 const { registerAuthoritativeReports } = require('./authoritative-reports');
+const { registerReportPrintTemplate } = require('./report-print-template');
+const { registerTranscripts } = require('./transcripts');
+const { registerDashboard } = require('./dashboard');
+const { registerStudentPermissions } = require('./student-permissions');
+const { withPublicErrors } = require('./public-errors');
+const studentDetails = require('./student-details');
+const { registerMyProfile } = require('./my-profile');
+const { registerMyClass } = require('./my-class');
+
+// Student photos. Plugin screens (classes, ID cards, progress books) may only show images stored in the
+// system or uploaded into the record (data:image), so an uploaded photo is the reliable kind; https links
+// are still accepted (other screens can show them). Google Drive share links become direct image links.
+const MAX_STUDENT_PHOTO = 200000; // characters of a data:image URL (about 150 KB of image)
+function studentPhoto(value, strict) {
+  const raw = String(value === undefined || value === null ? '' : value).trim();
+  if (!raw) return null;
+  const drive = raw.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:[^#]*&)?id=)([a-zA-Z0-9_-]+)/);
+  if (drive) return `https://lh3.googleusercontent.com/d/${drive[1]}`;
+  if (/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(raw)) {
+    if (raw.length <= MAX_STUDENT_PHOTO) return raw;
+    if (strict) throw new Error('The photo is too large; upload it again (it is made smaller automatically)');
+    return null;
+  }
+  if (/^https:\/\/[^\s"'<>]+$/i.test(raw) && raw.length <= 2048) return raw;
+  if (strict) throw new Error('The photo must be an uploaded image or an https:// link');
+  return null;
+}
 
 const DEPARTMENT = 'plugin_wattanam_academic_management_department';
 const USER_DEPARTMENT = 'plugin_wattanam_academic_management_user_department';
@@ -34,6 +61,10 @@ const CUSTOM_FIELD_TYPES = ['TEXT', 'SELECT', 'MULTI_SELECT'];
 const CUSTOM_FIELD_TYPES_WITH_OPTIONS = ['SELECT', 'MULTI_SELECT'];
 const ROSTER_CONTRACT = Object.freeze({ id: 'wattanam.academic-management.roster', version: '1.0.0' });
 const OFFICER_EMPLOYMENT_STATUSES = ['ACTIVE', 'INACTIVE', 'SUSPENDED'];
+// Roles that see every class (not only their own): the administrators, the front office
+// (RECEPTIONIST) and the scanning role (WATTAMAN). What each may change is still decided by the
+// permission granted to the role and by the checks in each route.
+const SCHOOL_WIDE_ROLES = ['SUPER_ADMIN', 'SCHOOL_ADMIN', 'ADMIN', 'RECEPTIONIST', 'WATTAMAN'];
 const ATTENDANCE_STATUSES = ['PRESENT', 'ABSENT', 'LATE', 'LEAVE', 'EXCUSED'];
 
 function requireDate(value, label = 'date') {
@@ -59,7 +90,24 @@ function attendancePermission(value) {
     .replace('wattanam.attendance-manager.', 'wattanam.academic-management.attendance.');
 }
 
-function attendanceContext(context) {
+// Which classes a user teaches, administers, studies in or has a child in — answered from this plugin's
+// own tables. The lean core's directory falls back to legacy class models that a core installation does
+// not have ("Cannot read properties of undefined (reading 'findMany')"), so the plugin never asks it.
+function withPluginDirectory(context) {
+  const classesForUser = async (userId, role) => {
+    const id = String(userId || '');
+    if (!id) return [];
+    let rows = [];
+    if (role === 'TEACHER') rows = await context.database.query(`SELECT "id" FROM ${CLASS} WHERE "teacherId" = $1`, [id]);
+    else if (role === 'CLASS_ADMIN') rows = await context.database.query(`SELECT "id" FROM ${CLASS} WHERE "classAdminId" = $1 OR "teacherId" = $1`, [id]);
+    else if (role === 'STUDENT') rows = await context.database.query(`SELECT e."classId" AS "id" FROM ${ENROLLMENT} e JOIN ${STUDENT_PROFILE} s ON s."id" = e."studentId" WHERE s."userId" = $1 AND e."validTo" IS NULL`, [id]);
+    else if (role === 'PARENT') rows = await context.database.query(`SELECT e."classId" AS "id" FROM ${ENROLLMENT} e JOIN ${STUDENT_PROFILE} s ON s."id" = e."studentId" WHERE s."guardianUserId" = $1 AND e."validTo" IS NULL`, [id]);
+    return [...new Set(rows.map((row) => row.id))];
+  };
+  return { ...context, directory: { ...context.directory, classesForUser } };
+}
+
+function attendanceContext(context, captured = new Map()) {
   const database = {
     query: (sql, params) => context.database.query(attendanceSql(sql), params),
     execute: (sql, params) => context.database.execute(attendanceSql(sql), params),
@@ -145,7 +193,9 @@ function attendanceContext(context) {
       }))) },
     routes: { register: (route) => {
       if (route.path === 'study-years' || route.path.startsWith('study-years/')) return () => {};
-      return context.routes.register({ ...route, permission: attendancePermission(route.permission) });
+      const mapped = { ...route, permission: attendancePermission(route.permission) };
+      captured.set(`${route.method} ${route.path}`, mapped);
+      return context.routes.register(mapped);
     } },
     events: {
       ...context.events,
@@ -246,7 +296,10 @@ function sanitizeFieldTypeAndOptions(fieldType, options) {
 module.exports = {
   id: 'wattanam.academic-management',
   health() { return { status: 'ready' }; },
-  async activate(context) {
+  async activate(hostContext) {
+    // Every route declares this plugin's messages (users see them instead of "Internal server error"),
+    // and class membership comes from this plugin's tables.
+    const context = withPublicErrors(withPluginDirectory(hostContext));
     context.logger.log('Wattanam Academic Management activated');
     const lookupUserMap = async (ids) => new Map(
       (await context.directory.lookupUsers(Array.from(new Set(ids.filter(Boolean))))).map((user) => [user.id, user]),
@@ -289,11 +342,20 @@ module.exports = {
       const userId = principal.userId;
       if (!userId) throw new Error('Authenticated principal is required');
       const role = principal.role || (await context.directory.lookupUsers([userId]))[0]?.role;
-      if (['SUPER_ADMIN', 'SCHOOL_ADMIN', 'ADMIN'].includes(role)) return;
+      if (SCHOOL_WIDE_ROLES.includes(role)) return;
       const rows = await context.database.query(`SELECT "teacherId", "classAdminId" FROM ${CLASS} WHERE "id" = $1 LIMIT 1`, [classId]);
       if (!rows.length) throw new Error('Class not found');
       if ((role === 'TEACHER' && rows[0].teacherId === userId) || (role === 'CLASS_ADMIN' && rows[0].classAdminId === userId)) return;
       throw new Error('You are not assigned to this class');
+    };
+    // The front office (RECEPTIONIST) registers and updates students and staff, prepares ID cards and
+    // prints books for every class; it does not change the school's set-up (years, classes, subjects,
+    // score sheets, print forms) — those keep requireAdministrativePrincipal.
+    const requireOfficeStaff = async (request) => {
+      const principal = request?.principal || {};
+      if (!principal.userId) throw new Error('Authenticated principal is required');
+      const role = principal.role || (await context.directory.lookupUsers([principal.userId]))[0]?.role;
+      if (!['SUPER_ADMIN', 'SCHOOL_ADMIN', 'ADMIN', 'RECEPTIONIST'].includes(role)) throw new Error('Administrator or receptionist access is required');
     };
     const requireAdministrativePrincipal = async (request) => {
       const principal = request?.principal || {};
@@ -305,7 +367,7 @@ module.exports = {
       const principal = request?.principal || {};
       if (!principal.userId) throw new Error('Authenticated principal is required');
       const role = principal.role || (await context.directory.lookupUsers([principal.userId]))[0]?.role;
-      if (['SUPER_ADMIN', 'SCHOOL_ADMIN', 'ADMIN'].includes(role)) return;
+      if (SCHOOL_WIDE_ROLES.includes(role)) return;
       if (role === 'STUDENT' && profile?.userId === principal.userId) return;
       if (role === 'PARENT' && profile?.guardianUserId === principal.userId) return;
       if (classId && ['TEACHER', 'CLASS_ADMIN'].includes(role)) {
@@ -318,24 +380,58 @@ module.exports = {
       const principal = request?.principal || {};
       if (!principal.userId) throw new Error('Authenticated principal is required');
       const role = principal.role || (await context.directory.lookupUsers([principal.userId]))[0]?.role;
-      if (['SUPER_ADMIN', 'SCHOOL_ADMIN', 'ADMIN'].includes(role)) return;
+      if (SCHOOL_WIDE_ROLES.includes(role)) return;
       if (role === 'TEACHER') { params.push(principal.userId); conditions.push(`c."teacherId" = $${params.length}`); return; }
       if (role === 'CLASS_ADMIN') { params.push(principal.userId); conditions.push(`c."classAdminId" = $${params.length}`); return; }
       throw new Error('You are not assigned to an academic class staff role');
     };
     context.permissions.register([
-      { id: 'wattanam.academic-management.view', label: 'View academic structures and rosters' },
-      { id: 'wattanam.academic-management.manage', label: 'Manage academic structures and enrollment' },
+      { id: 'wattanam.academic-management.view', label: 'View academic structures and rosters', roles: ['RECEPTIONIST', 'WATTAMAN', 'TEACHER', 'CLASS_ADMIN'] },
+      { id: 'wattanam.academic-management.manage', label: 'Manage academic structures and enrollment', description: 'Receptionists use it for registering and updating students and staff, ID cards and printing; teachers and class admins for the students of their own classes. Set-up changes stay with administrators.', roles: ['RECEPTIONIST', 'TEACHER', 'CLASS_ADMIN'] },
       { id: 'wattanam.academic-management.attendance', label: 'Record and correct officer attendance' },
+      { id: 'wattanam.academic-management.class.students', label: 'Add, edit and remove the students of my class', description: 'Teachers and class admins: create a student in their class, update a student\'s details, and remove a student from their class (the enrolment ends).', roles: ['TEACHER', 'CLASS_ADMIN'] },
     ]);
     context.navigation.register([
+      { id: 'attendance-dashboard', label: 'Attendance Dashboard', href: '/plugins/wattanam.academic-management/dashboard', permission: 'wattanam.academic-management.attendance.view' },
       { id: 'study-years', label: 'Academic Years', href: '/plugins/wattanam.academic-management/study-years', permission: 'wattanam.academic-management.view' },
       { id: 'classes', label: 'Classes', href: '/plugins/wattanam.academic-management/classes', permission: 'wattanam.academic-management.view', dashboard: { title: 'Academic Management', description: 'Manage classes, enrollment, and student academic profiles.', priority: 50 } },
       { id: 'student-id-cards', label: 'Student ID Cards', href: '/plugins/wattanam.academic-management/student-id-cards', permission: 'wattanam.academic-management.manage' },
       { id: 'officers', label: 'Manage Officers', href: '/plugins/wattanam.academic-management/officers', permission: 'wattanam.academic-management.view' },
       { id: 'staff-id-cards', label: 'Staff ID Cards', href: '/plugins/wattanam.academic-management/staff-id-cards', permission: 'wattanam.academic-management.manage' },
+      { id: 'score-sheets', label: 'Score Sheets', href: '/plugins/wattanam.academic-management/score-sheets', permission: 'wattanam.academic-management.view' },
+      // Score entry for teachers who have "Enter transcript scores…" (with or without View).
+      { id: 'score-entry', label: 'Enter Scores', href: '/plugins/wattanam.academic-management/score-entry?entry=1', permission: 'wattanam.academic-management.transcripts.edit' },
+      { id: 'student-ranking', label: 'Student Ranking', href: '/plugins/wattanam.academic-management/score-sheets?view=ranking', permission: 'wattanam.academic-management.view' },
+      { id: 'year-ranking', label: 'Year Ranking', href: '/plugins/wattanam.academic-management/score-sheets?view=ranking&scope=year', permission: 'wattanam.academic-management.view' },
+      { id: 'honor-roll', label: 'Honor Roll', href: '/plugins/wattanam.academic-management/score-sheets?view=honor', permission: 'wattanam.academic-management.view' },
+      { id: 'year-honor-roll', label: 'Year Honor Roll', href: '/plugins/wattanam.academic-management/score-sheets?view=honor&scope=year', permission: 'wattanam.academic-management.view' },
+      { id: 'subject-ranking', label: 'Subject Ranking', href: '/plugins/wattanam.academic-management/score-sheets?view=subjects', permission: 'wattanam.academic-management.view' },
+      { id: 'year-report-cards', label: 'Year Report Cards', href: '/plugins/wattanam.academic-management/score-sheets?view=yearcard', permission: 'wattanam.academic-management.view' },
+      { id: 'record-books', label: 'Record Books', href: '/plugins/wattanam.academic-management/score-sheets?view=recordbook', permission: 'wattanam.academic-management.view' },
+      { id: 'progress-books', label: 'Progress Books', href: '/plugins/wattanam.academic-management/progress-books', permission: 'wattanam.academic-management.view' },
+      { id: 'my-class', label: 'My Class', href: '/plugins/wattanam.academic-management/my-class', permission: 'wattanam.academic-management.attendance.view' },
+      { id: 'student-permissions', label: 'Student Permissions', href: '/plugins/wattanam.academic-management/student-permissions', permission: 'wattanam.academic-management.attendance.mark' },
     ]);
-    const studyYearSelect = `SELECT y."id", y."year", y."label", y."startDate", y."endDate", y."isCurrent", y."schoolName", y."logoUrl", y."createdAt", y."updatedAt", jsonb_build_object('classes', COUNT(c."id")::int) AS "_count" FROM ${STUDY_YEAR} y LEFT JOIN ${CLASS} c ON c."studyYearId" = y."id"`;
+    const studyYearSelect = `SELECT y."id", y."year", y."label", to_char(y."startDate", 'YYYY-MM-DD') AS "startDate", to_char(y."endDate", 'YYYY-MM-DD') AS "endDate", y."isCurrent", y."schoolName", y."logoUrl", y."createdAt", y."updatedAt", jsonb_build_object('classes', COUNT(c."id")::int) AS "_count" FROM ${STUDY_YEAR} y LEFT JOIN ${CLASS} c ON c."studyYearId" = y."id"`;
+    // An academic year's fields. Dates are plain days (YYYY-MM-DD); the logo is an uploaded image
+    // (data:image, shown on documents) or an https link.
+    const studyYearBody = (body) => {
+      const year = Number(body.year);
+      if (!Number.isInteger(year) || year < 2020 || year > 2100) throw new Error('year must be between 2020 and 2100');
+      const day = (value, name) => {
+        const v = String(value ?? '').trim().slice(0, 10);
+        if (!v) return null;
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(v) || Number.isNaN(Date.parse(v + 'T00:00:00Z'))) throw new Error(`${name} must be a date (YYYY-MM-DD)`);
+        return v;
+      };
+      const startDate = day(body.startDate, 'startDate'), endDate = day(body.endDate, 'endDate');
+      if (startDate && endDate && startDate > endDate) throw new Error('endDate must be on or after startDate');
+      const schoolName = String(body.schoolName ?? '').trim().slice(0, 160) || null;
+      let logoUrl = String(body.logoUrl ?? '').trim() || null;
+      if (logoUrl && !/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(logoUrl) && !/^https:\/\/\S+$/.test(logoUrl)) throw new Error('logo must be an uploaded PNG, JPEG, WebP or GIF image or an https link');
+      if (logoUrl && logoUrl.length > 400000) throw new Error('logo image is too large');
+      return { year, label: String(body.label || '').trim().slice(0, 120) || `${year}-${year + 1}`, startDate, endDate, schoolName, logoUrl };
+    };
     context.routes.register({
       method: 'GET', path: 'study-years', permission: 'wattanam.academic-management.view',
       handler: () => context.database.query(`${studyYearSelect} GROUP BY y."id" ORDER BY y."year" DESC`),
@@ -352,12 +448,11 @@ module.exports = {
       method: 'POST', path: 'study-years', permission: 'wattanam.academic-management.manage',
       handler: async (request) => {
         await requireAdministrativePrincipal(request);
-        const body = request?.body || {};
-        const year = Number(body.year);
-        if (!Number.isInteger(year) || year < 2020 || year > 2100) throw new Error('year must be between 2020 and 2100');
-        if (body.startDate && body.endDate && String(body.startDate) > String(body.endDate)) throw new Error('endDate must be on or after startDate');
+        const v = studyYearBody(request?.body || {});
+        const taken = await context.database.query(`SELECT "id" FROM ${STUDY_YEAR} WHERE "year" = $1 LIMIT 1`, [v.year]);
+        if (taken.length) throw new Error(`Academic year ${v.year} already exists`);
         const id = crypto.randomUUID();
-        await context.database.execute(`INSERT INTO ${STUDY_YEAR} ("id", "year", "label", "startDate", "endDate", "schoolName", "logoUrl") VALUES ($1,$2,$3,$4::timestamptz,$5::timestamptz,$6,$7)`, [id, year, String(body.label || '').trim() || `${year}-${year + 1}`, body.startDate || null, body.endDate || null, body.schoolName || null, body.logoUrl || null]);
+        await context.database.execute(`INSERT INTO ${STUDY_YEAR} ("id", "year", "label", "startDate", "endDate", "schoolName", "logoUrl") VALUES ($1,$2,$3,$4::date,$5::date,$6,$7)`, [id, v.year, v.label, v.startDate, v.endDate, v.schoolName, v.logoUrl]);
         return context.database.query(`${studyYearSelect} WHERE y."id" = $1 GROUP BY y."id" LIMIT 1`, [id]).then((rows) => rows[0]);
       },
     });
@@ -366,11 +461,10 @@ module.exports = {
       handler: async (request) => {
         await requireAdministrativePrincipal(request);
         const id = request?.params?.id;
-        const body = request?.body || {};
-        const year = Number(body.year);
-        if (!Number.isInteger(year) || year < 2020 || year > 2100) throw new Error('year must be between 2020 and 2100');
-        if (body.startDate && body.endDate && String(body.startDate) > String(body.endDate)) throw new Error('endDate must be on or after startDate');
-        const changed = await context.database.execute(`UPDATE ${STUDY_YEAR} SET "year"=$1,"label"=$2,"startDate"=$3::timestamptz,"endDate"=$4::timestamptz,"schoolName"=$5,"logoUrl"=$6,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=$7`, [year, String(body.label || '').trim() || `${year}-${year + 1}`, body.startDate || null, body.endDate || null, body.schoolName || null, body.logoUrl || null, id]);
+        const v = studyYearBody(request?.body || {});
+        const taken = await context.database.query(`SELECT "id" FROM ${STUDY_YEAR} WHERE "year" = $1 AND "id" <> $2 LIMIT 1`, [v.year, id]);
+        if (taken.length) throw new Error(`Academic year ${v.year} already exists`);
+        const changed = await context.database.execute(`UPDATE ${STUDY_YEAR} SET "year"=$1,"label"=$2,"startDate"=$3::date,"endDate"=$4::date,"schoolName"=$5,"logoUrl"=$6,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=$7`, [v.year, v.label, v.startDate, v.endDate, v.schoolName, v.logoUrl, id]);
         if (!changed.count) throw new Error('Study year not found');
         return context.database.query(`${studyYearSelect} WHERE y."id" = $1 GROUP BY y."id" LIMIT 1`, [id]).then((rows) => rows[0]);
       },
@@ -385,7 +479,7 @@ module.exports = {
           if (!exists.length) throw new Error('Study year not found');
           await tx.execute(`UPDATE ${STUDY_YEAR} SET "isCurrent"=FALSE,"updatedAt"=CURRENT_TIMESTAMP WHERE "isCurrent"=TRUE`, []);
           await tx.execute(`UPDATE ${STUDY_YEAR} SET "isCurrent"=TRUE,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=$1`, [id]);
-          return tx.query(`SELECT * FROM ${STUDY_YEAR} WHERE "id"=$1 LIMIT 1`, [id]).then((rows) => rows[0]);
+          return tx.query(`SELECT "id", "year", "label", "isCurrent" FROM ${STUDY_YEAR} WHERE "id"=$1 LIMIT 1`, [id]).then((rows) => rows[0]);
         });
       },
     });
@@ -585,6 +679,15 @@ module.exports = {
           .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
       },
     });
+    // A class's level decides which score sheets it can use (transcripts.js): secondary and high school →
+    // the ministry sheets (primary too), university → university sheets, short course (and classes without a level) → both.
+    const CLASS_LEVELS = ['PRIMARY', 'SECONDARY', 'HIGH_SCHOOL', 'UNIVERSITY', 'SHORT_COURSE'];
+    const classLevel = (value) => {
+      if (value === undefined || value === null || value === '') return null;
+      const level = String(value).toUpperCase();
+      if (!CLASS_LEVELS.includes(level)) throw new Error('level must be PRIMARY, SECONDARY, HIGH_SCHOOL, UNIVERSITY or SHORT_COURSE');
+      return level;
+    };
     // Migration 004 remains immutable because it was already published. Attendance Manager is
     // the sole runtime owner for Study Years; Academic Management consumes its versioned read model.
     context.routes.register({
@@ -596,6 +699,7 @@ module.exports = {
         if (!body.teacherId) throw new Error('teacherId is required');
         if (!['AVAILABLE', 'UNAVAILABLE', 'HIDDEN'].includes(body.registrationStatus)) throw new Error('registrationStatus must be one of AVAILABLE, UNAVAILABLE, HIDDEN');
         if (body.price !== undefined && body.price !== null && (typeof body.price !== 'number' || body.price < 0)) throw new Error('price must be a non-negative number');
+        classLevel(body.level);
         await requireRole(body.teacherId, 'TEACHER', 'Only users with TEACHER role can be assigned as teacher');
         if (body.classAdminId) {
           await requireRole(body.classAdminId, 'CLASS_ADMIN', 'Only users with CLASS_ADMIN role can be assigned as class admin');
@@ -604,7 +708,7 @@ module.exports = {
         const id = crypto.randomUUID();
         const created = await context.database.transaction(async (tx) => {
           await tx.execute(
-            `INSERT INTO ${CLASS} ("id", "name", "subject", "teacherId", "classAdminId", "studyYearId", "schedule", "registrationStatus", "thumbnail", "description", "price", "showPrice", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+            `INSERT INTO ${CLASS} ("id", "name", "subject", "teacherId", "classAdminId", "studyYearId", "schedule", "registrationStatus", "thumbnail", "description", "price", "showPrice", "level", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
             [
               id,
               body.name,
@@ -618,10 +722,11 @@ module.exports = {
               body.description || null,
               body.price ?? null,
               body.showPrice === true,
+              classLevel(body.level),
             ],
           );
           const row = await tx.query(
-            `SELECT c."id", c."name", c."subject", c."teacherId", c."classAdminId", c."studyYearId", c."schedule", c."registrationStatus", c."thumbnail", c."description", c."price", c."showPrice", c."createdAt", c."updatedAt" FROM ${CLASS} c WHERE c."id" = $1`,
+            `SELECT c."id", c."name", c."subject", c."teacherId", c."classAdminId", c."studyYearId", c."schedule", c."registrationStatus", c."thumbnail", c."description", c."price", c."showPrice", c."level", c."createdAt", c."updatedAt" FROM ${CLASS} c WHERE c."id" = $1`,
             [id],
           ).then((rows) => rows[0]);
           tx.publish({
@@ -668,6 +773,7 @@ module.exports = {
         add('description', body.description);
         add('price', body.price ?? null);
         add('showPrice', body.showPrice === undefined ? undefined : body.showPrice === true);
+        add('level', body.level === undefined ? undefined : classLevel(body.level));
         if (sets.length === 0) throw new Error('No valid class updates provided');
         sets.push(`"updatedAt" = CURRENT_TIMESTAMP`);
         params.push(id);
@@ -677,7 +783,7 @@ module.exports = {
             params,
           );
           const row = await tx.query(
-            `SELECT c."id", c."name", c."subject", c."teacherId", c."classAdminId", c."studyYearId", c."schedule", c."registrationStatus", c."thumbnail", c."description", c."price", c."showPrice", c."createdAt", c."updatedAt" FROM ${CLASS} c WHERE c."id" = $1`,
+            `SELECT c."id", c."name", c."subject", c."teacherId", c."classAdminId", c."studyYearId", c."schedule", c."registrationStatus", c."thumbnail", c."description", c."price", c."showPrice", c."level", c."createdAt", c."updatedAt" FROM ${CLASS} c WHERE c."id" = $1`,
             [id],
           ).then((rows) => rows[0]);
           tx.publish({
@@ -719,16 +825,16 @@ module.exports = {
         const id = request?.params?.id;
         await requireClassStaffScope(request, id);
         const rows = await context.database.query(
-          `SELECT c."id", c."name", c."subject", c."teacherId", c."classAdminId", c."studyYearId", c."schedule", c."registrationStatus", c."thumbnail", c."description", c."price", c."showPrice", c."createdAt", c."updatedAt" FROM ${CLASS} c WHERE c."id" = $1 LIMIT 1`,
+          `SELECT c."id", c."name", c."subject", c."teacherId", c."classAdminId", c."studyYearId", c."schedule", c."registrationStatus", c."thumbnail", c."description", c."price", c."showPrice", c."level", c."createdAt", c."updatedAt" FROM ${CLASS} c WHERE c."id" = $1 LIMIT 1`,
           [id],
         );
         if (!rows.length) throw new Error('Class not found');
         return (await decorateClassRows(rows))[0];
       },
     });
-    context.routes.register({
-      method: 'GET', path: 'classes', permission: 'wattanam.academic-management.view',
-      handler: async (request) => {
+    // The class list. Teachers and class admins get only their own classes (applyClassListScope); the my/ twin
+    // needs only "View attendance", so attendance and permission screens work without the View permission.
+    const listClasses = async (request) => {
         const query = request?.query || {};
         const teacherId = Array.isArray(query.teacherId) ? query.teacherId[0] : query.teacherId;
         const classAdminId = Array.isArray(query.classAdminId) ? query.classAdminId[0] : query.classAdminId;
@@ -750,24 +856,25 @@ module.exports = {
         }
         const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
         const rows = await context.database.query(
-          `SELECT c."id", c."name", c."subject", c."teacherId", c."classAdminId", c."studyYearId", c."schedule", c."registrationStatus", c."thumbnail", c."description", c."price", c."showPrice", c."createdAt", c."updatedAt", COALESCE((SELECT COUNT(*)::int FROM ${ENROLLMENT} e WHERE e."classId" = c."id" AND e."validTo" IS NULL), 0) AS "studentCount" FROM ${CLASS} c ${where} ORDER BY c."name" ASC`,
+          `SELECT c."id", c."name", c."subject", c."teacherId", c."classAdminId", c."studyYearId", c."schedule", c."registrationStatus", c."thumbnail", c."description", c."price", c."showPrice", c."level", c."createdAt", c."updatedAt", COALESCE((SELECT COUNT(*)::int FROM ${ENROLLMENT} e WHERE e."classId" = c."id" AND e."validTo" IS NULL), 0) AS "studentCount" FROM ${CLASS} c ${where} ORDER BY c."name" ASC`,
           params,
         );
         return decorateClassRows(rows);
-      },
-    });
-    context.routes.register({
-      method: 'GET', path: 'classes/:id/students', permission: 'wattanam.academic-management.view',
-      handler: async (request) => {
+    };
+    context.routes.register({ method: 'GET', path: 'classes', permission: 'wattanam.academic-management.view', handler: listClasses });
+    context.routes.register({ method: 'GET', path: 'my/classes', permission: 'wattanam.academic-management.attendance.view', handler: listClasses });
+    // A class roster (staff of the class, or school-wide roles); my/ twin under "View attendance" as above.
+    const listClassStudents = async (request) => {
         const classId = request?.params?.id;
         await requireClassStaffScope(request, classId);
         const rows = await context.database.query(
-          `SELECT s."id", s."userId", s."studentNumber", s."nameKh", s."qrCode", s."photo", s."sex", s."dateOfBirth", s."address", s."generation", s."customFieldValues", s."guardianUserId" AS "parentId" FROM ${STUDENT_PROFILE} s JOIN ${ENROLLMENT} e ON e."studentId" = s."id" AND e."validTo" IS NULL WHERE e."classId" = $1 ORDER BY s."studentNumber" ASC`,
+          `SELECT s."id", s."userId", s."studentNumber", s."nameKh", s."qrCode", s."photo", s."sex", s."dateOfBirth", s."address", s."generation", ${studentDetails.detailColumns('s')}, s."customFieldValues", s."guardianUserId" AS "parentId" FROM ${STUDENT_PROFILE} s JOIN ${ENROLLMENT} e ON e."studentId" = s."id" AND e."validTo" IS NULL WHERE e."classId" = $1 ORDER BY s."studentNumber" ASC`,
           [classId],
         );
         return decorateStudentRows(rows);
-      },
-    });
+    };
+    context.routes.register({ method: 'GET', path: 'classes/:id/students', permission: 'wattanam.academic-management.view', handler: listClassStudents });
+    context.routes.register({ method: 'GET', path: 'my/classes/:id/students', permission: 'wattanam.academic-management.attendance.view', handler: listClassStudents });
     context.routes.register({
       method: 'POST', path: 'classes/:id/students/bulk-csv', permission: 'wattanam.academic-management.manage',
       handler: async (request) => {
@@ -780,7 +887,9 @@ module.exports = {
         const classes = await context.database.query(`SELECT "id" FROM ${CLASS} WHERE "id" = $1 LIMIT 1`, [classId]);
         if (!classes.length) throw new Error('Class not found');
         const header = parseCsvLine(lines[0]).map((value) => value.trim().toLowerCase());
-        const find = (...names) => header.findIndex((value) => names.some((name) => value === name || (name.endsWith('*') && value.includes(name.slice(0, -1)))));
+        const find = (...names) => header.findIndex((value) => !studentDetails.isDetailHeader(value) && names.some((name) => value === name || (name.endsWith('*') && value.includes(name.slice(0, -1)))));
+        const detailIndexes = studentDetails.csvIndexes(header);
+        const detailKeys = studentDetails.KEYS.filter((key) => detailIndexes[key] >= 0);
         const indexes = {
           id: find('id'), name: find('name'), sex: find('sex'), email: find('mail*'), phone: find('phone*', 'contact*'),
           photo: find('photo'), password: find('password'), dateOfBirth: find('birth*', 'dob', 'date of birth'),
@@ -803,6 +912,9 @@ module.exports = {
             if (usedNumbers.has(studentNumber)) throw new Error('Duplicate student ID in CSV');
             usedNumbers.add(studentNumber);
             if (email && !isValidEmail(email)) throw new Error('Invalid email address');
+            // the details in this row (only the columns the file has); the address is written from its parts when given
+            const details = studentDetails.readDetails(Object.fromEntries(detailKeys.map((key) => [key, value(detailIndexes[key])])), true);
+            const address = studentDetails.hasAddress(details) ? studentDetails.composeAddress(details) : (value(indexes.address) || null);
             const dateOfBirth = value(indexes.dateOfBirth);
             if (dateOfBirth) {
               const parsedBirthDate = new Date(`${dateOfBirth}T00:00:00.000Z`);
@@ -823,8 +935,8 @@ module.exports = {
               });
               await context.database.transaction(async (tx) => {
                 await tx.execute(
-                  `UPDATE ${STUDENT_PROFILE} SET "nameKh" = $2, "photo" = $3, "sex" = $4, "dateOfBirth" = $5::date, "address" = $6, "generation" = $7, "updatedAt" = CURRENT_TIMESTAMP WHERE "id" = $1`,
-                  [existing.id, value(indexes.nameKh) || null, value(indexes.photo) || null, normalizedCsvSex(value(indexes.sex)), dateOfBirth || null, value(indexes.address) || null, value(indexes.generation) || null],
+                  `UPDATE ${STUDENT_PROFILE} SET "nameKh" = $2, "photo" = $3, "sex" = $4, "dateOfBirth" = $5::date, "address" = $6, "generation" = $7${detailKeys.map((key, i) => `, "${key}" = $${8 + i}`).join('')}, "updatedAt" = CURRENT_TIMESTAMP WHERE "id" = $1`,
+                  [existing.id, value(indexes.nameKh) || null, studentPhoto(value(indexes.photo), false), normalizedCsvSex(value(indexes.sex)), dateOfBirth || null, address, value(indexes.generation) || null, ...detailKeys.map((key) => details[key])],
                 );
                 if (existing.classId !== classId) {
                   await tx.execute(`DELETE FROM ${ENROLLMENT} WHERE "studentId" = $1 AND "validTo" IS NULL AND "validFrom" = CURRENT_DATE`, [existing.id]);
@@ -838,7 +950,9 @@ module.exports = {
                 });
               });
             } else {
-              const password = value(indexes.password) || `student${studentNumber}`;
+              // a row without a password gets a made one, listed in the import results for the staff to hand out
+              const password = value(indexes.password) || generatePassword();
+              if (!value(indexes.password)) result.password = password;
               if (password.length < 6 || password.length > 200) throw new Error('Password must contain 6-200 characters');
               const passwordHash = await context.crypto.hashBcrypt(password, 12);
               account = await context.accounts.createStudent({
@@ -848,13 +962,13 @@ module.exports = {
               const today = new Date().toISOString().slice(0, 10);
               await context.database.transaction(async (tx) => {
                 await tx.execute(
-                  `INSERT INTO ${STUDENT_PROFILE} ("id", "userId", "studentNumber", "nameKh", "qrCode", "photo", "sex", "dateOfBirth", "address", "generation", "source", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'plugin', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT ("userId") DO NOTHING`,
-                  [profileId, account.id, studentNumber, value(indexes.nameKh) || null, newCardCode('stu'), value(indexes.photo) || null, normalizedCsvSex(value(indexes.sex)), dateOfBirth || null, value(indexes.address) || null, value(indexes.generation) || null],
+                  `INSERT INTO ${STUDENT_PROFILE} ("id", "userId", "studentNumber", "nameKh", "qrCode", "photo", "sex", "dateOfBirth", "address", "generation"${detailKeys.map((key) => `, "${key}"`).join('')}, "source", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6, $7, $8::date, $9, $10${detailKeys.map((key, i) => `, $${11 + i}`).join('')}, 'plugin', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT ("userId") DO NOTHING`,
+                  [profileId, account.id, studentNumber, value(indexes.nameKh) || null, newCardCode('stu'), studentPhoto(value(indexes.photo), false), normalizedCsvSex(value(indexes.sex)), dateOfBirth || null, address, value(indexes.generation) || null, ...detailKeys.map((key) => details[key])],
                 );
                 const profiles = await tx.query(`SELECT "id" FROM ${STUDENT_PROFILE} WHERE "userId" = $1 LIMIT 1`, [account.id]);
                 if (!profiles.length) throw new Error('Student profile materialization failed');
                 await tx.execute(
-                  `INSERT INTO ${ENROLLMENT} ("id", "studentId", "classId", "validFrom", "source", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, 'plugin', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT ("studentId", "classId", "validFrom") DO NOTHING`,
+                  `INSERT INTO ${ENROLLMENT} ("id", "studentId", "classId", "validFrom", "source", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4::date, 'plugin', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT ("studentId", "classId", "validFrom") DO NOTHING`,
                   [crypto.randomUUID(), profiles[0].id, classId, today],
                 );
                 await tx.publish({
@@ -900,7 +1014,7 @@ module.exports = {
         if (!classIds.length) return result;
         for (const classId of classIds) await requireClassStaffScope(request, classId);
         const rows = await context.database.query(
-          `SELECT s."id", s."userId", s."studentNumber", s."nameKh", s."qrCode", s."photo", s."sex", s."dateOfBirth", s."address", s."generation", s."customFieldValues", s."guardianUserId" AS "parentId", e."classId", c."name" AS "className" FROM ${STUDENT_PROFILE} s JOIN ${ENROLLMENT} e ON e."studentId" = s."id" AND e."validTo" IS NULL JOIN ${CLASS} c ON c."id" = e."classId" WHERE e."classId" = ANY($1::text[]) ORDER BY e."classId" ASC, s."studentNumber" ASC`,
+          `SELECT s."id", s."userId", s."studentNumber", s."nameKh", s."qrCode", s."photo", s."sex", s."dateOfBirth", s."address", s."generation", ${studentDetails.detailColumns('s')}, s."customFieldValues", s."guardianUserId" AS "parentId", e."classId", c."name" AS "className" FROM ${STUDENT_PROFILE} s JOIN ${ENROLLMENT} e ON e."studentId" = s."id" AND e."validTo" IS NULL JOIN ${CLASS} c ON c."id" = e."classId" WHERE e."classId" = ANY($1::text[]) ORDER BY e."classId" ASC, s."studentNumber" ASC`,
           [classIds],
         );
         for (const row of await decorateStudentRows(rows)) result[row.classId].push({ ...row, className: row.className || null });
@@ -926,7 +1040,7 @@ module.exports = {
       handler: async (request) => {
         await requireClassStaffScope(request, request?.params?.id);
         const rows = await context.database.query(
-          `SELECT s."id", s."userId", s."studentNumber", s."nameKh", s."qrCode", s."photo", s."sex", s."dateOfBirth", s."address", s."generation", s."customFieldValues", s."guardianUserId" AS "parentId", c."name" AS "className" FROM ${STUDENT_PROFILE} s JOIN ${ENROLLMENT} e ON e."studentId" = s."id" AND e."validTo" IS NULL LEFT JOIN ${CLASS} c ON c."id" = e."classId" WHERE s."id" = $1 AND e."classId" = $2 LIMIT 1`,
+          `SELECT s."id", s."userId", s."studentNumber", s."nameKh", s."qrCode", s."photo", s."sex", s."dateOfBirth", s."address", s."generation", ${studentDetails.detailColumns('s')}, s."customFieldValues", s."guardianUserId" AS "parentId", c."name" AS "className" FROM ${STUDENT_PROFILE} s JOIN ${ENROLLMENT} e ON e."studentId" = s."id" AND e."validTo" IS NULL LEFT JOIN ${CLASS} c ON c."id" = e."classId" WHERE s."id" = $1 AND e."classId" = $2 LIMIT 1`,
           [request?.params?.studentId, request?.params?.id],
         );
         if (!rows.length) throw new Error('Student not found in this class');
@@ -936,6 +1050,7 @@ module.exports = {
           nameKh: row.nameKh || '', email: row.email, phone: row.phone || '', qrCode: row.qrCode,
           photo: row.photo || '', sex: row.sex || '', dateOfBirth: row.dateOfBirth,
           address: row.address || '', generation: row.generation || '',
+          ...studentDetails.detailsOut(row),
           customFieldValues: row.customFieldValues || {}, parentId: row.parentId || '',
           className: row.className || null,
         };
@@ -1137,7 +1252,7 @@ module.exports = {
     context.routes.register({
       method: 'PUT', path: 'commands/students/by-user/:id/guardian', permission: 'wattanam.academic-management.manage',
       handler: async (request) => {
-        await requireAdministrativePrincipal(request);
+        await requireOfficeStaff(request);
         const studentUserId = request?.params?.id;
         const parentId = request?.body?.parentId || null;
         const idempotencyKey = request?.body?.idempotencyKey;
@@ -1237,30 +1352,26 @@ module.exports = {
         };
       },
     });
-    function convertGoogleDriveUrl(url) {
-      if (!url) return url;
-      const match = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
-      if (match) return `https://lh3.googleusercontent.com/d/${match[1]}`;
-      return url;
-    }
-    context.routes.register({
-      method: 'POST', path: 'classes/:id/students/create', permission: 'wattanam.academic-management.manage',
-      handler: async (request) => {
-        await requireAdministrativePrincipal(request);
+    // A new student in a class. The front office (any class) or, with "Add, edit and remove the students of my class", the class's own staff.
+    const createClassStudent = async (request) => {
         const classId = String(request?.params?.id || '').trim();
         const body = request?.body || {};
         const name = String(body.name || '').trim();
         const email = String(body.email || '').trim().toLowerCase();
         const phone = String(body.phone || '').trim();
-        const password = String(body.password || '');
+        // No password asked when a student is added: one is made and returned once, for the staff to hand out.
+        const typedPassword = String(body.password || '');
+        const password = typedPassword || generatePassword();
         const commandKey = String(body.commandKey || '').trim();
         const studentNumber = String(body.studentNumber || '').trim();
         if (!classId) throw new Error('classId is required');
         if (!name || name.length > 160) throw new Error('name is required');
         if (email && !isValidEmail(email)) throw new Error('email is invalid');
-        if (password.length < 6 || password.length > 200) throw new Error('password must contain 6-200 characters');
+        if (typedPassword && (typedPassword.length < 6 || typedPassword.length > 200)) throw new Error('password must contain 6-200 characters');
         if (!/^[a-zA-Z0-9][a-zA-Z0-9:._-]{0,199}$/.test(commandKey)) throw new Error('commandKey is required');
         if (studentNumber.length > 100) throw new Error('studentNumber exceeds 100 characters');
+        const details = studentDetails.readDetails(body, false);
+        const address = studentDetails.hasAddress(details) ? studentDetails.composeAddress(details) : (String(body.address || '').trim() || null);
         const classRows = await context.database.query(`SELECT "id" FROM ${CLASS} WHERE "id"=$1 LIMIT 1`, [classId]);
         if (!classRows.length) throw new Error('Class not found');
         if (studentNumber) {
@@ -1271,7 +1382,7 @@ module.exports = {
         const profileId = crypto.randomUUID();
         const resolvedNumber = studentNumber || String((await context.database.query(`SELECT COUNT(*)::int AS "count" FROM ${ENROLLMENT} WHERE "classId"=$1 AND "validTo" IS NULL`, [classId]))[0].count + 1).padStart(4, '0');
         const materializedId = await context.database.transaction(async (tx) => {
-          await tx.execute(`INSERT INTO ${STUDENT_PROFILE} ("id","userId","studentNumber","nameKh","qrCode","photo","sex","dateOfBirth","address","generation","source") VALUES ($1,$2,$3,$4,$5,$6,$7,$8::date,$9,$10,'plugin') ON CONFLICT ("userId") DO NOTHING`, [profileId, account.id, resolvedNumber, String(body.nameKh || '').trim() || null, newCardCode('stu'), convertGoogleDriveUrl(String(body.photo || '').trim()) || null, normalizedCsvSex(String(body.sex || '')), body.dateOfBirth || null, String(body.address || '').trim() || null, String(body.generation || '').trim() || null]);
+          await tx.execute(`INSERT INTO ${STUDENT_PROFILE} ("id","userId","studentNumber","nameKh","qrCode","photo","sex","dateOfBirth","address","generation",${studentDetails.detailColumns()},"source") VALUES ($1,$2,$3,$4,$5,$6,$7,$8::date,$9,$10,${studentDetails.KEYS.map((key, i) => '$' + (11 + i)).join(',')},'plugin') ON CONFLICT ("userId") DO NOTHING`, [profileId, account.id, resolvedNumber, String(body.nameKh || '').trim() || null, newCardCode('stu'), studentPhoto(body.photo, true), normalizedCsvSex(String(body.sex || '')), body.dateOfBirth || null, address, String(body.generation || '').trim() || null, ...studentDetails.KEYS.map((key) => details[key])]);
           const profile = (await tx.query(`SELECT "id" FROM ${STUDENT_PROFILE} WHERE "userId"=$1 LIMIT 1`, [account.id]))[0];
           if (!profile) throw new Error('Student profile materialization failed');
           await tx.execute(`INSERT INTO ${ENROLLMENT} ("id","studentId","classId","validFrom","source") VALUES ($1,$2,$3,CURRENT_DATE,'plugin') ON CONFLICT ("studentId","classId","validFrom") DO NOTHING`, [crypto.randomUUID(), profile.id, classId]);
@@ -1279,9 +1390,16 @@ module.exports = {
           return profile.id;
         });
         context.events.publish('academic.student.added-to-class.v1', { studentId: materializedId, classId, principal: request?.principal });
-        return { id: materializedId, userId: account.id, studentNumber: resolvedNumber, name: account.name, email: account.email, phone: account.phone, classId };
-      },
-    });
+        return { id: materializedId, userId: account.id, studentNumber: resolvedNumber, name: account.name, email: account.email, phone: account.phone, classId, ...(typedPassword ? {} : { password }) };
+    };
+    context.routes.register({ method: 'POST', path: 'classes/:id/students/create', permission: 'wattanam.academic-management.manage', handler: async (request) => {
+      await requireOfficeStaff(request);
+      return createClassStudent(request);
+    } });
+    context.routes.register({ method: 'POST', path: 'my/classes/:id/students/create', permission: 'wattanam.academic-management.class.students', handler: async (request) => {
+      await requireClassStaffScope(request, request?.params?.id);
+      return createClassStudent(request);
+    } });
     context.routes.register({
       method: 'POST', path: 'classes/:id/students', permission: 'wattanam.academic-management.manage',
       handler: async (request) => {
@@ -1359,28 +1477,47 @@ module.exports = {
         return added;
       },
     });
-    context.routes.register({
-      method: 'PATCH', path: 'classes/:classId/students/:studentId', permission: 'wattanam.academic-management.manage',
-      handler: async (request) => {
+    // A student's details, by the staff of their class (manage), or with "Add, edit and remove the students of my class".
+    const updateClassStudent = async (request) => {
         const studentId = request?.params?.studentId;
         await requireClassStaffScope(request, request?.params?.classId);
         const body = request?.body || {};
         const studentRows = await context.database.query(`SELECT s."id", s."userId" FROM ${STUDENT_PROFILE} s JOIN ${ENROLLMENT} e ON e."studentId" = s."id" AND e."validTo" IS NULL WHERE s."id" = $1 AND e."classId" = $2 LIMIT 1`, [studentId, request?.params?.classId]);
         if (!studentRows.length) throw new Error('Student not found');
         const student = studentRows[0];
-        if (body.name !== undefined || body.phone !== undefined || body.email !== undefined) {
-          throw new Error('Core account name, email, and phone must be changed in User Management');
-        }
         const studentUser = (await context.directory.lookupUsers([student.userId]))[0] || null;
+        // Login details (name, email, phone) are changed through the core's student account service.
+        if (body.name !== undefined || body.phone !== undefined || body.email !== undefined) {
+          const name = String(body.name !== undefined ? body.name : studentUser?.name || '').trim();
+          const email = String(body.email !== undefined ? body.email : studentUser?.email || '').trim().toLowerCase();
+          const phone = String(body.phone !== undefined ? body.phone : studentUser?.phone || '').trim();
+          if (!name || name.length > 160) throw new Error('name is required (at most 160 characters)');
+          if (email && !isValidEmail(email)) throw new Error('email is invalid');
+          if (phone.length > 40) throw new Error('phone is too long');
+          const changed = name !== String(studentUser?.name || '') || email !== String(studentUser?.email || '').toLowerCase() || phone !== String(studentUser?.phone || '');
+          if (changed) {
+            const commandKey = String(body.commandKey || '').trim();
+            if (!/^[a-zA-Z0-9][a-zA-Z0-9:._-]{0,199}$/.test(commandKey)) throw new Error('commandKey is required to change the student login');
+            await context.accounts.updateStudent({ commandKey, userId: student.userId, name, email: email || null, phone: phone || null });
+          }
+        }
         const studentSets = [];
         const studentParams = [];
         if (body.nameKh !== undefined) { studentSets.push(`"nameKh" = $${studentParams.length + 1}`); studentParams.push(body.nameKh); }
         if (body.sex !== undefined) { studentSets.push(`"sex" = $${studentParams.length + 1}`); studentParams.push(body.sex); }
-        if (body.photo !== undefined) { studentSets.push(`"photo" = $${studentParams.length + 1}`); studentParams.push(convertGoogleDriveUrl(body.photo || '')); }
+        if (body.photo !== undefined) { studentSets.push(`"photo" = $${studentParams.length + 1}`); studentParams.push(studentPhoto(body.photo, true)); }
         if (body.dateOfBirth !== undefined) { studentSets.push(`"dateOfBirth" = $${studentParams.length + 1}`); studentParams.push(body.dateOfBirth ? new Date(body.dateOfBirth) : null); }
         if (body.address !== undefined) { studentSets.push(`"address" = $${studentParams.length + 1}`); studentParams.push(body.address); }
         if (body.generation !== undefined) { studentSets.push(`"generation" = $${studentParams.length + 1}`); studentParams.push(body.generation); }
-        if (body.studentNumber !== undefined) { studentSets.push(`"studentNumber" = $${studentParams.length + 1}`); studentParams.push(body.studentNumber.trim() || null); }
+        const details = studentDetails.readDetails(body, true);
+        Object.keys(details).forEach((key) => { studentSets.push(`"${key}" = $${studentParams.length + 1}`); studentParams.push(details[key]); });
+        const addressChanged = studentDetails.ADDRESS.some((key) => key in details);
+        if (body.studentNumber !== undefined) {
+          const studentNumber = String(body.studentNumber || '').trim();
+          if (studentNumber.length > 100) throw new Error('studentNumber exceeds 100 characters');
+          if (studentNumber && (await context.database.query(`SELECT "id" FROM ${STUDENT_PROFILE} WHERE "studentNumber"=$1 AND "id"<>$2 LIMIT 1`, [studentNumber, student.id])).length) throw new Error('Student number is already used');
+          studentSets.push(`"studentNumber" = $${studentParams.length + 1}`); studentParams.push(studentNumber || null);
+        }
         if (body.customFieldValues !== undefined) { studentSets.push(`"customFieldValues" = $${studentParams.length + 1}`); studentParams.push(JSON.stringify(body.customFieldValues)); }
         if (body.parentId !== undefined) {
           if (body.parentId) {
@@ -1395,8 +1532,12 @@ module.exports = {
             studentParams.push(student.id);
             await tx.execute(`UPDATE ${STUDENT_PROFILE} SET ${studentSets.join(', ')} WHERE "id" = $${studentParams.length}`, studentParams);
           }
+          if (addressChanged) {
+            const parts = (await tx.query(`SELECT ${studentDetails.detailColumns()} FROM ${STUDENT_PROFILE} WHERE "id" = $1`, [student.id]))[0] || {};
+            if (studentDetails.hasAddress(parts)) await tx.execute(`UPDATE ${STUDENT_PROFILE} SET "address" = $2 WHERE "id" = $1`, [student.id, studentDetails.composeAddress(parts)]);
+          }
           const rows = await tx.query(
-            `SELECT s."id", s."userId", s."studentNumber", s."nameKh", s."qrCode", s."photo", s."sex", s."dateOfBirth", s."address", s."generation", s."customFieldValues", s."guardianUserId" AS "parentId", c."name" AS "className" FROM ${STUDENT_PROFILE} s JOIN ${ENROLLMENT} e ON e."studentId" = s."id" AND e."validTo" IS NULL LEFT JOIN ${CLASS} c ON c."id" = e."classId" WHERE s."id" = $1 LIMIT 1`,
+            `SELECT s."id", s."userId", s."studentNumber", s."nameKh", s."qrCode", s."photo", s."sex", s."dateOfBirth", s."address", s."generation", ${studentDetails.detailColumns('s')}, s."customFieldValues", s."guardianUserId" AS "parentId", c."name" AS "className" FROM ${STUDENT_PROFILE} s JOIN ${ENROLLMENT} e ON e."studentId" = s."id" AND e."validTo" IS NULL LEFT JOIN ${CLASS} c ON c."id" = e."classId" WHERE s."id" = $1 LIMIT 1`,
             [studentId],
           );
           const row = rows[0];
@@ -1414,6 +1555,7 @@ module.exports = {
             dateOfBirth: row.dateOfBirth,
             address: row.address || '',
             generation: row.generation || '',
+            ...studentDetails.detailsOut(row),
             customFieldValues: row.customFieldValues || {},
             parentId: row.parentId,
             className: row.className || null,
@@ -1429,11 +1571,16 @@ module.exports = {
         });
         context.events.publish('academic.student.updated.v1', { student: updated, principal: request?.principal });
         return updated;
-      },
-    });
-    context.routes.register({
-      method: 'DELETE', path: 'classes/:id/students/:studentId', permission: 'wattanam.academic-management.manage',
-      handler: async (request) => {
+    };
+    context.routes.register({ method: 'PATCH', path: 'classes/:classId/students/:studentId', permission: 'wattanam.academic-management.manage', handler: async (request) => {
+      return updateClassStudent(request);
+    } });
+    context.routes.register({ method: 'PATCH', path: 'my/classes/:classId/students/:studentId', permission: 'wattanam.academic-management.class.students', handler: async (request) => {
+      return updateClassStudent(request);
+    } });
+    // Removing a student from a class (their enrolment ends; the student is kept), by the class's staff.
+    const removeClassStudent = async (request) => {
+        if (request?.principal?.role === 'RECEPTIONIST') throw new Error('Only an administrator or the class staff can remove a student from a class');
         const studentId = request?.params?.studentId;
         await requireClassStaffScope(request, request?.params?.id);
         const studentRows = await context.database.query(`SELECT s."id", s."userId" FROM ${STUDENT_PROFILE} s JOIN ${ENROLLMENT} e ON e."studentId" = s."id" AND e."validTo" IS NULL WHERE s."id" = $1 AND e."classId" = $2 LIMIT 1`, [studentId, request?.params?.id]);
@@ -1451,8 +1598,13 @@ module.exports = {
         });
         context.events.publish('academic.student.removed-from-class.v1', { studentId, classId: request?.params?.id, principal: request?.principal });
         return { success: true };
-      },
-    });
+    };
+    context.routes.register({ method: 'DELETE', path: 'classes/:id/students/:studentId', permission: 'wattanam.academic-management.manage', handler: async (request) => {
+      return removeClassStudent(request);
+    } });
+    context.routes.register({ method: 'DELETE', path: 'my/classes/:id/students/:studentId', permission: 'wattanam.academic-management.class.students', handler: async (request) => {
+      return removeClassStudent(request);
+    } });
     context.routes.register({
       method: 'POST', path: 'classes/cleanup-orphaned-students', permission: 'wattanam.academic-management.manage',
       handler: async (request) => {
@@ -1662,7 +1814,7 @@ module.exports = {
     context.routes.register({
       method: 'GET', path: 'admissions/registrations', permission: 'wattanam.academic-management.manage',
       handler: async (request) => {
-        await requireAdministrativePrincipal(request);
+        await requireOfficeStaff(request);
         const query = request?.query || {};
         const status = Array.isArray(query.status) ? query.status[0] : query.status;
         const classId = Array.isArray(query.classId) ? query.classId[0] : query.classId;
@@ -1686,7 +1838,7 @@ module.exports = {
     context.routes.register({
       method: 'GET', path: 'admissions/registrations/:id', permission: 'wattanam.academic-management.manage',
       handler: async (request) => {
-        await requireAdministrativePrincipal(request);
+        await requireOfficeStaff(request);
         const id = request?.params?.id;
         const rows = await context.database.query(
           `SELECT r.*, jsonb_build_object('id', c."id", 'name', c."name") AS class FROM ${REGISTRATION} r LEFT JOIN ${CLASS} c ON c."id" = r."classId" WHERE r."id" = $1 LIMIT 1`,
@@ -1699,7 +1851,7 @@ module.exports = {
     context.routes.register({
       method: 'PATCH', path: 'admissions/registrations/:id/resolve', permission: 'wattanam.academic-management.manage',
       handler: async (request) => {
-        await requireAdministrativePrincipal(request);
+        await requireOfficeStaff(request);
         const id = request?.params?.id;
         const body = request?.body || {};
         const action = body.action;
@@ -1809,7 +1961,7 @@ module.exports = {
     context.routes.register({
       method: 'POST', path: 'officers', permission: 'wattanam.academic-management.manage',
       handler: async (request) => {
-        await requireAdministrativePrincipal(request);
+        await requireOfficeStaff(request);
         const body = request?.body || {};
         let userId = String(body.userId || '').trim();
         let user;
@@ -1882,7 +2034,7 @@ module.exports = {
     context.routes.register({
       method: 'POST', path: 'id-cards/classes/:id/ensure', permission: 'wattanam.academic-management.manage',
       handler: async (request) => {
-        await requireAdministrativePrincipal(request);
+        await requireOfficeStaff(request);
         const classId = String(request?.params?.id || '');
         const missing = await context.database.query(`SELECT s."id" FROM ${STUDENT_PROFILE} s JOIN ${ENROLLMENT} e ON e."studentId"=s."id" AND e."validTo" IS NULL WHERE e."classId"=$1 AND NULLIF(BTRIM(s."qrCode"),'') IS NULL`, [classId]);
         if (missing.length) await context.database.transaction(async (tx) => {
@@ -1894,7 +2046,7 @@ module.exports = {
     context.routes.register({
       method: 'PATCH', path: 'officers/:id', permission: 'wattanam.academic-management.manage',
       handler: async (request) => {
-        await requireAdministrativePrincipal(request);
+        await requireOfficeStaff(request);
         const id = request?.params?.id;
         const body = request?.body || {};
         const existing = await context.database.query(`${officerSelect} WHERE o."id" = $1::uuid LIMIT 1`, [id]);
@@ -2065,7 +2217,7 @@ module.exports = {
             settings.phoneMode === 'HIDDEN' ? null : (phone || null),
             passwordHash,
             autoGenerated || null,
-            settings.photoMode === 'HIDDEN' ? null : (body.photo || null),
+            settings.photoMode === 'HIDDEN' ? null : studentPhoto(body.photo, false),
             settings.sexMode === 'HIDDEN' ? null : (sex || null),
             settings.dateOfBirthMode === 'HIDDEN' ? null : (dateOfBirth ? new Date(dateOfBirth).toISOString() : null),
             settings.addressMode === 'HIDDEN' ? null : (address || null),
@@ -2105,32 +2257,119 @@ module.exports = {
         return settings;
       },
     });
+    // The school's search (core convention: GET search). Every enrolled or unenrolled student, the
+    // staff and the classes are matched on number, Khmer name, directory name, email, phone, class,
+    // position and department; all words must match; results are ranked (exact > starts with > word
+    // starts with > contains) and grouped. Directory names are cached for a minute between keystrokes.
+    let searchUserCache = { at: 0, key: '', map: new Map() };
+    const searchUsers = async (ids) => {
+      const unique = [...new Set(ids.filter(Boolean))].sort();
+      const key = unique.length + ':' + (unique[0] || '') + ':' + (unique[unique.length - 1] || '');
+      if (searchUserCache.key === key && Date.now() - searchUserCache.at < 60000) return searchUserCache.map;
+      const map = new Map();
+      for (let i = 0; i < unique.length; i += 500) {
+        (await context.directory.lookupUsers(unique.slice(i, i + 500))).forEach((user) => map.set(user.id, user));
+      }
+      searchUserCache = { at: Date.now(), key, map };
+      return map;
+    };
+    const matchScore = (terms, fields) => {
+      // fields: [value, weight]; every term must match some field
+      let total = 0;
+      for (const term of terms) {
+        let best = 0;
+        for (const [raw, weight] of fields) {
+          if (raw === null || raw === undefined || raw === '') continue;
+          const value = String(raw).toLocaleLowerCase();
+          let score = 0;
+          if (value === term) score = 100;
+          else if (value.startsWith(term)) score = 80;
+          else if (value.split(/[\s,.;·/()-]+/).some((word) => word.startsWith(term))) score = 60;
+          else if (value.includes(term)) score = 40;
+          best = Math.max(best, score * weight);
+        }
+        if (!best) return 0;
+        total += best;
+      }
+      // Several words found together in one field (a full name typed as written) rank first.
+      if (terms.length > 1) {
+        const phrase = terms.join(' ');
+        let bonus = 0;
+        for (const [raw, weight] of fields) {
+          const value = raw === null || raw === undefined ? '' : String(raw).toLocaleLowerCase();
+          if (!value.includes(phrase)) continue;
+          bonus = Math.max(bonus, (value === phrase ? 150 : value.startsWith(phrase) ? 120 : 90) * weight);
+        }
+        total += bonus;
+      }
+      return total;
+    };
     context.routes.register({
       method: 'GET', path: 'search', permission: 'wattanam.academic-management.view',
       handler: async (request) => {
         const query = String(request?.query?.q || '').trim();
         if (query.length < 2 || query.length > 100) throw new Error('Search query must be between 2 and 100 characters');
-        const [students, officers, classes] = await Promise.all([
-          context.database.query(`SELECT s."id",s."userId",s."studentNumber",s."nameKh",e."classId",c."name" AS "className" FROM ${STUDENT_PROFILE} s JOIN ${ENROLLMENT} e ON e."studentId"=s."id" AND e."validTo" IS NULL JOIN ${CLASS} c ON c."id"=e."classId" ORDER BY s."studentNumber" LIMIT 500`),
-          context.database.query(`SELECT o."id",o."userId",o."employeeNumber",o."position",o."department",o."employmentStatus" FROM ${OFFICER} o ORDER BY o."employmentStatus"='ACTIVE' DESC,o."employeeNumber" LIMIT 300`),
-          context.database.query(`SELECT c."id",c."name",c."subject" AS "subjectName",COALESCE(y."label",y."year"::text) AS "studyYear" FROM ${CLASS} c LEFT JOIN ${STUDY_YEAR} y ON y."id"=c."studyYearId" ORDER BY c."name" LIMIT 300`),
+        const terms = query.toLocaleLowerCase().split(/\s+/).filter(Boolean).slice(0, 6);
+        const [students, officers, classes, departments] = await Promise.all([
+          context.database.query(`SELECT s."id", s."userId", s."studentNumber", s."nameKh", e."classId", c."name" AS "className"
+            FROM ${STUDENT_PROFILE} s LEFT JOIN ${ENROLLMENT} e ON e."studentId" = s."id" AND e."validTo" IS NULL LEFT JOIN ${CLASS} c ON c."id" = e."classId"
+            ORDER BY s."studentNumber" NULLS LAST LIMIT 20000`),
+          context.database.query(`SELECT o."id", o."userId", o."employeeNumber", o."position", o."departmentId", o."employmentStatus" FROM ${OFFICER} o ORDER BY o."employeeNumber" NULLS LAST LIMIT 5000`),
+          context.database.query(`SELECT c."id", c."name", c."subject" AS "subjectName", COALESCE(y."label", y."year"::text) AS "studyYear" FROM ${CLASS} c LEFT JOIN ${STUDY_YEAR} y ON y."id" = c."studyYearId" ORDER BY c."name" LIMIT 2000`),
+          context.database.query(`SELECT "id", "name", "nameKh" FROM ${DEPARTMENT} LIMIT 500`),
         ]);
-        const users = await lookupUserMap([...students.map((row) => row.userId), ...officers.map((row) => row.userId)]);
-        const needle = query.toLocaleLowerCase();
-        const matches = (values) => values.filter(Boolean).join(' ').toLocaleLowerCase().includes(needle);
-        const studentResults = students.filter((row) => { const user = users.get(row.userId); return matches([row.studentNumber,row.nameKh,row.className,user?.name,user?.email,user?.phone]); }).map((row) => { const user=users.get(row.userId); return {id:`student:${row.id}`,title:user?.name||row.nameKh||row.studentNumber,description:['Student',row.studentNumber,row.className,user?.email].filter(Boolean).join(' • '),href:`/plugins/wattanam.academic-management/classes/${encodeURIComponent(row.classId)}/students/${encodeURIComponent(row.id)}`}; });
-        const officerResults = officers.filter((row) => { const user = users.get(row.userId); return matches([row.employeeNumber,row.position,row.department,row.employmentStatus,user?.name,user?.email,user?.phone]); }).map((row) => { const user=users.get(row.userId); return {id:`officer:${row.id}`,title:user?.name||row.employeeNumber,description:['Staff',row.employeeNumber,row.position,row.department,row.employmentStatus].filter(Boolean).join(' • '),href:`/plugins/wattanam.academic-management/officers/edit/${encodeURIComponent(row.id)}`}; });
-        const classResults = classes.filter((row) => matches([row.name,row.subjectName,row.studyYear])).map((row) => ({id:`class:${row.id}`,title:row.name,description:['Class',row.subjectName,row.studyYear].filter(Boolean).join(' • '),href:`/plugins/wattanam.academic-management/classes/edit/${encodeURIComponent(row.id)}`}));
-        return [...studentResults,...officerResults,...classResults].slice(0,25);
+        const users = await searchUsers([...students.map((row) => row.userId), ...officers.map((row) => row.userId)]);
+        const departmentName = new Map(departments.map((d) => [d.id, d.nameKh || d.name]));
+        const found = [];
+        for (const row of students) {
+          const user = users.get(row.userId) || {};
+          const score = matchScore(terms, [[row.studentNumber, 1.3], [row.nameKh, 1.2], [user.name, 1.2], [user.email, 0.9], [user.phone, 0.9], [row.className, 0.6]]);
+          if (!score) continue;
+          const title = user.name || row.nameKh || row.studentNumber || 'Student';
+          found.push({ score, group: 'Students', id: `student:${row.id}`, title,
+            description: [row.studentNumber ? 'ID ' + row.studentNumber : '', row.nameKh && row.nameKh !== title ? row.nameKh : '', row.className || 'No class', user.phone || user.email || ''].filter(Boolean).join(' • '),
+            href: row.classId ? `/plugins/wattanam.academic-management/classes/${encodeURIComponent(row.classId)}/students/${encodeURIComponent(row.id)}` : '/plugins/wattanam.academic-management/classes' });
+        }
+        for (const row of officers) {
+          const user = users.get(row.userId) || {};
+          const department = departmentName.get(row.departmentId) || '';
+          const score = matchScore(terms, [[row.employeeNumber, 1.3], [user.name, 1.2], [user.email, 0.9], [user.phone, 0.9], [row.position, 0.7], [department, 0.6]]);
+          if (!score) continue;
+          found.push({ score: score * (row.employmentStatus === 'ACTIVE' ? 1 : 0.8), group: 'Staff', id: `officer:${row.id}`, title: user.name || row.employeeNumber || 'Staff member',
+            description: [row.employeeNumber ? 'ID ' + row.employeeNumber : '', row.position, department, row.employmentStatus !== 'ACTIVE' ? String(row.employmentStatus || '').toLowerCase() : ''].filter(Boolean).join(' • '),
+            href: `/plugins/wattanam.academic-management/officers/edit/${encodeURIComponent(row.id)}` });
+        }
+        for (const row of classes) {
+          const score = matchScore(terms, [[row.name, 1.2], [row.subjectName, 0.8], [row.studyYear, 0.6]]);
+          if (!score) continue;
+          found.push({ score, group: 'Classes', id: `class:${row.id}`, title: row.name,
+            description: ['Class', row.subjectName, row.studyYear].filter(Boolean).join(' • '),
+            href: `/plugins/wattanam.academic-management/classes/${encodeURIComponent(row.id)}/students` });
+        }
+        found.sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
+        const caps = { Students: 15, Staff: 8, Classes: 6 }, used = {};
+        return found.filter((item) => { used[item.group] = (used[item.group] || 0) + 1; return used[item.group] <= caps[item.group]; })
+          .slice(0, 25).map(({ score, ...item }) => item);
       },
     });
-    const academicAttendanceContext = attendanceContext(context);
+    const attendanceRoutes = new Map();
+    const academicAttendanceContext = attendanceContext(context, attendanceRoutes);
     await attendanceRuntime.activate(academicAttendanceContext);
     registerSelfAttendance(context);
     registerStaffAttendance(context);
+    registerTranscripts(context, { requireClassStaffScope, requireAdministrativePrincipal, decorateStudentRows });
+    registerDashboard(context, { decorateStudentRows, decorateOfficerRows });
+    // Student permissions: each session is saved through the attendance runtime's own mark route.
+    registerMyProfile(context);
+    registerMyClass(context, { requireClassStaffScope, decorateStudentRows });
+    registerStudentPermissions(context, {
+      saveRecord: (request) => attendanceRoutes.get('POST records').handler(request),
+      requireClassStaffScope, decorateStudentRows,
+    });
     // Authoritative student reports must resolve rosters from this plugin's
     // enrollment tables. The lean customer-school core intentionally does not
     // expose the legacy academic Prisma models through its directory provider.
     registerAuthoritativeReports(academicAttendanceContext);
+    registerReportPrintTemplate(context, { read: 'wattanam.academic-management.attendance.report', write: 'wattanam.academic-management.attendance.configure', staffRead: 'wattanam.academic-management.attendance.staff.report', staffWrite: 'wattanam.academic-management.attendance.configure', transcriptRead: 'wattanam.academic-management.view', transcriptWrite: 'wattanam.academic-management.manage' });
   },
 };

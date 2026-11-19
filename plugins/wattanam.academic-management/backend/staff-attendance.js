@@ -49,7 +49,7 @@ function staffRole(request) {
 
 function registerStaffAttendance(context) {
   context.permissions.register([
-    { id: scanPermission, label: 'Scan and record staff attendance' },
+    { id: scanPermission, label: 'Scan and record staff attendance', roles: ['WATTAMAN'] },
     { id: reportPermission, label: 'View and export staff attendance reports' },
     { id: correctPermission, label: 'Correct staff attendance records' },
   ]);

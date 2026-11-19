@@ -1,0 +1,2 @@
+-- wattanam-plugin-migration: 080_allow_staff_attendance_records
+ALTER TABLE "plugin_wattanam_academic_management_attendance_record" DROP CONSTRAINT IF EXISTS "academic_management_attendance_record_student_only";

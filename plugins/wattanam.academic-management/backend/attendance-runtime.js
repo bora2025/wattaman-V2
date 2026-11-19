@@ -93,9 +93,9 @@ module.exports = {
       throw new Error('This role cannot access attendance records');
     };
     context.permissions.register([
-      { id: 'wattanam.attendance-manager.view', label: 'View attendance and reports' },
-      { id: 'wattanam.attendance-manager.scan', label: 'Scan student attendance' },
-      { id: 'wattanam.attendance-manager.mark', label: 'Mark student attendance manually' },
+      { id: 'wattanam.attendance-manager.view', label: 'View attendance and reports', roles: ['WATTAMAN', 'TEACHER', 'CLASS_ADMIN'] },
+      { id: 'wattanam.attendance-manager.scan', label: 'Scan student attendance', roles: ['WATTAMAN', 'TEACHER', 'CLASS_ADMIN'] },
+      { id: 'wattanam.attendance-manager.mark', label: 'Mark student attendance and record student permissions', roles: ['TEACHER', 'CLASS_ADMIN'] },
       { id: 'wattanam.attendance-manager.correct', label: 'Correct recorded student attendance' },
       { id: 'wattanam.attendance-manager.report', label: 'View student attendance reports' },
       { id: 'wattanam.attendance-manager.print', label: 'Print and export student attendance reports' },

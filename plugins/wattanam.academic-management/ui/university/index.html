@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="km">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>University Score Sheets</title>
+  <link rel="stylesheet" href="university.css">
+  <style id="page-style">@page { size: A4 landscape; margin: 7mm; }</style>
+</head>
+<body>
+  <main id="app" aria-busy="true">
+    <!-- Score sheets come in two kinds: the ministry's primary, secondary & high school sheets, and university sheets -->
+    <nav class="kind-tabs no-print" id="kind-tabs" role="tablist" aria-label="Type of score sheet">
+      <button type="button" role="tab" aria-selected="false" id="tab-school">🏫 Primary, secondary &amp; high school <span class="kh">បឋមសិក្សា អនុវិទ្យាល័យ និង វិទ្យាល័យ</span></button>
+      <button type="button" role="tab" aria-selected="true" id="tab-university">🎓 University <span class="kh">សាកលវិទ្យាល័យ</span></button>
+    </nav>
+
+    <header class="appbar no-print">
+      <div class="brand">
+        <span class="brand-icon" aria-hidden="true">🎓</span>
+        <div>
+          <h1>University Score Sheets <span class="kh">· តារាងលទ្ធផលសិក្សា</span></h1>
+          <p class="context" id="context-line">Semesters, subjects, letter grades, GPA and rank</p>
+        </div>
+      </div>
+      <div class="actions">
+        <span id="saved" class="saved" role="status" hidden></span>
+        <button type="button" class="btn ghost" id="edit-header" aria-pressed="false" hidden>🖋️ Edit header &amp; footer</button>
+        <button type="button" class="btn ghost" id="open-setup" hidden>⚙️ Set up</button>
+        <button type="button" class="btn ghost" id="export">⬇️ CSV</button>
+        <button type="button" class="btn primary" id="print">🖨️ Print</button>
+      </div>
+    </header>
+
+    <!-- editing the header & footer (administrators): every outlined text can be typed over -->
+    <div class="header-bar no-print" id="header-bar" role="region" aria-label="Edit header and footer" hidden>
+      <span>🖋️ Click any outlined text in the header or footer to change it. Type the date as dd/mm/yyyy (empty = today). Saved for every university score sheet.</span>
+      <span class="buttons"><button type="button" class="btn ghost" id="header-cancel">Cancel</button><button type="button" class="btn primary" id="header-save">Save header &amp; footer</button></span>
+      <!-- formatting of the chosen text: font, size, colour, bold, alignment -->
+      <div class="style-bar" id="style-bar" role="toolbar" aria-label="Format the selected text">
+        <span class="style-target" id="style-target">Click a text on the page to format it</span>
+        <span class="segmented" role="group" aria-label="Alignment">
+          <button type="button" data-control data-align="left" title="Align left">⫷ Left</button><button type="button" data-control data-align="center" title="Centre">☰ Centre</button><button type="button" data-control data-align="right" title="Align right">Right ⫸</button>
+        </span>
+        <label>Font<select id="style-font" data-control><option value="">Default</option></select></label>
+        <label>Size (pt)<input id="style-size" data-control type="number" min="6" max="48" step="0.5" placeholder="auto"></label>
+        <label>Colour<input id="style-color" data-control type="color" value="#000000"></label>
+        <button type="button" id="style-bold" data-control class="btn ghost bold-btn" aria-pressed="false" title="Bold">B</button>
+        <button type="button" id="style-reset" data-control class="btn ghost" title="Back to the default look">↺ Reset</button>
+      </div>
+    </div>
+
+    <nav class="views no-print" role="tablist" aria-label="Document">
+      <button type="button" role="tab" data-view="sheet" aria-selected="true">📊 Score sheet</button>
+      <button type="button" role="tab" data-view="ranking" aria-selected="false">🏅 Student ranking</button>
+      <button type="button" role="tab" data-view="honor" aria-selected="false">🏆 Honor roll</button>
+      <button type="button" role="tab" data-view="cards" aria-selected="false">📘 Report cards</button>
+    </nav>
+
+    <section class="toolbar no-print" aria-label="Choose">
+      <label>Score sheet<select id="sheet"></select></label>
+      <label>Class<select id="class"></select></label>
+      <label id="scope-wrap" hidden>Period<select id="scope"></select></label>
+      <label id="order-wrap">Order<select id="order"><option value="list">By student list</option><option value="rank">By rank</option></select></label>
+      <label id="card-student-wrap" hidden>Student<select id="card-student"></select></label>
+      <label class="grow" id="search-wrap">Search<input id="search" type="search" placeholder="Name or ID…"></label>
+    </section>
+    <p id="error" class="notice danger no-print" role="alert" hidden></p>
+
+    <!-- set-up (administrators): the sheet, its classes, semesters and subjects, the grade scale -->
+    <section id="setup" class="panel no-print" hidden aria-labelledby="setup-title">
+      <div class="panel-head">
+        <h2 id="setup-title">Set up university score sheets</h2>
+        <button type="button" class="btn ghost" id="close-setup">Close</button>
+      </div>
+      <div class="setup-grid">
+        <nav class="sheet-list" id="sheet-list" aria-label="University score sheets"></nav>
+        <div class="setup-body">
+          <form id="sheet-form" class="card form" novalidate>
+            <h3 id="sheet-form-title">New university score sheet</h3>
+            <div class="row">
+              <label>Name *<input id="f-name" maxlength="160" placeholder="e.g. Year 1 English 2025-2026"></label>
+              <label>Degree / programme<input id="f-degree" maxlength="160" placeholder="e.g. Bachelor of Arts in English"></label>
+            </div>
+            <fieldset><legend>Classes using this sheet</legend><div id="f-classes" class="checks"></div></fieldset>
+            <p class="hint" id="new-hint">A new sheet starts with Semester 1 and Semester 2 (ឆមាសទី១, ឆមាសទី២) and the university grade scale.</p>
+            <div class="buttons">
+              <button type="submit" class="btn primary" id="save-sheet">Save</button>
+              <button type="button" class="btn ghost" id="new-sheet">＋ New sheet</button>
+              <button type="button" class="btn danger" id="delete-sheet" hidden>Delete sheet</button>
+            </div>
+          </form>
+          <div id="sheet-extra" hidden>
+            <section class="card">
+              <div class="panel-head"><h3>Semesters and their subjects</h3></div>
+              <div id="semesters" class="semesters"></div>
+              <form id="add-semester" class="inline" novalidate>
+                <input id="semester-label" maxlength="80" placeholder="e.g. ឆមាសទី៣" aria-label="New semester">
+                <button type="submit" class="btn ghost">＋ Add semester</button>
+              </form>
+            </section>
+            <section class="card">
+              <div class="panel-head"><h3>Grade scale</h3><span class="hint">From % of the subject's maximum (the last grade is everything below)</span></div>
+              <table class="scale"><thead><tr><th>Letter</th><th>Name</th><th>From %</th><th>GPA</th><th></th></tr></thead><tbody id="scale"></tbody></table>
+              <div class="buttons">
+                <button type="button" class="btn ghost" id="scale-add">＋ Grade</button>
+                <button type="button" class="btn ghost" id="scale-reset">Default scale</button>
+                <button type="button" class="btn primary" id="scale-save" disabled>Save grade scale</button>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <p id="empty" class="notice no-print" hidden></p>
+
+    <!-- the documents: one is shown at a time -->
+    <div id="paper-wrap" class="paper-wrap" hidden>
+      <article class="paper" id="paper" data-doc="sheet">
+        <div class="doc-top" id="sheet-top">
+          <header class="doc-head">
+            <div class="doc-school">
+              <img id="doc-logo" alt="" hidden>
+              <div><b id="doc-school"></b><span id="doc-degree"></span></div>
+            </div>
+            <div class="doc-motto"><b>ព្រះរាជាណាចក្រកម្ពុជា</b><span>ជាតិ សាសនា ព្រះមហាក្សត្រ</span></div>
+          </header>
+          <h2 class="doc-title" id="doc-title">តារាងលទ្ធផលសិក្សា</h2>
+          <p class="doc-info" id="doc-info"></p>
+        </div>
+        <div class="table-wrap"><table class="results" id="results"></table></div>
+        <div class="doc-foot" id="sheet-foot">
+          <div class="dist" id="dist"></div>
+        </div>
+      </article>
+      <article class="paper doc" id="ranking-doc" hidden></article>
+      <article class="paper doc" id="honor-doc" hidden></article>
+      <div id="cards-doc" class="cards" hidden></div>
+    </div>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="../university-math.js"></script>
+  <script src="university.js"></script>
+</body>
+</html>
