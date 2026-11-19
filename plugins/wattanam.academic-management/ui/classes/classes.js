@@ -11,15 +11,30 @@
     ['GLOBAL', '🌐', 'Global Default', 'Inherits from settings'], ['FULL', '🌞', 'Full Day', '7:00 AM – 5:00 PM'], ['MORNING', '🌅', 'Morning Only', '7:00 AM – 12:00 PM'],
     ['AFTERNOON', '🌤️', 'Afternoon Only', '1:00 PM – 5:30 PM'], ['EVENING', '🌆', 'Evening', '6:00 PM – 9:00 PM'], ['NIGHT', '🌙', 'Night Shift', '6:00 PM – 6:00 AM'], ['CUSTOM', '🔧', 'Custom', 'Set your own times'],
   ];
+  // A class's level: which score sheets it can use (primary, secondary & high school → the ministry sheets,
+  // university → university sheets, short course → both).
+  var LEVELS = [
+    ['PRIMARY', '✏️', 'Primary school', 'បឋមសិក្សា', 'School score sheets'],
+    ['SECONDARY', '🏫', 'Secondary school', 'អនុវិទ្យាល័យ', 'School score sheets'],
+    ['HIGH_SCHOOL', '🎒', 'High school', 'វិទ្យាល័យ', 'School score sheets'],
+    ['UNIVERSITY', '🎓', 'University', 'សាកលវិទ្យាល័យ', 'University score sheets'],
+    ['SHORT_COURSE', '📘', 'Short course', 'វគ្គខ្លី', 'Either kind of score sheet'],
+  ];
+  function levelOf(value) { return LEVELS.filter(function (item) { return item[0] === value; })[0] || null; }
   var studyDays = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
   var weekdays = ['MON', 'TUE', 'WED', 'THU', 'FRI'];
   var dayPresets = [['Mon–Fri', weekdays], ['Mon–Sat', studyDays.slice(0, 6)], ['All 7 days', studyDays], ['Weekend only', ['SAT', 'SUN']]];
-  var templateHeaders = ['ID', 'Name', 'Sex', 'Email', 'Phone', 'Password', 'Photo', 'Date of Birth', 'Address', 'Generation', 'Khmer Name'];
-  var studentFields = ['studentNumber', 'name', 'nameKh', 'email', 'phone', 'password', 'sex', 'dateOfBirth', 'photo', 'address', 'generation'];
+  // Spreadsheet columns: the student, then place of birth, current address and parents (student-details.js).
+  // An older file with one "Address" column still imports.
+  var D = window.WattanamStudentDetails;
+  // No password column: each new student gets a made password, listed in the import results.
+  // (A file that still has a "Password" column keeps working.)
+  var templateHeaders = ['ID', 'Name', 'Sex', 'Email', 'Phone', 'Photo', 'Date of Birth', 'Generation', 'Khmer Name'].concat(D.HEADERS);
+  var studentFields = ['studentNumber', 'name', 'nameKh', 'email', 'phone', 'sex', 'dateOfBirth', 'photo', 'generation'];
   var XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
   var state = {
-    classes: [], years: [], teachers: [], admins: [], query: '', year: '', sort: 'name', layout: 'grid', view: 'list', busy: '',
+    classes: [], years: [], teachers: [], admins: [], query: '', year: '', level: '', sort: 'name', layout: 'grid', view: 'list', busy: '',
     editing: null, form: null, daysClass: null, daysForm: null, studentsClass: null, students: [], available: [], studentsLoading: false,
     studentOpen: false, studentKey: '', importResult: null,
   };
@@ -97,10 +112,12 @@
   function shown() {
     var query = state.query.toLowerCase();
     return state.classes.filter(function (item) {
+      if (state.level && (state.level === 'NONE' ? Boolean(item.level) : item.level !== state.level)) return false;
       return (!state.year || item.studyYearId === state.year) && ((item.name || '') + ' ' + (item.subject || '') + ' ' + ((item.teacher && item.teacher.name) || '')).toLowerCase().indexOf(query) >= 0;
     }).sort(function (a, b) {
       if (state.sort === 'students') return Number(b.studentCount || 0) - Number(a.studentCount || 0);
       if (state.sort === 'subject') return String(a.subject || '').localeCompare(String(b.subject || ''));
+      if (state.sort === 'level') { var la = LEVELS.indexOf(levelOf(a.level)), lb = LEVELS.indexOf(levelOf(b.level)); return (la < 0 ? 9 : la) - (lb < 0 ? 9 : lb) || String(a.name || '').localeCompare(String(b.name || '')); }
       return String(a.name || '').localeCompare(String(b.name || ''));
     });
   }
@@ -127,7 +144,7 @@
         el('div', { class: 'count' }, [el('strong', { text: String(row.studentCount || 0) }), el('span', { text: 'STUDENTS' })]),
         thumb, el('h2', { text: row.name || '' }),
         row.subject ? el('span', { class: 'subject', text: row.subject }) : null,
-        el('div', { class: 'tags' }, [el('span', { text: '🗓️ ' + ((row.studyYear && row.studyYear.label) || 'No study year') }), el('span', { text: '● ' + registration }), el('span', { text: '🔧 ' + (preset ? preset[2] : 'Custom') })]),
+        el('div', { class: 'tags' }, [levelOf(row.level) ? el('span', { class: 'level level-' + row.level, 'data-level': row.level, text: levelOf(row.level)[1] + ' ' + levelOf(row.level)[2] }) : el('span', { class: 'level none', text: '⚪ Level not set' }), el('span', { text: '🗓️ ' + ((row.studyYear && row.studyYear.label) || 'No study year') }), el('span', { text: '● ' + registration }), el('span', { text: '🔧 ' + (preset ? preset[2] : 'Custom') })]),
         el('p', { class: 'line', text: '📅 Study days: ' + orderedDays(active).map(dayLabel).join(', ') }),
         el('p', { class: 'line', text: '👤 ' + ((row.teacher && row.teacher.name) || 'Teacher not assigned') }),
         el('div', { class: 'row-actions' }, [
@@ -158,13 +175,13 @@
   }
 
   // ---------- create / edit a class ----------
-  function blankForm() { return { name: '', subject: '', teacherId: '', classAdminId: '', studyYearId: state.year || currentYear(), registrationStatus: 'HIDDEN', thumbnail: '', description: '', price: '', showPrice: false, attendanceFormat: 'GLOBAL', week: weekdays.slice() }; }
+  function blankForm() { return { level: '', name: '', subject: '', teacherId: '', classAdminId: '', studyYearId: state.year || currentYear(), registrationStatus: 'HIDDEN', thumbnail: '', description: '', price: '', showPrice: false, attendanceFormat: 'GLOBAL', week: weekdays.slice() }; }
   function openClass(row) {
     state.editing = row || null;
     if (row) {
       var schedule = scheduleOf(row.schedule);
       state.form = {
-        name: row.name || '', subject: row.subject || '', teacherId: row.teacherId || '', classAdminId: row.classAdminId || '', studyYearId: row.studyYearId || '',
+        level: row.level || '', name: row.name || '', subject: row.subject || '', teacherId: row.teacherId || '', classAdminId: row.classAdminId || '', studyYearId: row.studyYearId || '',
         registrationStatus: row.registrationStatus || 'HIDDEN', thumbnail: row.thumbnail || '', description: row.description || '', price: row.price === null || row.price === undefined ? '' : String(row.price),
         showPrice: row.showPrice === true, attendanceFormat: typeof schedule.attendanceFormat === 'string' ? schedule.attendanceFormat : 'GLOBAL',
         week: Array.isArray(schedule.week) && schedule.week.length ? orderedDays(schedule.week) : weekdays.slice(),
@@ -193,6 +210,12 @@
       host.appendChild(el('button', { type: 'button', 'aria-pressed': String(form.attendanceFormat === preset[0]), onclick: function () { form.attendanceFormat = preset[0]; renderClassForm(); } }, [el('span', { text: preset[1] }), el('strong', { text: preset[2] }), el('span', { class: 'detail', text: preset[3] })]));
     });
     renderDays('c-days', 'c-day-presets', form, renderClassForm);
+    var levels = $('c-levels'); levels.textContent = '';
+    LEVELS.forEach(function (level) {
+      levels.appendChild(el('button', { type: 'button', role: 'radio', 'data-level': level[0], 'aria-checked': String(form.level === level[0]), 'aria-pressed': String(form.level === level[0]), onclick: function () { form.level = level[0]; renderClassForm(); } },
+        [el('span', { text: level[1] }), el('strong', { text: level[2] }), el('span', { class: 'kh', text: level[3] }), el('span', { class: 'detail', text: level[4] })]));
+    });
+    $('c-level-help').textContent = state.editing && !form.level ? 'This class has no level yet, so it can be used in both kinds of score sheet. Choose its level.' : 'The level decides which score sheets the class can use.';
     $('c-thumb-preview').hidden = !form.thumbnail; $('c-thumb-remove').hidden = !form.thumbnail;
     if (form.thumbnail) $('c-thumb-preview').setAttribute('src', form.thumbnail);
   }
@@ -207,8 +230,9 @@
     if (!form.name.trim() || !form.teacherId) { show('class-error', $('c-teacher').value.trim() && !form.teacherId ? 'Choose the teacher from the list.' : 'Class name and teacher are required.'); return; }
     if (adminText && !form.classAdminId) { show('class-error', 'Choose the class administrator from the list, or leave it empty.'); return; }
     if (!form.week.length) { show('class-error', 'Select at least one study day.'); return; }
+    if (!form.level && !state.editing) { show('class-error', 'Choose the class level: primary school, secondary school, high school, university or short course.'); return; }
     var body = {
-      name: form.name.trim(), subject: form.subject.trim() || null, teacherId: form.teacherId, classAdminId: form.classAdminId || null, studyYearId: form.studyYearId || null,
+      name: form.name.trim(), level: form.level || null, subject: form.subject.trim() || null, teacherId: form.teacherId, classAdminId: form.classAdminId || null, studyYearId: form.studyYearId || null,
       registrationStatus: form.registrationStatus, thumbnail: form.thumbnail || null, description: form.description.trim() || null, price: form.price === '' ? null : Number(form.price),
       showPrice: form.showPrice, schedule: JSON.stringify({ attendanceFormat: form.attendanceFormat, week: form.week }),
     };
@@ -302,7 +326,7 @@
       (result.details || []).forEach(function (item) {
         var status = String(item.status || '');
         body.appendChild(el('tr', {}, [el('td', { text: String(item.row === undefined ? '' : item.row) }), el('td', { text: item.id || '' }), el('td', { text: item.name || '' }),
-          el('td', { class: /success|import|creat|ok/i.test(status) ? 'status-ok' : /skip/i.test(status) ? 'status-skip' : 'status-bad', text: status }), el('td', { text: item.error || 'Imported' })]));
+          el('td', { class: /success|import|creat|ok/i.test(status) ? 'status-ok' : /skip/i.test(status) ? 'status-skip' : 'status-bad', text: status }), el('td', { text: item.error || 'Imported' }), el('td', { class: 'password', text: item.password || '' })]));
       });
     }
   }
@@ -317,23 +341,26 @@
   }
   // Photo: upload a picture (made small, kept with the student) or paste an https link.
   var photoUpload = window.WattanamPhoto ? window.WattanamPhoto.attach($('s-photo')) : null;
+  D.render($('s-details'), { gridClass: 'fields three' });
   function createStudent(event) {
     event.preventDefault();
     var row = state.studentsClass, values = {};
     studentFields.forEach(function (field) { values[field] = $('s-' + field).value; });
+    Object.assign(values, D.read($('s-details')));
     show('students-error');
-    if (!values.name.trim() || values.password.length < 6) { show('students-error', 'Latin name and a password of at least 6 characters are required.'); return; }
+    if (!values.name.trim()) { show('students-error', 'Latin name is required.'); return; }
     // The same key is reused on a retry, so a repeated submit cannot create the student twice.
     state.studentKey = state.studentKey || newKey('class-student:');
     state.busy = 'student-create'; renderStudents();
     ui.api.post(path('classes/', row.id, '/students/create'), Object.assign({}, values, {
       commandKey: state.studentKey, studentNumber: values.studentNumber.trim() || null, email: values.email.trim() || null, phone: values.phone.trim() || null,
       photo: values.photo.trim() || null, dateOfBirth: values.dateOfBirth || null,
-    })).then(function () {
+    })).then(function (created) {
       state.studentOpen = false; state.studentKey = '';
       studentFields.forEach(function (field) { $('s-' + field).value = ''; });
+      D.fill($('s-details'), {});
       if (photoUpload) photoUpload.refresh();
-      show('students-message', 'Student login, class enrollment, QR code, and ID card were created.');
+      show('students-message', 'Student login, class enrollment, QR code, and ID card were created.' + (created && created.password ? ' Sign-in password for ' + values.name.trim() + ': ' + created.password + ' (shown once; give it to the student).' : ''));
       return Promise.all([loadStudents(), loadClasses()]);
     }).catch(function (error) { show('students-error', error.message || 'Student could not be created.'); })
       .then(function () { state.busy = ''; renderStudents(); });
@@ -353,18 +380,22 @@
     }).then(function (csv) { return ui.api.post(path('classes/', row.id, '/students/bulk-csv'), { csv: csv }); })
       .then(function (result) {
         result = result || {}; state.importResult = result;
-        show('students-message', 'Import complete: ' + (result.success || 0) + ' succeeded, ' + (result.errors || 0) + ' failed, ' + (result.skipped || 0) + ' skipped.');
+        var made = (result.details || []).filter(function (item) { return item.password; }).length;
+        show('students-message', 'Import complete: ' + (result.success || 0) + ' succeeded, ' + (result.errors || 0) + ' failed, ' + (result.skipped || 0) + ' skipped.'
+          + (made ? ' Sign-in passwords were made for ' + made + ' new student' + (made === 1 ? '' : 's') + ': they are in the table below (shown once).' : ''));
         return Promise.all([loadStudents(), loadClasses()]);
       }).catch(function (error) { show('students-error', error.message || 'Spreadsheet upload failed.'); })
       .then(function () { state.busy = ''; renderStudents(); });
   }
   function downloadTemplate() {
-    download('student-import-template.xlsx', window.WattanamXlsx.write([templateHeaders, ['0001', 'Student Name', 'FEMALE', 'student@example.com', '012345678', 'change-me-123', '', '2008-01-01', 'Phnom Penh', '2026', 'ឈ្មោះសិស្ស']], 'Student Import'), XLSX_TYPE);
+    download('student-import-template.xlsx', window.WattanamXlsx.write([templateHeaders, ['0001', 'Student Name', 'FEMALE', 'student@example.com', '012345678', '', '2008-01-01', '2026', 'ឈ្មោះសិស្ស',
+      'ត្រពាំងឈូក', 'សង្កាត់ទឹកថ្លា', 'ខណ្ឌសែនសុខ', 'រាជធានីភ្នំពេញ', '12', '271', '3', 'សង្កាត់ទឹកល្អក់ទី១', 'ខណ្ឌទួលគោក', 'រាជធានីភ្នំពេញ',
+      'សុខ ចាន់', 'កសិករ', '012111222', 'ចាន់ ស្រីមុំ', 'លក់ដូរ', '012333444']], 'Student Import'), XLSX_TYPE);
   }
   function exportStudents() {
     var row = state.studentsClass; if (!row) return;
     var data = state.students.map(function (item) {
-      return [item.studentNumber, studentName(item), item.sex, item.email || (item.user && item.user.email), item.phone || (item.user && item.user.phone), '', item.photo, item.dateOfBirth ? String(item.dateOfBirth).slice(0, 10) : '', item.address, '', item.nameKh];
+      return [item.studentNumber, studentName(item), item.sex, item.email || (item.user && item.user.email), item.phone || (item.user && item.user.phone), item.photo, item.dateOfBirth ? String(item.dateOfBirth).slice(0, 10) : '', item.generation || '', item.nameKh].concat(D.row(item));
     });
     download(row.name + '-students.xlsx', window.WattanamXlsx.write([templateHeaders].concat(data), 'Students'), XLSX_TYPE);
   }
@@ -391,6 +422,7 @@
   $('query').addEventListener('input', function (event) { state.query = event.target.value; renderList(); });
   $('year').addEventListener('change', function (event) { state.year = event.target.value; renderList(); });
   $('sort').addEventListener('change', function (event) { state.sort = event.target.value; renderList(); });
+  $('level-filter').addEventListener('change', function (event) { state.level = event.target.value; renderList(); });
   $('view-grid').addEventListener('click', function () { state.layout = 'grid'; renderList(); });
   $('view-list').addEventListener('click', function () { state.layout = 'list'; renderList(); });
   $('add-class').addEventListener('click', function () { openClass(null); });

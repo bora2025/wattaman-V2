@@ -10,7 +10,9 @@ const { registerTranscripts } = require('./transcripts');
 const { registerDashboard } = require('./dashboard');
 const { registerStudentPermissions } = require('./student-permissions');
 const { withPublicErrors } = require('./public-errors');
+const studentDetails = require('./student-details');
 const { registerMyProfile } = require('./my-profile');
+const { registerMyClass } = require('./my-class');
 
 // Student photos. Plugin screens (classes, ID cards, progress books) may only show images stored in the
 // system or uploaded into the record (data:image), so an uploaded photo is the reliable kind; https links
@@ -387,6 +389,7 @@ module.exports = {
       { id: 'wattanam.academic-management.view', label: 'View academic structures and rosters', roles: ['RECEPTIONIST', 'WATTAMAN', 'TEACHER', 'CLASS_ADMIN'] },
       { id: 'wattanam.academic-management.manage', label: 'Manage academic structures and enrollment', description: 'Receptionists use it for registering and updating students and staff, ID cards and printing; teachers and class admins for the students of their own classes. Set-up changes stay with administrators.', roles: ['RECEPTIONIST', 'TEACHER', 'CLASS_ADMIN'] },
       { id: 'wattanam.academic-management.attendance', label: 'Record and correct officer attendance' },
+      { id: 'wattanam.academic-management.class.students', label: 'Add, edit and remove the students of my class', description: 'Teachers and class admins: create a student in their class, update a student\'s details, and remove a student from their class (the enrolment ends).', roles: ['TEACHER', 'CLASS_ADMIN'] },
     ]);
     context.navigation.register([
       { id: 'attendance-dashboard', label: 'Attendance Dashboard', href: '/plugins/wattanam.academic-management/dashboard', permission: 'wattanam.academic-management.attendance.view' },
@@ -406,6 +409,7 @@ module.exports = {
       { id: 'year-report-cards', label: 'Year Report Cards', href: '/plugins/wattanam.academic-management/score-sheets?view=yearcard', permission: 'wattanam.academic-management.view' },
       { id: 'record-books', label: 'Record Books', href: '/plugins/wattanam.academic-management/score-sheets?view=recordbook', permission: 'wattanam.academic-management.view' },
       { id: 'progress-books', label: 'Progress Books', href: '/plugins/wattanam.academic-management/progress-books', permission: 'wattanam.academic-management.view' },
+      { id: 'my-class', label: 'My Class', href: '/plugins/wattanam.academic-management/my-class', permission: 'wattanam.academic-management.attendance.view' },
       { id: 'student-permissions', label: 'Student Permissions', href: '/plugins/wattanam.academic-management/student-permissions', permission: 'wattanam.academic-management.attendance.mark' },
     ]);
     const studyYearSelect = `SELECT y."id", y."year", y."label", to_char(y."startDate", 'YYYY-MM-DD') AS "startDate", to_char(y."endDate", 'YYYY-MM-DD') AS "endDate", y."isCurrent", y."schoolName", y."logoUrl", y."createdAt", y."updatedAt", jsonb_build_object('classes', COUNT(c."id")::int) AS "_count" FROM ${STUDY_YEAR} y LEFT JOIN ${CLASS} c ON c."studyYearId" = y."id"`;
@@ -675,6 +679,15 @@ module.exports = {
           .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
       },
     });
+    // A class's level decides which score sheets it can use (transcripts.js): secondary and high school →
+    // the ministry sheets (primary too), university → university sheets, short course (and classes without a level) → both.
+    const CLASS_LEVELS = ['PRIMARY', 'SECONDARY', 'HIGH_SCHOOL', 'UNIVERSITY', 'SHORT_COURSE'];
+    const classLevel = (value) => {
+      if (value === undefined || value === null || value === '') return null;
+      const level = String(value).toUpperCase();
+      if (!CLASS_LEVELS.includes(level)) throw new Error('level must be PRIMARY, SECONDARY, HIGH_SCHOOL, UNIVERSITY or SHORT_COURSE');
+      return level;
+    };
     // Migration 004 remains immutable because it was already published. Attendance Manager is
     // the sole runtime owner for Study Years; Academic Management consumes its versioned read model.
     context.routes.register({
@@ -686,6 +699,7 @@ module.exports = {
         if (!body.teacherId) throw new Error('teacherId is required');
         if (!['AVAILABLE', 'UNAVAILABLE', 'HIDDEN'].includes(body.registrationStatus)) throw new Error('registrationStatus must be one of AVAILABLE, UNAVAILABLE, HIDDEN');
         if (body.price !== undefined && body.price !== null && (typeof body.price !== 'number' || body.price < 0)) throw new Error('price must be a non-negative number');
+        classLevel(body.level);
         await requireRole(body.teacherId, 'TEACHER', 'Only users with TEACHER role can be assigned as teacher');
         if (body.classAdminId) {
           await requireRole(body.classAdminId, 'CLASS_ADMIN', 'Only users with CLASS_ADMIN role can be assigned as class admin');
@@ -694,7 +708,7 @@ module.exports = {
         const id = crypto.randomUUID();
         const created = await context.database.transaction(async (tx) => {
           await tx.execute(
-            `INSERT INTO ${CLASS} ("id", "name", "subject", "teacherId", "classAdminId", "studyYearId", "schedule", "registrationStatus", "thumbnail", "description", "price", "showPrice", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+            `INSERT INTO ${CLASS} ("id", "name", "subject", "teacherId", "classAdminId", "studyYearId", "schedule", "registrationStatus", "thumbnail", "description", "price", "showPrice", "level", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
             [
               id,
               body.name,
@@ -708,10 +722,11 @@ module.exports = {
               body.description || null,
               body.price ?? null,
               body.showPrice === true,
+              classLevel(body.level),
             ],
           );
           const row = await tx.query(
-            `SELECT c."id", c."name", c."subject", c."teacherId", c."classAdminId", c."studyYearId", c."schedule", c."registrationStatus", c."thumbnail", c."description", c."price", c."showPrice", c."createdAt", c."updatedAt" FROM ${CLASS} c WHERE c."id" = $1`,
+            `SELECT c."id", c."name", c."subject", c."teacherId", c."classAdminId", c."studyYearId", c."schedule", c."registrationStatus", c."thumbnail", c."description", c."price", c."showPrice", c."level", c."createdAt", c."updatedAt" FROM ${CLASS} c WHERE c."id" = $1`,
             [id],
           ).then((rows) => rows[0]);
           tx.publish({
@@ -758,6 +773,7 @@ module.exports = {
         add('description', body.description);
         add('price', body.price ?? null);
         add('showPrice', body.showPrice === undefined ? undefined : body.showPrice === true);
+        add('level', body.level === undefined ? undefined : classLevel(body.level));
         if (sets.length === 0) throw new Error('No valid class updates provided');
         sets.push(`"updatedAt" = CURRENT_TIMESTAMP`);
         params.push(id);
@@ -767,7 +783,7 @@ module.exports = {
             params,
           );
           const row = await tx.query(
-            `SELECT c."id", c."name", c."subject", c."teacherId", c."classAdminId", c."studyYearId", c."schedule", c."registrationStatus", c."thumbnail", c."description", c."price", c."showPrice", c."createdAt", c."updatedAt" FROM ${CLASS} c WHERE c."id" = $1`,
+            `SELECT c."id", c."name", c."subject", c."teacherId", c."classAdminId", c."studyYearId", c."schedule", c."registrationStatus", c."thumbnail", c."description", c."price", c."showPrice", c."level", c."createdAt", c."updatedAt" FROM ${CLASS} c WHERE c."id" = $1`,
             [id],
           ).then((rows) => rows[0]);
           tx.publish({
@@ -809,7 +825,7 @@ module.exports = {
         const id = request?.params?.id;
         await requireClassStaffScope(request, id);
         const rows = await context.database.query(
-          `SELECT c."id", c."name", c."subject", c."teacherId", c."classAdminId", c."studyYearId", c."schedule", c."registrationStatus", c."thumbnail", c."description", c."price", c."showPrice", c."createdAt", c."updatedAt" FROM ${CLASS} c WHERE c."id" = $1 LIMIT 1`,
+          `SELECT c."id", c."name", c."subject", c."teacherId", c."classAdminId", c."studyYearId", c."schedule", c."registrationStatus", c."thumbnail", c."description", c."price", c."showPrice", c."level", c."createdAt", c."updatedAt" FROM ${CLASS} c WHERE c."id" = $1 LIMIT 1`,
           [id],
         );
         if (!rows.length) throw new Error('Class not found');
@@ -840,7 +856,7 @@ module.exports = {
         }
         const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
         const rows = await context.database.query(
-          `SELECT c."id", c."name", c."subject", c."teacherId", c."classAdminId", c."studyYearId", c."schedule", c."registrationStatus", c."thumbnail", c."description", c."price", c."showPrice", c."createdAt", c."updatedAt", COALESCE((SELECT COUNT(*)::int FROM ${ENROLLMENT} e WHERE e."classId" = c."id" AND e."validTo" IS NULL), 0) AS "studentCount" FROM ${CLASS} c ${where} ORDER BY c."name" ASC`,
+          `SELECT c."id", c."name", c."subject", c."teacherId", c."classAdminId", c."studyYearId", c."schedule", c."registrationStatus", c."thumbnail", c."description", c."price", c."showPrice", c."level", c."createdAt", c."updatedAt", COALESCE((SELECT COUNT(*)::int FROM ${ENROLLMENT} e WHERE e."classId" = c."id" AND e."validTo" IS NULL), 0) AS "studentCount" FROM ${CLASS} c ${where} ORDER BY c."name" ASC`,
           params,
         );
         return decorateClassRows(rows);
@@ -852,7 +868,7 @@ module.exports = {
         const classId = request?.params?.id;
         await requireClassStaffScope(request, classId);
         const rows = await context.database.query(
-          `SELECT s."id", s."userId", s."studentNumber", s."nameKh", s."qrCode", s."photo", s."sex", s."dateOfBirth", s."address", s."generation", s."customFieldValues", s."guardianUserId" AS "parentId" FROM ${STUDENT_PROFILE} s JOIN ${ENROLLMENT} e ON e."studentId" = s."id" AND e."validTo" IS NULL WHERE e."classId" = $1 ORDER BY s."studentNumber" ASC`,
+          `SELECT s."id", s."userId", s."studentNumber", s."nameKh", s."qrCode", s."photo", s."sex", s."dateOfBirth", s."address", s."generation", ${studentDetails.detailColumns('s')}, s."customFieldValues", s."guardianUserId" AS "parentId" FROM ${STUDENT_PROFILE} s JOIN ${ENROLLMENT} e ON e."studentId" = s."id" AND e."validTo" IS NULL WHERE e."classId" = $1 ORDER BY s."studentNumber" ASC`,
           [classId],
         );
         return decorateStudentRows(rows);
@@ -871,7 +887,9 @@ module.exports = {
         const classes = await context.database.query(`SELECT "id" FROM ${CLASS} WHERE "id" = $1 LIMIT 1`, [classId]);
         if (!classes.length) throw new Error('Class not found');
         const header = parseCsvLine(lines[0]).map((value) => value.trim().toLowerCase());
-        const find = (...names) => header.findIndex((value) => names.some((name) => value === name || (name.endsWith('*') && value.includes(name.slice(0, -1)))));
+        const find = (...names) => header.findIndex((value) => !studentDetails.isDetailHeader(value) && names.some((name) => value === name || (name.endsWith('*') && value.includes(name.slice(0, -1)))));
+        const detailIndexes = studentDetails.csvIndexes(header);
+        const detailKeys = studentDetails.KEYS.filter((key) => detailIndexes[key] >= 0);
         const indexes = {
           id: find('id'), name: find('name'), sex: find('sex'), email: find('mail*'), phone: find('phone*', 'contact*'),
           photo: find('photo'), password: find('password'), dateOfBirth: find('birth*', 'dob', 'date of birth'),
@@ -894,6 +912,9 @@ module.exports = {
             if (usedNumbers.has(studentNumber)) throw new Error('Duplicate student ID in CSV');
             usedNumbers.add(studentNumber);
             if (email && !isValidEmail(email)) throw new Error('Invalid email address');
+            // the details in this row (only the columns the file has); the address is written from its parts when given
+            const details = studentDetails.readDetails(Object.fromEntries(detailKeys.map((key) => [key, value(detailIndexes[key])])), true);
+            const address = studentDetails.hasAddress(details) ? studentDetails.composeAddress(details) : (value(indexes.address) || null);
             const dateOfBirth = value(indexes.dateOfBirth);
             if (dateOfBirth) {
               const parsedBirthDate = new Date(`${dateOfBirth}T00:00:00.000Z`);
@@ -914,8 +935,8 @@ module.exports = {
               });
               await context.database.transaction(async (tx) => {
                 await tx.execute(
-                  `UPDATE ${STUDENT_PROFILE} SET "nameKh" = $2, "photo" = $3, "sex" = $4, "dateOfBirth" = $5::date, "address" = $6, "generation" = $7, "updatedAt" = CURRENT_TIMESTAMP WHERE "id" = $1`,
-                  [existing.id, value(indexes.nameKh) || null, studentPhoto(value(indexes.photo), false), normalizedCsvSex(value(indexes.sex)), dateOfBirth || null, value(indexes.address) || null, value(indexes.generation) || null],
+                  `UPDATE ${STUDENT_PROFILE} SET "nameKh" = $2, "photo" = $3, "sex" = $4, "dateOfBirth" = $5::date, "address" = $6, "generation" = $7${detailKeys.map((key, i) => `, "${key}" = $${8 + i}`).join('')}, "updatedAt" = CURRENT_TIMESTAMP WHERE "id" = $1`,
+                  [existing.id, value(indexes.nameKh) || null, studentPhoto(value(indexes.photo), false), normalizedCsvSex(value(indexes.sex)), dateOfBirth || null, address, value(indexes.generation) || null, ...detailKeys.map((key) => details[key])],
                 );
                 if (existing.classId !== classId) {
                   await tx.execute(`DELETE FROM ${ENROLLMENT} WHERE "studentId" = $1 AND "validTo" IS NULL AND "validFrom" = CURRENT_DATE`, [existing.id]);
@@ -929,7 +950,9 @@ module.exports = {
                 });
               });
             } else {
-              const password = value(indexes.password) || `student${studentNumber}`;
+              // a row without a password gets a made one, listed in the import results for the staff to hand out
+              const password = value(indexes.password) || generatePassword();
+              if (!value(indexes.password)) result.password = password;
               if (password.length < 6 || password.length > 200) throw new Error('Password must contain 6-200 characters');
               const passwordHash = await context.crypto.hashBcrypt(password, 12);
               account = await context.accounts.createStudent({
@@ -939,13 +962,13 @@ module.exports = {
               const today = new Date().toISOString().slice(0, 10);
               await context.database.transaction(async (tx) => {
                 await tx.execute(
-                  `INSERT INTO ${STUDENT_PROFILE} ("id", "userId", "studentNumber", "nameKh", "qrCode", "photo", "sex", "dateOfBirth", "address", "generation", "source", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'plugin', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT ("userId") DO NOTHING`,
-                  [profileId, account.id, studentNumber, value(indexes.nameKh) || null, newCardCode('stu'), studentPhoto(value(indexes.photo), false), normalizedCsvSex(value(indexes.sex)), dateOfBirth || null, value(indexes.address) || null, value(indexes.generation) || null],
+                  `INSERT INTO ${STUDENT_PROFILE} ("id", "userId", "studentNumber", "nameKh", "qrCode", "photo", "sex", "dateOfBirth", "address", "generation"${detailKeys.map((key) => `, "${key}"`).join('')}, "source", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6, $7, $8::date, $9, $10${detailKeys.map((key, i) => `, $${11 + i}`).join('')}, 'plugin', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT ("userId") DO NOTHING`,
+                  [profileId, account.id, studentNumber, value(indexes.nameKh) || null, newCardCode('stu'), studentPhoto(value(indexes.photo), false), normalizedCsvSex(value(indexes.sex)), dateOfBirth || null, address, value(indexes.generation) || null, ...detailKeys.map((key) => details[key])],
                 );
                 const profiles = await tx.query(`SELECT "id" FROM ${STUDENT_PROFILE} WHERE "userId" = $1 LIMIT 1`, [account.id]);
                 if (!profiles.length) throw new Error('Student profile materialization failed');
                 await tx.execute(
-                  `INSERT INTO ${ENROLLMENT} ("id", "studentId", "classId", "validFrom", "source", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, 'plugin', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT ("studentId", "classId", "validFrom") DO NOTHING`,
+                  `INSERT INTO ${ENROLLMENT} ("id", "studentId", "classId", "validFrom", "source", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4::date, 'plugin', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT ("studentId", "classId", "validFrom") DO NOTHING`,
                   [crypto.randomUUID(), profiles[0].id, classId, today],
                 );
                 await tx.publish({
@@ -991,7 +1014,7 @@ module.exports = {
         if (!classIds.length) return result;
         for (const classId of classIds) await requireClassStaffScope(request, classId);
         const rows = await context.database.query(
-          `SELECT s."id", s."userId", s."studentNumber", s."nameKh", s."qrCode", s."photo", s."sex", s."dateOfBirth", s."address", s."generation", s."customFieldValues", s."guardianUserId" AS "parentId", e."classId", c."name" AS "className" FROM ${STUDENT_PROFILE} s JOIN ${ENROLLMENT} e ON e."studentId" = s."id" AND e."validTo" IS NULL JOIN ${CLASS} c ON c."id" = e."classId" WHERE e."classId" = ANY($1::text[]) ORDER BY e."classId" ASC, s."studentNumber" ASC`,
+          `SELECT s."id", s."userId", s."studentNumber", s."nameKh", s."qrCode", s."photo", s."sex", s."dateOfBirth", s."address", s."generation", ${studentDetails.detailColumns('s')}, s."customFieldValues", s."guardianUserId" AS "parentId", e."classId", c."name" AS "className" FROM ${STUDENT_PROFILE} s JOIN ${ENROLLMENT} e ON e."studentId" = s."id" AND e."validTo" IS NULL JOIN ${CLASS} c ON c."id" = e."classId" WHERE e."classId" = ANY($1::text[]) ORDER BY e."classId" ASC, s."studentNumber" ASC`,
           [classIds],
         );
         for (const row of await decorateStudentRows(rows)) result[row.classId].push({ ...row, className: row.className || null });
@@ -1017,7 +1040,7 @@ module.exports = {
       handler: async (request) => {
         await requireClassStaffScope(request, request?.params?.id);
         const rows = await context.database.query(
-          `SELECT s."id", s."userId", s."studentNumber", s."nameKh", s."qrCode", s."photo", s."sex", s."dateOfBirth", s."address", s."generation", s."customFieldValues", s."guardianUserId" AS "parentId", c."name" AS "className" FROM ${STUDENT_PROFILE} s JOIN ${ENROLLMENT} e ON e."studentId" = s."id" AND e."validTo" IS NULL LEFT JOIN ${CLASS} c ON c."id" = e."classId" WHERE s."id" = $1 AND e."classId" = $2 LIMIT 1`,
+          `SELECT s."id", s."userId", s."studentNumber", s."nameKh", s."qrCode", s."photo", s."sex", s."dateOfBirth", s."address", s."generation", ${studentDetails.detailColumns('s')}, s."customFieldValues", s."guardianUserId" AS "parentId", c."name" AS "className" FROM ${STUDENT_PROFILE} s JOIN ${ENROLLMENT} e ON e."studentId" = s."id" AND e."validTo" IS NULL LEFT JOIN ${CLASS} c ON c."id" = e."classId" WHERE s."id" = $1 AND e."classId" = $2 LIMIT 1`,
           [request?.params?.studentId, request?.params?.id],
         );
         if (!rows.length) throw new Error('Student not found in this class');
@@ -1027,6 +1050,7 @@ module.exports = {
           nameKh: row.nameKh || '', email: row.email, phone: row.phone || '', qrCode: row.qrCode,
           photo: row.photo || '', sex: row.sex || '', dateOfBirth: row.dateOfBirth,
           address: row.address || '', generation: row.generation || '',
+          ...studentDetails.detailsOut(row),
           customFieldValues: row.customFieldValues || {}, parentId: row.parentId || '',
           className: row.className || null,
         };
@@ -1328,24 +1352,26 @@ module.exports = {
         };
       },
     });
-    context.routes.register({
-      method: 'POST', path: 'classes/:id/students/create', permission: 'wattanam.academic-management.manage',
-      handler: async (request) => {
-        await requireOfficeStaff(request);
+    // A new student in a class. The front office (any class) or, with "Add, edit and remove the students of my class", the class's own staff.
+    const createClassStudent = async (request) => {
         const classId = String(request?.params?.id || '').trim();
         const body = request?.body || {};
         const name = String(body.name || '').trim();
         const email = String(body.email || '').trim().toLowerCase();
         const phone = String(body.phone || '').trim();
-        const password = String(body.password || '');
+        // No password asked when a student is added: one is made and returned once, for the staff to hand out.
+        const typedPassword = String(body.password || '');
+        const password = typedPassword || generatePassword();
         const commandKey = String(body.commandKey || '').trim();
         const studentNumber = String(body.studentNumber || '').trim();
         if (!classId) throw new Error('classId is required');
         if (!name || name.length > 160) throw new Error('name is required');
         if (email && !isValidEmail(email)) throw new Error('email is invalid');
-        if (password.length < 6 || password.length > 200) throw new Error('password must contain 6-200 characters');
+        if (typedPassword && (typedPassword.length < 6 || typedPassword.length > 200)) throw new Error('password must contain 6-200 characters');
         if (!/^[a-zA-Z0-9][a-zA-Z0-9:._-]{0,199}$/.test(commandKey)) throw new Error('commandKey is required');
         if (studentNumber.length > 100) throw new Error('studentNumber exceeds 100 characters');
+        const details = studentDetails.readDetails(body, false);
+        const address = studentDetails.hasAddress(details) ? studentDetails.composeAddress(details) : (String(body.address || '').trim() || null);
         const classRows = await context.database.query(`SELECT "id" FROM ${CLASS} WHERE "id"=$1 LIMIT 1`, [classId]);
         if (!classRows.length) throw new Error('Class not found');
         if (studentNumber) {
@@ -1356,7 +1382,7 @@ module.exports = {
         const profileId = crypto.randomUUID();
         const resolvedNumber = studentNumber || String((await context.database.query(`SELECT COUNT(*)::int AS "count" FROM ${ENROLLMENT} WHERE "classId"=$1 AND "validTo" IS NULL`, [classId]))[0].count + 1).padStart(4, '0');
         const materializedId = await context.database.transaction(async (tx) => {
-          await tx.execute(`INSERT INTO ${STUDENT_PROFILE} ("id","userId","studentNumber","nameKh","qrCode","photo","sex","dateOfBirth","address","generation","source") VALUES ($1,$2,$3,$4,$5,$6,$7,$8::date,$9,$10,'plugin') ON CONFLICT ("userId") DO NOTHING`, [profileId, account.id, resolvedNumber, String(body.nameKh || '').trim() || null, newCardCode('stu'), studentPhoto(body.photo, true), normalizedCsvSex(String(body.sex || '')), body.dateOfBirth || null, String(body.address || '').trim() || null, String(body.generation || '').trim() || null]);
+          await tx.execute(`INSERT INTO ${STUDENT_PROFILE} ("id","userId","studentNumber","nameKh","qrCode","photo","sex","dateOfBirth","address","generation",${studentDetails.detailColumns()},"source") VALUES ($1,$2,$3,$4,$5,$6,$7,$8::date,$9,$10,${studentDetails.KEYS.map((key, i) => '$' + (11 + i)).join(',')},'plugin') ON CONFLICT ("userId") DO NOTHING`, [profileId, account.id, resolvedNumber, String(body.nameKh || '').trim() || null, newCardCode('stu'), studentPhoto(body.photo, true), normalizedCsvSex(String(body.sex || '')), body.dateOfBirth || null, address, String(body.generation || '').trim() || null, ...studentDetails.KEYS.map((key) => details[key])]);
           const profile = (await tx.query(`SELECT "id" FROM ${STUDENT_PROFILE} WHERE "userId"=$1 LIMIT 1`, [account.id]))[0];
           if (!profile) throw new Error('Student profile materialization failed');
           await tx.execute(`INSERT INTO ${ENROLLMENT} ("id","studentId","classId","validFrom","source") VALUES ($1,$2,$3,CURRENT_DATE,'plugin') ON CONFLICT ("studentId","classId","validFrom") DO NOTHING`, [crypto.randomUUID(), profile.id, classId]);
@@ -1364,9 +1390,16 @@ module.exports = {
           return profile.id;
         });
         context.events.publish('academic.student.added-to-class.v1', { studentId: materializedId, classId, principal: request?.principal });
-        return { id: materializedId, userId: account.id, studentNumber: resolvedNumber, name: account.name, email: account.email, phone: account.phone, classId };
-      },
-    });
+        return { id: materializedId, userId: account.id, studentNumber: resolvedNumber, name: account.name, email: account.email, phone: account.phone, classId, ...(typedPassword ? {} : { password }) };
+    };
+    context.routes.register({ method: 'POST', path: 'classes/:id/students/create', permission: 'wattanam.academic-management.manage', handler: async (request) => {
+      await requireOfficeStaff(request);
+      return createClassStudent(request);
+    } });
+    context.routes.register({ method: 'POST', path: 'my/classes/:id/students/create', permission: 'wattanam.academic-management.class.students', handler: async (request) => {
+      await requireClassStaffScope(request, request?.params?.id);
+      return createClassStudent(request);
+    } });
     context.routes.register({
       method: 'POST', path: 'classes/:id/students', permission: 'wattanam.academic-management.manage',
       handler: async (request) => {
@@ -1444,9 +1477,8 @@ module.exports = {
         return added;
       },
     });
-    context.routes.register({
-      method: 'PATCH', path: 'classes/:classId/students/:studentId', permission: 'wattanam.academic-management.manage',
-      handler: async (request) => {
+    // A student's details, by the staff of their class (manage), or with "Add, edit and remove the students of my class".
+    const updateClassStudent = async (request) => {
         const studentId = request?.params?.studentId;
         await requireClassStaffScope(request, request?.params?.classId);
         const body = request?.body || {};
@@ -1477,7 +1509,15 @@ module.exports = {
         if (body.dateOfBirth !== undefined) { studentSets.push(`"dateOfBirth" = $${studentParams.length + 1}`); studentParams.push(body.dateOfBirth ? new Date(body.dateOfBirth) : null); }
         if (body.address !== undefined) { studentSets.push(`"address" = $${studentParams.length + 1}`); studentParams.push(body.address); }
         if (body.generation !== undefined) { studentSets.push(`"generation" = $${studentParams.length + 1}`); studentParams.push(body.generation); }
-        if (body.studentNumber !== undefined) { studentSets.push(`"studentNumber" = $${studentParams.length + 1}`); studentParams.push(body.studentNumber.trim() || null); }
+        const details = studentDetails.readDetails(body, true);
+        Object.keys(details).forEach((key) => { studentSets.push(`"${key}" = $${studentParams.length + 1}`); studentParams.push(details[key]); });
+        const addressChanged = studentDetails.ADDRESS.some((key) => key in details);
+        if (body.studentNumber !== undefined) {
+          const studentNumber = String(body.studentNumber || '').trim();
+          if (studentNumber.length > 100) throw new Error('studentNumber exceeds 100 characters');
+          if (studentNumber && (await context.database.query(`SELECT "id" FROM ${STUDENT_PROFILE} WHERE "studentNumber"=$1 AND "id"<>$2 LIMIT 1`, [studentNumber, student.id])).length) throw new Error('Student number is already used');
+          studentSets.push(`"studentNumber" = $${studentParams.length + 1}`); studentParams.push(studentNumber || null);
+        }
         if (body.customFieldValues !== undefined) { studentSets.push(`"customFieldValues" = $${studentParams.length + 1}`); studentParams.push(JSON.stringify(body.customFieldValues)); }
         if (body.parentId !== undefined) {
           if (body.parentId) {
@@ -1492,8 +1532,12 @@ module.exports = {
             studentParams.push(student.id);
             await tx.execute(`UPDATE ${STUDENT_PROFILE} SET ${studentSets.join(', ')} WHERE "id" = $${studentParams.length}`, studentParams);
           }
+          if (addressChanged) {
+            const parts = (await tx.query(`SELECT ${studentDetails.detailColumns()} FROM ${STUDENT_PROFILE} WHERE "id" = $1`, [student.id]))[0] || {};
+            if (studentDetails.hasAddress(parts)) await tx.execute(`UPDATE ${STUDENT_PROFILE} SET "address" = $2 WHERE "id" = $1`, [student.id, studentDetails.composeAddress(parts)]);
+          }
           const rows = await tx.query(
-            `SELECT s."id", s."userId", s."studentNumber", s."nameKh", s."qrCode", s."photo", s."sex", s."dateOfBirth", s."address", s."generation", s."customFieldValues", s."guardianUserId" AS "parentId", c."name" AS "className" FROM ${STUDENT_PROFILE} s JOIN ${ENROLLMENT} e ON e."studentId" = s."id" AND e."validTo" IS NULL LEFT JOIN ${CLASS} c ON c."id" = e."classId" WHERE s."id" = $1 LIMIT 1`,
+            `SELECT s."id", s."userId", s."studentNumber", s."nameKh", s."qrCode", s."photo", s."sex", s."dateOfBirth", s."address", s."generation", ${studentDetails.detailColumns('s')}, s."customFieldValues", s."guardianUserId" AS "parentId", c."name" AS "className" FROM ${STUDENT_PROFILE} s JOIN ${ENROLLMENT} e ON e."studentId" = s."id" AND e."validTo" IS NULL LEFT JOIN ${CLASS} c ON c."id" = e."classId" WHERE s."id" = $1 LIMIT 1`,
             [studentId],
           );
           const row = rows[0];
@@ -1511,6 +1555,7 @@ module.exports = {
             dateOfBirth: row.dateOfBirth,
             address: row.address || '',
             generation: row.generation || '',
+            ...studentDetails.detailsOut(row),
             customFieldValues: row.customFieldValues || {},
             parentId: row.parentId,
             className: row.className || null,
@@ -1526,11 +1571,15 @@ module.exports = {
         });
         context.events.publish('academic.student.updated.v1', { student: updated, principal: request?.principal });
         return updated;
-      },
-    });
-    context.routes.register({
-      method: 'DELETE', path: 'classes/:id/students/:studentId', permission: 'wattanam.academic-management.manage',
-      handler: async (request) => {
+    };
+    context.routes.register({ method: 'PATCH', path: 'classes/:classId/students/:studentId', permission: 'wattanam.academic-management.manage', handler: async (request) => {
+      return updateClassStudent(request);
+    } });
+    context.routes.register({ method: 'PATCH', path: 'my/classes/:classId/students/:studentId', permission: 'wattanam.academic-management.class.students', handler: async (request) => {
+      return updateClassStudent(request);
+    } });
+    // Removing a student from a class (their enrolment ends; the student is kept), by the class's staff.
+    const removeClassStudent = async (request) => {
         if (request?.principal?.role === 'RECEPTIONIST') throw new Error('Only an administrator or the class staff can remove a student from a class');
         const studentId = request?.params?.studentId;
         await requireClassStaffScope(request, request?.params?.id);
@@ -1549,8 +1598,13 @@ module.exports = {
         });
         context.events.publish('academic.student.removed-from-class.v1', { studentId, classId: request?.params?.id, principal: request?.principal });
         return { success: true };
-      },
-    });
+    };
+    context.routes.register({ method: 'DELETE', path: 'classes/:id/students/:studentId', permission: 'wattanam.academic-management.manage', handler: async (request) => {
+      return removeClassStudent(request);
+    } });
+    context.routes.register({ method: 'DELETE', path: 'my/classes/:id/students/:studentId', permission: 'wattanam.academic-management.class.students', handler: async (request) => {
+      return removeClassStudent(request);
+    } });
     context.routes.register({
       method: 'POST', path: 'classes/cleanup-orphaned-students', permission: 'wattanam.academic-management.manage',
       handler: async (request) => {
@@ -2307,6 +2361,7 @@ module.exports = {
     registerDashboard(context, { decorateStudentRows, decorateOfficerRows });
     // Student permissions: each session is saved through the attendance runtime's own mark route.
     registerMyProfile(context);
+    registerMyClass(context, { requireClassStaffScope, decorateStudentRows });
     registerStudentPermissions(context, {
       saveRecord: (request) => attendanceRoutes.get('POST records').handler(request),
       requireClassStaffScope, decorateStudentRows,

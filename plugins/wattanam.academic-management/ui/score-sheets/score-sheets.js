@@ -421,11 +421,11 @@
     if (on) { var first = document.querySelector('.doc:not([hidden]) .title-prefix'); if (first) first.focus(); }
   }
   function saveHeader() {
-    ui.api.put('transcripts/score-sheet-print-template', state.form).then(function (form) {
+    ui.api.put(ENTRY ? 'transcripts/entry/print-template' : 'transcripts/score-sheet-print-template', state.form).then(function (form) {
       state.form = Object.assign(copy(DEFAULT_FORM), form || {});
       setHeaderEditing(false); saved('✓ Header and footer saved');
     }).catch(function (error) {
-      saved(error.status === 403 ? 'Only administrators can save the header; your changes show until you leave this page.' : error.message || 'The header was not saved', true);
+      saved(error.status === 403 ? (ENTRY ? 'Saving the header needs "Edit the score sheets\' header & footer" (ask your administrator on Roles & access)' : 'Only administrators can save the header') + '; your changes show until you leave this page.' : error.message || 'The header was not saved', true);
     });
   }
   function cancelHeader() { if (state.formBeforeEdit) state.form = state.formBeforeEdit; setHeaderEditing(false); }
@@ -849,7 +849,7 @@
     "៤- នៅដំណាច់ឆ្នាំសិក្សា នាយកវិទ្យាល័យត្រូវចុះមូលវិចារ និងទទួលខុសត្រូវលើការវាយតំលៃសិស្សគ្រប់ផ្នែក ។ នៅដើមភូមិសិក្សានីមួយៗ ត្រូវមានចុះលទ្ធផលនៃការប្រឡងរបស់សិស្ស សម័យប្រឡង - មណ្ឌល លេខបន្ទប់ - លេខតុ និង និទ្ទេសផង ។",
     "៥- នៅក្នុងសៀវភៅ សិក្ខាគារិក មិនត្រូវអោយមានការកោសលុប ឬសរសេរត្រួតគ្នាឡើយ ។ បើសិនជាមានក្នុងករណីចាំបាច់ នាយកវិទ្យាល័យត្រូវកែដោយទឹកខ្មៅក្រហម និងចុះហត្ថលេខាទទួលស្គាល់ផង ។ នៅពេលឈប់រៀន សិស្សអាចសុំសៀវភៅសិក្ខាគារិកទៅទុកផ្ទាល់ខ្លួនបាន ។"
   ];
-  // The school's registration fields, found by their labels (place of birth, father, mother).
+  // The student's details first (place of birth, parents); else the school's registration fields, by their labels.
   function customValue(student, test) {
     var fields = (state.data && state.data.customFields) || [], values = student.customFieldValues || {};
     return fields.filter(function (f) { return test(String(f.label || '') + ' ' + String(f.key || '')); })
@@ -858,11 +858,11 @@
   }
   function parentOf(student, who) {
     var person = who === 'father' ? /ឪពុក|father/i : /ម្តាយ|ម្ដាយ|mother/i, job = /មុខរបរ|occupation|job|work/i;
-    var name = customValue(student, function (s) { return person.test(s) && !job.test(s) && !/ទូរស័ព្ទ|phone/i.test(s); });
-    var work = customValue(student, function (s) { return person.test(s) && job.test(s); });
+    var name = student[who + 'Name'] || customValue(student, function (s) { return person.test(s) && !job.test(s) && !/ទូរស័ព្ទ|phone/i.test(s); });
+    var work = student[who + 'Job'] || customValue(student, function (s) { return person.test(s) && job.test(s); });
     return [name, work ? 'មុខរបរ ' + work : ''].filter(Boolean).join('   ');
   }
-  function birthPlace(student) { return customValue(student, function (s) { return /ទីកន្លែងកំណើត|place\s*of\s*birth|birth\s*place|birthplace/i.test(s); }); }
+  function birthPlace(student) { return student.birthPlace || customValue(student, function (s) { return /ទីកន្លែងកំណើត|place\s*of\s*birth|birth\s*place|birthplace/i.test(s); }); }
   function dotted(label, value) { return el('p', { class: 'rb-field' }, [el('span', { class: 'k', text: label }), el('span', { class: 'v', text: value || '' })]); }
   function mottoBlock() {
     var form = state.form, block = el('div', { class: 'rb-motto' });
@@ -1347,10 +1347,16 @@
     var sheet = sheetById(state.editingSheet);
     $('sheet-form-title').textContent = sheet ? 'Edit ' + sheet.name : 'New score sheet';
     $('delete-sheet').hidden = !sheet; $('sheet-extra').hidden = !sheet;
+    $('f-kind-wrap').hidden = Boolean(sheet); // the type is chosen when the sheet is created
     var checks = $('f-classes'); checks.textContent = '';
+    // primary, secondary, high school and short-course classes (and classes without a level); university classes use university sheets
+    var LEVEL_NAMES = { PRIMARY: 'Primary', SECONDARY: 'Secondary', HIGH_SCHOOL: 'High school', UNIVERSITY: 'University', SHORT_COURSE: 'Short course' };
     state.classes.forEach(function (item) {
-      var box = el('input', { type: 'checkbox', value: item.id }); box.checked = Boolean(sheet && sheet.classIds.indexOf(item.id) >= 0);
-      checks.appendChild(el('label', {}, [box, item.name || item.id]));
+      var linked = Boolean(sheet && sheet.classIds.indexOf(item.id) >= 0);
+      var university = !sheet && ((document.querySelector('input[name="f-kind"]:checked') || {}).value === 'UNIVERSITY');
+      if (!linked && (university ? item.level === 'PRIMARY' || item.level === 'SECONDARY' || item.level === 'HIGH_SCHOOL' : item.level === 'UNIVERSITY')) return;
+      var box = el('input', { type: 'checkbox', value: item.id }); box.checked = linked;
+      checks.appendChild(el('label', {}, [box, (item.name || item.id) + (LEVEL_NAMES[item.level] ? ' · ' + LEVEL_NAMES[item.level] : '')]));
     });
     if (!state.classes.length) checks.appendChild(el('span', { class: 'muted', text: 'No classes yet.' }));
     if (!sheet) return;
@@ -1397,6 +1403,14 @@
     event.preventDefault();
     var classIds = Array.prototype.map.call(document.querySelectorAll('#f-classes input:checked'), function (box) { return box.value; });
     var body = { name: $('f-name').value, degree: $('f-degree').value, classIds: classIds };
+    // A university sheet is set up and filled on University Score Sheets.
+    var kind = (document.querySelector('input[name="f-kind"]:checked') || {}).value || 'SCHOOL';
+    if (!state.editingSheet && kind === 'UNIVERSITY') {
+      body.kind = 'UNIVERSITY';
+      ui.api.post('transcripts/sheets', body).then(function (sheet) { ui.navigate('university-sheets', { sheetId: sheet.id, setup: '1' }); })
+        .catch(function (error) { setupError(error, 'The score sheet could not be saved.'); });
+      return;
+    }
     var request = state.editingSheet ? ui.api.put('transcripts/sheets/' + encodeURIComponent(state.editingSheet), body) : ui.api.post('transcripts/sheets', body);
     request.then(function (sheet) {
       saved('✓ Score sheet saved'); state.editingSheet = sheet.id; if (!state.sheetId) state.sheetId = sheet.id;
@@ -1631,8 +1645,11 @@
   $('add-tab').addEventListener('click', function () { toggleTabPanel(); });
   $('tab-form').addEventListener('submit', addTab);
   $('open-setup').addEventListener('click', function () { saveScores().then(openSetup); });
+  $('tab-university').addEventListener('click', function () { saveScores().then(function () { ui.navigate(ENTRY ? 'university-entry' : 'university-sheets', ENTRY ? { entry: '1' } : {}); }); });
   $('close-setup').addEventListener('click', function () { $('setup').hidden = true; });
   $('new-sheet').addEventListener('click', function () { editSheet(null); $('f-name').focus(); });
+  // a new sheet's type decides which classes it can take
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="f-kind"]'), function (radio) { radio.addEventListener('change', function () { renderSetup(); }); });
   $('sheet-form').addEventListener('submit', saveSheet);
   $('add-subject').addEventListener('click', addSubject);
   $('delete-sheet').addEventListener('click', function () {
@@ -1720,6 +1737,10 @@
   ui.connect().then(function (context) {
     var query = context.query || {};
     ENTRY = query.entry === '1';
+    // Enter Scores: "Edit the score sheets' header & footer" brings back the menu with that one item
+    var granted = Array.isArray(context.permissions) ? context.permissions : null;
+    document.body.classList.toggle('can-edit-header', ENTRY && (!granted || granted.indexOf('wattanam.academic-management.transcripts.print') >= 0));
+    if (ENTRY) $('kind-tabs').hidden = true;
     document.body.classList.toggle('entry-mode', ENTRY);
     return Promise.all([loadSheets(), ui.api.get(ENTRY ? 'transcripts/entry/print-template' : 'transcripts/score-sheet-print-template').catch(function () { return {}; })]).then(function (results) {
       state.form = Object.assign(copy(DEFAULT_FORM), results[1] || {});
@@ -1734,6 +1755,15 @@
       pickDefaults();
       if (query.classId && activeSheet() && activeSheet().classIds.indexOf(query.classId) >= 0) state.classId = query.classId;
       applyPage();
+      // University score sheets live on their own page: link to it, and in Enter Scores go straight there
+      // when the caller's classes only use university sheets.
+      ui.api.get(ENTRY ? 'transcripts/entry/sheets' : 'transcripts/sheets', { kind: 'UNIVERSITY' }).then(function (result) {
+        var university = rows(ENTRY ? result && result.sheets : result);
+        // a teacher sees the University tab only when one of their classes uses a university sheet
+        if (ENTRY) $('kind-tabs').hidden = !university.length;
+        var classInUniversity = query.classId && university.some(function (s) { return s.classIds.indexOf(query.classId) >= 0; }) && !state.sheets.some(function (s) { return s.classIds.indexOf(query.classId) >= 0; });
+        if (ENTRY && !query.stay && university.length && (classInUniversity || !state.sheets.length)) ui.navigate('university-entry', query.classId ? { entry: '1', classId: query.classId } : { entry: '1' });
+      }).catch(function () {});
       return load();
     });
   }).catch(function (error) { show('error', error.message || 'Score sheets could not be loaded.'); })

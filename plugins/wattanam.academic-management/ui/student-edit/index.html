@@ -48,9 +48,11 @@
           <label>Sex<select id="s-sex"><option value="">—</option><option value="MALE">Male</option><option value="FEMALE">Female</option><option value="OTHER">Other</option></select></label>
           <label>Date of Birth<input id="s-dateOfBirth" type="date"></label>
           <label>Photo<input id="s-photo" type="url" placeholder="https://… (or upload below)"></label>
-          <label>Address<input id="s-address" maxlength="500"></label>
           <label>Generation<input id="s-generation" maxlength="100"></label>
         </div>
+        <!-- place of birth, current address and parents (student-details.js) -->
+        <div id="s-details" class="details-groups"></div>
+        <p class="note" id="old-address" hidden></p>
         <p class="note">The password is not shown or changed here; reset it from User Management.</p>
         <div class="form-actions">
           <button type="button" id="cancel" class="secondary">Cancel</button>
@@ -61,6 +63,7 @@
   </main>
   <script src="../wattanam-plugin-ui.js"></script>
   <script src="../photo-upload.js"></script>
+  <script src="../student-details.js"></script>
   <script src="student-edit.js"></script>
 </body>
 </html>

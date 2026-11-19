@@ -221,7 +221,7 @@ test('Academic Management exposes the streamlined administration and attendance 
   assert.ok(permissions.some((permission) => permission.id === 'wattanam.academic-management.attendance.self.scan'));
   assert.deepEqual(
     navigation.map((item) => item.id),
-    ['attendance-dashboard', 'study-years', 'classes', 'student-id-cards', 'officers', 'staff-id-cards', 'score-sheets', 'score-entry', 'student-ranking', 'year-ranking', 'honor-roll', 'year-honor-roll', 'subject-ranking', 'year-report-cards', 'record-books', 'progress-books', 'student-permissions', 'attendance-records', 'attendance-corrections', 'attendance-alerts', 'attendance-reports', 'attendance-settings', 'student-attendance-scan', 'staff-attendance-scanner', 'staff-attendance-reports'],
+    ['attendance-dashboard', 'study-years', 'classes', 'student-id-cards', 'officers', 'staff-id-cards', 'score-sheets', 'score-entry', 'student-ranking', 'year-ranking', 'honor-roll', 'year-honor-roll', 'subject-ranking', 'year-report-cards', 'record-books', 'progress-books', 'my-class', 'student-permissions', 'attendance-records', 'attendance-corrections', 'attendance-alerts', 'attendance-reports', 'attendance-settings', 'student-attendance-scan', 'staff-attendance-scanner', 'staff-attendance-reports'],
   );
   assert.equal(navigation.find((item) => item.id === 'attendance-records')?.label, 'Student Attendance');
   assert.equal(navigation.find((item) => item.id === 'attendance-reports')?.label, 'Student Attendance Reports');
@@ -714,4 +714,69 @@ test('Academic Management declares its own messages so users see them, and keeps
   const { publicCode } = require(path.join(root, 'backend', 'public-errors.js'));
   assert.equal(publicCode('startedAt must be a valid ISO date (YYYY-MM-DD)'), 'X_MUST_BE_A_VALID_ISO_DATE_YYYY_MM_DD');
   assert.equal(publicCode('relation "plugin_x" does not exist'), null, 'database errors stay private');
+});
+
+// The school's university result sheet (Result.xlsx 2025-2026): ten subjects (five a semester, out of 100),
+// with the sheet's own totals, averages, grades, GPA and ranks.
+test('university results match the school\'s university result sheet', () => {
+  const U = require(path.join(root, 'ui', 'university-math.js'));
+  const rows = [
+    [[70.5, 54.5, 69, 79.5, 86, 0, 4, 0, 0, 29], 392.5, 39.25, 'F', 1.75, 28],
+    [[87, 72, 95, 76.5, 96, 90, 69.5, 89, 77, 84.5], 836.5, 83.65, 'B+', 3.75, 5],
+    [[78.5, 59, 84.5, 63.5, 91.5, 82, 52.5, 80, 51.5, 52.5], 695.5, 69.55, 'C+', 3, 17],
+    [[90, 68.5, 98, 78, 97, 99, 84.5, 95, 66.5, 90], 866.5, 86.65, 'A', 4, 2],
+    [[97, 64, 66, 76, 95.5, 98.5, 51, 56.5, 73.5, 90], 768, 76.8, 'B', 3.5, 12],
+    [[89, 74, 83.5, 73, 93, 88.5, 88, 86.5, 70, 84], 829.5, 82.95, 'B+', 3.75, 6],
+    [[52, 55, 72.5, 52, 57, 23, 2.5, 17, 3, 0], 334, 33.4, 'F', 1.75, 30],
+    [[59.5, 54.5, 74.5, 79, 90.5, 21, 2.5, 29, 2.5, 29], 442, 44.2, 'E', 2, 23],
+    [[63, 81.5, 93, 76.5, 91, 54, 52, 79, 67, 86], 743, 74.3, 'B', 3.5, 14],
+    [[59.5, 75.5, 82.5, 51, 92, 29, 7, 32.5, 4, 29], 462, 46.2, 'D', 2.25, 22],
+    [[54, 62, 83, 63, 92, 53.5, 54.5, 82.5, 51, 85.5], 681, 68.1, 'C+', 3, 18],
+    [[52, 51, 52, 51, 72, 24, 0, 17, 0.5, 0.5], 320, 32, 'F', 1.75, 31],
+    [[72, 79.5, 97, 66, 94, 64, 77, 82, 54, 90], 775.5, 77.55, 'B', 3.5, 11],
+    [[53, 54, 64, 52, 90, 28.5, 2.5, 23, 2, 26.5], 395.5, 39.55, 'F', 1.75, 27],
+    [[62, 53, 81, 51, 52, 26.5, 3, 19.5, 1.5, 0], 349.5, 34.95, 'F', 1.75, 29],
+    [[93, 85, 95, 66.5, 93, 88.5, 87, 82, 68, 84.5], 842.5, 84.25, 'B+', 3.75, 3],
+    [[85.5, 64, 86, 70, 93, 23.5, 1, 4, 2.5, 3.5], 433, 43.3, 'E', 2, 24],
+    [[95, 69.5, 65, 60, 96, 66.5, 85.5, 84, 54.5, 88], 764, 76.4, 'B', 3.5, 13],
+    [[90.5, 77, 93, 60, 93, 69, 91, 78, 53, 89.5], 794, 79.4, 'B', 3.5, 8],
+    [[48.5, 59, 89, 64, 73, 66.5, 87.5, 82.5, 36.5, 71.5], 678, 67.8, 'C+', 3, 19],
+    [[74, 78.5, 85.5, 70, 91.5, 76, 81, 81, 68, 82], 787.5, 78.75, 'B', 3.5, 10],
+    [[80, 69, 96, 73, 93, 55, 86, 84.5, 67, 90.5], 794, 79.4, 'B', 3.5, 8],
+    [[91, 90.5, 97.5, 71, 97, 25, 3, 31, 4.5, 27.5], 538, 53.8, 'C', 2.5, 21],
+    [[96, 86.5, 98.5, 75, 96, 26, 3, 31, 4.5, 27.5], 544, 54.4, 'C', 2.5, 20],
+    [[95, 71, 91, 79, 96, 70.5, 85.5, 93, 68, 91], 840, 84, 'B+', 3.75, 4],
+    [[52, 52, 65, 55.5, 77.5, 20, 8.5, 38, 1.5, 32], 402, 40.2, 'E', 2, 26],
+    [[82.5, 64.5, 67.5, 86, 94.5, 94.5, 83, 94, 56, 90.5], 813, 81.3, 'B+', 3.75, 7],
+    [[77.5, 72, 77, 73.5, 91, 56, 71.5, 56, 51, 78], 703.5, 70.35, 'B', 3.5, 16],
+    [[63, 52, 80.5, 67.5, 79.5, 28.5, 4.5, 28.5, 2.5, 25.5], 432, 43.2, 'E', 2, 25],
+    [[100, 83, 95, 80.5, 96, 100, 80, 86.5, 58.5, 92], 871.5, 87.15, 'A', 4, 1],
+    [[92, 67, 74, 61.5, 87.5, 67, 82, 72.5, 54.5, 78.5], 736.5, 73.65, 'B', 3.5, 15],
+  ];
+  const semesters = [{ id: 's1' }, { id: 's2' }];
+  const subjects = Array.from({ length: 10 }, (_, i) => ({ id: 'u' + i, tabId: i < 5 ? 's1' : 's2', maxScore: 100 }));
+  const students = rows.map((_, i) => ({ id: 'st' + i }));
+  const scores = { s1: {}, s2: {} };
+  rows.forEach(([marks], i) => marks.forEach((mark, j) => { ((scores[j < 5 ? 's1' : 's2'])['st' + i] ||= {})['u' + j] = mark; }));
+  const out = U.results({ semesters, subjects, students }, scores);
+  rows.forEach(([, total, average, grade, gpa, rank], i) => {
+    assert.deepEqual([out['st' + i].total, out['st' + i].average, out['st' + i].grade, out['st' + i].gpa, out['st' + i].rank], [total, average, grade, gpa, rank], 'student ' + (i + 1));
+  });
+  // subject letters, as on the sheet
+  for (const [score, letter] of [[100, 'A'], [85, 'A'], [84.5, 'B+'], [80, 'B+'], [79.5, 'B'], [70, 'B'], [69.5, 'C+'], [65, 'C+'], [64, 'C'], [50, 'C'], [48.5, 'D'], [45, 'D'], [44, 'E'], [40, 'E'], [36.5, 'F'], [0, 'F']]) {
+    assert.equal(U.letter(score, 100, U.SCALE), letter, String(score));
+  }
+  assert.equal(U.letter(null, 100), '');
+  assert.equal(U.letter(42.5, 50), 'A', 'a share of the subject\'s maximum');
+  // each semester's own total, grade, GPA and rank (ranked by the semester's total)
+  const s1 = rows.map((r, i) => ({ id: 'st' + i, value: r[0].slice(0, 5).reduce((x, y) => x + y, 0) }));
+  const best = s1.slice().sort((x, y) => y.value - x.value)[0];
+  assert.equal(out[best.id].semesters.s1.rank, 1);
+  assert.equal(out.st0.semesters.s1.total, 359.5); assert.equal(out.st0.semesters.s1.average, 71.9); assert.equal(out.st0.semesters.s1.grade, 'B'); assert.equal(out.st0.semesters.s1.gpa, 3.5);
+  assert.equal(out.st0.semesters.s2.total, 33); assert.equal(out.st0.semesters.s2.grade, 'F');
+  // no score at all: no total, no rank
+  const empty = U.results({ semesters, subjects, students: [{ id: 'x' }] }, {});
+  assert.deepEqual([empty.x.total, empty.x.average, empty.x.grade, empty.x.rank], [null, null, '', null]);
+  // the backend's default scale is the screen's
+  assert.deepEqual(require(path.join(root, 'backend', 'transcripts.js')).UNIVERSITY_SCALE, U.SCALE);
 });

@@ -94,3 +94,19 @@ td .cell-actions { display: flex; gap: 6px; }
 .photo-remove { border: 0; background: none; color: #dc2626; font-weight: 600; cursor: pointer; padding: 0; font-size: 13px; }
 .photo-note { font-size: 12px; color: #64748b; margin: 4px 0 0; grid-column: 1 / -1; }
 .photo-note.warn { color: #b45309; font-weight: 600; }
+
+/* class level */
+.levels { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+.levels .kh { display: block; font-family: "Khmer OS Battambang", "Noto Sans Khmer", sans-serif; font-size: 12.5px; color: #475569; }
+.class .tags .level { font-weight: 700; }
+.class .tags .level-PRIMARY { background: #fdf4ff; color: #a21caf; }
+.class .tags .level-SECONDARY { background: #ecfdf5; color: #047857; }
+.class .tags .level-HIGH_SCHOOL { background: #eff6ff; color: #1d4ed8; }
+.class .tags .level-UNIVERSITY { background: #eef2ff; color: #4338ca; }
+.class .tags .level-SHORT_COURSE { background: #fff7ed; color: #c2410c; }
+.class .tags .level.none { color: #64748b; }
+
+/* place of birth, current address and parents (student-details.js) */
+.details-groups { display: grid; gap: 12px; margin-top: 14px; }
+.details-groups .student-details { border: 1px solid #e2e8f0; border-radius: 14px; padding: 10px 14px 14px; margin: 0; min-width: 0; }
+.details-groups .student-details legend { padding: 0 6px; font-weight: 800; color: #1e293b; font-size: 14px; }

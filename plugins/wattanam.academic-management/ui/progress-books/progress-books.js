@@ -63,7 +63,8 @@
   }
   function line(parts) { return el('div', { class: 'field' }, parts.map(function (p) { return p[0] === 'k' ? el('span', { class: 'k', text: p[1] }) : el('span', { class: 'v' + (p[2] ? ' ' + p[2] : ''), text: p[1] || '' }); })); }
 
-  // Registration fields by label (the school's own fields): father, mother, place of birth, phone.
+  // The student's details (place of birth, address, parents) first; else the school's own registration
+  // fields, found by their labels: father, mother, place of birth, phone.
   function custom(student, test) {
     var fields = (state.data && state.data.customFields) || [];
     var values = student.customFieldValues || {};
@@ -75,12 +76,18 @@
   function parent(student, who) {
     var person = who === 'father' ? /ឪពុក|father/i : /ម្តាយ|ម្ដាយ|mother/i;
     var job = /មុខរបរ|occupation|job|work/i;
-    var name = custom(student, function (s) { return person.test(s) && !job.test(s) && !/ទូរស័ព្ទ|phone/i.test(s); });
-    var work = custom(student, function (s) { return person.test(s) && job.test(s); });
+    var name = student[who + 'Name'] || custom(student, function (s) { return person.test(s) && !job.test(s) && !/ទូរស័ព្ទ|phone/i.test(s); });
+    var work = student[who + 'Job'] || custom(student, function (s) { return person.test(s) && job.test(s); });
     return [name, work].filter(Boolean).join('   ');
   }
-  function placeOfBirth(student) { return custom(student, function (s) { return /ទីកន្លែងកំណើត|place\s*of\s*birth|birth\s*place|birthplace/i.test(s); }); }
-  function phone(student) { return student.guardianPhone || custom(student, function (s) { return /ទូរស័ព្ទ|phone/i.test(s); }) || student.phone || ''; }
+  function placeOfBirth(student) { return student.birthPlace || custom(student, function (s) { return /ទីកន្លែងកំណើត|place\s*of\s*birth|birth\s*place|birthplace/i.test(s); }); }
+  function phone(student) {
+    var parents = [student.fatherPhone, student.motherPhone].filter(Boolean).join(' / ');
+    return parents || student.guardianPhone || custom(student, function (s) { return /ទូរស័ព្ទ|phone/i.test(s); }) || student.phone || '';
+  }
+  // the address parts, without the word the printed form already has (សង្កាត់ ទឹកល្អក់, not សង្កាត់ សង្កាត់ទឹកល្អក់)
+  function part(value, words) { return String(value || '').replace(new RegExp('^(' + words + ')\\s*'), '').trim(); }
+  function hasAddressParts(student) { return ['houseNo', 'street', 'village', 'commune', 'district', 'province'].some(function (k) { return student[k]; }); }
 
   // ---------- figures ----------
   function model() { var d = state.data; return M.model(d.subjects, { coefficient: d.sheet.coefficient, averageMax: d.sheet.averageMax, grades: d.sheet.gradeScale }); }
@@ -170,7 +177,10 @@
     page.appendChild(el('div', { class: 'blank-line' }));
     page.appendChild(field('ឈ្មោះ និងមុខរបរម្តាយ:', parent(student, 'mother')));
     page.appendChild(el('div', { class: 'blank-line' }));
-    if (student.address) {
+    if (hasAddressParts(student)) {
+      page.appendChild(line([['k', 'អាសយដ្ឋានសព្វថ្ងៃ: ផ្ទះលេខ'], ['v', part(student.houseNo, 'ផ្ទះលេខ|ផ្ទះ')], ['k', 'ផ្លូវលេខ'], ['v', part(student.street, 'ផ្លូវលេខ|ផ្លូវ')], ['k', 'ក្រុមទី'], ['v', part(student.village, 'ក្រុមទី|ក្រុម|ភូមិ')]]));
+      page.appendChild(line([['k', 'សង្កាត់'], ['v', part(student.commune, 'ឃុំ|សង្កាត់')], ['k', 'ខណ្ឌ'], ['v', part(student.district, 'ស្រុក|ខណ្ឌ|ក្រុង')], ['k', 'រាជធានី/ខេត្ត'], ['v', part(student.province, 'រាជធានី|ខេត្ត') || f.footerText || '']]));
+    } else if (student.address) {
       page.appendChild(field('អាសយដ្ឋានសព្វថ្ងៃ:', student.address));
       page.appendChild(el('div', { class: 'blank-line' }));
     } else {

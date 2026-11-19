@@ -249,8 +249,23 @@ table.mini input[type="color"] { width: 48px; height: 32px; padding: 2px; }
 @media print { .paper-wrap .doc.ranking.flow { break-inside: auto; break-after: auto; } }
 
 /* entry mode (Enter Scores): score entry only — no set-up, print-form or grade-scale changes */
-body.entry-mode #more-menu, body.entry-mode #add-tab, body.entry-mode #open-grades, body.entry-mode #avg-save { display: none !important; }
+body.entry-mode:not(.can-edit-header) #more-menu, body.entry-mode #open-setup, body.entry-mode #open-form, body.entry-mode #add-tab, body.entry-mode #open-grades, body.entry-mode #avg-save { display: none !important; }
 body.entry-mode .averaging input { pointer-events: none; background: #f8fafc; }
 /* the ＋ Add / delete panel opens over the preview bar below the filters */
 .filters { position: relative; z-index: 21; }
 @media (max-width: 640px) { .add-tab { flex-basis: 100%; } .tab-panel, .tab-panel.align-right { position: static; width: 100%; box-shadow: none; } }
+
+/* New score sheet: high & secondary school or university */
+.kind-choice { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.kind-choice label { display: flex; gap: 10px; align-items: flex-start; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; cursor: pointer; background: #fff; }
+.kind-choice label:has(input:checked) { border-color: #4f46e5; box-shadow: 0 0 0 2px #c7d2fe; }
+.kind-choice input[type="radio"] { width: auto; flex: none; margin: 3px 0 0; padding: 0; }
+.kind-choice b { display: block; font-size: 14px; }
+.kind-choice small { display: block; color: #64748b; font-size: 12px; font-weight: 500; }
+
+/* the two kinds of score sheet */
+.kind-tabs { display: flex; gap: 4px; padding: 4px; background: #f1f5f9; border-radius: 14px; width: fit-content; max-width: 100%; flex-wrap: wrap; margin-bottom: 4px; }
+.kind-tabs button { border: 0; background: none; border-radius: 10px; padding: 9px 16px; font: inherit; font-weight: 800; font-size: 14.5px; color: #475569; cursor: pointer; }
+.kind-tabs button .kh { font-family: "Khmer OS Battambang", "Noto Sans Khmer", sans-serif; font-weight: 500; font-size: 12px; color: #64748b; margin-left: 4px; }
+.kind-tabs button[aria-selected="true"] { background: #fff; color: #4f46e5; box-shadow: 0 1px 3px rgba(15, 23, 42, .12); }
+@media (max-width: 640px) { .kind-tabs button { padding: 8px 10px; font-size: 13.5px; } .kind-tabs button .kh { display: none; } }

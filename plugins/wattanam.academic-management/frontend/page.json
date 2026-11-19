@@ -4126,6 +4126,13 @@
           ],
           "permission": "wattanam.academic-management.transcripts.edit",
           "autoload": false
+        },
+        {
+          "id": "saveEntryPrintForm",
+          "method": "PUT",
+          "path": "transcripts/entry/print-template",
+          "permission": "wattanam.academic-management.transcripts.print",
+          "autoload": false
         }
       ],
       "components": [
@@ -4135,6 +4142,308 @@
           "title": "Enter Scores",
           "options": {
             "entry": "ui/score-sheets/index.html",
+            "height": "auto",
+            "minHeight": 900
+          }
+        }
+      ]
+    },
+    {
+      "id": "my-class",
+      "title": "My Class",
+      "routePath": "my-class",
+      "permission": "wattanam.academic-management.attendance.view",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "myClasses",
+          "method": "GET",
+          "path": "my/classes",
+          "permission": "wattanam.academic-management.attendance.view",
+          "autoload": false
+        },
+        {
+          "id": "classOverview",
+          "method": "GET",
+          "path": "my/classes/:id/overview",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.attendance.view",
+          "autoload": false
+        },
+        {
+          "id": "createClassStudent",
+          "method": "POST",
+          "path": "my/classes/:id/students/create",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.class.students",
+          "autoload": false
+        },
+        {
+          "id": "updateClassStudent",
+          "method": "PATCH",
+          "path": "my/classes/:classId/students/:studentId",
+          "parameters": [
+            "classId",
+            "studentId"
+          ],
+          "permission": "wattanam.academic-management.class.students",
+          "autoload": false
+        },
+        {
+          "id": "removeClassStudent",
+          "method": "DELETE",
+          "path": "my/classes/:id/students/:studentId",
+          "parameters": [
+            "id",
+            "studentId"
+          ],
+          "permission": "wattanam.academic-management.class.students",
+          "autoload": false
+        }
+      ],
+      "components": [
+        {
+          "id": "my-class-screen",
+          "type": "app",
+          "title": "My Class",
+          "options": {
+            "entry": "ui/my-class/index.html",
+            "height": "auto",
+            "minHeight": 760
+          }
+        }
+      ]
+    },
+    {
+      "id": "university-sheets",
+      "title": "University Score Sheets",
+      "routePath": "university-sheets",
+      "permission": "wattanam.academic-management.view",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "universitySheets",
+          "method": "GET",
+          "path": "transcripts/sheets",
+          "permission": "wattanam.academic-management.view",
+          "autoload": false
+        },
+        {
+          "id": "universityClasses",
+          "method": "GET",
+          "path": "classes",
+          "permission": "wattanam.academic-management.view",
+          "autoload": false
+        },
+        {
+          "id": "universityResults",
+          "method": "GET",
+          "path": "transcripts/university/results",
+          "permission": "wattanam.academic-management.view",
+          "autoload": false
+        },
+        {
+          "id": "saveUniversityScores",
+          "method": "POST",
+          "path": "transcripts/tabs/:id/scores",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.transcripts.edit",
+          "autoload": false
+        },
+        {
+          "id": "saveUniversityRemark",
+          "method": "PUT",
+          "path": "transcripts/tabs/:id/remarks",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.transcripts.edit",
+          "autoload": false
+        },
+        {
+          "id": "createUniversitySheet",
+          "method": "POST",
+          "path": "transcripts/sheets",
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "saveUniversitySheet",
+          "method": "PUT",
+          "path": "transcripts/sheets/:id",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "deleteUniversitySheet",
+          "method": "DELETE",
+          "path": "transcripts/sheets/:id",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "saveUniversityGrades",
+          "method": "PUT",
+          "path": "transcripts/sheets/:id/grades",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "addUniversitySubject",
+          "method": "POST",
+          "path": "transcripts/sheets/:id/subjects",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "saveUniversitySubject",
+          "method": "PUT",
+          "path": "transcripts/subjects/:id",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "deleteUniversitySubject",
+          "method": "DELETE",
+          "path": "transcripts/subjects/:id",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "addUniversitySemester",
+          "method": "POST",
+          "path": "transcripts/sheets/:id/tabs",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "deleteUniversitySemester",
+          "method": "DELETE",
+          "path": "transcripts/tabs/:id",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        },
+        {
+          "id": "universityPrintForm",
+          "method": "GET",
+          "path": "transcripts/university-print-template",
+          "permission": "wattanam.academic-management.view",
+          "autoload": false
+        },
+        {
+          "id": "saveUniversityPrintForm",
+          "method": "PUT",
+          "path": "transcripts/university-print-template",
+          "permission": "wattanam.academic-management.manage",
+          "autoload": false
+        }
+      ],
+      "components": [
+        {
+          "id": "university-sheets-screen",
+          "type": "app",
+          "title": "University Score Sheets",
+          "options": {
+            "entry": "ui/university/index.html",
+            "height": "auto",
+            "minHeight": 900
+          }
+        }
+      ]
+    },
+    {
+      "id": "university-entry",
+      "title": "Enter University Scores",
+      "routePath": "university-entry",
+      "permission": "wattanam.academic-management.transcripts.edit",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "entryUniversitySheets",
+          "method": "GET",
+          "path": "transcripts/entry/sheets",
+          "permission": "wattanam.academic-management.transcripts.edit",
+          "autoload": false
+        },
+        {
+          "id": "entryUniversityResults",
+          "method": "GET",
+          "path": "transcripts/entry/university/results",
+          "permission": "wattanam.academic-management.transcripts.edit",
+          "autoload": false
+        },
+        {
+          "id": "saveUniversityScores",
+          "method": "POST",
+          "path": "transcripts/tabs/:id/scores",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.transcripts.edit",
+          "autoload": false
+        },
+        {
+          "id": "saveUniversityRemark",
+          "method": "PUT",
+          "path": "transcripts/tabs/:id/remarks",
+          "parameters": [
+            "id"
+          ],
+          "permission": "wattanam.academic-management.transcripts.edit",
+          "autoload": false
+        },
+        {
+          "id": "entryUniversityPrintForm",
+          "method": "GET",
+          "path": "transcripts/entry/university-print-template",
+          "permission": "wattanam.academic-management.transcripts.edit",
+          "autoload": false
+        },
+        {
+          "id": "saveEntryUniversityPrintForm",
+          "method": "PUT",
+          "path": "transcripts/entry/university-print-template",
+          "permission": "wattanam.academic-management.transcripts.print",
+          "autoload": false
+        }
+      ],
+      "components": [
+        {
+          "id": "university-entry-screen",
+          "type": "app",
+          "title": "Enter University Scores",
+          "options": {
+            "entry": "ui/university/index.html",
             "height": "auto",
             "minHeight": 900
           }

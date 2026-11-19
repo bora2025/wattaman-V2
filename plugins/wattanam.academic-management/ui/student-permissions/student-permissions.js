@@ -144,7 +144,10 @@
       state.classId = state.classes.some(function (c) { return c.id === wanted; }) ? wanted : (state.classes[0] && state.classes[0].id) || '';
       renderClasses();
       if (!state.classes.length) show('error', 'No class is assigned to you yet.');
-      return loadClass();
+      var wantedStudent = String((context.query && context.query.studentId) || '');
+      return loadClass().then(function () {
+        if (wantedStudent && state.students.some(function (s) { return s.id === wantedStudent; })) { state.studentId = wantedStudent; renderStudents(); }
+      });
     });
   }).catch(function (error) { show('error', error.message || 'Student permissions could not be loaded.'); })
     .then(function () { $('app').setAttribute('aria-busy', 'false'); });

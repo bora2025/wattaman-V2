@@ -4,7 +4,9 @@
 (function () {
   'use strict';
   var ui = window.WattanamPluginUI;
-  var FIELDS = ['studentNumber', 'name', 'nameKh', 'email', 'phone', 'sex', 'dateOfBirth', 'photo', 'address', 'generation'];
+  var D = window.WattanamStudentDetails;
+  var FIELDS = ['studentNumber', 'name', 'nameKh', 'email', 'phone', 'sex', 'dateOfBirth', 'photo', 'generation'];
+  var DETAILS = D.KEYS; // place of birth, current address, parents
   var ACCOUNT = ['name', 'email', 'phone'];
   var state = { classId: '', studentId: '', student: null, busy: false, commandKey: '' };
 
@@ -37,23 +39,29 @@
       image.src = url; box.appendChild(image);
     } else box.textContent = label;
   }
+  D.render($('s-details'), { gridClass: 'fields three' });
   var photoUpload = window.WattanamPhoto ? window.WattanamPhoto.attach($('s-photo'), function (value) { showPhoto(value); }) : null;
   function fill() {
     var s = state.student || {};
     FIELDS.forEach(function (field) { $('s-' + field).value = field === 'dateOfBirth' ? text(s.dateOfBirth).slice(0, 10) : text(s[field]); });
+    D.fill($('s-details'), s);
+    // an address typed before the parts existed: shown until the parts are filled in
+    var partsGiven = ['houseNo', 'street', 'village', 'commune', 'district', 'province'].some(function (k) { return s[k]; });
+    show('old-address', s.address && !partsGiven ? 'Saved address: ' + s.address + ' (fill in the current address above to replace it)' : '');
     renderHeader();
     if (photoUpload) photoUpload.refresh();
   }
   function values() {
     var result = {};
     FIELDS.forEach(function (field) { result[field] = $('s-' + field).value.trim(); });
+    Object.assign(result, D.read($('s-details')));
     return result;
   }
 
   // Unsaved edits: any field that differs from the saved student.
   function dirty() {
     var next = values(), current = state.student || {};
-    return FIELDS.some(function (field) { return next[field] !== (field === 'dateOfBirth' ? text(current.dateOfBirth).slice(0, 10) : text(current[field])); });
+    return FIELDS.concat(DETAILS).some(function (field) { return next[field] !== (field === 'dateOfBirth' ? text(current.dateOfBirth).slice(0, 10) : text(current[field])); });
   }
   // Back to the student list of this class in Manage Classes.
   function leave() {
@@ -73,7 +81,7 @@
     if (!next.name) { show('error', 'Latin name is required.'); return; }
     // Send only what changed; login fields go together so the account update is complete.
     var body = {}, accountChanged = false;
-    FIELDS.forEach(function (field) {
+    FIELDS.concat(DETAILS).forEach(function (field) {
       var before = field === 'dateOfBirth' ? text(current.dateOfBirth).slice(0, 10) : text(current[field]);
       if (next[field] !== before) {
         if (ACCOUNT.indexOf(field) >= 0) accountChanged = true;

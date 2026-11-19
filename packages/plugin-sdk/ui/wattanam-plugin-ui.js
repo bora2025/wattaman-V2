@@ -13,6 +13,7 @@
  *   WattanamPluginUI.navigate('settings');              // another page of this plugin
  *   WattanamPluginUI.navigate('attendance', { classId: id });   // ...with a query (core 0.1.34+); read it as host.query
  *   WattanamPluginUI.autoResize();                       // keep the frame as tall as the content
+ *   host.permissions                                    // this user's granted permissions of the plugin (newer cores; null on older ones)
  *
  * Devices (school core 0.1.33+, and only when the page declares them in options.devices):
  *   WattanamPluginUI.scanner.start({ onResult: (text) => ..., onClose: () => ..., onError: (message) => ... });
@@ -43,7 +44,7 @@
     if (event.source !== global.parent || !event.data || event.data.protocol !== PROTOCOL) return;
     var data = event.data;
     if (data.type === 'init') {
-      context = { pluginId: data.pluginId, pluginVersion: data.pluginVersion, params: data.params || {}, language: data.language || 'en', theme: data.theme || {}, devices: Array.isArray(data.devices) ? data.devices : [], query: data.query && typeof data.query === 'object' ? data.query : {} };
+      context = { pluginId: data.pluginId, pluginVersion: data.pluginVersion, params: data.params || {}, language: data.language || 'en', theme: data.theme || {}, devices: Array.isArray(data.devices) ? data.devices : [], query: data.query && typeof data.query === 'object' ? data.query : {}, permissions: Array.isArray(data.permissions) ? data.permissions : null };
       applyTheme(context.theme);
       waiting.splice(0).forEach(function (resolve) { resolve(context); });
     } else if (data.type === 'scan-result' && scanHandlers) {

@@ -3,7 +3,7 @@
 // The school's saved print form for student attendance reports (letterhead, logo, signers, paper).
 // Read by anyone who may view reports; changed only by attendance configurators.
 // One saved form per report kind: student (class) reports and staff reports.
-const KEYS = { student: 'attendance-report-print-template', staff: 'attendance-staff-report-print-template', transcript: 'transcript-print-template', scoresheet: 'transcript-score-sheet-print-template', progressbook: 'transcript-progress-book-template' };
+const KEYS = { student: 'attendance-report-print-template', staff: 'attendance-staff-report-print-template', transcript: 'transcript-print-template', scoresheet: 'transcript-score-sheet-print-template', progressbook: 'transcript-progress-book-template', university: 'transcript-university-print-template' };
 function kindOf(request) { const kind = String(request?.query?.kind || 'student'); if (!KEYS[kind]) throw new Error('kind must be student or staff'); return kind; }
 const PAPERS = ['A4', 'A3', 'B5', 'A5', 'Letter', 'Legal'];
 const ORIENTATIONS = ['portrait', 'landscape'];
@@ -60,7 +60,7 @@ function logo(value) {
 }
 
 // Each score document's own title (score sheet uses title): ranking, honor roll, subject ranking.
-const TITLE_KEYS = ['ranking', 'honor', 'subjects', 'subjectsMonthly', 'yearcard', 'yearParents', 'recordbook', 'rbMinistry', 'rbLevel', 'rbGuidance', 'bulletin'];
+const TITLE_KEYS = ['ranking', 'honor', 'subjects', 'subjectsMonthly', 'yearcard', 'yearParents', 'recordbook', 'rbMinistry', 'rbLevel', 'rbGuidance', 'bulletin', 'semestercard'];
 function titles(value) {
   if (value === undefined || value === null) return {};
   if (typeof value !== 'object' || Array.isArray(value)) throw new Error('titles must be an object');
@@ -196,7 +196,17 @@ const PROGRESSBOOK_DEFAULTS = Object.freeze({
   rulesLines: BOOK_RULES,
   bookGrades: [{ label: 'ល្អ', min: 80 }, { label: 'ល្អបង្គួរ', min: 65 }, { label: 'មធ្យម', min: 50 }, { label: 'ខ្សោយ', min: 0 }],
 });
+// University score sheets: the school's name (the academic year's name when empty) with lines under it
+// (the programme when there are none), the motto, each document's title, and two signatures:
+// the director's approval on the left and the class teacher on the right. footerText is the place signed.
+const UNIVERSITY_DEFAULTS = Object.freeze({
+  title: 'តារាងលទ្ធផលសិក្សា', orgName: '', headerLines: [], orientation: 'landscape', footerText: '',
+  mottoLines: ['ព្រះរាជាណាចក្រកម្ពុជា', 'ជាតិ សាសនា ព្រះមហាក្សត្រ'],
+  titles: { ranking: 'ចំណាត់ថ្នាក់សិស្ស', honor: 'តារាងកិត្តិយស', yearcard: 'ព្រឹត្តិបត្រពិន្ទុប្រចាំឆ្នាំសិក្សា', semestercard: 'ព្រឹត្តិបត្រពិន្ទុប្រចាំ' },
+  approvalText: 'បានឃើញ និង ឯកភាព', signers: ['នាយកសាលា', 'គ្រូបន្ទុកថ្នាក់'], signerNames: [],
+});
 function defaultsFor(kind) {
+  if (kind === 'university') return { ...DEFAULT_TEMPLATE, ...UNIVERSITY_DEFAULTS };
   if (kind === 'progressbook') return { ...DEFAULT_TEMPLATE, ...PROGRESSBOOK_DEFAULTS };
   if (kind === 'staff') return { ...DEFAULT_TEMPLATE, ...STAFF_DEFAULTS };
   if (kind === 'transcript') return { ...DEFAULT_TEMPLATE, ...TRANSCRIPT_DEFAULTS };
@@ -207,9 +217,9 @@ function defaultsFor(kind) {
 function registerReportPrintTemplate(context, permissions) {
   // reports/print-template (student; ?kind=staff also accepted on reads) and reports/staff-print-template.
   const paths = [['reports/print-template', null], ['reports/staff-print-template', 'staff']];
-  if (permissions.transcriptRead) paths.push(['transcripts/print-template', 'transcript'], ['transcripts/score-sheet-print-template', 'scoresheet'], ['transcripts/progress-book-template', 'progressbook']);
+  if (permissions.transcriptRead) paths.push(['transcripts/print-template', 'transcript'], ['transcripts/score-sheet-print-template', 'scoresheet'], ['transcripts/progress-book-template', 'progressbook'], ['transcripts/university-print-template', 'university']);
   for (const [path, fixed] of paths) {
-    const transcriptKind = fixed === 'transcript' || fixed === 'scoresheet' || fixed === 'progressbook';
+    const transcriptKind = fixed === 'transcript' || fixed === 'scoresheet' || fixed === 'progressbook' || fixed === 'university';
     const read = fixed === 'staff' ? permissions.staffRead || permissions.read : transcriptKind ? permissions.transcriptRead : permissions.read;
     const write = fixed === 'staff' ? permissions.staffWrite || permissions.write : transcriptKind ? permissions.transcriptWrite : permissions.write;
   context.routes.register({
@@ -230,9 +240,17 @@ function registerReportPrintTemplate(context, permissions) {
   }
 }
 
+/** Saves a print form of a kind (routes that check their own permission, e.g. teachers' score-sheet headers). */
+async function writePrintTemplate(context, kind, body) {
+  if (!KEYS[kind]) throw new Error('Unknown print form');
+  const template = normalizeTemplate(body);
+  await context.settings.set(KEYS[kind], template);
+  return template;
+}
+
 /** The saved print form of a kind with its defaults (read-only use by other routes). */
 async function readPrintTemplate(context, kind) {
   return { ...defaultsFor(kind), ...(await context.settings.get(KEYS[kind], {})) };
 }
 
-module.exports = { registerReportPrintTemplate, normalizeTemplate, DEFAULT_TEMPLATE, readPrintTemplate };
+module.exports = { registerReportPrintTemplate, normalizeTemplate, DEFAULT_TEMPLATE, readPrintTemplate, writePrintTemplate };

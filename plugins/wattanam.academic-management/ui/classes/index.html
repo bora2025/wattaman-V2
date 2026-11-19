@@ -17,9 +17,19 @@
       <div class="toolbar">
         <input id="query" type="search" placeholder="Search by class name, subject, or teacher…" aria-label="Search classes">
         <select id="year" aria-label="Study year"></select>
+        <select id="level-filter" aria-label="Level">
+          <option value="">All levels</option>
+          <option value="PRIMARY">Primary school</option>
+          <option value="SECONDARY">Secondary school</option>
+          <option value="HIGH_SCHOOL">High school</option>
+          <option value="UNIVERSITY">University</option>
+          <option value="SHORT_COURSE">Short course</option>
+          <option value="NONE">Level not set</option>
+        </select>
         <select id="sort" aria-label="Sort classes">
           <option value="name">Sort: Name</option>
           <option value="subject">Sort: Subject</option>
+          <option value="level">Sort: Level</option>
           <option value="students">Sort: Students</option>
         </select>
         <div class="view-toggle" role="group" aria-label="Layout">
@@ -41,6 +51,9 @@
         <button type="button" class="secondary" data-close>← Back to classes</button>
       </div>
       <p id="class-error" class="notice danger" role="alert" hidden></p>
+      <h3>Level *</h3>
+      <p class="muted" id="c-level-help">The level decides which score sheets the class can use.</p>
+      <div id="c-levels" class="presets levels" role="radiogroup" aria-label="Level"></div>
       <h3>Class information</h3>
       <div class="fields">
         <label>Name *<input id="c-name" required></label>
@@ -110,20 +123,20 @@
 
       <form id="student-form" class="subpanel" hidden novalidate>
         <h3>Register New Student</h3>
-        <p class="muted">Creates the login, profile, class enrollment, QR identifier, and ID card together.</p>
+        <p class="muted">Creates the login, profile, class enrollment, QR identifier, and ID card together. A sign-in password is made for the student and shown once after saving.</p>
         <div class="fields three">
           <label>Student ID<input id="s-studentNumber"></label>
           <label>Latin Name *<input id="s-name" required></label>
           <label>Khmer Name<input id="s-nameKh"></label>
           <label>Email<input id="s-email" type="email"></label>
           <label>Phone<input id="s-phone"></label>
-          <label>Temporary Password *<input id="s-password" type="password" minlength="6" autocomplete="new-password" required></label>
           <label>Sex<select id="s-sex"><option value="">—</option><option value="MALE">Male</option><option value="FEMALE">Female</option><option value="OTHER">Other</option></select></label>
           <label>Date of Birth<input id="s-dateOfBirth" type="date"></label>
           <label>Photo<input id="s-photo" type="url" placeholder="https://… (or upload below)"></label>
-          <label>Address<input id="s-address"></label>
           <label>Generation<input id="s-generation"></label>
         </div>
+        <!-- place of birth, current address and parents (student-details.js); the address line is written from its parts -->
+        <div id="s-details" class="details-groups"></div>
         <div class="form-actions">
           <button type="button" id="student-cancel" class="secondary">Cancel</button>
           <button type="submit" id="student-save" class="primary">Create Student</button>
@@ -133,7 +146,7 @@
       <section id="import-result" class="subpanel" hidden>
         <h3>Import Result</h3>
         <p class="muted" id="import-summary"></p>
-        <div class="table-wrap"><table><thead><tr><th>Row</th><th>ID</th><th>Name</th><th>Status</th><th>Message</th></tr></thead><tbody id="import-rows"></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th>Row</th><th>ID</th><th>Name</th><th>Status</th><th>Message</th><th>Password</th></tr></thead><tbody id="import-rows"></tbody></table></div>
       </section>
 
       <h3>Available Students</h3>
@@ -151,6 +164,7 @@
   <script src="../wattanam-plugin-ui.js"></script>
   <script src="xlsx.js"></script>
   <script src="../photo-upload.js"></script>
+  <script src="../student-details.js"></script>
   <script src="classes.js"></script>
 </body>
 </html>

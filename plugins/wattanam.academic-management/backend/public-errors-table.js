@@ -110,13 +110,17 @@ const STATIC = {
   "Subject not found": "SUBJECT_NOT_FOUND",
   "The book needs four grades": "THE_BOOK_NEEDS_FOUR_GRADES",
   "The class does not study on any of these days": "THE_CLASS_DOES_NOT_STUDY_ON_ANY_OF_THESE_DAYS",
+  "The class level does not suit this score sheet": "THE_CLASS_LEVEL_DOES_NOT_SUIT_THIS_SCORE_SHEET",
+  "The grade scale must have 2 to 12 grades": "THE_GRADE_SCALE_MUST_HAVE_2_TO_12_GRADES",
   "The grade scale must have six grades": "THE_GRADE_SCALE_MUST_HAVE_SIX_GRADES",
   "The last day must be on or after the first day": "THE_LAST_DAY_MUST_BE_ON_OR_AFTER_THE_FIRST_DAY",
   "The photo is too large; upload it again (it is made smaller automatically)": "THE_PHOTO_IS_TOO_LARGE_UPLOAD_IT_AGAIN_IT_IS_MADE_SMALLE",
   "The photo must be an uploaded image or an https:// link": "THE_PHOTO_MUST_BE_AN_UPLOADED_IMAGE_OR_AN_HTTPS_LINK",
+  "The semester was not found in this score sheet": "THE_SEMESTER_WAS_NOT_FOUND_IN_THIS_SCORE_SHEET",
   "The subject it is part of was not found in this score sheet": "THE_SUBJECT_IT_IS_PART_OF_WAS_NOT_FOUND_IN_THIS_SCORE_SH",
   "This class does not use this score sheet": "THIS_CLASS_DOES_NOT_USE_THIS_SCORE_SHEET",
   "This field needs at least 2 options": "THIS_FIELD_NEEDS_AT_LEAST_2_OPTIONS",
+  "This is not a university score sheet": "THIS_IS_NOT_A_UNIVERSITY_SCORE_SHEET",
   "This role cannot access attendance records": "THIS_ROLE_CANNOT_ACCESS_ATTENDANCE_RECORDS",
   "This role cannot manage attendance windows": "THIS_ROLE_CANNOT_MANAGE_ATTENDANCE_WINDOWS",
   "This role cannot scan staff attendance": "THIS_ROLE_CANNOT_SCAN_STAFF_ATTENDANCE",
@@ -124,6 +128,7 @@ const STATIC = {
   "This student is not in this class": "THIS_STUDENT_IS_NOT_IN_THIS_CLASS",
   "This subject has parts, so it cannot be a part of another subject": "THIS_SUBJECT_HAS_PARTS_SO_IT_CANNOT_BE_A_PART_OF_ANOTHER",
   "Too many attendance scan attempts; wait one minute": "TOO_MANY_ATTENDANCE_SCAN_ATTEMPTS_WAIT_ONE_MINUTE",
+  "Unknown print form": "UNKNOWN_PRINT_FORM",
   "Write the reason for the permission": "WRITE_THE_REASON_FOR_THE_PERMISSION",
   "You are not assigned to an academic class staff role": "YOU_ARE_NOT_ASSIGNED_TO_AN_ACADEMIC_CLASS_STAFF_ROLE",
   "You are not assigned to this attendance class": "YOU_ARE_NOT_ASSIGNED_TO_THIS_ATTENDANCE_CLASS",
@@ -159,9 +164,11 @@ const STATIC = {
   "idempotencyKey is invalid": "IDEMPOTENCYKEY_IS_INVALID",
   "ids is required": "IDS_IS_REQUIRED",
   "ids supports at most 100 classes": "IDS_SUPPORTS_AT_MOST_100_CLASSES",
+  "kind must be SCHOOL or UNIVERSITY": "KIND_MUST_BE_SCHOOL_OR_UNIVERSITY",
   "kind must be student or staff": "KIND_MUST_BE_STUDENT_OR_STAFF",
   "label cannot be empty": "LABEL_CANNOT_BE_EMPTY",
   "label is required": "LABEL_IS_REQUIRED",
+  "level must be PRIMARY, SECONDARY, HIGH_SCHOOL, UNIVERSITY or SHORT_COURSE": "LEVEL_MUST_BE_PRIMARY_SECONDARY_HIGH_SCHOOL_UNIVERSITY_O",
   "logo image is too large": "LOGO_IMAGE_IS_TOO_LARGE",
   "logo must be an uploaded PNG, JPEG, WebP or GIF image or an https link": "LOGO_MUST_BE_AN_UPLOADED_PNG_JPEG_WEBP_OR_GIF_IMAGE_OR_A",
   "logoUrl must be an https link or an uploaded PNG, JPEG, WebP or GIF image": "LOGOURL_MUST_BE_AN_HTTPS_LINK_OR_AN_UPLOADED_PNG_JPEG_WE",
@@ -218,6 +225,10 @@ const PATTERNS = [
   [
     "^(.+?) must be one of the listed options$",
     "X_MUST_BE_ONE_OF_THE_LISTED_OPTIONS"
+  ],
+  [
+    "^(.+?) is too long \\(at most (.+?) characters\\)$",
+    "X_IS_TOO_LONG_AT_MOST_X_CHARACTERS"
   ],
   [
     "^(.+?) must be one of (.+?)$",
@@ -284,6 +295,10 @@ const PATTERNS = [
     "X_MUST_BE_TEXT"
   ],
   [
+    "^(.+?) belongs to another semester$",
+    "X_BELONGS_TO_ANOTHER_SEMESTER"
+  ],
+  [
     "^(.+?) is the sum of its parts; enter the parts instead$",
     "X_IS_THE_SUM_OF_ITS_PARTS_ENTER_THE_PARTS_INSTEAD"
   ],
@@ -302,6 +317,10 @@ const PATTERNS = [
   [
     "^Attendance is disabled because (.+?) is not a study day for this class$",
     "ATTENDANCE_IS_DISABLED_BECAUSE_X_IS_NOT_A_STUDY_DAY_FOR"
+  ],
+  [
+    "^Grade (.+?): the GPA must be between 0 and 5$",
+    "GRADE_X_THE_GPA_MUST_BE_BETWEEN_0_AND_5"
   ],
   [
     "^Grade (.+?): the minimum must be between 0% and 100%$",
@@ -758,6 +777,14 @@ const ERRORS = {
     "status": 400,
     "message": "The class does not study on any of these days"
   },
+  "THE_CLASS_LEVEL_DOES_NOT_SUIT_THIS_SCORE_SHEET": {
+    "status": 400,
+    "message": "The class level does not suit this score sheet"
+  },
+  "THE_GRADE_SCALE_MUST_HAVE_2_TO_12_GRADES": {
+    "status": 400,
+    "message": "The grade scale must have 2 to 12 grades"
+  },
   "THE_GRADE_SCALE_MUST_HAVE_SIX_GRADES": {
     "status": 400,
     "message": "The grade scale must have six grades"
@@ -774,6 +801,10 @@ const ERRORS = {
     "status": 400,
     "message": "The photo must be an uploaded image or an https:// link"
   },
+  "THE_SEMESTER_WAS_NOT_FOUND_IN_THIS_SCORE_SHEET": {
+    "status": 404,
+    "message": "The semester was not found in this score sheet"
+  },
   "THE_SUBJECT_IT_IS_PART_OF_WAS_NOT_FOUND_IN_THIS_SCORE_SH": {
     "status": 404,
     "message": "The subject it is part of was not found in this score sheet"
@@ -785,6 +816,10 @@ const ERRORS = {
   "THIS_FIELD_NEEDS_AT_LEAST_2_OPTIONS": {
     "status": 400,
     "message": "This field needs at least 2 options"
+  },
+  "THIS_IS_NOT_A_UNIVERSITY_SCORE_SHEET": {
+    "status": 400,
+    "message": "This is not a university score sheet"
   },
   "THIS_ROLE_CANNOT_ACCESS_ATTENDANCE_RECORDS": {
     "status": 403,
@@ -813,6 +848,10 @@ const ERRORS = {
   "TOO_MANY_ATTENDANCE_SCAN_ATTEMPTS_WAIT_ONE_MINUTE": {
     "status": 400,
     "message": "Too many attendance scan attempts; wait one minute"
+  },
+  "UNKNOWN_PRINT_FORM": {
+    "status": 400,
+    "message": "Unknown print form"
   },
   "WRITE_THE_REASON_FOR_THE_PERMISSION": {
     "status": 400,
@@ -954,6 +993,10 @@ const ERRORS = {
     "status": 400,
     "message": "ids supports at most 100 classes"
   },
+  "KIND_MUST_BE_SCHOOL_OR_UNIVERSITY": {
+    "status": 400,
+    "message": "kind must be SCHOOL or UNIVERSITY"
+  },
   "KIND_MUST_BE_STUDENT_OR_STAFF": {
     "status": 400,
     "message": "kind must be student or staff"
@@ -965,6 +1008,10 @@ const ERRORS = {
   "LABEL_IS_REQUIRED": {
     "status": 400,
     "message": "label is required"
+  },
+  "LEVEL_MUST_BE_PRIMARY_SECONDARY_HIGH_SCHOOL_UNIVERSITY_O": {
+    "status": 400,
+    "message": "level must be PRIMARY, SECONDARY, HIGH_SCHOOL, UNIVERSITY or SHORT_COURSE"
   },
   "LOGO_IMAGE_IS_TOO_LARGE": {
     "status": 400,
@@ -1160,6 +1207,11 @@ const ERRORS = {
     "message": "… must be one of the listed options",
     "detail": true
   },
+  "X_IS_TOO_LONG_AT_MOST_X_CHARACTERS": {
+    "status": 400,
+    "message": "… is too long (at most … characters)",
+    "detail": true
+  },
   "X_MUST_BE_ONE_OF_X": {
     "status": 400,
     "message": "… must be one of …",
@@ -1240,6 +1292,11 @@ const ERRORS = {
     "message": "… must be text",
     "detail": true
   },
+  "X_BELONGS_TO_ANOTHER_SEMESTER": {
+    "status": 400,
+    "message": "… belongs to another semester",
+    "detail": true
+  },
   "X_IS_THE_SUM_OF_ITS_PARTS_ENTER_THE_PARTS_INSTEAD": {
     "status": 400,
     "message": "… is the sum of its parts; enter the parts instead",
@@ -1263,6 +1320,11 @@ const ERRORS = {
   "ATTENDANCE_IS_DISABLED_BECAUSE_X_IS_NOT_A_STUDY_DAY_FOR": {
     "status": 400,
     "message": "Attendance is disabled because … is not a study day for this class",
+    "detail": true
+  },
+  "GRADE_X_THE_GPA_MUST_BE_BETWEEN_0_AND_5": {
+    "status": 400,
+    "message": "Grade …: the GPA must be between 0 and 5",
     "detail": true
   },
   "GRADE_X_THE_MINIMUM_MUST_BE_BETWEEN_0_AND_100": {

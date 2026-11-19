@@ -10,6 +10,11 @@
 </head>
 <body>
   <main id="app" aria-busy="true">
+    <!-- Score sheets come in two kinds: the ministry's primary, secondary & high school sheets, and university sheets -->
+    <nav class="kind-tabs no-print" id="kind-tabs" role="tablist" aria-label="Type of score sheet">
+      <button type="button" role="tab" aria-selected="true" id="tab-school">🏫 Primary, secondary &amp; high school <span class="kh">បឋមសិក្សា អនុវិទ្យាល័យ និង វិទ្យាល័យ</span></button>
+      <button type="button" role="tab" aria-selected="false" id="tab-university">🎓 University <span class="kh">សាកលវិទ្យាល័យ</span></button>
+    </nav>
     <!-- App bar: title, live context, main actions; the rest under "More" -->
     <header class="appbar no-print">
       <div class="brand">
@@ -119,6 +124,10 @@
         </div>
         <form id="sheet-form" class="sheet-form" novalidate>
           <h3 id="sheet-form-title">New score sheet</h3>
+          <fieldset id="f-kind-wrap" class="kind-choice"><legend>Type of score sheet</legend>
+            <label><input type="radio" name="f-kind" value="SCHOOL" checked> <span><b>🏫 Primary, secondary &amp; high school</b><small>Months and semesters in the ministry layout, ranking, honor roll, report cards</small></span></label>
+            <label><input type="radio" name="f-kind" value="UNIVERSITY"> <span><b>🎓 University</b><small>Semesters with their own subjects, letter grades, GPA and rank</small></span></label>
+          </fieldset>
           <div class="row2">
             <label>Name *<input id="f-name" maxlength="160" placeholder="e.g. ថ្នាក់ទី៧ ២០២៥-២០២៦"></label>
             <label>Degree / level<input id="f-degree" maxlength="160" placeholder="e.g. Lower secondary"></label>

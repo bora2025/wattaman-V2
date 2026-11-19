@@ -1,0 +1,2 @@
+-- wattanam-plugin-migration: 091_index_transcript_subject_tabid
+CREATE INDEX IF NOT EXISTS plugin_wattanam_academic_management_transcript_subject_tabid_idx ON plugin_wattanam_academic_management_transcript_subject ("tabId");

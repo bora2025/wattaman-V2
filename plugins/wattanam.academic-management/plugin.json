@@ -3,7 +3,7 @@
   "id": "wattanam.academic-management",
   "name": "Academic Management",
   "description": "Official Wattanam academic structures, profiles, admissions, enrollment, and roster contracts.",
-  "version": "0.24.1",
+  "version": "0.33.1",
   "requiresCore": ">=0.1.35 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -58,7 +58,9 @@
     "wattanam.academic-management.attendance.staff.report",
     "wattanam.academic-management.attendance.staff.correct",
     "wattanam.academic-management.transcripts.edit",
-    "wattanam.academic-management.profile.self"
+    "wattanam.academic-management.profile.self",
+    "wattanam.academic-management.class.students",
+    "wattanam.academic-management.transcripts.print"
   ],
   "dependencies": {},
   "optionalDependencies": {},
@@ -627,6 +629,36 @@
       "path": "migrations/088_index_student_permission_classid.sql",
       "checksum": "52b3d115feddfba05b5200ccf5e2a7a901e7eb50e38b6048d3df04e083c8d358",
       "destructive": false
+    },
+    {
+      "id": "089_add_transcript_sheet_kind",
+      "path": "migrations/089_add_transcript_sheet_kind.sql",
+      "checksum": "381d0b255aee860d80891aed03fd96ca303232e8df405f73267fab3b270a8cd4",
+      "destructive": false
+    },
+    {
+      "id": "090_add_transcript_subject_tab",
+      "path": "migrations/090_add_transcript_subject_tab.sql",
+      "checksum": "ac0dfcade87ada2820d2758a99dc3d53fd17dd035ec9872bcb14fc6ec370f141",
+      "destructive": false
+    },
+    {
+      "id": "091_index_transcript_subject_tabid",
+      "path": "migrations/091_index_transcript_subject_tabid.sql",
+      "checksum": "ed03f872cfa248b8188c8a5fdcd466339992713458beb03b769b21956be0b65f",
+      "destructive": false
+    },
+    {
+      "id": "092_add_class_level",
+      "path": "migrations/092_add_class_level.sql",
+      "checksum": "4ea833640730f5bd8fe87e59ebda0266cbcd76987057e360184fdcc6aeccdc0a",
+      "destructive": false
+    },
+    {
+      "id": "093_add_student_details",
+      "path": "migrations/093_add_student_details.sql",
+      "checksum": "a42bed990e668b2a13fbe13d964dd551fed5728ed077443993f345ebc4240ec1",
+      "destructive": false
     }
   ],
   "navigation": [
@@ -767,6 +799,12 @@
       "label": "Progress Books",
       "href": "/plugins/wattanam.academic-management/progress-books",
       "permission": "wattanam.academic-management.view"
+    },
+    {
+      "id": "my-class",
+      "label": "My Class",
+      "href": "/plugins/wattanam.academic-management/my-class",
+      "permission": "wattanam.academic-management.attendance.view"
     },
     {
       "id": "student-permissions",
