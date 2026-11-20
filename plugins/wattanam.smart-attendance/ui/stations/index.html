@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="km">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Attendance Stations</title>
+  <link rel="stylesheet" href="../smart.css">
+  <style>
+    .station { display: grid; gap: 10px; }
+    .station-top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: center; }
+    .station-top h2 { margin: 0; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+    fieldset { border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; margin: 0; min-width: 0; }
+    legend { font-size: 12px; font-weight: 800; color: #475569; padding: 0 4px; }
+    .checks { display: flex; flex-wrap: wrap; gap: 6px 14px; max-height: 160px; overflow: auto; }
+    .checks label { display: flex; gap: 6px; align-items: center; font-weight: 600; font-size: 14px; color: var(--ink); }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  </style>
+</head>
+<body>
+  <main id="app" aria-busy="true">
+    <header class="appbar">
+      <div><h1>🛰️ Attendance Stations</h1><p>Approve the tablets and PCs that take attendance, and choose what each one accepts.</p></div>
+      <button type="button" id="reload">↻ Refresh</button>
+    </header>
+    <p id="message" class="notice ok" role="status" hidden></p>
+    <p id="error" class="notice bad" role="alert" hidden></p>
+    <p class="notice info">To add a station, open <b>Attendance Station</b> on the device itself and ask for approval; it then appears here.</p>
+    <div id="list"></div>
+
+    <!-- hardware terminals (face / card terminals, or a bridge program next to them) -->
+    <section class="panel">
+      <h2>Add a terminal</h2>
+      <p class="muted">A face or card terminal (or a small program next to it) sends its events with a device key. Faces recognised by the terminal are sent as the student ID; cards as the card number.</p>
+      <form id="terminal-form" class="row" novalidate>
+        <label>Terminal name *<input id="t-name" maxlength="80" placeholder="e.g. Gate face terminal"></label>
+        <label>Place<input id="t-place" maxlength="120"></label>
+        <label style="display:flex;flex-direction:row;gap:6px;align-items:center"><input id="t-face" type="checkbox" checked> Faces</label>
+        <label style="display:flex;flex-direction:row;gap:6px;align-items:center"><input id="t-nfc" type="checkbox" checked> Cards</label>
+        <button type="submit" class="primary">Add terminal</button>
+      </form>
+      <div id="key-box" class="notice info" hidden>
+        <b>Copy this key now: it is shown only once.</b>
+        <pre id="key-text" style="white-space:pre-wrap;word-break:break-all;margin:8px 0 0;font-size:13px"></pre>
+      </div>
+    </section>
+
+    <section class="panel" id="settings-panel" hidden>
+      <h2>Settings</h2>
+      <form id="settings" class="row" novalidate>
+        <label>Ignore the same student again for (seconds)<input id="cooldown" type="number" min="0" max="3600" step="1"></label>
+        <label>Keep offline captures for (hours)<input id="offline" type="number" min="0" max="168" step="1"></label>
+        <label>Face: same person at distance ≤<input id="accept" type="number" min="0.3" max="0.7" step="0.01"></label>
+        <label>Face: teacher confirms up to<input id="review" type="number" min="0.3" max="0.8" step="0.01"></label>
+        <label>Face: ahead of the next person by ≥<input id="margin" type="number" min="0" max="0.3" step="0.01"></label>
+        <label style="display:flex;flex-direction:row;gap:6px;align-items:center"><input id="liveness" type="checkbox"> Face: require the head turn (liveness)</label>
+        <button type="submit" class="primary">Save settings</button>
+      </form>
+      <p class="muted">A second scan or tap within the cool-down records nothing new. Face distances: smaller means more alike; lower the first number to make face matches stricter.</p>
+    </section>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="stations.js"></script>
+</body>
+</html>

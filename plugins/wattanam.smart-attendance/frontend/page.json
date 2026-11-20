@@ -1,0 +1,297 @@
+{
+  "schemaVersion": 2,
+  "kind": "declarative-ui",
+  "portability": "universal",
+  "pages": [
+    {
+      "id": "station",
+      "title": "Attendance Station",
+      "routePath": "station",
+      "permission": "wattanam.smart-attendance.station.operate",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "me",
+          "method": "GET",
+          "path": "stations/me",
+          "permission": "wattanam.smart-attendance.station.operate",
+          "autoload": false
+        },
+        {
+          "id": "register",
+          "method": "POST",
+          "path": "stations/register",
+          "permission": "wattanam.smart-attendance.station.operate"
+        },
+        {
+          "id": "capture",
+          "method": "POST",
+          "path": "captures",
+          "permission": "wattanam.smart-attendance.station.operate"
+        },
+        {
+          "id": "result",
+          "method": "GET",
+          "path": "captures/:id",
+          "permission": "wattanam.smart-attendance.station.operate",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        },
+        {
+          "id": "review",
+          "method": "POST",
+          "path": "captures/:id/review",
+          "permission": "wattanam.smart-attendance.station.operate",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        }
+      ],
+      "components": [
+        {
+          "id": "attendance-station",
+          "type": "app",
+          "title": "Attendance Station",
+          "options": {
+            "entry": "ui/station/index.html",
+            "height": "auto",
+            "minHeight": 640,
+            "devices": [
+              "scanner",
+              "device-id",
+              "face",
+              "nfc",
+              "storage"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "stations",
+      "title": "Attendance Stations",
+      "routePath": "stations",
+      "permission": "wattanam.smart-attendance.stations.manage",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "stations",
+          "method": "GET",
+          "path": "stations",
+          "permission": "wattanam.smart-attendance.stations.manage",
+          "autoload": false
+        },
+        {
+          "id": "saveStation",
+          "method": "PUT",
+          "path": "stations/:id",
+          "permission": "wattanam.smart-attendance.stations.manage",
+          "parameters": [
+            "id"
+          ],
+          "autoload": false
+        },
+        {
+          "id": "classes",
+          "method": "GET",
+          "path": "classes",
+          "permission": "wattanam.smart-attendance.stations.manage",
+          "autoload": false
+        },
+        {
+          "id": "settings",
+          "method": "GET",
+          "path": "settings",
+          "permission": "wattanam.smart-attendance.configure",
+          "autoload": false
+        },
+        {
+          "id": "saveSettings",
+          "method": "PUT",
+          "path": "settings",
+          "permission": "wattanam.smart-attendance.configure"
+        },
+        {
+          "id": "addTerminal",
+          "method": "POST",
+          "path": "terminals",
+          "permission": "wattanam.smart-attendance.stations.manage"
+        },
+        {
+          "id": "terminalKey",
+          "method": "POST",
+          "path": "terminals/:id/key",
+          "permission": "wattanam.smart-attendance.stations.manage",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        }
+      ],
+      "components": [
+        {
+          "id": "attendance-stations",
+          "type": "app",
+          "title": "Attendance Stations",
+          "options": {
+            "entry": "ui/stations/index.html",
+            "height": "auto",
+            "minHeight": 560
+          }
+        }
+      ]
+    },
+    {
+      "id": "cards",
+      "title": "NFC Cards",
+      "routePath": "cards",
+      "permission": "wattanam.smart-attendance.cards.manage",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "people",
+          "method": "GET",
+          "path": "people",
+          "permission": "wattanam.smart-attendance.cards.manage",
+          "autoload": false
+        },
+        {
+          "id": "cards",
+          "method": "GET",
+          "path": "cards",
+          "permission": "wattanam.smart-attendance.cards.manage",
+          "autoload": false
+        },
+        {
+          "id": "issueCard",
+          "method": "POST",
+          "path": "cards",
+          "permission": "wattanam.smart-attendance.cards.manage"
+        },
+        {
+          "id": "endCard",
+          "method": "PUT",
+          "path": "cards/:id",
+          "permission": "wattanam.smart-attendance.cards.manage",
+          "parameters": [
+            "id"
+          ],
+          "autoload": false
+        }
+      ],
+      "components": [
+        {
+          "id": "nfc-cards",
+          "type": "app",
+          "title": "NFC Cards",
+          "options": {
+            "entry": "ui/cards/index.html",
+            "height": "auto",
+            "minHeight": 560
+          }
+        }
+      ]
+    },
+    {
+      "id": "monitor",
+      "title": "Station Monitor",
+      "routePath": "monitor",
+      "permission": "wattanam.smart-attendance.view",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "captures",
+          "method": "GET",
+          "path": "captures",
+          "permission": "wattanam.smart-attendance.view",
+          "autoload": false
+        }
+      ],
+      "components": [
+        {
+          "id": "station-monitor",
+          "type": "app",
+          "title": "Station Monitor",
+          "options": {
+            "entry": "ui/monitor/index.html",
+            "height": "auto",
+            "minHeight": 560
+          }
+        }
+      ]
+    },
+    {
+      "id": "faces",
+      "title": "Face Enrolment",
+      "routePath": "faces",
+      "permission": "wattanam.smart-attendance.faces.enroll",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "people",
+          "method": "GET",
+          "path": "faces/people",
+          "permission": "wattanam.smart-attendance.faces.enroll",
+          "autoload": false
+        },
+        {
+          "id": "coverage",
+          "method": "GET",
+          "path": "faces/coverage",
+          "permission": "wattanam.smart-attendance.faces.enroll",
+          "autoload": false
+        },
+        {
+          "id": "consent",
+          "method": "POST",
+          "path": "faces/consents",
+          "permission": "wattanam.smart-attendance.faces.enroll"
+        },
+        {
+          "id": "withdraw",
+          "method": "POST",
+          "path": "faces/consents/:id/withdraw",
+          "permission": "wattanam.smart-attendance.faces.manage",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        },
+        {
+          "id": "enrol",
+          "method": "POST",
+          "path": "faces/samples",
+          "permission": "wattanam.smart-attendance.faces.enroll"
+        },
+        {
+          "id": "deleteFace",
+          "method": "DELETE",
+          "path": "faces/samples/:personId",
+          "permission": "wattanam.smart-attendance.faces.manage",
+          "autoload": false,
+          "parameters": [
+            "personId"
+          ]
+        }
+      ],
+      "components": [
+        {
+          "id": "face-enrolment",
+          "type": "app",
+          "title": "Face Enrolment",
+          "options": {
+            "entry": "ui/faces/index.html",
+            "height": "auto",
+            "minHeight": 560,
+            "devices": [
+              "face"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

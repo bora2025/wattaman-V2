@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="km">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NFC Cards</title>
+  <link rel="stylesheet" href="../smart.css">
+  <style>
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+    .people { display: grid; gap: 6px; max-height: 520px; overflow: auto; }
+    .person { display: flex; justify-content: space-between; gap: 8px; align-items: center; text-align: left; font-weight: 600; width: 100%; }
+    .person[aria-pressed="true"] { border-color: var(--brand); background: var(--brand-soft); }
+    .person .kh { font-size: 15px; }
+    .tap { border: 2px dashed #a5b4fc; border-radius: 16px; padding: 18px; text-align: center; background: var(--brand-soft); }
+    .tap .big { font-size: 44px; }
+    .tap input { width: 100%; text-align: center; font-size: 18px; margin-top: 8px; }
+    @media (max-width: 760px) { .layout { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main id="app" aria-busy="true">
+    <header class="appbar">
+      <div><h1>📶 NFC Cards</h1><p>Give a student a card: find the student, then tap the card on the USB card reader.</p></div>
+    </header>
+    <p id="message" class="notice ok" role="status" hidden></p>
+    <p id="error" class="notice bad" role="alert" hidden></p>
+
+    <div class="layout">
+      <section class="panel">
+        <h2>1. Find the student</h2>
+        <div class="row">
+          <label style="flex:1">Search<input id="search" type="search" placeholder="Name, ID or class…"></label>
+        </div>
+        <p class="muted" id="people-note"></p>
+        <div class="people" id="people"></div>
+      </section>
+      <section class="panel" id="issue" hidden>
+        <h2>2. Tap the card</h2>
+        <p id="chosen" class="kh"></p>
+        <p id="current-card" class="muted"></p>
+        <form id="tap-form" class="tap" novalidate>
+          <div class="big" aria-hidden="true">📶</div>
+          <div>Tap the card on the reader now (or type its number and press Enter).</div>
+          <input id="uid" autocomplete="off" spellcheck="false" aria-label="Card number">
+        </form>
+        <div class="row" style="margin-top:10px">
+          <button type="button" class="danger" id="lost" hidden>Card lost</button>
+          <button type="button" id="returned" hidden>Card returned</button>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel">
+      <h2>Cards</h2>
+      <div class="row"><label>Show<select id="filter"><option value="ACTIVE">In use</option><option value="LOST">Lost</option><option value="REPLACED">Replaced</option><option value="RETURNED">Returned</option><option value="">All</option></select></label></div>
+      <div class="table-wrap"><table><thead><tr><th>Student</th><th>Class</th><th>Card</th><th>Status</th><th>Since</th></tr></thead><tbody id="cards"></tbody></table></div>
+    </section>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="cards.js"></script>
+</body>
+</html>

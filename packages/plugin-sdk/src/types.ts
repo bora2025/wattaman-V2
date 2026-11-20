@@ -29,6 +29,8 @@ export interface PluginRouteDefinition {
   path: string;
   permission: string;
   contract?: { version: `${number}.${number}`; request?: { params?: { parse(value: unknown): Record<string, string> }; query?: { parse(value: unknown): Record<string, string | string[]> }; body?: { parse(value: unknown): unknown } }; response: { parse(value: unknown): unknown }; errors: Record<string, { status: number; message: string }> };
+  /** 'user' (default): /api/plugin-api with the user's grants; 'device': /api/plugin-device with a device credential. */
+  access?: 'user' | 'device';
   handler(request: PluginRouteRequest): unknown | Promise<unknown>;
 }
 
@@ -95,6 +97,12 @@ export interface PluginRuntimeContext {
     notifyUser(userId: string, event: string, payload: unknown): void;
   };
   crypto: { hashBcrypt(plaintext: string, rounds?: number): Promise<string> };
+  /** Capability devices.credentials (school core with device credentials). */
+  devices?: {
+    issue(input: { name: string; scope: string }): Promise<{ id: string; name: string; scope: string; hint: string; token: string; createdAt: string | Date }>;
+    list(): Promise<Array<{ id: string; name: string; scope: string; hint: string; createdAt: string | Date; lastUsedAt: string | Date | null; revokedAt: string | Date | null }>>;
+    revoke(id: string): Promise<{ id: string; revoked: boolean }>;
+  };
   accounts: {
     createStaff(input: { commandKey: string; name: string; email: string; phone?: string | null; photo?: string | null; passwordHash: string; role: 'STAFF' | 'TEACHER' }): Promise<{ id: string; name: string; role: 'STAFF' | 'TEACHER'; email: string | null; phone: string | null }>;
     createStudent(input: { commandKey: string; name: string; email?: string | null; phone?: string | null; passwordHash: string }): Promise<{ id: string; name: string; role: 'STUDENT'; email: string | null; phone: string | null }>;
