@@ -185,6 +185,8 @@ module.exports = {
         });
         return record;
     };
+    // Smart Attendance stations (station-intake.js) save through the same path, with their scan mode.
+    if (context.internal) context.internal.saveStationRecord = (request, scanMode) => saveRecord(request, scanMode);
     const saveRecord = async (request, scanMode) => {
       const prepared = await prepareRecord(request, scanMode);
       const record = await context.database.transaction(async (tx) => {

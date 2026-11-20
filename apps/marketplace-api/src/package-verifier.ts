@@ -30,7 +30,7 @@ const manifestSchema = z.object({
     healthCheck: z.literal('runtime'),
     dataClassification: z.array(z.enum([
       'education-records', 'personal-data', 'communications', 'financial-records',
-      'employment-records', 'location-data', 'generated-documents',
+      'employment-records', 'location-data', 'generated-documents', 'biometric-data',
     ])).min(1),
     backup: z.object({
       database: z.enum(['required', 'none']),

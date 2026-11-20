@@ -22,6 +22,17 @@
  *   const deviceId = await WattanamPluginUI.deviceId();  // per-plugin browser identifier (core 0.1.35+, devices: device-id)
  * The school page runs the camera and shows it above your screen; you receive only decoded text.
  *
+ * More devices (school core with the station bridges; declare them in options.devices):
+ *   face:    WattanamPluginUI.face.start({ mode: 'identify' | 'enroll', title, liveness: true, samples: 3,
+ *              onResult: (r) => ..., onError, onClose })   r = { mode, descriptors: [[128 numbers], ...],
+ *              quality: { score, size }, liveness: { passed, challenge }, modelVersion } — never an image.
+ *            WattanamPluginUI.face.stop(); feedback / activity as for the scanner's station.
+ *            The plugin must declare "biometric-data" in operational.dataClassification.
+ *   nfc:     WattanamPluginUI.nfc.start({ onRead: (serialNumber) => ..., onError, onClose }); .stop()
+ *            (Web NFC: Chrome on Android; USB readers type like a keyboard and need no device).
+ *   storage: await WattanamPluginUI.storage.get(key) / .set(key, value) / .remove(key) / .keys()
+ *            (JSON values on this device for this plugin; at most 256 KiB each, 1 MiB in all).
+ *
  * API calls go to YOUR plugin's API only (paths are relative, e.g. 'classes/42'); they run as the
  * signed-in user and your routes' permissions apply. Failed calls reject with an Error that has
  * .status and .body.
@@ -34,6 +45,8 @@
   var context = null;
   var waiting = [];
   var scanHandlers = null;
+  var faceHandlers = null;
+  var nfcHandlers = null;
 
   function send(message) {
     message.protocol = PROTOCOL;
@@ -54,6 +67,20 @@
       scanHandlers = null;
       if (data.type === 'scan-error' && typeof handlers.onError === 'function') handlers.onError(String(data.message || 'The scanner could not start.'));
       if (typeof handlers.onClose === 'function') handlers.onClose();
+    } else if (data.type === 'face-result' && faceHandlers) {
+      if (typeof faceHandlers.onResult === 'function' && data.result && typeof data.result === 'object') faceHandlers.onResult(data.result);
+    } else if ((data.type === 'face-closed' || data.type === 'face-error') && faceHandlers) {
+      var face = faceHandlers;
+      faceHandlers = null;
+      if (data.type === 'face-error' && typeof face.onError === 'function') face.onError(String(data.message || 'The camera could not start.'));
+      if (typeof face.onClose === 'function') face.onClose();
+    } else if (data.type === 'nfc-result' && nfcHandlers) {
+      if (typeof nfcHandlers.onRead === 'function' && typeof data.serialNumber === 'string') nfcHandlers.onRead(data.serialNumber);
+    } else if ((data.type === 'nfc-closed' || data.type === 'nfc-error') && nfcHandlers) {
+      var nfc = nfcHandlers;
+      nfcHandlers = null;
+      if (data.type === 'nfc-error' && typeof nfc.onError === 'function') nfc.onError(String(data.message || 'NFC could not start.'));
+      if (typeof nfc.onClose === 'function') nfc.onClose();
     } else if (data.type === 'response' && pending[data.id]) {
       var entry = pending[data.id];
       delete pending[data.id];
@@ -101,7 +128,7 @@
   }
 
   // A request answered by the school page itself (not the plugin API).
-  function hostRequest(type, prefix, unavailable) {
+  function hostRequest(type, prefix, unavailable, extra) {
     return new Promise(function (resolve, reject) {
       var id = prefix + (++counter) + '_' + Date.now().toString(36);
       var timer = setTimeout(function () {
@@ -111,7 +138,9 @@
         error.status = 0; reject(error);
       }, 15000);
       pending[id] = { resolve: resolve, reject: reject, timer: timer };
-      send({ type: type, id: id });
+      var message = { type: type, id: id };
+      Object.keys(extra || {}).forEach(function (key) { message[key] = extra[key]; });
+      send(message);
     });
   }
 
@@ -153,6 +182,39 @@
     active: function () { return scanHandlers !== null; },
   };
 
+  // Faces: the school page runs the camera and the face model and returns face vectors only.
+  var face = {
+    start: function (handlers) {
+      faceHandlers = handlers || {};
+      var message = { type: 'face-start', mode: faceHandlers.mode === 'enroll' ? 'enroll' : 'identify', liveness: faceHandlers.liveness !== false };
+      if (faceHandlers.title) message.title = String(faceHandlers.title);
+      if (faceHandlers.samples) message.samples = Number(faceHandlers.samples);
+      send(message);
+    },
+    stop: function () { send({ type: 'face-stop' }); },
+    feedback: function (tone, message) { send({ type: 'scan-feedback', tone: tone, message: String(message || '') }); },
+    activity: function (items, title) { var message = { type: 'scan-activity', items: items || [] }; if (title) message.title = String(title); send(message); },
+    active: function () { return faceHandlers !== null; },
+  };
+  // NFC cards through the school page (Web NFC, Chrome on Android).
+  var nfc = {
+    start: function (handlers) { nfcHandlers = handlers || {}; send({ type: 'nfc-start' }); },
+    stop: function () { send({ type: 'nfc-stop' }); },
+    active: function () { return nfcHandlers !== null; },
+  };
+  // A small store on this device for this plugin (the sandbox has no storage of its own).
+  function store(op, key, value) {
+    var extra = { op: op }; if (key !== undefined) extra.key = key; if (value !== undefined) extra.value = value;
+    return hostRequest('storage', 's', 'Device storage is unavailable (school core without the storage device, or no answer).', extra)
+      .then(function (body) { return body ? body.value : undefined; });
+  }
+  var storage = {
+    get: function (key) { return store('get', key); },
+    set: function (key, value) { return store('set', key, value); },
+    remove: function (key) { return store('remove', key); },
+    keys: function () { return store('keys'); },
+  };
+
   function autoResize() {
     // Measure the content, not the document: inside an iframe documentElement.scrollHeight is never
     // smaller than the frame itself, so the frame could grow but never shrink back.
@@ -183,5 +245,8 @@
     scanner: scanner,
     location: location,
     deviceId: deviceId,
+    face: face,
+    nfc: nfc,
+    storage: storage,
   };
 })(window);

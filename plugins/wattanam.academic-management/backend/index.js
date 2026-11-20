@@ -10,6 +10,7 @@ const { registerTranscripts } = require('./transcripts');
 const { registerDashboard } = require('./dashboard');
 const { registerStudentPermissions } = require('./student-permissions');
 const { withPublicErrors } = require('./public-errors');
+const { registerStationIntake } = require('./station-intake');
 const studentDetails = require('./student-details');
 const { registerMyProfile } = require('./my-profile');
 const { registerMyClass } = require('./my-class');
@@ -2354,7 +2355,11 @@ module.exports = {
     });
     const attendanceRoutes = new Map();
     const academicAttendanceContext = attendanceContext(context, attendanceRoutes);
+    // hooks the attendance runtime fills in for Smart Attendance stations (station-intake.js)
+    const stationHooks = {};
+    academicAttendanceContext.internal = stationHooks;
     await attendanceRuntime.activate(academicAttendanceContext);
+    registerStationIntake(context, { internal: stationHooks, decorateStudentRows });
     registerSelfAttendance(context);
     registerStaffAttendance(context);
     registerTranscripts(context, { requireClassStaffScope, requireAdministrativePrincipal, decorateStudentRows });

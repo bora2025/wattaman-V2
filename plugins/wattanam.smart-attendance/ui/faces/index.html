@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="km">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Face Enrolment</title>
+  <link rel="stylesheet" href="../smart.css">
+  <style>
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+    .people { display: grid; gap: 6px; max-height: 520px; overflow: auto; }
+    .person { display: flex; justify-content: space-between; gap: 8px; align-items: center; text-align: left; font-weight: 600; width: 100%; }
+    .person[aria-pressed="true"] { border-color: var(--brand); background: var(--brand-soft); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .bar { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; min-width: 80px; }
+    .bar span { display: block; height: 100%; background: var(--ok); }
+    @media (max-width: 760px) { .layout { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main id="app" aria-busy="true">
+    <header class="appbar">
+      <div><h1>🙂 Face Enrolment</h1><p>Faces are biometric data: record the consent first, then enrol the face. Nothing but a face code is kept — never a photo.</p></div>
+    </header>
+    <p id="message" class="notice ok" role="status" hidden></p>
+    <p id="warning" class="notice info" role="status" hidden></p>
+    <p id="error" class="notice bad" role="alert" hidden></p>
+
+    <section class="panel">
+      <h2>Classes</h2>
+      <div class="table-wrap"><table><thead><tr><th>Class</th><th>Students</th><th>Consent</th><th>Enrolled</th><th></th></tr></thead><tbody id="coverage"></tbody></table></div>
+    </section>
+
+    <div class="layout">
+      <section class="panel">
+        <h2>1. Find the student</h2>
+        <label>Search<input id="search" type="search" placeholder="Name, ID or class…"></label>
+        <div class="people" id="people" style="margin-top:10px"></div>
+      </section>
+
+      <section class="panel" id="chosen-panel" hidden>
+        <h2 id="chosen" class="kh"></h2>
+        <p class="muted" id="chosen-meta"></p>
+
+        <form id="consent-form" hidden novalidate>
+          <h3>2. Record the consent</h3>
+          <p class="muted">For a student under 18, a parent or guardian gives consent. Keep the signed form and note its reference.</p>
+          <div class="grid">
+            <label>Given by (name) *<input id="c-by" maxlength="160"></label>
+            <label>Relation *<select id="c-relation"><option value="Mother">Mother</option><option value="Father">Father</option><option value="Guardian">Guardian</option><option value="Student (18 or older)">Student (18 or older)</option></select></label>
+            <label>How *<select id="c-method"><option value="PAPER">Signed paper form</option><option value="DIGITAL">Digital (message / app)</option></select></label>
+            <label>Form reference<input id="c-ref" maxlength="200" placeholder="e.g. File 2026/7A/015"></label>
+          </div>
+          <label style="margin-top:10px">Note<input id="c-note" maxlength="500"></label>
+          <div class="actions"><button type="submit" class="primary">Record consent</button></div>
+        </form>
+
+        <div id="consent-info" hidden>
+          <h3>Consent</h3>
+          <p id="consent-text"></p>
+          <h3>3. The face</h3>
+          <p id="face-text" class="muted"></p>
+          <div class="actions">
+            <button type="button" class="primary" id="enrol">🙂 Enrol the face</button>
+            <button type="button" class="danger" id="delete-face" hidden>Delete the face</button>
+            <button type="button" class="danger" id="withdraw" hidden>Withdraw consent</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="faces.js"></script>
+</body>
+</html>

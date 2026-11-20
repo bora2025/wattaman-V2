@@ -3,7 +3,7 @@
   "id": "wattanam.academic-management",
   "name": "Academic Management",
   "description": "Official Wattanam academic structures, profiles, admissions, enrollment, and roster contracts.",
-  "version": "0.33.1",
+  "version": "0.34.0",
   "requiresCore": ">=0.1.35 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -63,7 +63,7 @@
     "wattanam.academic-management.transcripts.print"
   ],
   "dependencies": {},
-  "optionalDependencies": {},
+  "optionalDependencies": { "wattanam.smart-attendance": ">=0.1.0 <1.0.0" },
   "contracts": {
     "schemaVersion": 1,
     "deprecationNoticeDays": 180,
@@ -72,6 +72,7 @@
         "wattanam.academic-management.attendance.corrected": [1],
         "wattanam.academic-management.attendance.recorded": [1],
         "wattanam.academic-management.attendance.staff-recorded": [1],
+        "wattanam.academic-management.attendance.station-result": [1],
         "wattanam.academic-management.attendance.study-year.created": [1],
         "wattanam.academic-management.attendance.study-year.deleted": [1],
         "wattanam.academic-management.attendance.study-year.set-current": [1],
@@ -94,10 +95,10 @@
         "wattanam.academic-management.subject.created": [1],
         "wattanam.academic-management.subject.updated": [1]
       },
-      "subscribes": {}
+      "subscribes": { "wattanam.smart-attendance.presence.captured": [1] }
     },
     "readModels": {
-      "publishes": { "study-year": [1], "student-attendance-summary": [1] },
+      "publishes": { "study-year": [1], "student-attendance-summary": [1], "attendance-people": [1], "attendance-person-photo": [1] },
       "reads": {}
     }
   },
