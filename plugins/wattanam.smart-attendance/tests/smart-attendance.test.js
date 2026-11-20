@@ -126,3 +126,65 @@ test('moved screens call only the routes their owner opened to Smart Attendance'
     }
   }
 });
+
+test('a new device registers itself; a Wattaman device is approved at once (0.4.0)', async () => {
+  // a tiny station table: INSERT, the auto-approval UPDATE and the lookup by device
+  const stations = [];
+  const settings = new Map();
+  const db = {
+    query: async (sql, params) => (/FROM plugin_wattanam_smart_attendance_station WHERE "deviceIdHash"/.test(sql) ? stations.filter((s) => s.deviceIdHash === params[0]) : []),
+    execute: async (sql, params) => {
+      if (/^INSERT INTO plugin_wattanam_smart_attendance_station /.test(sql)) stations.push({ id: params[0], name: params[1], place: params[2], deviceIdHash: params[3], requestedBy: params[4], status: 'PENDING', mode: 'AUTO', methods: ['QR', 'NFC'], classIds: [] });
+      if (/^UPDATE plugin_wattanam_smart_attendance_station SET "status" = 'ACTIVE'/.test(sql)) stations.filter((s) => s.id === params[0] && s.status === 'PENDING').forEach((s) => Object.assign(s, { status: 'ACTIVE', methods: JSON.parse(params[1]), approvedBy: params[2] }));
+      return { count: 1 };
+    },
+    transaction: async (work) => work({ query: async () => [], execute: async () => ({ count: 1 }), publish: async () => {} }),
+  };
+  const routes = new Map();
+  await plugin.activate({
+    logger: { log() {} }, database: db,
+    routes: { register(route) { routes.set(`${route.method} ${route.path}`, route); return () => {}; } },
+    permissions: { register() { return () => {}; } }, navigation: { register() { return () => {}; } },
+    settings: { get: async (k, d) => (settings.has(k) ? settings.get(k) : d), set: async (k, v) => { settings.set(k, v); } },
+    readModels: { read: async () => [] }, durableEvents: { subscribe() { return () => {}; } },
+    dependencies: { required: {}, optional: {}, isAvailable: async () => true },
+  });
+  const registerStation = (role, deviceId, extra = {}) => routes.get('POST stations/register').handler({ principal: { userId: `u-${role}`, role }, body: { deviceId, device: 'Chrome on Android', ...extra } });
+
+  const guard = await registerStation('WATTAMAN', 'device-wattaman-1');
+  assert.equal(guard.station.status, 'ACTIVE');
+  assert.equal(guard.autoApproved, true);
+  assert.deepEqual(guard.station.methods, ['QR', 'NFC', 'FACE']);
+  assert.match(guard.station.name, /^Wattaman · Chrome on Android · \d{4}-\d{2}-\d{2}$/);
+
+  const teacher = await registerStation('TEACHER', 'device-teacher-1');
+  assert.equal(teacher.station.status, 'PENDING', 'other roles still wait for an administrator');
+  assert.match(teacher.station.name, /^Station · Chrome on Android/);
+  // the same device opened later by a Wattaman: approved then
+  assert.equal((await registerStation('WATTAMAN', 'device-teacher-1')).station.status, 'ACTIVE');
+
+  // the setting turns it off
+  settings.set('wattaman-auto-approve', false);
+  assert.equal((await registerStation('WATTAMAN', 'device-wattaman-2')).station.status, 'PENDING');
+  assert.equal((await routes.get('GET settings').handler({})).wattamanAutoApprove, false);
+});
+
+test('the station opens the automatic station: face, QR codes and card readers together', () => {
+  const station = fs.readFileSync(path.join(root, 'ui/station/station.js'), 'utf8');
+  assert.match(station, /ui\.face\.start\(\{\s*mode: 'identify', title: title\(\), liveness: state\.liveness, codes: codes, faces: faces,/);
+  assert.match(station, /onCode: function \(text, source\)/);
+  assert.match(station, /if \(!state\.autoOpened && !state\.overlay\) startAuto\(\);/);
+  assert.doesNotMatch(fs.readFileSync(path.join(root, 'ui/station/index.html'), 'utf8'), /id="r-name"/, 'nothing to type when setting up a station');
+});
+
+test('face attendance asks for the head turn and blink only when the school turns it on (0.4.1)', async () => {
+  const { routes, settings } = await activated();
+  const me = routes.get('GET stations/me');
+  assert.equal((await me.handler({ query: { deviceId: 'd1' }, principal: { userId: 'u', role: 'WATTAMAN' } })).livenessRequired, false, 'off by default');
+  assert.equal((await routes.get('GET settings').handler({})).livenessRequired, false);
+  settings.set('liveness-required', true);
+  assert.equal((await me.handler({ query: { deviceId: 'd1' }, principal: { userId: 'u', role: 'WATTAMAN' } })).livenessRequired, true);
+  const station = fs.readFileSync(path.join(root, 'ui/station/station.js'), 'utf8');
+  assert.match(station, /state\.liveness = r\.livenessRequired === true;/);
+  assert.doesNotMatch(station, /liveness: true/, 'the station follows the setting');
+});

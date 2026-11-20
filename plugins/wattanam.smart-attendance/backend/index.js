@@ -124,7 +124,7 @@ module.exports = {
 
     context.permissions.register([
       { id: PERM.view, label: 'See the attendance stations’ live monitor and capture log', roles: ['ADMIN', 'SCHOOL_ADMIN'] },
-      { id: PERM.operate, label: 'Run an attendance station on an approved device', description: 'Open the Station screen on a tablet or PC the school approved; students then scan their QR code or tap their card.', roles: ['ADMIN', 'SCHOOL_ADMIN', 'RECEPTIONIST', 'TEACHER', 'CLASS_ADMIN'] },
+      { id: PERM.operate, label: 'Run an attendance station on an approved device', description: 'Open the Station screen on a tablet or PC the school approved; students then scan their QR code or tap their card.', roles: ['ADMIN', 'SCHOOL_ADMIN', 'RECEPTIONIST', 'TEACHER', 'CLASS_ADMIN', 'WATTAMAN'] },
       { id: PERM.stations, label: 'Approve attendance stations and choose what they accept', roles: ['ADMIN', 'SCHOOL_ADMIN'] },
       { id: PERM.cards, label: 'Issue, replace and end students’ NFC cards', roles: ['ADMIN', 'SCHOOL_ADMIN', 'RECEPTIONIST'] },
       { id: PERM.configure, label: 'Change Smart Attendance settings', roles: ['ADMIN', 'SCHOOL_ADMIN'] },
@@ -190,7 +190,11 @@ module.exports = {
         const value = Number(await context.settings.get(key, fallback));
         out[name] = Number.isFinite(value) && value >= min && value <= max && (!integer || Number.isInteger(value)) ? value : fallback;
       }
-      out.livenessRequired = (await context.settings.get('liveness-required', true)) !== false;
+      // Face attendance asks for a head turn and a blink only when this is on (off by default since 0.4.1:
+      // the face is read at once, with a Wattaman watching the station).
+      out.livenessRequired = (await context.settings.get('liveness-required', false)) === true;
+      // A Wattaman (the school's attendance staff) opening Station: the device is approved at once.
+      out.wattamanAutoApprove = (await context.settings.get('wattaman-auto-approve', true)) !== false;
       if (out.faceReview < out.faceAccept) out.faceReview = out.faceAccept;
       return out;
     };
@@ -222,7 +226,8 @@ module.exports = {
         const deviceId = text(request?.query?.deviceId, 'deviceId', 200, true);
         const station = await stationByDevice(deviceId);
         if (station) await db.execute(`UPDATE ${T.station} SET "lastSeenAt" = CURRENT_TIMESTAMP WHERE "id" = $1`, [station.id]);
-        return { station: stationOut(station) };
+        // whether the face station asks for the head turn and blink
+        return { station: stationOut(station), livenessRequired: (await settings()).livenessRequired };
       },
     });
     register({
@@ -230,13 +235,27 @@ module.exports = {
       handler: async (request) => {
         const body = request?.body || {};
         const deviceId = text(body.deviceId, 'deviceId', 200, true);
+        // A Wattaman's device is approved at once (setting "wattaman-auto-approve", on by default): it reads
+        // QR codes, NFC cards and faces, in every class, check-in or check-out by the time of day. An
+        // administrator can rename, limit or turn it off on Attendance Stations.
+        const wattaman = String(request.principal.role || '').toUpperCase() === 'WATTAMAN' && (await settings()).wattamanAutoApprove;
+        const approve = async (stationId) => db.execute(
+          `UPDATE ${T.station} SET "status" = 'ACTIVE', "methods" = $2::jsonb, "approvedBy" = $3, "approvedAt" = CURRENT_TIMESTAMP, "updatedAt" = CURRENT_TIMESTAMP WHERE "id" = $1 AND "status" = 'PENDING'`,
+          [stationId, JSON.stringify(METHODS), request.principal.userId]);
         const existing = await stationByDevice(deviceId);
-        if (existing) return { station: stationOut(existing) };
+        if (existing) {
+          if (wattaman && existing.status === 'PENDING') { await approve(existing.id); return { station: stationOut(await stationByDevice(deviceId)), autoApproved: true }; }
+          return { station: stationOut(existing) };
+        }
+        // No typing: the name says who set it up and on what; it can be changed on Attendance Stations.
+        const device = text(body.device, 'device', 60) || 'this device';
+        const name = text(body.name, 'Station name', 80) || `${wattaman ? 'Wattaman' : 'Station'} · ${device} · ${new Date().toISOString().slice(0, 10)}`;
         const id = crypto.randomUUID();
         await db.execute(
           `INSERT INTO ${T.station} ("id", "name", "place", "deviceIdHash", "requestedBy") VALUES ($1, $2, $3, $4, $5) ON CONFLICT ("deviceIdHash") DO NOTHING`,
-          [id, text(body.name, 'Station name', 80, true), text(body.place, 'Place', 120) || null, deviceHash(deviceId), request.principal.userId]);
-        return { station: stationOut(await stationByDevice(deviceId)) };
+          [id, name.slice(0, 80), text(body.place, 'Place', 120) || null, deviceHash(deviceId), request.principal.userId]);
+        if (wattaman) await approve(id);
+        return { station: stationOut(await stationByDevice(deviceId)), ...(wattaman ? { autoApproved: true } : {}) };
       },
     });
     register({
@@ -728,7 +747,8 @@ module.exports = {
         if (!consent) throw fail('NO_CONSENT');
         const vectors = Array.isArray(body.descriptors) ? body.descriptors.map(vectorOf) : [];
         if (vectors.length < 1 || vectors.length > 5 || vectors.some((v) => !v)) throw fail('FACE_INVALID');
-        if ((await settings()).livenessRequired && !(body.liveness && body.liveness.passed === true)) throw fail('INVALID_VALUE', 'The liveness check was not passed: turn the head when asked');
+        // Enrolment always proves a live person (once, with staff present); the setting is for attendance.
+        if (!(body.liveness && body.liveness.passed === true)) throw fail('INVALID_VALUE', 'The liveness check was not passed: turn the head and blink when asked');
         const modelVersion = text(body.modelVersion, 'modelVersion', 80, true);
         const quality = Number(body.quality && body.quality.score);
         await db.transaction(async (tx) => {
@@ -771,6 +791,7 @@ module.exports = {
           await context.settings.set(key, value);
         }
         if (body.livenessRequired !== undefined) await context.settings.set('liveness-required', body.livenessRequired === true);
+        if (body.wattamanAutoApprove !== undefined) await context.settings.set('wattaman-auto-approve', body.wattamanAutoApprove === true);
         return settings();
       },
     });

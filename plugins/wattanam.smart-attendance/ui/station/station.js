@@ -8,11 +8,14 @@
  * Each capture shows who it is at once, then the attendance result from Academic Management (polled:
  * plugin screens cannot receive pushes). Face matches that are only fairly close wait for the teacher here.
  * Without network, captures are kept on this device (storage device) and sent later with their own time.
+ * Since 0.4.0 the device registers itself (nothing to type; a Wattaman's device is approved at once) and opens
+ * the AUTOMATIC station: the school page's camera reads faces and ID-card QR codes at the same time, USB
+ * readers and this phone's NFC listen too, and each student's class comes from their enrolment.
  * Plugin API: GET stations/me, POST stations/register, POST captures, GET captures/:id, POST captures/:id/review. */
 (function () {
   'use strict';
   var ui = window.WattanamPluginUI;
-  var state = { deviceId: '', station: null, busy: false, overlay: null, recent: [], reviews: [], idleTimer: null, current: '', queue: 0, flushing: false };
+  var state = { deviceId: '', station: null, busy: false, overlay: null, recent: [], reviews: [], idleTimer: null, current: '', queue: 0, flushing: false, autoOpened: false, liveness: false };
   var STATUS = {
     PRESENT: ['ok', '✓ មានវត្តមាន · Present'], LATE: ['warn', '⏰ យឺត · Late'],
     ALREADY: ['ok', '✓ បានកត់ត្រារួចហើយ · Already recorded'],
@@ -218,7 +221,7 @@
   $('face').addEventListener('click', function () {
     state.overlay = 'face';
     ui.face.start({
-      mode: 'identify', title: title(), liveness: true,
+      mode: 'identify', title: title(), liveness: state.liveness,
       onResult: function (r) {
         if (!r.descriptors || !r.descriptors.length) return;
         capture({ method: 'FACE', source: 'CAMERA', descriptor: r.descriptors[0], liveness: r.liveness, quality: r.quality, modelVersion: r.modelVersion });
@@ -227,21 +230,43 @@
       onClose: function () { state.overlay = null; focusUsb(); },
     });
   });
-  $('phone-nfc').addEventListener('click', function () {
-    if (ui.nfc.active()) { ui.nfc.stop(); return; }
+  function startNfc(quiet) {
+    if (ui.nfc.active()) return;
     $('phone-nfc').textContent = '📶 Phone NFC: on (tap to stop)';
     ui.nfc.start({
       onRead: function (serial) { capture({ code: serial, source: 'PHONE', method: 'NFC' }); },
-      onError: function (message) { error(message || 'NFC could not start on this device.'); },
+      // the automatic station tries the phone's NFC quietly: most tablets and PCs have none
+      onError: function (message) { if (!quiet) error(message || 'NFC could not start on this device.'); },
       onClose: function () { $('phone-nfc').textContent = '📶 Read cards with this phone'; },
     });
-  });
+  }
+  $('phone-nfc').addEventListener('click', function () { if (ui.nfc.active()) ui.nfc.stop(); else startNfc(false); });
+
+  // ---------- the automatic station: whatever the student shows is recorded ----------
+  function startAuto() {
+    var faces = accepts('FACE'), codes = accepts('QR') || accepts('NFC');
+    if (!faces && !codes) return;
+    state.overlay = 'face'; state.autoOpened = true;
+    if (accepts('NFC')) startNfc(true);
+    ui.face.start({
+      mode: 'identify', title: title(), liveness: state.liveness, codes: codes, faces: faces,
+      onResult: function (r) {
+        if (!r.descriptors || !r.descriptors.length) return;
+        capture({ method: 'FACE', source: 'CAMERA', descriptor: r.descriptors[0], liveness: r.liveness, quality: r.quality, modelVersion: r.modelVersion });
+      },
+      // a QR code seen by the camera, or a USB reader (QR scanner or NFC card reader) typing a code
+      onCode: function (text, source) { capture(source === 'USB' ? { code: text, source: 'USB', method: 'AUTO' } : { code: text, source: 'CAMERA', method: 'QR' }); },
+      onError: function (message) { state.overlay = null; error(message || 'The camera could not start.'); },
+      onClose: function () { state.overlay = null; focusUsb(); },
+    });
+  }
+  $('auto').addEventListener('click', startAuto);
 
   // ---------- registration and approval ----------
   function render() {
     var s = state.station;
     show('register', !s); show('waiting', Boolean(s) && s.status !== 'ACTIVE'); show('station', Boolean(s) && s.status === 'ACTIVE');
-    if (!s) { setTimeout(function () { $('r-name').focus(); }, 0); return; }
+    if (!s) return;
     if (s.status !== 'ACTIVE') {
       $('waiting-title').textContent = s.status === 'REVOKED' ? 'This station was turned off' : 'Waiting for approval';
       $('waiting-text').textContent = s.status === 'REVOKED'
@@ -262,23 +287,39 @@
     $('face').hidden = !accepts('FACE');
     $('phone-nfc').hidden = !accepts('NFC');
     $('usb-state').textContent = accepts('NFC') ? 'QR scanner or NFC card reader' : 'QR scanner';
+    $('auto').hidden = !(accepts('FACE') || accepts('QR') || accepts('NFC'));
     setResult('idle');
     focusUsb();
     flush();
+    // opens by itself once; after "‹ Back" the button starts it again
+    if (!state.autoOpened && !state.overlay) startAuto();
+  }
+  // What this device is, for the station's automatic name (e.g. "Chrome on Android").
+  function deviceLabel() {
+    var ua = navigator.userAgent || '';
+    var browser = /Edg\//.test(ua) ? 'Edge' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'Browser';
+    var system = /Android/.test(ua) ? 'Android' : /iPad/.test(ua) ? 'iPad' : /iPhone/.test(ua) ? 'iPhone' : /Windows/.test(ua) ? 'Windows' : /Mac OS/.test(ua) ? 'Mac' : /Linux/.test(ua) ? 'Linux' : 'device';
+    return browser + ' on ' + system;
+  }
+  // A new device registers itself (nothing to type); a Wattaman's is approved at once.
+  function register() {
+    $('r-retry').hidden = true; error('');
+    return ui.api.post('stations/register', { deviceId: state.deviceId, device: deviceLabel() })
+      .then(function (r) { state.station = r.station; render(); })
+      .catch(function (e) { $('r-retry').hidden = false; error(e.message || 'The station could not be registered.'); });
   }
   function load() {
-    return ui.api.get('stations/me', { deviceId: state.deviceId }).then(function (r) { state.station = r.station; render(); });
+    return ui.api.get('stations/me', { deviceId: state.deviceId }).then(function (r) {
+      state.station = r.station;
+      // the school's setting: a head turn and a blink before a face is sent (off: the face is read at once)
+      state.liveness = r.livenessRequired === true;
+      if (!r.station) return register();
+      // a Wattaman opening a device that still waits for approval: register again approves it
+      if (r.station.status === 'PENDING') return register();
+      render();
+    });
   }
-  $('register-form').addEventListener('submit', function (event) {
-    event.preventDefault();
-    var name = $('r-name').value.trim();
-    if (!name) { error('Give the station a name, e.g. Main gate.'); return; }
-    $('r-save').disabled = true; error('');
-    ui.api.post('stations/register', { deviceId: state.deviceId, name: name, place: $('r-place').value.trim() })
-      .then(function (r) { state.station = r.station; render(); })
-      .catch(function (e) { error(e.message || 'The station could not be registered.'); })
-      .then(function () { $('r-save').disabled = false; });
-  });
+  $('r-retry').addEventListener('click', register);
   $('refresh').addEventListener('click', function () { load().catch(function (e) { error(e.message); }); });
   // a waiting station checks by itself every 20 seconds
   setInterval(function () { if (state.station && state.station.status === 'PENDING') load().catch(function () {}); }, 20000);
