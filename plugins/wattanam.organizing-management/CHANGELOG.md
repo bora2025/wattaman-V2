@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.28.0
+- Needs school core 0.1.36 or newer, like Smart Attendance 0.3.0, so organizations on an older core keep 0.27 and their own screens.
 - Scan Attendance and Attendance Settings moved to **Smart Attendance 0.3.0** (Workforce Scan Attendance, Workforce Attendance Settings). Install it to take attendance.
 - Attendance records, corrections, reports and payroll stay here; the routes those screens use are opened to Smart Attendance (`backend/smart-attendance-callers.js`).
 
