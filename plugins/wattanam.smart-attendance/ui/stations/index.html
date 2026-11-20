@@ -53,7 +53,8 @@
         <label>Face: same person at distance ≤<input id="accept" type="number" min="0.3" max="0.7" step="0.01"></label>
         <label>Face: teacher confirms up to<input id="review" type="number" min="0.3" max="0.8" step="0.01"></label>
         <label>Face: ahead of the next person by ≥<input id="margin" type="number" min="0" max="0.3" step="0.01"></label>
-        <label style="display:flex;flex-direction:row;gap:6px;align-items:center"><input id="liveness" type="checkbox"> Face: require the head turn (liveness)</label>
+        <label style="display:flex;flex-direction:row;gap:6px;align-items:center"><input id="liveness" type="checkbox"> Face: ask for a head turn and a blink (liveness; off = the face is read at once)</label>
+        <label style="display:flex;flex-direction:row;gap:6px;align-items:center"><input id="wattaman-auto" type="checkbox"> Approve Wattaman stations automatically</label>
         <button type="submit" class="primary">Save settings</button>
       </form>
       <p class="muted">A second scan or tap within the cool-down records nothing new. Face distances: smaller means more alike; lower the first number to make face matches stricter.</p>

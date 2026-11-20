@@ -14,6 +14,10 @@ NFC card or face, at stations, terminals and phones. Architecture and phases:
 - A school installs it with Academic Management, an organization with Organizing Management (both are
   optional dependencies); the sidebar shows the screens of the installed ones.
 
+- **Automatic station (0.4).** Opening *Attendance Station* registers the device by itself (nothing to type) and opens
+  straight into automatic attendance: one camera reads faces and ID-card QR codes together, USB readers and the
+  phone's NFC listen too. Each student's class comes from their enrolment. A **Wattaman**'s device is approved at
+  once (setting on *Attendance Stations*); other devices wait for an administrator.
 - **Stations.** A device opens *Attendance Station* and asks for approval; an administrator approves it
   on *Attendance Stations* and chooses what it accepts (QR, NFC), check-in / check-out, and its classes.
 - **QR codes.** The school page's camera (the host scanner) or a USB 2D scanner. Codes are matched against

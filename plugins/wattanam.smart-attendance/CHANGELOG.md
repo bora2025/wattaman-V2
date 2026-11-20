@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.1
+- Face attendance without the head turn and blink: the face is read at once (about a second per student). The setting "Face: ask for a head turn and a blink" on Attendance Stations turns the check back on; it is now off by default. Face enrolment still asks for both steps.
+
+## 0.4.0
+Automatic stations: nothing to type, nothing to press. Needs school core 0.1.36 (the automatic face station).
+- **One screen for everything:** the station opens straight into automatic attendance. The camera reads faces and ID-card QR codes at the same time, USB readers (QR scanners, NFC card readers) and the phone's NFC listen as well, and whatever the student shows is recorded. Each student's class (and session) comes from their enrolment and timetable, as before.
+- **No setup typing:** a new device registers itself with a name like "Wattaman · Chrome on Android · 2026-11-20". Administrators can rename it on Attendance Stations.
+- **Wattaman:** can now run a station, and a Wattaman's device is approved at once for QR, NFC and face in every class (setting "Approve Wattaman stations automatically", on by default). Other roles' devices still wait for an administrator.
+- Face liveness (head turn + blink) stays on; a Wattaman watches the station.
+
 ## 0.3.0
 Smart Attendance is now the one place to take attendance. Needs school core 0.1.36 or newer (partner screens).
 - **From Academic Management (0.35.0):** Take Attendance (by hand, with the camera or a USB scanner), Attendance Settings (session times, identifiers, holidays, alert rules), the students' Scan Attendance, Self-Attendance Windows, Self-Attendance Review, Staff Attendance and Staff Attendance Reports.
