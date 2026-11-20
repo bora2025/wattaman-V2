@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "id": "wattanam.organizing-management",
   "name": "Organizing Management",
-  "description": "Workforce, HR calendar, employee ID cards, QR attendance, corrections, settings, and reporting for companies, shops, stores, and organizations.",
-  "version": "0.27.0",
+  "description": "Workforce, HR calendar, employee ID cards, attendance records, corrections, settings and reporting for companies, shops, stores and organizations. Attendance is taken with Smart Attendance.",
+  "version": "0.28.0",
   "requiresCore": ">=0.1.29 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -565,13 +565,6 @@
       "permission": "wattanam.organizing-management.id-cards.manage"
     },
     {
-      "id": "attendance-scan",
-      "label": "Scan Attendance",
-      "icon": "scan",
-      "href": "/plugins/wattanam.organizing-management/attendance-scan",
-      "permission": "wattanam.organizing-management.attendance.scan"
-    },
-    {
       "id": "attendance-records",
       "label": "Attendance Reports",
       "icon": "check-square",
@@ -584,13 +577,6 @@
       "icon": "file-pen-line",
       "href": "/plugins/wattanam.organizing-management/attendance-corrections",
       "permission": "wattanam.organizing-management.attendance.correct"
-    },
-    {
-      "id": "attendance-settings",
-      "label": "Attendance Settings",
-      "icon": "settings",
-      "href": "/plugins/wattanam.organizing-management/attendance-settings",
-      "permission": "wattanam.organizing-management.attendance.configure"
     }
   ],
   "supportedLanguages": [

@@ -9,6 +9,17 @@ const root = path.join(__dirname, '..');
 const manifest = JSON.parse(fs.readFileSync(path.join(root, 'plugin.json'), 'utf8'));
 const pages = JSON.parse(fs.readFileSync(path.join(root, 'frontend/page.json'), 'utf8')).pages;
 const plugin = require(path.join(root, 'backend/index.js'));
+// The routes Academic Management and Organizing Management open to these screens (partner screens).
+const partnerRoutes = {
+  'wattanam.academic-management': require(path.join(root, '../wattanam.academic-management/backend/smart-attendance-callers.js')).ROUTES,
+  'wattanam.organizing-management': require(path.join(root, '../wattanam.organizing-management/backend/smart-attendance-callers.js')).ROUTES,
+};
+const shape = (method, routePath) => `${method} ${routePath.replace(/:[^/]+/g, ':id')}`;
+// the scripts of an app screen (its folder)
+const appScripts = (entry) => {
+  const dir = path.join(root, path.dirname(entry));
+  return fs.readdirSync(dir).filter((name) => name.endsWith('.js')).map((name) => fs.readFileSync(path.join(dir, name), 'utf8')).join('\n');
+};
 
 async function activated() {
   const routes = new Map(), settings = new Map(), consumers = [], executed = [];
@@ -25,6 +36,7 @@ async function activated() {
     settings: { get: async (k, d) => (settings.has(k) ? settings.get(k) : d), set: async (k, v) => { settings.set(k, v); } },
     readModels: { read: async () => [] },
     durableEvents: { subscribe(definition) { consumers.push(definition); return () => {}; } },
+    dependencies: { required: {}, optional: {}, isAvailable: async () => true },
   });
   return { routes, settings, consumers, permissions, navigation, executed };
 }
@@ -33,6 +45,13 @@ test('every screen data source is a registered route with the same permission', 
   const { routes } = await activated();
   for (const page of pages) {
     for (const source of page.dataSources) {
+      if (source.plugin) {
+        // a partner's route: the partner opens it to Smart Attendance, with its own permission
+        assert.ok(manifest.optionalDependencies[source.plugin], `${page.id}: ${source.plugin} is a dependency`);
+        assert.ok(partnerRoutes[source.plugin].includes(shape(source.method, source.path)), `${page.id}: ${source.plugin} opens ${source.method} ${source.path}`);
+        assert.ok(source.permission.startsWith(source.plugin + '.'), `${page.id}: ${source.path} uses ${source.plugin}'s permission`);
+        continue;
+      }
       const route = routes.get(`${source.method} ${source.path}`);
       assert.ok(route, `${page.id}: ${source.method} ${source.path} is registered`);
       assert.equal(route.permission, source.permission, `${page.id}: ${source.path} permission`);
@@ -57,10 +76,11 @@ test('a per-school card key is made once and kept', async () => {
 });
 
 test('station screens use only the devices they declare', () => {
-  const use = { scanner: /ui\.scanner\.start/, 'device-id': /ui\.deviceId\(\)/, face: /ui\.face\.start/, nfc: /ui\.nfc\.start/, storage: /ui\.storage\.(get|set)/, location: /ui\.location\(/ };
+  const use = { scanner: /ui\.scanner\.start/, 'device-id': /ui\.deviceId\(/, face: /ui\.face\.start/, nfc: /ui\.nfc\.start/, storage: /ui\.storage\.(get|set)/, location: /ui\.location\(/ };
   for (const page of pages) {
     const app = page.components.find((c) => c.type === 'app');
-    const source = fs.readFileSync(path.join(root, app.options.entry.replace(/index\.html$/, ''), `${page.id === 'station' ? 'station' : page.id}.js`), 'utf8');
+    if (!app) continue;
+    const source = appScripts(app.options.entry);
     const declared = app.options.devices || [];
     for (const [device, pattern] of Object.entries(use)) {
       if (declared.includes(device)) assert.match(source, pattern, `${page.id} declares ${device} and uses it`);
@@ -85,4 +105,24 @@ test('the sidebar entries are registered at activation, as the manifest declares
   const pick = (list) => list.map((e) => [e.id, e.label, e.href, e.permission]);
   assert.deepEqual(pick(navigation), pick(manifest.navigation));
   for (const entry of navigation) assert.ok(pages.some((p) => entry.href === '/plugins/' + manifest.id + '/' + p.routePath && p.permission === entry.permission), entry.id + ' opens its page');
+});
+
+test('moved screens call only the routes their owner opened to Smart Attendance', () => {
+  for (const page of pages) {
+    for (const app of page.components.filter((c) => c.type === 'app' && c.options.apis)) {
+      const scripts = appScripts(app.options.entry);
+      for (const owner of app.options.apis) {
+        const variable = owner === 'wattanam.academic-management' ? 'academic' : 'organizing';
+        assert.match(scripts, new RegExp(`var ${variable} = ui\\.partner\\('${owner.replace(/\./g, '\\.')}'\\)`), `${page.id} calls ${owner} as a partner`);
+        // 'path' or 'path/' + encodeURIComponent(id) + '/rest' (a value in the middle is a route parameter)
+        const calls = [...scripts.matchAll(new RegExp(`\\b${variable}\\.(get|post|put|patch|delete)\\('([^']+)'((?:\\s*\\+\\s*(?:encodeURIComponent\\([^)]*\\)|'[^']*'))*)`, 'g'))];
+        assert.ok(calls.length, `${page.id} calls ${owner}`);
+        for (const [, method, literal, more] of calls) {
+          const routePath = more ? `${literal}:id${(more.match(/\+\s*'([^']*)'\s*$/) || [, ''])[1]}` : literal;
+          assert.ok(partnerRoutes[owner].includes(shape(method.toUpperCase(), routePath)), `${page.id}: ${method.toUpperCase()} ${routePath} is opened by ${owner}`);
+        }
+      }
+      assert.doesNotMatch(scripts, /ui\.api\./, `${page.id} does not call Smart Attendance's own API by mistake`);
+    }
+  }
 });

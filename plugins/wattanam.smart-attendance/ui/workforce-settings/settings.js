@@ -4,6 +4,8 @@
 (function () {
   'use strict';
   var ui = window.WattanamPluginUI;
+  // Moved into Smart Attendance: the records and rules stay with wattanam.organizing-management, called as a partner.
+  var organizing = ui.partner('wattanam.organizing-management');
   var defaults = [
     { scope: 'STAFF', session: 1, type: 'CHECK_IN', startTime: '07:00', endTime: '07:30' },
     { scope: 'STAFF', session: 2, type: 'CHECK_OUT', startTime: '11:30', endTime: '12:00' },
@@ -97,16 +99,16 @@
     if (!state.settings.staffWorkingDays.length) { show('message'); show('error', 'Choose at least one working day.'); return; }
     state.busy = true; show('message'); show('error'); render();
     state.sessions.reduce(function (chain, item) {
-      return chain.then(function () { return ui.api.post('attendance/sessions', { scope: 'STAFF', session: item.session, type: item.type, startTime: item.startTime, endTime: item.endTime }); });
+      return chain.then(function () { return organizing.post('attendance/sessions', { scope: 'STAFF', session: item.session, type: item.type, startTime: item.startTime, endTime: item.endTime }); });
     }, Promise.resolve())
-      .then(function () { return ui.api.put('attendance/session-settings', { staffFormatRules: state.settings.staffFormatRules === true, staffWorkingDays: state.settings.staffWorkingDays }); })
+      .then(function () { return organizing.put('attendance/session-settings', { staffFormatRules: state.settings.staffFormatRules === true, staffWorkingDays: state.settings.staffWorkingDays }); })
       .then(function () { show('message', 'Workforce session settings saved.'); return load(); })
       .catch(function (error) { show('error', error.message || 'Settings could not be saved.'); })
       .then(function () { state.busy = false; render(); });
   }
 
   function load() {
-    return Promise.all([ui.api.get('attendance/sessions'), ui.api.get('attendance/session-settings')]).then(function (results) {
+    return Promise.all([organizing.get('attendance/sessions'), organizing.get('attendance/session-settings')]).then(function (results) {
       state.sessions = normalize(results[0]);
       var saved = results[1] && typeof results[1] === 'object' ? results[1] : {};
       state.settings = { staffFormatRules: saved.staffFormatRules === true, staffWorkingDays: Array.isArray(saved.staffWorkingDays) && saved.staffWorkingDays.length ? saved.staffWorkingDays.slice() : weekdays.slice() };

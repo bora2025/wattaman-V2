@@ -31,6 +31,12 @@ export interface PluginRouteDefinition {
   contract?: { version: `${number}.${number}`; request?: { params?: { parse(value: unknown): Record<string, string> }; query?: { parse(value: unknown): Record<string, string | string[]> }; body?: { parse(value: unknown): unknown } }; response: { parse(value: unknown): unknown }; errors: Record<string, { status: number; message: string }> };
   /** 'user' (default): /api/plugin-api with the user's grants; 'device': /api/plugin-device with a device credential. */
   access?: 'user' | 'device';
+  /**
+   * Partner screens (school core 0.2+): other plugins whose screens may call this route through the school
+   * page (their page data sources name this plugin in "plugin", or their app screens list it in
+   * options.apis). The signed-in user's grants still apply.
+   */
+  callers?: string[];
   handler(request: PluginRouteRequest): unknown | Promise<unknown>;
 }
 

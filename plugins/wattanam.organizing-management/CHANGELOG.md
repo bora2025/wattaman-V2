@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.28.0
+- Scan Attendance and Attendance Settings moved to **Smart Attendance 0.3.0** (Workforce Scan Attendance, Workforce Attendance Settings). Install it to take attendance.
+- Attendance records, corrections, reports and payroll stay here; the routes those screens use are opened to Smart Attendance (`backend/smart-attendance-callers.js`).
+
 ## 0.27.0
 
 - Workforce ID Cards is now the plugin's own screen (`ui/id-cards`), with the same designs and printed layouts as before.

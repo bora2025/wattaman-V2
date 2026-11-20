@@ -92,3 +92,24 @@ WattanamPluginUI.autoResize();                            // frame follows the c
 - **Checking before you publish:** `wattanam-plugin check` validates the entry, the file types and inline scripts.
 
 See the Customer School guide `docs/plugin-ui-apps.md` for the full security model.
+
+### Partner screens (school core 0.2+)
+
+A screen can use the API of another plugin it depends on, for example Smart Attendance's Take Attendance screen saving into Academic Management. Three things must agree:
+
+1. **The screen's plugin declares the partner** as a dependency or optional dependency in `plugin.json`.
+2. **The page names the partner:**
+   - a data source gets `"plugin": "<partner id>"` and the partner's permission;
+   - an `app` component lists it in `"options": { "apis": ["<partner id>"] }` and calls it with `WattanamPluginUI.partner(id)`.
+3. **The partner opens each route** to the calling plugin with `callers: ['<calling plugin id>']` in `context.routes.register(...)`.
+
+```js
+const academic = WattanamPluginUI.partner('wattanam.academic-management');
+const sessions = await academic.get('sessions');
+await academic.post('records', { ... });
+academic.navigate('student-permissions');   // a page of the partner
+```
+
+A screen moved from the partner keeps the devices registered there: `WattanamPluginUI.deviceId('<partner id>')` returns the partner's identifier for this browser (the screen must declare `device-id` and list the partner in `apis`).
+
+The school page marks each such call with the screen's plugin. A route that does not list that plugin answers 404, and the signed-in user still needs the partner's permission. A page with partner data sources can use these components only: heading, text, status, card, metric, table, form, detail, chart, print, scanner, filter, actions and app. `wattanam-plugin check` checks that partners are dependencies.

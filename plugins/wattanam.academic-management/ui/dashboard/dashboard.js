@@ -4,16 +4,18 @@
 (function () {
   'use strict';
   var ui = window.WattanamPluginUI;
+  // Taking attendance, its settings and staff attendance are Smart Attendance screens.
+  var smart = ui.partner('wattanam.smart-attendance');
   var COLORS = { present: '#10b981', late: '#f59e0b', absent: '#ef4444', permission: '#3b82f6', off: '#cbd5e1' };
   var LABELS = { present: 'Present', late: 'Late', absent: 'Absent', permission: 'Permission', off: 'Day off' };
   var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   var ACTIONS = [
-    ['Take attendance', 'attendance', '📷', 'linear-gradient(135deg,#a855f7,#d946ef)'],
+    ['Take attendance', 'take', '📷', 'linear-gradient(135deg,#a855f7,#d946ef)', 'smart'],
     ['Edit attendance', 'corrections', '✏️', 'linear-gradient(135deg,#6366f1,#3b82f6)'],
     ['Reports', 'reports', '📊', 'linear-gradient(135deg,#10b981,#14b8a6)'],
-    ['Staff reports', 'staff-attendance-reports', '👥', 'linear-gradient(135deg,#06b6d4,#0ea5e9)'],
+    ['Staff reports', 'staff/reports', '👥', 'linear-gradient(135deg,#06b6d4,#0ea5e9)', 'smart'],
     ['Classes', 'classes', '🏫', 'linear-gradient(135deg,#f59e0b,#f97316)'],
-    ['Sessions', 'settings', '⏰', 'linear-gradient(135deg,#8b5cf6,#a855f7)'],
+    ['Sessions', 'attendance-settings', '⏰', 'linear-gradient(135deg,#8b5cf6,#a855f7)', 'smart'],
     ['Transcripts', 'transcripts', '📜', 'linear-gradient(135deg,#f43f5e,#ec4899)'],
     ['Alerts', 'alerts', '🔔', 'linear-gradient(135deg,#eab308,#f59e0b)'],
   ];
@@ -95,7 +97,7 @@
   function renderActions() {
     var host = $('actions'); host.textContent = '';
     ACTIONS.forEach(function (a) {
-      host.appendChild(el('button', { type: 'button', class: 'action', onclick: function () { ui.navigate(a[1]); } }, [el('span', { class: 'emoji', style: 'background:' + a[3], text: a[2] }), a[0]]));
+      host.appendChild(el('button', { type: 'button', class: 'action', onclick: function () { if (a[4] === 'smart') smart.navigate(a[1]); else ui.navigate(a[1]); } }, [el('span', { class: 'emoji', style: 'background:' + a[3], text: a[2] }), a[0]]));
     });
   }
 

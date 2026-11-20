@@ -7,6 +7,8 @@
 (function () {
   'use strict';
   var ui = window.WattanamPluginUI;
+  // Moved into Smart Attendance: the records and rules stay with wattanam.academic-management, called as a partner.
+  var academic = ui.partner('wattanam.academic-management');
   var STATUS = ['PRESENT', 'LATE', 'PERMISSION', 'ABSENT'];
   var names = ['Morning Check-In', 'Morning Check-Out', 'Afternoon Check-In', 'Afternoon Check-Out'];
   var dayCodes = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
@@ -174,7 +176,7 @@
     if (!state.classId) { render(); return Promise.resolve(); }
     state.busy = true; show('error'); render();
     var classId = state.classId, session = state.session;
-    return Promise.all([ui.api.get('my/classes/' + encodeURIComponent(classId) + '/students'), ui.api.get('records', { classId: classId, date: today() })]).then(function (results) {
+    return Promise.all([academic.get('my/classes/' + encodeURIComponent(classId) + '/students'), academic.get('records', { classId: classId, date: today() })]).then(function (results) {
       if (classId !== state.classId || session !== state.session) return;
       var records = {};
       rows(results[1]).filter(function (item) { return Number(item.session) === session; }).forEach(function (item) { records[item.personId] = item; });
@@ -213,7 +215,7 @@
     stationFeedback('info', 'QR detected — recording attendance…');
     var body = { code: clean, classId: state.classId, session: state.session, mode: scanMode, clientTimestamp: new Date().toISOString(), idempotencyKey: newKey() };
     if (state.location) { body.latitude = state.location.latitude; body.longitude = state.location.longitude; }
-    return ui.api.post('scan', body).then(function (record) {
+    return academic.post('scan', body).then(function (record) {
       record = record || {};
       var student = state.students.filter(function (item) { return item.id === record.personId; })[0];
       var text = displayName(student || { studentNumber: '' }) + ' marked ' + String(record.status || 'PRESENT').toLowerCase() + '.';
@@ -238,7 +240,7 @@
       return chain.then(function () {
         var body = { personId: student.id, personType: 'STUDENT', classId: state.classId, date: today(), session: state.session, status: state.statuses[student.id] || 'ABSENT' };
         if (state.location) { body.latitude = state.location.latitude; body.longitude = state.location.longitude; }
-        return ui.api.post('records', body);
+        return academic.post('records', body);
       });
     }, Promise.resolve()).then(function () { return loadRoster(); }).then(function () { show('message', 'Attendance saved for ' + count + ' students.'); })
       .catch(function (error) { show('error', error.message || 'Attendance could not be saved.'); })
@@ -317,7 +319,7 @@
       state.locationText = 'Location active (' + Number(position.latitude).toFixed(4) + ', ' + Number(position.longitude).toFixed(4) + ')';
     }).catch(function (error) { state.locationText = error.status === 503 || error.status === 0 ? 'Location unavailable' : 'Location permission not granted'; })
       .then(renderStatus);
-    return Promise.all([ui.api.get('my/classes'), ui.api.get('sessions')]);
+    return Promise.all([academic.get('my/classes'), academic.get('sessions')]);
   }).then(function (results) {
     state.classes = rows(results[0]);
     state.sessions = rows(results[1]).filter(function (item) { return item.scope === 'STUDENT'; });

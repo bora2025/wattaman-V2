@@ -7,6 +7,11 @@ const path = require('node:path');
 const test = require('node:test');
 
 const root = path.resolve(__dirname, '..', 'plugins', 'wattanam.academic-management');
+// Since Academic Management 0.35.0 the screens that TAKE attendance are Smart Attendance's (partner screens);
+// the records, rules and reports stay here.
+const smartRoot = path.resolve(__dirname, '..', 'plugins', 'wattanam.smart-attendance');
+const smartUi = JSON.parse(fs.readFileSync(path.join(smartRoot, 'frontend', 'page.json'), 'utf8'));
+const { ROUTES: smartCallers } = require(path.join(root, 'backend', 'smart-attendance-callers.js'));
 const plugin = require(path.join(root, 'backend', 'index.js'));
 const { registerAuthoritativeReports } = require(path.join(root, 'backend', 'authoritative-reports.js'));
 const { registerSelfAttendance } = require(path.join(root, 'backend', 'self-attendance.js'));
@@ -34,7 +39,8 @@ test('Academic Management uses the universal SDK 1.3 UI contract', () => {
     + components.filter((component) => component.type === 'app' && component.options?.entry === 'ui/officers/index.html').length
     // So is Academic Years (ui/study-years): set current and delete on each year.
     + 2 * descriptor.pages.filter((page) => page.id === 'study-years' && page.components.some((component) => component.options?.entry === 'ui/study-years/index.html')).length;
-  assert.ok(recordActions >= 10);
+  // The self-attendance window and review actions moved to Smart Attendance in 0.35.0.
+  assert.ok(recordActions >= 6);
 });
 
 test('class roster groups single, CSV, and existing-student creation behind one action menu', () => {
@@ -221,9 +227,12 @@ test('Academic Management exposes the streamlined administration and attendance 
   assert.ok(permissions.some((permission) => permission.id === 'wattanam.academic-management.attendance.self.scan'));
   assert.deepEqual(
     navigation.map((item) => item.id),
-    ['attendance-dashboard', 'study-years', 'classes', 'student-id-cards', 'officers', 'staff-id-cards', 'score-sheets', 'score-entry', 'student-ranking', 'year-ranking', 'honor-roll', 'year-honor-roll', 'subject-ranking', 'year-report-cards', 'record-books', 'progress-books', 'my-class', 'student-permissions', 'attendance-records', 'attendance-corrections', 'attendance-alerts', 'attendance-reports', 'attendance-settings', 'student-attendance-scan', 'staff-attendance-scanner', 'staff-attendance-reports'],
+    ['attendance-dashboard', 'study-years', 'classes', 'student-id-cards', 'officers', 'staff-id-cards', 'score-sheets', 'score-entry', 'student-ranking', 'year-ranking', 'honor-roll', 'year-honor-roll', 'subject-ranking', 'year-report-cards', 'record-books', 'progress-books', 'my-class', 'student-permissions', 'attendance-corrections', 'attendance-alerts', 'attendance-reports'],
   );
-  assert.equal(navigation.find((item) => item.id === 'attendance-records')?.label, 'Student Attendance');
+  // Open to Smart Attendance's screens, and only routes this plugin registers.
+  const shapes = new Map([...routes].map(([key, route]) => [key.replace(/:[^/]+/g, ':id'), route]));
+  for (const route of smartCallers) assert.deepEqual(shapes.get(route)?.callers, ['wattanam.smart-attendance'], `${route} is registered and open to Smart Attendance`);
+  assert.equal(routes.get('PATCH records/:id/correct')?.callers, undefined, 'corrections stay with Academic Management');
   assert.equal(navigation.find((item) => item.id === 'attendance-reports')?.label, 'Student Attendance Reports');
 
   const ui = JSON.parse(fs.readFileSync(path.join(root, 'frontend', 'page.json'), 'utf8'));
@@ -233,7 +242,7 @@ test('Academic Management exposes the streamlined administration and attendance 
   const dashboardScript = fs.readFileSync(path.join(root, 'ui/dashboard/dashboard.js'), 'utf8');
   for (const call of ["ui.api.get('dashboard/day'", "ui.api.get('dashboard/month'", "ui.api.get('dashboard/milestones')"]) assert.ok(dashboardScript.includes(call), `dashboard must use ${call}`);
   assert.ok(routes.has('GET dashboard/day') && routes.has('GET dashboard/month') && routes.has('GET dashboard/milestones'), 'missing dashboard routes');
-  for (const page of ['study-years', 'classes', 'officers', 'officer-edit', 'officer-attendance', 'attendance-records', 'attendance-corrections', 'attendance-reports', 'attendance-settings', 'attendance-windows', 'student-attendance-scan', 'attendance-self-review', 'staff-attendance-scanner', 'staff-attendance-reports']) {
+  for (const page of ['study-years', 'classes', 'officers', 'officer-edit', 'officer-attendance', 'attendance-corrections', 'attendance-reports']) {
     assert.ok(ui.pages.some((candidate) => candidate.id === page), `missing UI page ${page}`);
   }
   const studyYears = ui.pages.find((candidate) => candidate.id === 'study-years');
@@ -281,36 +290,43 @@ test('Academic Management exposes the streamlined administration and attendance 
   assert.ok(officers.dataSources.some((source) => source.id === 'deleteOfficer' && source.method === 'DELETE'), 'officer CRUD requires a guarded delete source');
   const officerEdit = ui.pages.find((candidate) => candidate.id === 'officer-edit');
   assert.ok(officerEdit.components.some((component) => component.type === 'form' && component.fields?.some((field) => field.id === 'photoUrl' && field.type === 'url')), 'officer edit must expose a secure photo URL');
-  const settings = ui.pages.find((candidate) => candidate.id === 'attendance-settings');
-  // Since 0.3.7 Session Time Settings is the plugin's own sandboxed screen, not a core component.
+  // The screens that take attendance are Smart Attendance's: every data source calls this plugin.
+  const smartPage = (id) => smartUi.pages.find((candidate) => candidate.id === id);
+  const smartFile = (file) => fs.readFileSync(path.join(smartRoot, file), 'utf8');
+  for (const id of ['take', 'attendance-settings', 'self-windows', 'self-scan', 'self-review', 'staff', 'staff-reports']) {
+    assert.ok(smartPage(id)?.dataSources.every((source) => source.plugin === 'wattanam.academic-management'), `Smart Attendance ${id} calls Academic Management`);
+  }
+  const settings = smartPage('attendance-settings');
   assert.ok(settings.components.some((component) => component.type === 'app' && component.options?.entry === 'ui/sessions/index.html'), 'missing dedicated Session Time Settings screen');
-  assert.ok(fs.existsSync(path.join(root, 'ui', 'sessions', 'index.html')), 'Session Time Settings screen files are missing');
-  const attendance = ui.pages.find((candidate) => candidate.id === 'attendance-records');
-  // Since 0.5.0 the attendance station is the plugin's own screen; the school page runs the camera for it.
+  assert.ok(fs.existsSync(path.join(smartRoot, 'ui', 'sessions', 'index.html')), 'Session Time Settings screen files are missing');
+  const attendance = smartPage('take');
   const takeAttendance = attendance.components.find((component) => component.type === 'app');
-  assert.equal(takeAttendance?.options?.entry, 'ui/attendance/index.html', 'missing guided student attendance station');
+  assert.equal(takeAttendance?.options?.entry, 'ui/take/index.html', 'missing guided student attendance station');
   assert.deepEqual(takeAttendance.options.devices, ['scanner', 'location'], 'attendance station must declare the scanner and location');
-  const attendanceScreen = fs.readFileSync(path.join(root, 'ui/attendance/attendance.js'), 'utf8');
-  for (const call of ["ui.api.get('my/classes')", "ui.api.get('sessions')", "ui.api.get('records'", "'/students')", "ui.api.post('records'", "ui.api.post('scan'", 'ui.scanner.start(']) {
+  assert.deepEqual(takeAttendance.options.apis, ['wattanam.academic-management']);
+  const attendanceScreen = smartFile('ui/take/attendance.js');
+  for (const call of ["academic.get('my/classes')", "academic.get('sessions')", "academic.get('records'", "'/students')", "academic.post('records'", "academic.post('scan'", 'ui.scanner.start(']) {
     assert.ok(attendanceScreen.includes(call), `student attendance station must use ${call}`);
   }
   assert.ok(attendance.dataSources.some((source) => source.id === 'classStudents' && source.autoload === false), 'missing runtime class roster source');
-  assert.equal(ui.pages.some((candidate) => candidate.id === 'attendance-scanner'), false, 'legacy student scanner page must be removed');
-  const studentScanner = ui.pages.find((candidate) => candidate.id === 'student-attendance-scan');
-  // Since 0.6.0 students use the plugin's own Scan Attendance screen; the school page runs the camera.
+  for (const moved of ['attendance-records', 'attendance-settings', 'attendance-windows', 'student-attendance-scan', 'attendance-self-review', 'staff-attendance-scanner', 'staff-attendance-reports', 'attendance-scanner']) {
+    assert.equal(ui.pages.some((candidate) => candidate.id === moved), false, `${moved} is a Smart Attendance screen now`);
+  }
+  for (const gone of ['ui/attendance', 'ui/sessions', 'ui/student-attendance', 'ui/reports/staff.html']) assert.equal(fs.existsSync(path.join(root, gone)), false, `${gone} moved to Smart Attendance`);
+  const studentScanner = smartPage('self-scan');
   const studentScreen = studentScanner?.components.find((component) => component.type === 'app');
-  assert.equal(studentScreen?.options?.entry, 'ui/student-attendance/index.html', 'student scanner must use the student attendance screen');
+  assert.equal(studentScreen?.options?.entry, 'ui/self-scan/index.html', 'student scanner must use the student attendance screen');
   assert.deepEqual(studentScreen.options.devices, ['scanner', 'location', 'device-id'], 'student scanner must declare the camera, location and device identifier');
-  const studentScript = fs.readFileSync(path.join(root, 'ui/student-attendance/student-attendance.js'), 'utf8');
-  for (const call of ["ui.api.post('student/self-scan'", "ui.api.get('student/attendance-history')", "ui.api.get('student/attendance-devices'", "ui.api.post('student/attendance-devices'", 'clientRequestId: newKey()', 'ui.scanner.start(']) {
+  const studentScript = smartFile('ui/self-scan/student-attendance.js');
+  for (const call of ["academic.post('student/self-scan'", "academic.get('student/attendance-history')", "academic.get('student/attendance-devices'", "academic.post('student/attendance-devices'", 'clientRequestId: newKey()', 'ui.scanner.start(']) {
     assert.ok(studentScript.includes(call), `student scanner must use ${call}`);
   }
   assert.ok(studentScanner?.dataSources.some((source) => source.id === 'selfScan' && source.path === 'student/self-scan'), 'student scanner must submit to the secure self-scan route');
-  const attendanceWindows = ui.pages.find((candidate) => candidate.id === 'attendance-windows');
+  const attendanceWindows = smartPage('self-windows');
   assert.ok(attendanceWindows?.components.some((component) => component.type === 'form' && component.source === 'openWindow'), 'missing universal attendance window creation workflow');
   assert.ok(attendanceWindows?.components.some((component) => component.type === 'table' && component.options?.rowActions?.some((action) => action.source === 'rotateWindow')), 'missing per-record attendance window rotation action');
   assert.ok(attendanceWindows?.dataSources.some((source) => source.id === 'windowLive' && source.path === 'attendance-windows/:id/live'), 'attendance window workspace requires live confirmation data');
-  const staffScanner = ui.pages.find((candidate) => candidate.id === 'staff-attendance-scanner');
+  const staffScanner = smartPage('staff');
   const staffScannerComponent = staffScanner?.components.find((component) => component.id === 'staff-scanner');
   assert.equal(staffScannerComponent?.options?.station, true, 'staff attendance must use the fullscreen attendance-station workflow');
   assert.equal(staffScannerComponent?.options?.autoLocation, true, 'staff attendance station must capture location automatically');
@@ -325,9 +341,10 @@ test('Academic Management exposes the streamlined administration and attendance 
     assert.ok(navigation.some((entry) => entry.id === pageId), `missing runtime navigation for ${pageId}`);
   }
   // Staff attendance reports use the same report screen in staff mode, with their own saved print form.
-  const staffReports = ui.pages.find((candidate) => candidate.id === 'staff-attendance-reports');
-  assert.equal(staffReports?.components.find((component) => component.type === 'app')?.options?.entry, 'ui/reports/staff.html', 'missing staff attendance report screen');
-  assert.match(fs.readFileSync(path.join(root, 'ui/reports/staff.html'), 'utf8'), /data-mode="staff"/, 'staff report page must run the screen in staff mode');
+  // (a Smart Attendance screen since 0.35.0, calling this plugin's routes)
+  const staffReports = smartUi.pages.find((candidate) => candidate.id === 'staff-reports');
+  assert.equal(staffReports?.components.find((component) => component.type === 'app')?.options?.entry, 'ui/staff-reports/index.html', 'missing staff attendance report screen');
+  assert.match(fs.readFileSync(path.join(smartRoot, 'ui/staff-reports/index.html'), 'utf8'), /data-mode="staff"/, 'staff report page must run the screen in staff mode');
   assert.ok(routes.has('GET reports/staff-print-template') && routes.has('PUT reports/staff-print-template'), 'missing saved staff report print form routes');
   // Student attendance reports are the plugin's own screen: daily/period report, print and a saved print form.
   const studentReports = ui.pages.find((candidate) => candidate.id === 'attendance-reports');
@@ -498,8 +515,10 @@ test('embedded attendance durable events map to the declared Academic namespace'
 test('staff navigation exposes one canonical attendance workflow', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'plugin.json'), 'utf8'));
   const ids = manifest.navigation.map((item) => item.id);
-  assert.ok(ids.includes('staff-attendance-scanner'));
-  assert.ok(ids.includes('staff-attendance-reports'));
+  // Staff Attendance and its reports are Smart Attendance screens since Academic Management 0.35.0.
+  const smartIds = JSON.parse(fs.readFileSync(path.join(smartRoot, 'plugin.json'), 'utf8')).navigation.map((item) => item.id);
+  assert.ok(smartIds.includes('staff') && smartIds.includes('staff-reports'));
+  assert.ok(!ids.includes('staff-attendance-scanner') && !ids.includes('staff-attendance-reports'));
   assert.ok(!ids.includes('officer-attendance'));
   assert.ok(!ids.includes('officer-attendance-reports'));
 });

@@ -3,7 +3,7 @@
   "id": "wattanam.academic-management",
   "name": "Academic Management",
   "description": "Official Wattanam academic structures, profiles, admissions, enrollment, and roster contracts.",
-  "version": "0.34.0",
+  "version": "0.35.0",
   "requiresCore": ">=0.1.35 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
@@ -63,42 +63,111 @@
     "wattanam.academic-management.transcripts.print"
   ],
   "dependencies": {},
-  "optionalDependencies": { "wattanam.smart-attendance": ">=0.1.0 <1.0.0" },
+  "optionalDependencies": {
+    "wattanam.smart-attendance": ">=0.1.0 <1.0.0"
+  },
   "contracts": {
     "schemaVersion": 1,
     "deprecationNoticeDays": 180,
     "events": {
       "publishes": {
-        "wattanam.academic-management.attendance.corrected": [1],
-        "wattanam.academic-management.attendance.recorded": [1],
-        "wattanam.academic-management.attendance.staff-recorded": [1],
-        "wattanam.academic-management.attendance.station-result": [1],
-        "wattanam.academic-management.attendance.study-year.created": [1],
-        "wattanam.academic-management.attendance.study-year.deleted": [1],
-        "wattanam.academic-management.attendance.study-year.set-current": [1],
-        "wattanam.academic-management.attendance.study-year.updated": [1],
-        "wattanam.academic-management.attendance.student-self-recorded": [1],
-        "wattanam.academic-management.class.created": [1],
-        "wattanam.academic-management.class.deleted": [1],
-        "wattanam.academic-management.class.updated": [1],
-        "wattanam.academic-management.department.created": [1],
-        "wattanam.academic-management.department.deleted": [1],
-        "wattanam.academic-management.department.updated": [1],
-        "wattanam.academic-management.identity.detached": [1],
-        "wattanam.academic-management.registration.approved": [2],
-        "wattanam.academic-management.student.added-to-class": [1],
-        "wattanam.academic-management.student.created": [1],
-        "wattanam.academic-management.student.imported": [1],
-        "wattanam.academic-management.student.removed-from-class": [1],
-        "wattanam.academic-management.student.updated": [1],
-        "wattanam.academic-management.students.cleaned-up": [1],
-        "wattanam.academic-management.subject.created": [1],
-        "wattanam.academic-management.subject.updated": [1]
+        "wattanam.academic-management.attendance.corrected": [
+          1
+        ],
+        "wattanam.academic-management.attendance.recorded": [
+          1
+        ],
+        "wattanam.academic-management.attendance.staff-recorded": [
+          1
+        ],
+        "wattanam.academic-management.attendance.station-result": [
+          1
+        ],
+        "wattanam.academic-management.attendance.study-year.created": [
+          1
+        ],
+        "wattanam.academic-management.attendance.study-year.deleted": [
+          1
+        ],
+        "wattanam.academic-management.attendance.study-year.set-current": [
+          1
+        ],
+        "wattanam.academic-management.attendance.study-year.updated": [
+          1
+        ],
+        "wattanam.academic-management.attendance.student-self-recorded": [
+          1
+        ],
+        "wattanam.academic-management.class.created": [
+          1
+        ],
+        "wattanam.academic-management.class.deleted": [
+          1
+        ],
+        "wattanam.academic-management.class.updated": [
+          1
+        ],
+        "wattanam.academic-management.department.created": [
+          1
+        ],
+        "wattanam.academic-management.department.deleted": [
+          1
+        ],
+        "wattanam.academic-management.department.updated": [
+          1
+        ],
+        "wattanam.academic-management.identity.detached": [
+          1
+        ],
+        "wattanam.academic-management.registration.approved": [
+          2
+        ],
+        "wattanam.academic-management.student.added-to-class": [
+          1
+        ],
+        "wattanam.academic-management.student.created": [
+          1
+        ],
+        "wattanam.academic-management.student.imported": [
+          1
+        ],
+        "wattanam.academic-management.student.removed-from-class": [
+          1
+        ],
+        "wattanam.academic-management.student.updated": [
+          1
+        ],
+        "wattanam.academic-management.students.cleaned-up": [
+          1
+        ],
+        "wattanam.academic-management.subject.created": [
+          1
+        ],
+        "wattanam.academic-management.subject.updated": [
+          1
+        ]
       },
-      "subscribes": { "wattanam.smart-attendance.presence.captured": [1] }
+      "subscribes": {
+        "wattanam.smart-attendance.presence.captured": [
+          1
+        ]
+      }
     },
     "readModels": {
-      "publishes": { "study-year": [1], "student-attendance-summary": [1], "attendance-people": [1], "attendance-person-photo": [1] },
+      "publishes": {
+        "study-year": [
+          1
+        ],
+        "student-attendance-summary": [
+          1
+        ],
+        "attendance-people": [
+          1
+        ],
+        "attendance-person-photo": [
+          1
+        ]
+      },
       "reads": {}
     }
   },
@@ -700,12 +769,6 @@
       "permission": "wattanam.academic-management.manage"
     },
     {
-      "id": "attendance-records",
-      "label": "Student Attendance",
-      "href": "/plugins/wattanam.academic-management/attendance",
-      "permission": "wattanam.academic-management.attendance.view"
-    },
-    {
       "id": "attendance-corrections",
       "label": "Attendance Corrections",
       "href": "/plugins/wattanam.academic-management/corrections",
@@ -722,24 +785,6 @@
       "label": "Student Attendance Reports",
       "href": "/plugins/wattanam.academic-management/reports",
       "permission": "wattanam.academic-management.attendance.report"
-    },
-    {
-      "id": "attendance-settings",
-      "label": "Attendance Settings",
-      "href": "/plugins/wattanam.academic-management/settings",
-      "permission": "wattanam.academic-management.attendance.configure"
-    },
-    {
-      "id": "staff-attendance-scanner",
-      "label": "Staff Attendance",
-      "href": "/plugins/wattanam.academic-management/staff-attendance",
-      "permission": "wattanam.academic-management.attendance.staff.scan"
-    },
-    {
-      "id": "staff-attendance-reports",
-      "label": "Staff Attendance Reports",
-      "href": "/plugins/wattanam.academic-management/staff-attendance-reports",
-      "permission": "wattanam.academic-management.attendance.staff.report"
     },
     {
       "id": "score-sheets",
@@ -812,12 +857,6 @@
       "label": "Student Permissions",
       "href": "/plugins/wattanam.academic-management/student-permissions",
       "permission": "wattanam.academic-management.attendance.mark"
-    },
-    {
-      "id": "student-attendance-scan",
-      "label": "Scan Attendance",
-      "href": "/plugins/wattanam.academic-management/student/attendance-scan",
-      "permission": "wattanam.academic-management.attendance.self.scan"
     }
   ],
   "supportedLanguages": [
