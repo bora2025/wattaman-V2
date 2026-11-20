@@ -292,6 +292,1207 @@
           }
         }
       ]
+    },
+    {
+      "id": "take",
+      "title": "Take Attendance",
+      "routePath": "take",
+      "permission": "wattanam.smart-attendance.take",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "classes",
+          "method": "GET",
+          "path": "my/classes",
+          "permission": "wattanam.academic-management.attendance.view",
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "sessions",
+          "method": "GET",
+          "path": "sessions",
+          "permission": "wattanam.academic-management.attendance.view",
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "records",
+          "method": "GET",
+          "path": "records",
+          "permission": "wattanam.academic-management.attendance.view",
+          "autoload": false,
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "classStudents",
+          "method": "GET",
+          "path": "my/classes/:classId/students",
+          "permission": "wattanam.academic-management.attendance.view",
+          "parameters": [
+            "classId"
+          ],
+          "autoload": false,
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "saveRecord",
+          "method": "POST",
+          "path": "records",
+          "permission": "wattanam.academic-management.attendance.mark",
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "scan",
+          "method": "POST",
+          "path": "scan",
+          "permission": "wattanam.academic-management.attendance.scan",
+          "plugin": "wattanam.academic-management"
+        }
+      ],
+      "components": [
+        {
+          "id": "take-student-attendance",
+          "type": "app",
+          "title": "Take Student Attendance",
+          "options": {
+            "entry": "ui/take/index.html",
+            "height": "auto",
+            "minHeight": 640,
+            "devices": [
+              "scanner",
+              "location"
+            ],
+            "apis": [
+              "wattanam.academic-management"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "attendance-settings",
+      "title": "Attendance Settings",
+      "routePath": "attendance-settings",
+      "permission": "wattanam.smart-attendance.configure",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "identifiers",
+          "method": "GET",
+          "path": "identifiers",
+          "permission": "wattanam.academic-management.attendance.devices.manage",
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "createIdentifier",
+          "method": "POST",
+          "path": "identifiers",
+          "permission": "wattanam.academic-management.attendance.devices.manage",
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "sessions",
+          "method": "GET",
+          "path": "sessions",
+          "permission": "wattanam.academic-management.attendance.view",
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "saveSession",
+          "method": "POST",
+          "path": "sessions",
+          "permission": "wattanam.academic-management.attendance.configure",
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "sessionSettings",
+          "method": "GET",
+          "path": "session-settings",
+          "permission": "wattanam.academic-management.attendance.view",
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "saveSessionSettings",
+          "method": "PUT",
+          "path": "session-settings",
+          "permission": "wattanam.academic-management.attendance.configure",
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "holidays",
+          "method": "GET",
+          "path": "holidays",
+          "permission": "wattanam.academic-management.attendance.view",
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "createHoliday",
+          "method": "POST",
+          "path": "holidays",
+          "permission": "wattanam.academic-management.attendance.configure",
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "alertRules",
+          "method": "GET",
+          "path": "alert-rules",
+          "permission": "wattanam.academic-management.attendance.configure",
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "saveAlertRule",
+          "method": "POST",
+          "path": "alert-rules",
+          "permission": "wattanam.academic-management.attendance.configure",
+          "plugin": "wattanam.academic-management"
+        }
+      ],
+      "components": [
+        {
+          "id": "session-settings-workspace",
+          "type": "app",
+          "title": "Session Time Settings",
+          "options": {
+            "entry": "ui/sessions/index.html",
+            "height": "auto",
+            "minHeight": 400,
+            "apis": [
+              "wattanam.academic-management"
+            ]
+          }
+        },
+        {
+          "id": "identifiers",
+          "type": "table",
+          "title": "Camera / card / USB identifiers",
+          "source": "identifiers",
+          "fields": [
+            {
+              "id": "code",
+              "label": "Code",
+              "filterable": true
+            },
+            {
+              "id": "personType",
+              "label": "Type"
+            },
+            {
+              "id": "personId",
+              "label": "Person ID"
+            },
+            {
+              "id": "active",
+              "label": "Active",
+              "format": "boolean"
+            }
+          ],
+          "options": {
+            "pageSize": 20,
+            "selectable": false
+          }
+        },
+        {
+          "id": "identifier-form",
+          "type": "form",
+          "title": "Add identifier",
+          "source": "createIdentifier",
+          "fields": [
+            {
+              "id": "code",
+              "type": "text",
+              "label": "Card / QR / USB code",
+              "required": true
+            },
+            {
+              "id": "personId",
+              "type": "text",
+              "label": "Person ID",
+              "required": true
+            },
+            {
+              "id": "personType",
+              "type": "select",
+              "label": "Person type",
+              "required": true,
+              "options": [
+                {
+                  "label": "Student",
+                  "value": "STUDENT"
+                },
+                {
+                  "label": "Staff",
+                  "value": "STAFF"
+                }
+              ]
+            }
+          ],
+          "options": {
+            "submitLabel": "Add identifier",
+            "successMessage": "Identifier added"
+          }
+        },
+        {
+          "id": "holidays",
+          "type": "table",
+          "title": "Holidays",
+          "source": "holidays",
+          "fields": [
+            {
+              "id": "date",
+              "label": "Date",
+              "format": "date"
+            },
+            {
+              "id": "name",
+              "label": "Name"
+            },
+            {
+              "id": "type",
+              "label": "Type"
+            }
+          ],
+          "options": {
+            "pageSize": 20,
+            "selectable": false
+          }
+        },
+        {
+          "id": "holiday-form",
+          "type": "form",
+          "title": "Add holiday",
+          "source": "createHoliday",
+          "fields": [
+            {
+              "id": "date",
+              "type": "date",
+              "label": "Date",
+              "required": true
+            },
+            {
+              "id": "name",
+              "type": "text",
+              "label": "Name",
+              "required": true
+            },
+            {
+              "id": "description",
+              "type": "textarea",
+              "label": "Description"
+            }
+          ],
+          "options": {
+            "submitLabel": "Add holiday",
+            "successMessage": "Holiday added"
+          }
+        },
+        {
+          "id": "alert-rules",
+          "type": "table",
+          "title": "Absence alert rules",
+          "source": "alertRules",
+          "fields": [
+            {
+              "id": "code",
+              "label": "Code"
+            },
+            {
+              "id": "enabled",
+              "label": "Enabled",
+              "format": "boolean"
+            },
+            {
+              "id": "threshold",
+              "label": "Absences"
+            },
+            {
+              "id": "windowDays",
+              "label": "Window days"
+            },
+            {
+              "id": "channels",
+              "label": "Channels"
+            }
+          ],
+          "options": {
+            "pageSize": 20,
+            "selectable": false
+          }
+        },
+        {
+          "id": "alert-rule-form",
+          "type": "form",
+          "title": "Create or update absence alert rule",
+          "source": "saveAlertRule",
+          "fields": [
+            {
+              "id": "code",
+              "type": "text",
+              "label": "Rule code",
+              "required": true,
+              "minLength": 3,
+              "maxLength": 100
+            },
+            {
+              "id": "threshold",
+              "type": "number",
+              "label": "Absence threshold",
+              "required": true,
+              "min": 1,
+              "max": 100
+            },
+            {
+              "id": "windowDays",
+              "type": "number",
+              "label": "Window days",
+              "required": true,
+              "min": 1,
+              "max": 365
+            },
+            {
+              "id": "enabled",
+              "type": "checkbox",
+              "label": "Enabled"
+            }
+          ],
+          "options": {
+            "submitLabel": "Save alert rule",
+            "successMessage": "Alert rule saved"
+          }
+        }
+      ]
+    },
+    {
+      "id": "self-windows",
+      "title": "Self-Attendance Windows",
+      "routePath": "self-attendance/windows",
+      "permission": "wattanam.smart-attendance.self.windows",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "windows",
+          "method": "GET",
+          "path": "attendance-windows",
+          "permission": "wattanam.academic-management.attendance.windows.manage",
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "openWindow",
+          "method": "POST",
+          "path": "attendance-windows",
+          "permission": "wattanam.academic-management.attendance.windows.manage",
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "rotateWindow",
+          "method": "POST",
+          "path": "attendance-windows/:id/rotate",
+          "parameters": [
+            "id"
+          ],
+          "autoload": false,
+          "permission": "wattanam.academic-management.attendance.windows.manage",
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "closeWindow",
+          "method": "POST",
+          "path": "attendance-windows/:id/close",
+          "parameters": [
+            "id"
+          ],
+          "autoload": false,
+          "permission": "wattanam.academic-management.attendance.windows.manage",
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "windowLive",
+          "method": "GET",
+          "path": "attendance-windows/:id/live",
+          "parameters": [
+            "id"
+          ],
+          "autoload": false,
+          "permission": "wattanam.academic-management.attendance.windows.manage",
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "windowClasses",
+          "method": "GET",
+          "path": "classes",
+          "permission": "wattanam.academic-management.view",
+          "plugin": "wattanam.academic-management"
+        }
+      ],
+      "components": [
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Secure student self-attendance"
+        },
+        {
+          "id": "windows-table",
+          "type": "table",
+          "title": "Attendance windows and rotating QR tokens",
+          "source": "windows",
+          "fields": [
+            {
+              "id": "classId",
+              "label": "Class",
+              "filterable": true
+            },
+            {
+              "id": "session",
+              "label": "Session"
+            },
+            {
+              "id": "sessionType",
+              "label": "Type"
+            },
+            {
+              "id": "status",
+              "label": "Status",
+              "filterable": true
+            },
+            {
+              "id": "startsAt",
+              "label": "Starts",
+              "format": "datetime"
+            },
+            {
+              "id": "endsAt",
+              "label": "Ends",
+              "format": "datetime"
+            },
+            {
+              "id": "attendanceToken",
+              "label": "Current signed QR token"
+            },
+            {
+              "id": "expiresAt",
+              "label": "Token expires",
+              "format": "datetime"
+            }
+          ],
+          "options": {
+            "pageSize": 20,
+            "selectable": false,
+            "rowActions": [
+              {
+                "id": "rotate-window",
+                "label": "Rotate QR",
+                "source": "rotateWindow",
+                "idField": "id",
+                "idParameter": "id",
+                "confirmation": "Generate a fresh short-lived QR token for this window?"
+              },
+              {
+                "id": "close-window",
+                "label": "Close",
+                "source": "closeWindow",
+                "idField": "id",
+                "idParameter": "id",
+                "confirmation": "Close this attendance window?",
+                "destructive": true
+              }
+            ]
+          }
+        },
+        {
+          "id": "open-window-form",
+          "type": "form",
+          "title": "Open attendance window",
+          "source": "openWindow",
+          "fields": [
+            {
+              "id": "classId",
+              "type": "text",
+              "label": "Class ID",
+              "required": true
+            },
+            {
+              "id": "session",
+              "type": "number",
+              "label": "Session",
+              "required": true,
+              "min": 1,
+              "max": 4
+            },
+            {
+              "id": "sessionType",
+              "type": "select",
+              "label": "Action",
+              "required": true,
+              "options": [
+                {
+                  "label": "Check in",
+                  "value": "CHECK_IN"
+                },
+                {
+                  "label": "Check out",
+                  "value": "CHECK_OUT"
+                }
+              ]
+            },
+            {
+              "id": "startsAt",
+              "type": "text",
+              "label": "Starts at (ISO date/time)",
+              "required": true
+            },
+            {
+              "id": "endsAt",
+              "type": "text",
+              "label": "Ends at (ISO date/time)",
+              "required": true
+            },
+            {
+              "id": "qrValiditySeconds",
+              "type": "number",
+              "label": "QR validity seconds",
+              "required": true,
+              "min": 15,
+              "max": 300,
+              "defaultValue": 45
+            },
+            {
+              "id": "locationRequired",
+              "type": "checkbox",
+              "label": "Require campus location"
+            },
+            {
+              "id": "latitude",
+              "type": "number",
+              "label": "Campus latitude",
+              "visibleWhen": {
+                "field": "locationRequired",
+                "equals": true
+              }
+            },
+            {
+              "id": "longitude",
+              "type": "number",
+              "label": "Campus longitude",
+              "visibleWhen": {
+                "field": "locationRequired",
+                "equals": true
+              }
+            },
+            {
+              "id": "radiusMeters",
+              "type": "number",
+              "label": "Campus radius (meters)",
+              "min": 10,
+              "max": 10000,
+              "visibleWhen": {
+                "field": "locationRequired",
+                "equals": true
+              }
+            },
+            {
+              "id": "maxAccuracyMeters",
+              "type": "number",
+              "label": "Maximum GPS accuracy (meters)",
+              "min": 5,
+              "max": 5000,
+              "defaultValue": 100
+            },
+            {
+              "id": "registeredDeviceRequired",
+              "type": "checkbox",
+              "label": "Require registered student device"
+            },
+            {
+              "id": "maxOfflineMinutes",
+              "type": "number",
+              "label": "Maximum offline age (minutes)",
+              "min": 0,
+              "max": 10080,
+              "defaultValue": 1440
+            }
+          ],
+          "options": {
+            "submitLabel": "Open and create signed QR",
+            "confirmation": "Open this attendance window?",
+            "successMessage": "Attendance window opened"
+          }
+        }
+      ]
+    },
+    {
+      "id": "self-scan",
+      "title": "Scan Attendance",
+      "routePath": "self-attendance/scan",
+      "permission": "wattanam.smart-attendance.self.scan",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "selfScan",
+          "method": "POST",
+          "path": "student/self-scan",
+          "permission": "wattanam.academic-management.attendance.self.scan",
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "history",
+          "method": "GET",
+          "path": "student/attendance-history",
+          "permission": "wattanam.academic-management.attendance.self.scan",
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "devices",
+          "method": "GET",
+          "path": "student/attendance-devices",
+          "permission": "wattanam.academic-management.attendance.self.scan",
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "registerDevice",
+          "method": "POST",
+          "path": "student/attendance-devices",
+          "permission": "wattanam.academic-management.attendance.self.scan",
+          "plugin": "wattanam.academic-management"
+        }
+      ],
+      "components": [
+        {
+          "id": "student-self-attendance",
+          "type": "app",
+          "title": "Scan Attendance",
+          "options": {
+            "entry": "ui/self-scan/index.html",
+            "height": "auto",
+            "minHeight": 560,
+            "devices": [
+              "scanner",
+              "location",
+              "device-id"
+            ],
+            "apis": [
+              "wattanam.academic-management"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "self-review",
+      "title": "Self-Attendance Review",
+      "routePath": "self-attendance/review",
+      "permission": "wattanam.smart-attendance.self.review",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "attempts",
+          "method": "GET",
+          "path": "attendance-self-review",
+          "permission": "wattanam.academic-management.attendance.self.review",
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "decide",
+          "method": "POST",
+          "path": "attendance-self-review/:id/decide",
+          "parameters": [
+            "id"
+          ],
+          "autoload": false,
+          "permission": "wattanam.academic-management.attendance.self.review",
+          "plugin": "wattanam.academic-management"
+        }
+      ],
+      "components": [
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Review offline and location exceptions"
+        },
+        {
+          "id": "attempts-table",
+          "type": "table",
+          "title": "Pending self-attendance attempts",
+          "source": "attempts",
+          "fields": [
+            {
+              "id": "receivedAt",
+              "label": "Received",
+              "format": "datetime"
+            },
+            {
+              "id": "studentProfileId",
+              "label": "Student"
+            },
+            {
+              "id": "classId",
+              "label": "Class"
+            },
+            {
+              "id": "session",
+              "label": "Session"
+            },
+            {
+              "id": "result",
+              "label": "Result"
+            },
+            {
+              "id": "rejectionReason",
+              "label": "Reason"
+            },
+            {
+              "id": "locationDecision",
+              "label": "Location"
+            },
+            {
+              "id": "networkQuality",
+              "label": "Network"
+            }
+          ],
+          "options": {
+            "pageSize": 25,
+            "selectable": false,
+            "rowActions": [
+              {
+                "id": "approve-attempt",
+                "label": "Approve",
+                "source": "decide",
+                "idField": "id",
+                "idParameter": "id",
+                "body": {
+                  "decision": "APPROVED",
+                  "reason": "Approved after staff review"
+                },
+                "confirmation": "Approve this self-attendance attempt?"
+              },
+              {
+                "id": "reject-attempt",
+                "label": "Reject",
+                "source": "decide",
+                "idField": "id",
+                "idParameter": "id",
+                "body": {
+                  "decision": "REJECTED",
+                  "reason": "Rejected after staff review"
+                },
+                "confirmation": "Reject this self-attendance attempt?",
+                "destructive": true
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "staff",
+      "title": "Staff Attendance",
+      "routePath": "staff",
+      "permission": "wattanam.smart-attendance.staff.scan",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "scanStaff",
+          "method": "POST",
+          "path": "staff-attendance/scan",
+          "permission": "wattanam.academic-management.attendance.staff.scan",
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "staffRecords",
+          "method": "GET",
+          "path": "staff-attendance/records",
+          "permission": "wattanam.academic-management.attendance.staff.scan",
+          "plugin": "wattanam.academic-management"
+        }
+      ],
+      "components": [
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Camera / USB staff attendance scanner"
+        },
+        {
+          "id": "staff-scanner",
+          "type": "scanner",
+          "title": "Scan staff card",
+          "source": "scanStaff",
+          "options": {
+            "station": true,
+            "autoLocation": true,
+            "modes": [
+              "camera",
+              "keyboard"
+            ],
+            "field": "code",
+            "minLength": 4,
+            "maxLength": 1000,
+            "debounceMs": 1000,
+            "contextFields": [
+              {
+                "id": "session",
+                "type": "select",
+                "label": "Session (leave blank for automatic)",
+                "options": [
+                  {
+                    "label": "Session 1",
+                    "value": 1
+                  },
+                  {
+                    "label": "Session 2",
+                    "value": 2
+                  },
+                  {
+                    "label": "Session 3",
+                    "value": 3
+                  },
+                  {
+                    "label": "Session 4",
+                    "value": 4
+                  }
+                ]
+              },
+              {
+                "id": "latitude",
+                "type": "number",
+                "label": "Latitude"
+              },
+              {
+                "id": "longitude",
+                "type": "number",
+                "label": "Longitude"
+              },
+              {
+                "id": "location",
+                "type": "text",
+                "label": "Location label"
+              }
+            ]
+          }
+        },
+        {
+          "id": "staff-records",
+          "type": "table",
+          "title": "Today's staff attendance",
+          "source": "staffRecords",
+          "fields": [
+            {
+              "id": "personNameSnapshot",
+              "label": "Officer"
+            },
+            {
+              "id": "personNumberSnapshot",
+              "label": "Officer ID"
+            },
+            {
+              "id": "classNameSnapshot",
+              "label": "Department"
+            },
+            {
+              "id": "session",
+              "label": "Session"
+            },
+            {
+              "id": "status",
+              "label": "Status"
+            },
+            {
+              "id": "checkInTime",
+              "label": "Check in",
+              "format": "datetime"
+            },
+            {
+              "id": "checkOutTime",
+              "label": "Check out",
+              "format": "datetime"
+            },
+            {
+              "id": "scanLocation",
+              "label": "Location"
+            }
+          ],
+          "options": {
+            "pageSize": 30,
+            "selectable": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "staff-reports",
+      "title": "Staff Attendance Reports",
+      "routePath": "staff/reports",
+      "permission": "wattanam.smart-attendance.staff.reports",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "reportStaff",
+          "method": "GET",
+          "path": "officers",
+          "permission": "wattanam.academic-management.attendance.staff.report",
+          "autoload": false,
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "staffReportSessions",
+          "method": "GET",
+          "path": "sessions",
+          "permission": "wattanam.academic-management.attendance.staff.report",
+          "autoload": false,
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "staffReport",
+          "method": "GET",
+          "path": "staff-attendance/reports",
+          "permission": "wattanam.academic-management.attendance.staff.report",
+          "autoload": false,
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "staffAuthoritativeReport",
+          "method": "GET",
+          "path": "staff-attendance/reports/authoritative",
+          "permission": "wattanam.academic-management.attendance.staff.report",
+          "autoload": false,
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "staffSummary",
+          "method": "GET",
+          "path": "staff-attendance/reports/summary",
+          "permission": "wattanam.academic-management.attendance.staff.report",
+          "autoload": false,
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "reportHolidays",
+          "method": "GET",
+          "path": "holidays",
+          "permission": "wattanam.academic-management.attendance.view",
+          "autoload": false,
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "reportStudyYears",
+          "method": "GET",
+          "path": "study-years",
+          "permission": "wattanam.academic-management.view",
+          "autoload": false,
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "staffDepartments",
+          "method": "GET",
+          "path": "departments",
+          "permission": "wattanam.academic-management.view",
+          "autoload": false,
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "staffSessionSettings",
+          "method": "GET",
+          "path": "session-settings",
+          "permission": "wattanam.academic-management.attendance.view",
+          "autoload": false,
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "staffPrintTemplate",
+          "method": "GET",
+          "path": "reports/staff-print-template",
+          "permission": "wattanam.academic-management.attendance.staff.report",
+          "autoload": false,
+          "plugin": "wattanam.academic-management"
+        },
+        {
+          "id": "saveStaffPrintTemplate",
+          "method": "PUT",
+          "path": "reports/staff-print-template",
+          "permission": "wattanam.academic-management.attendance.configure",
+          "autoload": false,
+          "plugin": "wattanam.academic-management"
+        }
+      ],
+      "components": [
+        {
+          "id": "staff-attendance-report-screen",
+          "type": "app",
+          "title": "Staff Attendance Reports",
+          "options": {
+            "entry": "ui/staff-reports/index.html",
+            "height": "auto",
+            "minHeight": 720,
+            "apis": [
+              "wattanam.academic-management"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "workforce-scan",
+      "title": "Workforce Scan Attendance",
+      "routePath": "workforce/scan",
+      "permission": "wattanam.smart-attendance.workforce.scan",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "scan",
+          "method": "POST",
+          "path": "attendance/scan",
+          "permission": "wattanam.organizing-management.attendance.scan",
+          "plugin": "wattanam.organizing-management"
+        },
+        {
+          "id": "today",
+          "method": "GET",
+          "path": "attendance/records",
+          "permission": "wattanam.organizing-management.attendance.report",
+          "plugin": "wattanam.organizing-management"
+        }
+      ],
+      "components": [
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Camera / USB workforce attendance scanner"
+        },
+        {
+          "id": "scanner",
+          "type": "scanner",
+          "title": "Scan employer or employee ID card",
+          "source": "scan",
+          "options": {
+            "station": true,
+            "autoLocation": true,
+            "modes": [
+              "camera",
+              "keyboard"
+            ],
+            "field": "code",
+            "minLength": 4,
+            "maxLength": 1000,
+            "debounceMs": 1000,
+            "contextFields": [
+              {
+                "id": "latitude",
+                "type": "number",
+                "label": "Latitude"
+              },
+              {
+                "id": "longitude",
+                "type": "number",
+                "label": "Longitude"
+              },
+              {
+                "id": "location",
+                "type": "text",
+                "label": "Location label"
+              }
+            ]
+          }
+        },
+        {
+          "id": "today-heading",
+          "type": "heading",
+          "title": "Today’s attendance activity"
+        },
+        {
+          "id": "today",
+          "type": "table",
+          "title": "Employer and employee check-ins",
+          "source": "today",
+          "fields": [
+            {
+              "id": "fullName",
+              "label": "Employer / employee",
+              "filterable": true
+            },
+            {
+              "id": "employeeNumber",
+              "label": "ID number",
+              "filterable": true
+            },
+            {
+              "id": "position",
+              "label": "Position",
+              "filterable": true
+            },
+            {
+              "id": "status",
+              "label": "Status",
+              "filterable": true
+            },
+            {
+              "id": "checkInAt",
+              "label": "Check in",
+              "format": "datetime"
+            },
+            {
+              "id": "checkOutAt",
+              "label": "Check out",
+              "format": "datetime"
+            },
+            {
+              "id": "source",
+              "label": "Scanner"
+            }
+          ],
+          "options": {
+            "pageSize": 50,
+            "selectable": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "workforce-settings",
+      "title": "Workforce Attendance Settings",
+      "routePath": "workforce/settings",
+      "permission": "wattanam.smart-attendance.workforce.settings",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "sessions",
+          "method": "GET",
+          "path": "attendance/sessions",
+          "permission": "wattanam.organizing-management.attendance.configure",
+          "plugin": "wattanam.organizing-management"
+        },
+        {
+          "id": "saveSession",
+          "method": "POST",
+          "path": "attendance/sessions",
+          "permission": "wattanam.organizing-management.attendance.configure",
+          "plugin": "wattanam.organizing-management"
+        },
+        {
+          "id": "sessionSettings",
+          "method": "GET",
+          "path": "attendance/session-settings",
+          "permission": "wattanam.organizing-management.attendance.configure",
+          "plugin": "wattanam.organizing-management"
+        },
+        {
+          "id": "saveSessionSettings",
+          "method": "PUT",
+          "path": "attendance/session-settings",
+          "permission": "wattanam.organizing-management.attendance.configure",
+          "plugin": "wattanam.organizing-management"
+        }
+      ],
+      "components": [
+        {
+          "id": "workforce-session-settings",
+          "type": "app",
+          "title": "Workforce Session Settings",
+          "options": {
+            "entry": "ui/workforce-settings/index.html",
+            "height": "auto",
+            "minHeight": 420,
+            "apis": [
+              "wattanam.organizing-management"
+            ]
+          }
+        }
+      ]
     }
   ]
 }

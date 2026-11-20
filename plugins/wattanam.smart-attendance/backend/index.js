@@ -39,7 +39,18 @@ const PERM = {
   configure: `${ID}.configure`,
   enroll: `${ID}.faces.enroll`,
   faces: `${ID}.faces.manage`,
+  // Taking attendance, moved here from Academic Management and Organizing Management (0.3.0). The
+  // records stay with those plugins; these screens call their routes as partner screens.
+  take: `${ID}.take`,
+  selfScan: `${ID}.self.scan`,
+  selfWindows: `${ID}.self.windows`,
+  selfReview: `${ID}.self.review`,
+  staffScan: `${ID}.staff.scan`,
+  staffReports: `${ID}.staff.reports`,
+  workforceScan: `${ID}.workforce.scan`,
+  workforceSettings: `${ID}.workforce.settings`,
 };
+const ORGANIZING = 'wattanam.organizing-management';
 const PRESENCE = `${ID}.presence.captured`;
 const RESULT = `${ACADEMIC}.attendance.station-result`;
 const METHODS = ['QR', 'NFC', 'FACE'];
@@ -119,15 +130,44 @@ module.exports = {
       { id: PERM.configure, label: 'Change Smart Attendance settings', roles: ['ADMIN', 'SCHOOL_ADMIN'] },
       { id: PERM.enroll, label: 'Record face consent and enrol students’ faces', description: 'Faces are biometric data: enrol only after the student (or a guardian for students under 18) has agreed.', roles: ['ADMIN', 'SCHOOL_ADMIN', 'RECEPTIONIST'] },
       { id: PERM.faces, label: 'Delete enrolled faces and withdraw consent', roles: ['ADMIN', 'SCHOOL_ADMIN'] },
+      // The same default roles as the Academic Management / Organizing Management permissions these screens
+      // use; the user also needs those for every call.
+      { id: PERM.take, label: 'Take student attendance (by hand, camera or USB scanner)', roles: ['WATTAMAN', 'TEACHER', 'CLASS_ADMIN'] },
+      { id: PERM.selfScan, label: 'Record my own attendance with the school QR (students)' },
+      { id: PERM.selfWindows, label: 'Open and close student self-attendance windows' },
+      { id: PERM.selfReview, label: 'Review exceptional student self-attendance scans' },
+      { id: PERM.staffScan, label: 'Scan and record staff attendance', roles: ['WATTAMAN'] },
+      { id: PERM.staffReports, label: 'View and export staff attendance reports' },
+      { id: PERM.workforceScan, label: 'Scan workforce attendance (organizations)' },
+      { id: PERM.workforceSettings, label: 'Configure workforce attendance (organizations)' },
     ]);
 
     // The sidebar: the core shows only the entries registered here (plugin.json's list is the declaration).
+    // Older school cores do not say which plugins are installed: show the entries then.
+    const partnerInstalled = async (pluginId) => {
+      try { return context.dependencies ? await context.dependencies.isAvailable(pluginId) : true; } catch { return true; }
+    };
     context.navigation.register([
       { id: 'station', label: 'Attendance Station', href: `/plugins/${ID}/station`, permission: PERM.operate },
       { id: 'monitor', label: 'Station Monitor', href: `/plugins/${ID}/monitor`, permission: PERM.view },
       { id: 'stations', label: 'Attendance Stations', href: `/plugins/${ID}/stations`, permission: PERM.stations },
       { id: 'cards', label: 'NFC Cards', href: `/plugins/${ID}/cards`, permission: PERM.cards },
       { id: 'faces', label: 'Face Enrolment', href: `/plugins/${ID}/faces`, permission: PERM.enroll },
+      // The screens moved from Academic Management (schools) and Organizing Management (organizations),
+      // shown when that plugin is installed.
+      ...(await partnerInstalled(ACADEMIC) ? [
+        { id: 'take', label: 'Take Attendance', href: `/plugins/${ID}/take`, permission: PERM.take },
+        { id: 'attendance-settings', label: 'Attendance Settings', href: `/plugins/${ID}/attendance-settings`, permission: PERM.configure },
+        { id: 'self-scan', label: 'Scan Attendance', href: `/plugins/${ID}/self-attendance/scan`, permission: PERM.selfScan },
+        { id: 'self-windows', label: 'Self-Attendance Windows', href: `/plugins/${ID}/self-attendance/windows`, permission: PERM.selfWindows },
+        { id: 'self-review', label: 'Self-Attendance Review', href: `/plugins/${ID}/self-attendance/review`, permission: PERM.selfReview },
+        { id: 'staff', label: 'Staff Attendance', href: `/plugins/${ID}/staff`, permission: PERM.staffScan },
+        { id: 'staff-reports', label: 'Staff Attendance Reports', href: `/plugins/${ID}/staff/reports`, permission: PERM.staffReports },
+      ] : []),
+      ...(await partnerInstalled(ORGANIZING) ? [
+        { id: 'workforce-scan', label: 'Workforce Scan Attendance', href: `/plugins/${ID}/workforce/scan`, permission: PERM.workforceScan },
+        { id: 'workforce-settings', label: 'Workforce Attendance Settings', href: `/plugins/${ID}/workforce/settings`, permission: PERM.workforceSettings },
+      ] : []),
     ]);
 
     // ---------- settings: the per-school card key, the cool-down ----------

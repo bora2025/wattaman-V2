@@ -290,3 +290,23 @@ Every foreign key gets an index (CI rule), and every migration has one statement
 | Legal or guardian objections to biometrics | Face is optional per school and per person, consent first, deletion on withdrawal, clear notices. |
 | Event latency feels slow at the gate | Step-1 feedback immediately; measure in Phase 0. |
 | Model licence not cleared for commercial use | Licence review before Phase 2; models swappable by `modelVersion` (re-enrolment path). |
+
+## 17. Smart Attendance as the one place to take attendance (decided 2026-11-20)
+
+**Decision.** Every screen for *taking* attendance moves into Smart Attendance. The records, and the rules that check them, stay with the plugin that owns the people:
+
+| Stays with the owner (records and rules) | Moves to Smart Attendance (screens) |
+|---|---|
+| **Academic Management:** attendance records, sessions, holidays, settings data, student permissions, corrections, alerts, student attendance reports, dashboard, documents (progress book, record book, year reports), ID cards | Take Attendance (manual, with its camera and USB scanner), Attendance Settings (session times, identifiers, holidays, alert rules), student self-scan (Scan Attendance, Self-Attendance Windows, Self-Attendance Review), Staff Attendance and Staff Attendance Reports |
+| **Organizing Management:** employee attendance records, settings data, corrections, reports, payroll | Scan Attendance (employees), Attendance Settings |
+
+Nothing is copied: the screens keep calling the owner's API, so no records move and the documents keep working. Students' ID-card QR codes keep working at stations (the people model already carries them, hashed).
+
+**How a Smart Attendance screen calls Academic or Organizing (core 0.2 "partner screens").**
+- A page data source, or an `app` component, names the partner: `"plugin": "wattanam.academic-management"` (data source) or `"apis": ["wattanam.academic-management"]` (app option; the screen uses `WattanamPluginUI.partner(id)`). The partner must be a dependency or optional dependency of the calling plugin.
+- The school page sends such calls to the partner's API with the header `X-Wattanam-Plugin-Screen: <calling plugin>`. The partner route must name the caller in `callers`, or the call is refused (404). Without the header (the partner's own screens) nothing changes.
+- The signed-in user still needs the partner's permission for every route; the calling plugin gains nothing the user does not already have, and only for routes the partner opened to it.
+
+**Dependencies.** Smart Attendance's dependency on Academic Management becomes optional, so organisations can install it with Organizing Management only. Its school pages need Academic Management 0.35+, its organisation pages Organizing Management 0.28+.
+
+**Upgrade order for a school:** core with partner screens → Smart Attendance 0.3 → Academic Management 0.35 (which removes its own taking screens). An Academic upgrade without Smart Attendance leaves the school with reports but no way to take attendance; the release notes and the Academic dashboard say so.

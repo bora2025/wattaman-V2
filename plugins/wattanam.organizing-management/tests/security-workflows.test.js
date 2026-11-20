@@ -298,14 +298,24 @@ test('employee and employer profile editor can update the complete workforce rec
   for (const call of ["ui.api.get(path)", "ui.api.get(path + '/relations')", "ui.api.put('employees/'"]) assert.ok(script.includes(call), `profile screen calls ${call}`);
 });
 
-test('workforce attendance settings are the plugin\'s own screen', () => {
+test('workforce attendance screens are Smart Attendance screens calling this plugin', () => {
+  // Since 0.28.0 Scan Attendance and Attendance Settings are Smart Attendance's (partner screens); the
+  // records, rules, corrections and reports stay here.
   const descriptor = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'frontend', 'page.json'), 'utf8'));
-  const page = descriptor.pages.find(item => item.routePath === 'attendance-settings');
+  assert.equal(descriptor.pages.some(item => ['attendance-scan', 'attendance-settings'].includes(item.id)), false);
+  const smart = path.join(__dirname, '..', '..', 'wattanam.smart-attendance');
+  const smartPages = JSON.parse(fs.readFileSync(path.join(smart, 'frontend', 'page.json'), 'utf8')).pages;
+  const page = smartPages.find(item => item.id === 'workforce-settings');
   const screen = page.components.find(item => item.id === 'workforce-session-settings');
   assert.equal(screen.type, 'app');
-  assert.equal(screen.options.entry, 'ui/attendance-settings/index.html');
-  const script = fs.readFileSync(path.join(__dirname, '..', 'ui', 'attendance-settings', 'settings.js'), 'utf8');
-  for (const route of ["'attendance/sessions'", "'attendance/session-settings'"]) assert.ok(script.includes(route), `settings screen calls ${route}`);
+  assert.equal(screen.options.entry, 'ui/workforce-settings/index.html');
+  assert.deepEqual(screen.options.apis, ['wattanam.organizing-management']);
+  const script = fs.readFileSync(path.join(smart, 'ui', 'workforce-settings', 'settings.js'), 'utf8');
+  for (const call of ["organizing.get('attendance/sessions'", "organizing.get('attendance/session-settings'"]) assert.ok(script.includes(call), `settings screen calls ${call}`);
+  const scan = smartPages.find(item => item.id === 'workforce-scan');
+  assert.ok(scan.dataSources.every(source => source.plugin === 'wattanam.organizing-management'));
+  const { ROUTES } = require('../backend/smart-attendance-callers.js');
+  for (const route of ['POST attendance/scan', 'GET attendance/sessions', 'PUT attendance/session-settings']) assert.ok(ROUTES.includes(route), `${route} is open to Smart Attendance`);
   // No screen in this plugin depends on a domain screen built into the school core any more.
   const coreBuilt = descriptor.pages.flatMap(item => item.components.map(component => component.type)).filter(type => ['session-manager','profile-manager','officer-manager','class-manager','take-attendance','id-card-manager'].includes(type));
   assert.deepEqual(coreBuilt, []);

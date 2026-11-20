@@ -7,6 +7,8 @@
 (function () {
   'use strict';
   var ui = window.WattanamPluginUI;
+  // Moved into Smart Attendance: the records and rules stay with wattanam.academic-management, called as a partner.
+  var academic = ui.partner('wattanam.academic-management');
   var MIN_TOKEN = 40, MAX_TOKEN = 1000, RETRY_MS = 15000, REPEAT_MS = 20000;
   var last = { token: '', at: 0 };
   // Every result the server can return, in words a student understands.
@@ -159,7 +161,7 @@
   }
 
   function send(entry) {
-    return ui.api.post('student/self-scan', entry.body).then(function (response) {
+    return academic.post('student/self-scan', entry.body).then(function (response) {
       var view = describe(response || {});
       entry.done = true;
       state.today.unshift({ at: entry.at, title: view.title, detail: view.detail, badge: (response && response.result) || 'RECORDED' });
@@ -241,12 +243,12 @@
 
   // ---------- history and devices ----------
   function loadHistory() {
-    return ui.api.get('student/attendance-history').then(function (result) { state.history = rows(result); renderHistory(); })
+    return academic.get('student/attendance-history').then(function (result) { state.history = rows(result); renderHistory(); })
       .catch(function (error) { show('error', error.message || 'Attendance history could not be loaded.'); });
   }
   // The server compares this browser's identifier (as a hash) and marks the matching device.
   function loadDevices() {
-    return ui.api.get('student/attendance-devices', state.deviceId ? { deviceId: state.deviceId } : undefined).then(function (result) {
+    return academic.get('student/attendance-devices', state.deviceId ? { deviceId: state.deviceId } : undefined).then(function (result) {
       var list = rows(result);
       list.forEach(function (item) { item.matchesThisDevice = item.thisDevice === true; });
       state.devices = list; render();
@@ -256,7 +258,7 @@
     event.preventDefault();
     if (!state.deviceId || state.busy) return;
     state.busy = true; show('error'); renderDevices();
-    ui.api.post('student/attendance-devices', { deviceId: state.deviceId, label: $('device-label').value.trim() || 'My device' })
+    academic.post('student/attendance-devices', { deviceId: state.deviceId, label: $('device-label').value.trim() || 'My device' })
       .then(function () { return loadDevices(); })
       .catch(function (error) { show('error', error.message || 'This device could not be registered.'); })
       .then(function () { state.busy = false; render(); });
@@ -276,7 +278,8 @@
   render();
   ui.autoResize();
   ui.connect().then(function () {
-    ui.deviceId().then(function (id) { state.deviceId = id || null; state.deviceNote = id ? 'not registered' : 'unavailable'; })
+    // Academic Management's identifier for this browser: devices students registered before the move still match.
+    ui.deviceId('wattanam.academic-management').then(function (id) { state.deviceId = id || null; state.deviceNote = id ? 'not registered' : 'unavailable'; })
       .catch(function () { state.deviceId = null; state.deviceNote = 'unavailable'; })
       .then(function () { render(); return loadDevices(); });
     locate();
