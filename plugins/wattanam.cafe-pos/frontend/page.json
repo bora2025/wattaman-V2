@@ -540,6 +540,13 @@
           "parameters": [
             "register"
           ]
+        },
+        {
+          "id": "menu",
+          "method": "GET",
+          "path": "menu",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false
         }
       ],
       "components": [

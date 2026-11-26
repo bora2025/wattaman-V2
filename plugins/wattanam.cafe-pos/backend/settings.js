@@ -31,6 +31,7 @@ const DEFAULTS = {
   printMode: 'BROWSER',     // BROWSER: the printer's own driver; USB: a USB thermal printer through the school page
   cashDrawer: false,        // open the cash drawer (wired to the USB printer) on cash payments
   sounds: true,             // the screens' sounds (paid, error, kitchen tickets…)
+  displayMenu: true,        // the customer display shows the menu (photos, prices) while nobody is at the till
 };
 
 function createSettings(context) {
@@ -61,6 +62,7 @@ function createSettings(context) {
     set('printMode', (v) => oneOf(v, ['BROWSER', 'USB'], 'printMode'));
     set('cashDrawer', (v) => bool(v, false));
     set('sounds', (v) => bool(v, true));
+    set('displayMenu', (v) => bool(v, true));
     return next;
   };
   const register = () => {

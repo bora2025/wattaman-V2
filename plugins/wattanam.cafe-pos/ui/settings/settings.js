@@ -6,7 +6,7 @@
   var Pos = window.Pos, ui = Pos.ui, $ = Pos.$, el = Pos.el;
   var state = { s: null, logo: undefined, khqr: undefined, menu: { categories: [], stations: [] }, station: null };
   var TEXT = ['shopName', 'shopNameKh', 'address', 'phone', 'vatNumber', 'receiptFooter', 'khqrName', 'timeZone'];
-  var CHECK = ['vatEnabled', 'vatInclusive', 'loyaltyEnabled', 'kitchenTickets', 'cashDrawer', 'sounds'];
+  var CHECK = ['vatEnabled', 'vatInclusive', 'loyaltyEnabled', 'kitchenTickets', 'cashDrawer', 'sounds', 'displayMenu'];
   function failed(e) { Pos.say('message', ''); Pos.say('error', Pos.errorText(e), 'bad'); }
   function fill(s) {
     state.s = s; Pos.setSound(s.sounds);

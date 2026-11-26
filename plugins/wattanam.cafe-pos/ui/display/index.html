@@ -6,28 +6,63 @@
   <title>Customer Display</title>
   <link rel="stylesheet" href="../pos.css">
   <style>
-    body { background: #0b1f1c; color: #fff; }
-    main { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 40%); gap: 16px; padding: 24px; }
-    @media (max-width: 760px) { main { grid-template-columns: 1fr; } }
+    html, body { height: 100%; }
+    body { background: #0b1f1c; color: #fff; overflow: hidden; }
     .shop { font-size: 28px; font-weight: 900; } .shop small { display: block; font-size: 18px; opacity: .8; font-family: var(--khmer); }
-    .lines { margin-top: 16px; font-size: 20px; }
-    .lines div { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.12); }
+
+    /* the order being rung up */
+    #order { height: 100vh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 40%); gap: 16px; padding: 24px; }
+    @media (max-width: 760px) { #order { grid-template-columns: 1fr; } }
+    .lines { margin-top: 16px; font-size: 20px; overflow: auto; }
+    .lines .line { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.12); }
+    .lines .line img, .lines .line .ph { width: 52px; height: 52px; border-radius: 10px; object-fit: cover; flex: none; background: rgba(255,255,255,.08); }
+    .lines .line span { flex: 1; }
     .total { background: rgba(255,255,255,.07); border-radius: 20px; padding: 24px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 10px; text-align: center; }
     .total .amount { font-size: 56px; font-weight: 900; } .total .other { font-size: 26px; opacity: .85; }
     .total img { width: 260px; max-width: 90%; background: #fff; border-radius: 12px; padding: 8px; }
     .thanks { font-size: 40px; font-weight: 900; }
     .change { font-size: 28px; color: #86efac; }
-    .setup { position: fixed; bottom: 8px; right: 8px; opacity: .4; } .setup:hover { opacity: 1; }
+
+    /* the menu board, while nobody is at the till */
+    #board { height: 100vh; display: flex; flex-direction: column; }
+    .board-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 28px; background: rgba(0,0,0,.25); }
+    .board-head img.logo { height: 56px; border-radius: 10px; background: #fff; padding: 4px; }
+    .board-head .brand { display: flex; align-items: center; gap: 14px; }
+    .board-head .rate { font-size: 18px; opacity: .8; text-align: right; }
+    .board-list { flex: 1; overflow: hidden; padding: 8px 28px 40px; }
+    .board-list h2 { font-size: 26px; margin: 22px 0 12px; display: flex; gap: 10px; align-items: baseline; }
+    .board-list h2 small { font-family: var(--khmer); font-weight: 600; opacity: .75; font-size: 20px; }
+    .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; }
+    .tile { background: rgba(255,255,255,.07); border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; }
+    .tile img, .tile .ph { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; }
+    .tile .ph { display: flex; align-items: center; justify-content: center; font-size: 46px; font-weight: 900; color: rgba(255,255,255,.85); }
+    .tile .info { padding: 10px 14px 14px; display: flex; flex-direction: column; gap: 2px; flex: 1; }
+    .tile .name { font-size: 20px; font-weight: 800; line-height: 1.2; }
+    .tile .kh { font-family: var(--khmer); opacity: .8; font-size: 17px; }
+    .tile .price { margin-top: auto; padding-top: 6px; font-size: 24px; font-weight: 900; color: #5eead4; }
+    .tile .price small { font-size: 15px; font-weight: 600; color: rgba(255,255,255,.7); margin-left: 6px; }
+    .tile .sizes { font-size: 14px; opacity: .75; }
+
+    .setup { position: fixed; bottom: 8px; right: 8px; opacity: .25; z-index: 5; } .setup:hover { opacity: 1; }
     .setup input { width: 120px; }
   </style>
 </head>
 <body>
   <main id="app" aria-busy="true">
-    <section>
-      <div class="shop" id="shop"></div>
-      <div class="lines" id="lines"></div>
+    <section id="board" hidden aria-label="Menu">
+      <header class="board-head">
+        <div class="brand"><img id="board-logo" class="logo" alt="" hidden><div class="shop" id="board-shop"></div></div>
+        <div class="rate" id="board-rate"></div>
+      </header>
+      <div class="board-list" id="board-list"></div>
     </section>
-    <section class="total" id="total" aria-live="polite"></section>
+    <div id="order" hidden>
+      <section>
+        <div class="shop" id="shop"></div>
+        <div class="lines" id="lines"></div>
+      </section>
+      <section class="total" id="total" aria-live="polite"></section>
+    </div>
     <div class="setup"><label>Register <input id="register" maxlength="40" value="main"></label></div>
   </main>
   <script src="../wattanam-plugin-ui.js"></script>

@@ -489,8 +489,8 @@
     displayTimer = setTimeout(function () {
       if (!state.s) return;
       var t = totals(), b = base();
-      var lines = (state.order ? state.order.items.filter(function (i) { return i.status !== 'VOID'; }).map(function (i) { return { name: i.name + (i.variantName ? ' (' + i.variantName + ')' : ''), quantity: i.quantity, amount: i.lineTotal }; }) : [])
-        .concat(state.lines.map(function (l) { return { name: l.label, quantity: l.quantity, amount: l.unitPrice * l.quantity }; }));
+      var lines = (state.order ? state.order.items.filter(function (i) { return i.status !== 'VOID'; }).map(function (i) { return { productId: i.productId, name: i.name + (i.variantName ? ' (' + i.variantName + ')' : ''), quantity: i.quantity, amount: i.lineTotal }; }) : [])
+        .concat(state.lines.map(function (l) { return { productId: l.productId, name: l.label, quantity: l.quantity, amount: l.unitPrice * l.quantity }; }));
       ui.api.put('display/' + encodeURIComponent(state.register), { stage: stage, lines: lines.slice(-30), currency: b, total: t.total, other: Pos.other(t.total, b, rate(), state.s.khrStep), due: state.order ? state.order.due : t.total, khqr: stage === 'pay' && state.pay.method === 'KHQR', changeUsd: cash && cash.changeUsd || 0, changeKhr: cash && cash.changeKhr || 0, at: new Date().toISOString() }).catch(function () {});
     }, 500);
   }

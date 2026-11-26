@@ -3,7 +3,7 @@
   "id": "wattanam.cafe-pos",
   "name": "Café POS",
   "description": "Point of sale for cafés, restaurants and shops: counter, menu with sizes and add-ons, tables, kitchen display, waiter phones, US dollars and riel, cash shifts, receipts, stock, customers and loyalty, reports.",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "requiresCore": ">=0.1.36 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",

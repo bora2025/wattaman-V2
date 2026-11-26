@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.5
+- Customer Display: while nobody is at the till it shows the **menu board**: every category with its items' photos, Khmer and English names, sizes and prices (with the riel or dollar equivalent), the shop's logo and the exchange rate; a long menu scrolls slowly by itself. It switches to the order as soon as the counter rings one up (the items now with their photos), and back to the menu after the thank-you. Menu changes appear within five minutes.
+- POS Settings: "Customer display shows the menu with photos when idle" (on by default).
+
 ## 0.1.4
 - Customer Display, Kitchen Display, Counter and Waiter can be shown on their own screen: “🖥️ Show on a screen” opens the page alone (no sidebar or header) on the monitor you choose (Chrome and Edge), full screen after one tap. A dedicated tablet or PC opens the page with ?screen=1 (or a browser in kiosk mode). Needs the school core's screen mode.
 - The Kitchen Display fills the screen.
