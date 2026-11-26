@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="km">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>POS Settings</title>
+  <link rel="stylesheet" href="../pos.css">
+  <style>.thumb { max-width: 120px; max-height: 120px; display: block; margin-top: 6px; border-radius: 8px; } .checks { display: flex; flex-wrap: wrap; gap: 8px; } .checks label { display: flex; gap: 4px; align-items: center; font-weight: 600; }</style>
+</head>
+<body>
+  <main id="app" aria-busy="true">
+    <h1>⚙️ POS settings · ការកំណត់</h1>
+    <div id="error" class="notice bad" hidden></div>
+    <div id="message" class="notice ok" hidden></div>
+
+    <section class="panel">
+      <h2>Money · រូបិយប័ណ្ណ</h2>
+      <div class="row">
+        <label>Orders are totalled in<select id="baseCurrency"><option value="USD">US dollars ($)</option><option value="KHR">Riel (៛)</option></select></label>
+        <label>Exchange rate: riel per $1<input id="rate" type="number" min="1000" max="10000" step="10"></label>
+        <label>Round riel to<select id="khrStep"><option value="100">100៛</option><option value="50">50៛</option><option value="500">500៛</option><option value="1000">1,000៛</option><option value="1">no rounding</option></select></label>
+      </div>
+      <p class="muted">Each order keeps the rate it was made with. Change in cash: whole dollars back in dollars, the rest in riel.</p>
+    </section>
+
+    <section class="panel">
+      <h2>VAT and service</h2>
+      <div class="row">
+        <label class="checks"><label><input type="checkbox" id="vatEnabled"> Charge VAT</label><label><input type="checkbox" id="vatInclusive"> Prices already include VAT</label></label>
+        <label>VAT %<input id="vatRate" type="number" min="0" max="50" step="0.01"></label>
+        <label>VAT number (TIN)<input id="vatNumber" maxlength="60"></label>
+        <label>Service charge on dine-in %<input id="serviceRate" type="number" min="0" max="30" step="0.01"></label>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Receipt · បង្កាន់ដៃ</h2>
+      <div class="row"><label>Shop name<input id="shopName" maxlength="120"></label><label>Khmer name<input id="shopNameKh" maxlength="120" class="kh"></label><label>Phone<input id="phone" maxlength="60"></label></div>
+      <div class="row"><label>Address<input id="address" maxlength="300" size="50"></label><label>Footer<input id="receiptFooter" maxlength="300" size="40"></label><label>Paper<select id="paperWidth"><option value="80">80 mm</option><option value="58">58 mm</option></select></label></div>
+      <div class="row"><label>Logo<input type="file" id="logo-file" accept="image/*"></label><img id="logo-preview" class="thumb" alt="" hidden><button type="button" class="small" id="logo-remove">Remove logo</button></div>
+      <div class="row"><label>Print receipts on<select id="printMode"><option value="BROWSER">This device's printer (browser printing)</option><option value="USB">A USB receipt printer (Chrome or Edge)</option></select></label><label class="checks"><label><input type="checkbox" id="cashDrawer"> Open the cash drawer on cash payments</label></label><button type="button" id="test-print">🖨️ Test print</button></div>
+      <div class="row"><label>Time zone<input id="timeZone" maxlength="60"></label><label class="checks"><label><input type="checkbox" id="kitchenTickets"> Send orders to the kitchen display</label><label><input type="checkbox" id="sounds"> Sounds (paid, errors, kitchen tickets, ready…)</label></label><button type="button" id="sound-test" class="small">🔊 Try</button></div>
+    </section>
+
+    <section class="panel">
+      <h2>KHQR · Bakong</h2>
+      <p class="muted">Upload the shop's KHQR (from your bank app). The counter and customer display show it; the cashier confirms when the payment arrives.</p>
+      <div class="row"><label>KHQR picture<input type="file" id="khqr-file" accept="image/*"></label><img id="khqr-preview" class="thumb" alt="" hidden><button type="button" class="small" id="khqr-remove">Remove</button><label>Account name<input id="khqrName" maxlength="120"></label></div>
+    </section>
+
+    <section class="panel">
+      <h2>Loyalty points</h2>
+      <div class="row"><label class="checks"><label><input type="checkbox" id="loyaltyEnabled"> Customers earn points</label></label><label>Spend for 1 point<input id="loyaltySpend" inputmode="decimal" size="8"></label><label>A point is worth<input id="loyaltyPointValue" inputmode="decimal" size="8"></label></div>
+      <p class="muted">Amounts in the order currency. Points pay part of an order at the counter (“Points”).</p>
+    </section>
+    <div class="row"><button type="button" class="primary big" id="save">💾 Save settings</button></div>
+
+    <section class="panel" style="margin-top:12px">
+      <h2>Kitchen stations</h2>
+      <p class="muted">Each station's kitchen display shows the items of its categories (bar: drinks; kitchen: food). Items in no station show on every screen.</p>
+      <div class="row"><label>Name<input id="st-name" maxlength="60" placeholder="Bar, Kitchen"></label><label class="checks"><label><input type="checkbox" id="st-active" checked> On</label></label><button type="button" id="st-save" class="primary">Add station</button></div>
+      <div class="checks" id="st-categories" style="margin:8px 0"></div>
+      <table><tbody id="st-list"></tbody></table>
+    </section>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="../pos.js"></script>
+  <script src="settings.js"></script>
+</body>
+</html>

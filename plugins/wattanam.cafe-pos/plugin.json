@@ -1,0 +1,391 @@
+{
+  "schemaVersion": 1,
+  "id": "wattanam.cafe-pos",
+  "name": "Café POS",
+  "description": "Point of sale for cafés, restaurants and shops: counter, menu with sizes and add-ons, tables, kitchen display, waiter phones, US dollars and riel, cash shifts, receipts, stock, customers and loyalty, reports.",
+  "version": "0.1.4",
+  "requiresCore": ">=0.1.36 <1.0.0",
+  "publisher": "wattanam",
+  "license": "commercial",
+  "backendEntry": "backend/index.js",
+  "frontendEntry": "frontend/page.json",
+  "sdkVersion": "1.3.0",
+  "runtimeVersion": "1.0.0",
+  "capabilities": [
+    "api.routes",
+    "database.read",
+    "database.write",
+    "database.transaction",
+    "directory.read",
+    "navigation.register",
+    "permissions.register",
+    "readmodels.publish",
+    "settings.read",
+    "settings.write",
+    "ui.pages"
+  ],
+  "permissions": [
+    "wattanam.cafe-pos.sell",
+    "wattanam.cafe-pos.discount",
+    "wattanam.cafe-pos.void",
+    "wattanam.cafe-pos.refund",
+    "wattanam.cafe-pos.cash",
+    "wattanam.cafe-pos.kitchen",
+    "wattanam.cafe-pos.tables",
+    "wattanam.cafe-pos.menu",
+    "wattanam.cafe-pos.stock",
+    "wattanam.cafe-pos.customers",
+    "wattanam.cafe-pos.reports",
+    "wattanam.cafe-pos.configure"
+  ],
+  "dependencies": {},
+  "optionalDependencies": {},
+  "contracts": {
+    "schemaVersion": 1,
+    "deprecationNoticeDays": 180,
+    "events": {
+      "publishes": {},
+      "subscribes": {}
+    },
+    "readModels": {
+      "publishes": {
+        "daily-sales": [
+          1
+        ]
+      },
+      "reads": {}
+    }
+  },
+  "migrations": [
+    {
+      "id": "001_create_category",
+      "path": "migrations/001_create_category.sql",
+      "checksum": "5f433edef8baaf71196dc5a896984ba709fa43172116d52274710042d19293cd",
+      "destructive": false
+    },
+    {
+      "id": "002_create_product",
+      "path": "migrations/002_create_product.sql",
+      "checksum": "f51b9b823f8e9ec69b8e900e96e8f959aefda39b1116f1012715f75f310c5cf3",
+      "destructive": false
+    },
+    {
+      "id": "003_index_product_category",
+      "path": "migrations/003_index_product_category.sql",
+      "checksum": "cac587e7d504a825f93136205cef84de0c55c03541839964bef6d642ace498e7",
+      "destructive": false
+    },
+    {
+      "id": "004_index_product_barcode",
+      "path": "migrations/004_index_product_barcode.sql",
+      "checksum": "565d50911e181bbaa4f8bf33b9b9c628c1a6a2169ff277642052f400739a5f16",
+      "destructive": false
+    },
+    {
+      "id": "005_create_variant",
+      "path": "migrations/005_create_variant.sql",
+      "checksum": "6a197128c100d8c863abfda99faf997971681c955cc534d3893c0b7ef99871d7",
+      "destructive": false
+    },
+    {
+      "id": "006_index_variant_product",
+      "path": "migrations/006_index_variant_product.sql",
+      "checksum": "8017663670fc3010c6565129f8e0ba1bb82f8e3f2967c6ff1454a1bb593707c9",
+      "destructive": false
+    },
+    {
+      "id": "007_create_addon_group",
+      "path": "migrations/007_create_addon_group.sql",
+      "checksum": "49ac6393eec737649c74dc1186d8ffa3107fcf8c9bfa905ea2e727d9536b7356",
+      "destructive": false
+    },
+    {
+      "id": "008_create_addon",
+      "path": "migrations/008_create_addon.sql",
+      "checksum": "5b96e43e7fe9d4a9210afaa8dc50edca11f2b5d465d1f9f3be00aecd3d095099",
+      "destructive": false
+    },
+    {
+      "id": "009_index_addon_group",
+      "path": "migrations/009_index_addon_group.sql",
+      "checksum": "614b6df4d83a4ea803f5f265592f184e3285395e4cf03f8ba04005d0fbc5f18e",
+      "destructive": false
+    },
+    {
+      "id": "010_create_product_addon_group",
+      "path": "migrations/010_create_product_addon_group.sql",
+      "checksum": "5b157d3bb00b9d7d37408af1a4fe1ea01369175ef3d565717b362028103e2fe4",
+      "destructive": false
+    },
+    {
+      "id": "011_create_dining_table",
+      "path": "migrations/011_create_dining_table.sql",
+      "checksum": "b1a3cc5810aea04de2f77c6d6f09a77203a5042588829599e197ce815d3d2154",
+      "destructive": false
+    },
+    {
+      "id": "012_create_kitchen_station",
+      "path": "migrations/012_create_kitchen_station.sql",
+      "checksum": "156bc9e1371830febd17bb681d8f655751fd68618817ccf00599534268800adc",
+      "destructive": false
+    },
+    {
+      "id": "013_create_customer",
+      "path": "migrations/013_create_customer.sql",
+      "checksum": "ab272d4a56446df7ce9fa03ae8ffd19c553288f168efc4c169989d1c84a76489",
+      "destructive": false
+    },
+    {
+      "id": "014_index_customer_phone",
+      "path": "migrations/014_index_customer_phone.sql",
+      "checksum": "fbf96f7948d17faa941399e1110c43bd80b92dcf25c2a3003a7f58b460e6da45",
+      "destructive": false
+    },
+    {
+      "id": "015_create_order",
+      "path": "migrations/015_create_order.sql",
+      "checksum": "72de215cbfc7db7c8cfe3ab7409eeeb1066af2212b547af5f10e659b45ec834c",
+      "destructive": false
+    },
+    {
+      "id": "016_index_order_clientkey",
+      "path": "migrations/016_index_order_clientkey.sql",
+      "checksum": "eb2b6293f2ce5d94bd72caa4fc7d920cd133d34b781416053c9b5e73c5d5acd6",
+      "destructive": false
+    },
+    {
+      "id": "017_index_order_number",
+      "path": "migrations/017_index_order_number.sql",
+      "checksum": "d10f36d9f94f634149a15ef4142301d280fd48706158634b1ab179e6d8754670",
+      "destructive": false
+    },
+    {
+      "id": "018_index_order_status",
+      "path": "migrations/018_index_order_status.sql",
+      "checksum": "17306b3c21136db7b7397e96059fd4e6b7dc024e5b8fcb394fdc6e7e215fb826",
+      "destructive": false
+    },
+    {
+      "id": "019_create_order_item",
+      "path": "migrations/019_create_order_item.sql",
+      "checksum": "e38035393b18bba07ae2015132f9ef09933e732b6441eaf62b6f9ed155bf1183",
+      "destructive": false
+    },
+    {
+      "id": "020_index_order_item_order",
+      "path": "migrations/020_index_order_item_order.sql",
+      "checksum": "e51a4e6670424b17cc176a815224ab50cb4109d31c2601b8215c85a5be84eb53",
+      "destructive": false
+    },
+    {
+      "id": "021_index_order_item_kitchen",
+      "path": "migrations/021_index_order_item_kitchen.sql",
+      "checksum": "a59dca6b652e07b1eb66096661ec30cf28ba9a06edeb3aaa48cc853271121803",
+      "destructive": false
+    },
+    {
+      "id": "022_create_cash_session",
+      "path": "migrations/022_create_cash_session.sql",
+      "checksum": "5e546656f6b7aa7adb01e063451ed67640d7735066671036abc6670ac690f2e5",
+      "destructive": false
+    },
+    {
+      "id": "023_index_cash_session_open",
+      "path": "migrations/023_index_cash_session_open.sql",
+      "checksum": "de5e8a6a967fa9c1de17e643a65e2db87a0a7e4c779fa8f016c47390edbecd7a",
+      "destructive": false
+    },
+    {
+      "id": "024_create_cash_movement",
+      "path": "migrations/024_create_cash_movement.sql",
+      "checksum": "acfb924433fabc6c253551405370dc82343fdaebf5e7fbf98c096237db762dda",
+      "destructive": false
+    },
+    {
+      "id": "025_create_payment",
+      "path": "migrations/025_create_payment.sql",
+      "checksum": "a18d783ee4a7eeb7eb9991e2d4cb84743e3f64b09856f54e4d01d5a6c7277e67",
+      "destructive": false
+    },
+    {
+      "id": "026_index_payment_order",
+      "path": "migrations/026_index_payment_order.sql",
+      "checksum": "cc96b47d8202355a9c4f65c89ca90a2dda2057a66d94147c41447889b31c16ac",
+      "destructive": false
+    },
+    {
+      "id": "027_index_payment_session",
+      "path": "migrations/027_index_payment_session.sql",
+      "checksum": "a8cfe206c28df15a97b8f1abc0719a947c8230441165ba4cebcd20797688e665",
+      "destructive": false
+    },
+    {
+      "id": "028_index_payment_clientkey",
+      "path": "migrations/028_index_payment_clientkey.sql",
+      "checksum": "a6a6b00e2d86621e821491f8db2c7e5270e045040e99f06eeeddf8911ddbce63",
+      "destructive": false
+    },
+    {
+      "id": "029_create_refund",
+      "path": "migrations/029_create_refund.sql",
+      "checksum": "ffaefe1872e99f08abb491360e08b2572548a93c94a5b636f8318db8c7dfcb8d",
+      "destructive": false
+    },
+    {
+      "id": "030_index_refund_order",
+      "path": "migrations/030_index_refund_order.sql",
+      "checksum": "79362357ee70acbaefad2bb5512be861f03bff582c555b0f553d13f120b6558c",
+      "destructive": false
+    },
+    {
+      "id": "031_create_day_counter",
+      "path": "migrations/031_create_day_counter.sql",
+      "checksum": "03e99d80622271318cc72ea200280cf8fb64521ebd11d4d01c016cb0d50179a9",
+      "destructive": false
+    },
+    {
+      "id": "032_create_display",
+      "path": "migrations/032_create_display.sql",
+      "checksum": "bd02cda1e4cc82145b02da508c068d712bb6874310219292495a76b724d5dfea",
+      "destructive": false
+    },
+    {
+      "id": "033_create_supply",
+      "path": "migrations/033_create_supply.sql",
+      "checksum": "70f7277a6a69fb8d0e2acc8e195aa288871c35156bbfee7282df131adb89be29",
+      "destructive": false
+    },
+    {
+      "id": "034_create_recipe_item",
+      "path": "migrations/034_create_recipe_item.sql",
+      "checksum": "291644422f48b822cecdeebc08edb1774984345a8ea9c1bc65a43010241dfcd4",
+      "destructive": false
+    },
+    {
+      "id": "035_index_recipe_item_product",
+      "path": "migrations/035_index_recipe_item_product.sql",
+      "checksum": "ed32591f48feb6ce2cad63f35d9d78d0f46f4ca8cef392285fd52bc4611bf930",
+      "destructive": false
+    },
+    {
+      "id": "036_create_stock_movement",
+      "path": "migrations/036_create_stock_movement.sql",
+      "checksum": "7bb44491719dd08c00d8772079f1ffbe6cfe40525e41cbdb2180deeb31b4fca5",
+      "destructive": false
+    },
+    {
+      "id": "037_index_stock_movement_supply",
+      "path": "migrations/037_index_stock_movement_supply.sql",
+      "checksum": "862de46fcbd5ca823272e621b3fc4eee4677ce656e8e6a2407fb6fbb5580054d",
+      "destructive": false
+    },
+    {
+      "id": "038_create_loyalty_entry",
+      "path": "migrations/038_create_loyalty_entry.sql",
+      "checksum": "94017a7fc1636932b4aef7b6cf51d30e0f587975c5938e0ada4fc8d1395860e8",
+      "destructive": false
+    },
+    {
+      "id": "039_index_loyalty_entry_customer",
+      "path": "migrations/039_index_loyalty_entry_customer.sql",
+      "checksum": "e70b565f51439acf2b479f97304f058f6bcae6605c997c96d9da35ff5546f1ba",
+      "destructive": false
+    }
+  ],
+  "navigation": [
+    {
+      "id": "counter",
+      "label": "POS Counter",
+      "href": "/plugins/wattanam.cafe-pos/counter",
+      "permission": "wattanam.cafe-pos.sell"
+    },
+    {
+      "id": "waiter",
+      "label": "Waiter",
+      "href": "/plugins/wattanam.cafe-pos/waiter",
+      "permission": "wattanam.cafe-pos.sell"
+    },
+    {
+      "id": "orders",
+      "label": "Orders",
+      "href": "/plugins/wattanam.cafe-pos/orders",
+      "permission": "wattanam.cafe-pos.sell"
+    },
+    {
+      "id": "kitchen",
+      "label": "Kitchen Display",
+      "href": "/plugins/wattanam.cafe-pos/kitchen",
+      "permission": "wattanam.cafe-pos.kitchen"
+    },
+    {
+      "id": "tables",
+      "label": "Tables",
+      "href": "/plugins/wattanam.cafe-pos/tables",
+      "permission": "wattanam.cafe-pos.sell"
+    },
+    {
+      "id": "display",
+      "label": "Customer Display",
+      "href": "/plugins/wattanam.cafe-pos/display",
+      "permission": "wattanam.cafe-pos.sell"
+    },
+    {
+      "id": "cash",
+      "label": "Cash Shifts",
+      "href": "/plugins/wattanam.cafe-pos/cash",
+      "permission": "wattanam.cafe-pos.cash"
+    },
+    {
+      "id": "menu",
+      "label": "Menu",
+      "href": "/plugins/wattanam.cafe-pos/menu",
+      "permission": "wattanam.cafe-pos.menu"
+    },
+    {
+      "id": "stock",
+      "label": "Stock",
+      "href": "/plugins/wattanam.cafe-pos/stock",
+      "permission": "wattanam.cafe-pos.stock"
+    },
+    {
+      "id": "customers",
+      "label": "Customers",
+      "href": "/plugins/wattanam.cafe-pos/customers",
+      "permission": "wattanam.cafe-pos.customers"
+    },
+    {
+      "id": "reports",
+      "label": "Sales Reports",
+      "href": "/plugins/wattanam.cafe-pos/reports",
+      "permission": "wattanam.cafe-pos.reports"
+    },
+    {
+      "id": "settings",
+      "label": "POS Settings",
+      "href": "/plugins/wattanam.cafe-pos/settings",
+      "permission": "wattanam.cafe-pos.configure"
+    }
+  ],
+  "supportedLanguages": [
+    "en",
+    "km"
+  ],
+  "supportUrl": "https://wattanam.example/support/cafe-pos",
+  "privacyUrl": "https://wattanam.example/privacy/plugins/cafe-pos",
+  "operational": {
+    "healthCheck": "runtime",
+    "dataClassification": [
+      "financial-records",
+      "personal-data"
+    ],
+    "backup": {
+      "database": "required",
+      "files": "none",
+      "restore": "required"
+    },
+    "uninstall": {
+      "dataRetention": "preserve"
+    },
+    "pricing": "marketplace"
+  }
+}

@@ -1,0 +1,978 @@
+{
+  "schemaVersion": 2,
+  "kind": "declarative-ui",
+  "portability": "universal",
+  "pages": [
+    {
+      "id": "counter",
+      "title": "POS Counter",
+      "routePath": "counter",
+      "permission": "wattanam.cafe-pos.sell",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "settings",
+          "method": "GET",
+          "path": "settings",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false
+        },
+        {
+          "id": "menu",
+          "method": "GET",
+          "path": "menu",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false
+        },
+        {
+          "id": "shift",
+          "method": "GET",
+          "path": "cash/current",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false
+        },
+        {
+          "id": "tables",
+          "method": "GET",
+          "path": "tables",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false
+        },
+        {
+          "id": "customers",
+          "method": "GET",
+          "path": "customers",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false
+        },
+        {
+          "id": "addCustomer",
+          "method": "POST",
+          "path": "customers",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false
+        },
+        {
+          "id": "openOrders",
+          "method": "GET",
+          "path": "orders",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false
+        },
+        {
+          "id": "createOrder",
+          "method": "POST",
+          "path": "orders",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false
+        },
+        {
+          "id": "order",
+          "method": "GET",
+          "path": "orders/:id",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        },
+        {
+          "id": "updateOrder",
+          "method": "PUT",
+          "path": "orders/:id",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        },
+        {
+          "id": "addItems",
+          "method": "POST",
+          "path": "orders/:id/items",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        },
+        {
+          "id": "discount",
+          "method": "PUT",
+          "path": "orders/:id/discount",
+          "permission": "wattanam.cafe-pos.discount",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        },
+        {
+          "id": "pay",
+          "method": "POST",
+          "path": "orders/:id/payments",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        },
+        {
+          "id": "close",
+          "method": "POST",
+          "path": "orders/:id/close",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        },
+        {
+          "id": "display",
+          "method": "PUT",
+          "path": "display/:register",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false,
+          "parameters": [
+            "register"
+          ]
+        },
+        {
+          "id": "openShift",
+          "method": "POST",
+          "path": "cash/open",
+          "permission": "wattanam.cafe-pos.cash",
+          "autoload": false
+        }
+      ],
+      "components": [
+        {
+          "id": "counter-screen",
+          "type": "app",
+          "title": "POS Counter",
+          "options": {
+            "entry": "ui/counter/index.html",
+            "height": "auto",
+            "minHeight": 720,
+            "devices": [
+              "storage",
+              "printer"
+            ]
+          }
+        }
+      ],
+      "appearance": {
+        "screen": "kiosk"
+      }
+    },
+    {
+      "id": "waiter",
+      "title": "Waiter",
+      "routePath": "waiter",
+      "permission": "wattanam.cafe-pos.sell",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "settings",
+          "method": "GET",
+          "path": "settings",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false
+        },
+        {
+          "id": "menu",
+          "method": "GET",
+          "path": "menu",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false
+        },
+        {
+          "id": "shift",
+          "method": "GET",
+          "path": "cash/current",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false
+        },
+        {
+          "id": "tables",
+          "method": "GET",
+          "path": "tables",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false
+        },
+        {
+          "id": "customers",
+          "method": "GET",
+          "path": "customers",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false
+        },
+        {
+          "id": "addCustomer",
+          "method": "POST",
+          "path": "customers",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false
+        },
+        {
+          "id": "openOrders",
+          "method": "GET",
+          "path": "orders",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false
+        },
+        {
+          "id": "createOrder",
+          "method": "POST",
+          "path": "orders",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false
+        },
+        {
+          "id": "order",
+          "method": "GET",
+          "path": "orders/:id",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        },
+        {
+          "id": "updateOrder",
+          "method": "PUT",
+          "path": "orders/:id",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        },
+        {
+          "id": "addItems",
+          "method": "POST",
+          "path": "orders/:id/items",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        },
+        {
+          "id": "discount",
+          "method": "PUT",
+          "path": "orders/:id/discount",
+          "permission": "wattanam.cafe-pos.discount",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        },
+        {
+          "id": "pay",
+          "method": "POST",
+          "path": "orders/:id/payments",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        },
+        {
+          "id": "close",
+          "method": "POST",
+          "path": "orders/:id/close",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        },
+        {
+          "id": "display",
+          "method": "PUT",
+          "path": "display/:register",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false,
+          "parameters": [
+            "register"
+          ]
+        },
+        {
+          "id": "openShift",
+          "method": "POST",
+          "path": "cash/open",
+          "permission": "wattanam.cafe-pos.cash",
+          "autoload": false
+        }
+      ],
+      "components": [
+        {
+          "id": "waiter-screen",
+          "type": "app",
+          "title": "Waiter",
+          "options": {
+            "entry": "ui/waiter/index.html",
+            "height": "auto",
+            "minHeight": 720,
+            "devices": [
+              "storage",
+              "printer"
+            ]
+          }
+        }
+      ],
+      "appearance": {
+        "screen": "kiosk"
+      }
+    },
+    {
+      "id": "orders",
+      "title": "Orders",
+      "routePath": "orders",
+      "permission": "wattanam.cafe-pos.sell",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "settings",
+          "method": "GET",
+          "path": "settings",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false
+        },
+        {
+          "id": "orders",
+          "method": "GET",
+          "path": "orders",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false
+        },
+        {
+          "id": "order",
+          "method": "GET",
+          "path": "orders/:id",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        },
+        {
+          "id": "void",
+          "method": "POST",
+          "path": "orders/:id/void",
+          "permission": "wattanam.cafe-pos.void",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        },
+        {
+          "id": "voidItem",
+          "method": "POST",
+          "path": "orders/:id/items/:itemId/void",
+          "permission": "wattanam.cafe-pos.void",
+          "autoload": false,
+          "parameters": [
+            "id",
+            "itemId"
+          ]
+        },
+        {
+          "id": "refund",
+          "method": "POST",
+          "path": "orders/:id/refunds",
+          "permission": "wattanam.cafe-pos.refund",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        }
+      ],
+      "components": [
+        {
+          "id": "orders-screen",
+          "type": "app",
+          "title": "Orders",
+          "options": {
+            "entry": "ui/orders/index.html",
+            "height": "auto",
+            "minHeight": 640,
+            "devices": [
+              "printer"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "kitchen",
+      "title": "Kitchen Display",
+      "routePath": "kitchen",
+      "permission": "wattanam.cafe-pos.kitchen",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "stations",
+          "method": "GET",
+          "path": "kitchen/stations",
+          "permission": "wattanam.cafe-pos.kitchen",
+          "autoload": false
+        },
+        {
+          "id": "tickets",
+          "method": "GET",
+          "path": "kitchen/tickets",
+          "permission": "wattanam.cafe-pos.kitchen",
+          "autoload": false
+        },
+        {
+          "id": "itemStatus",
+          "method": "POST",
+          "path": "kitchen/items/:id/status",
+          "permission": "wattanam.cafe-pos.kitchen",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        },
+        {
+          "id": "advance",
+          "method": "POST",
+          "path": "kitchen/orders/:id/advance",
+          "permission": "wattanam.cafe-pos.kitchen",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        }
+      ],
+      "components": [
+        {
+          "id": "kitchen-screen",
+          "type": "app",
+          "title": "Kitchen Display",
+          "options": {
+            "entry": "ui/kitchen/index.html",
+            "height": "fill",
+            "minHeight": 720,
+            "devices": [
+              "storage"
+            ]
+          }
+        }
+      ],
+      "appearance": {
+        "screen": "kiosk"
+      }
+    },
+    {
+      "id": "tables",
+      "title": "Tables",
+      "routePath": "tables",
+      "permission": "wattanam.cafe-pos.sell",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "settings",
+          "method": "GET",
+          "path": "settings",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false
+        },
+        {
+          "id": "tables",
+          "method": "GET",
+          "path": "tables",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false
+        },
+        {
+          "id": "addTable",
+          "method": "POST",
+          "path": "tables",
+          "permission": "wattanam.cafe-pos.tables",
+          "autoload": false
+        },
+        {
+          "id": "saveTable",
+          "method": "PUT",
+          "path": "tables/:id",
+          "permission": "wattanam.cafe-pos.tables",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        }
+      ],
+      "components": [
+        {
+          "id": "tables-screen",
+          "type": "app",
+          "title": "Tables",
+          "options": {
+            "entry": "ui/tables/index.html",
+            "height": "auto",
+            "minHeight": 640
+          }
+        }
+      ]
+    },
+    {
+      "id": "display",
+      "title": "Customer Display",
+      "routePath": "display",
+      "permission": "wattanam.cafe-pos.sell",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "settings",
+          "method": "GET",
+          "path": "settings",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false
+        },
+        {
+          "id": "display",
+          "method": "GET",
+          "path": "display/:register",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false,
+          "parameters": [
+            "register"
+          ]
+        }
+      ],
+      "components": [
+        {
+          "id": "display-screen",
+          "type": "app",
+          "title": "Customer Display",
+          "options": {
+            "entry": "ui/display/index.html",
+            "height": "fill",
+            "minHeight": 480,
+            "devices": [
+              "storage"
+            ]
+          }
+        }
+      ],
+      "appearance": {
+        "screen": "kiosk"
+      }
+    },
+    {
+      "id": "cash",
+      "title": "Cash Shifts",
+      "routePath": "cash",
+      "permission": "wattanam.cafe-pos.cash",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "settings",
+          "method": "GET",
+          "path": "settings",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false
+        },
+        {
+          "id": "current",
+          "method": "GET",
+          "path": "cash/current",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false
+        },
+        {
+          "id": "open",
+          "method": "POST",
+          "path": "cash/open",
+          "permission": "wattanam.cafe-pos.cash",
+          "autoload": false
+        },
+        {
+          "id": "move",
+          "method": "POST",
+          "path": "cash/movements",
+          "permission": "wattanam.cafe-pos.cash",
+          "autoload": false
+        },
+        {
+          "id": "close",
+          "method": "POST",
+          "path": "cash/close",
+          "permission": "wattanam.cafe-pos.cash",
+          "autoload": false
+        },
+        {
+          "id": "sessions",
+          "method": "GET",
+          "path": "cash/sessions",
+          "permission": "wattanam.cafe-pos.cash",
+          "autoload": false
+        },
+        {
+          "id": "session",
+          "method": "GET",
+          "path": "cash/sessions/:id",
+          "permission": "wattanam.cafe-pos.cash",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        }
+      ],
+      "components": [
+        {
+          "id": "cash-screen",
+          "type": "app",
+          "title": "Cash Shifts",
+          "options": {
+            "entry": "ui/cash/index.html",
+            "height": "auto",
+            "minHeight": 640
+          }
+        }
+      ]
+    },
+    {
+      "id": "menu",
+      "title": "Menu",
+      "routePath": "menu",
+      "permission": "wattanam.cafe-pos.menu",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "menu",
+          "method": "GET",
+          "path": "menu/all",
+          "permission": "wattanam.cafe-pos.menu",
+          "autoload": false
+        },
+        {
+          "id": "addCategory",
+          "method": "POST",
+          "path": "categories",
+          "permission": "wattanam.cafe-pos.menu",
+          "autoload": false
+        },
+        {
+          "id": "saveCategory",
+          "method": "PUT",
+          "path": "categories/:id",
+          "permission": "wattanam.cafe-pos.menu",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        },
+        {
+          "id": "addProduct",
+          "method": "POST",
+          "path": "products",
+          "permission": "wattanam.cafe-pos.menu",
+          "autoload": false
+        },
+        {
+          "id": "saveProduct",
+          "method": "PUT",
+          "path": "products/:id",
+          "permission": "wattanam.cafe-pos.menu",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        },
+        {
+          "id": "addGroup",
+          "method": "POST",
+          "path": "addon-groups",
+          "permission": "wattanam.cafe-pos.menu",
+          "autoload": false
+        },
+        {
+          "id": "saveGroup",
+          "method": "PUT",
+          "path": "addon-groups/:id",
+          "permission": "wattanam.cafe-pos.menu",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        },
+        {
+          "id": "import",
+          "method": "POST",
+          "path": "menu/import",
+          "permission": "wattanam.cafe-pos.menu",
+          "autoload": false
+        }
+      ],
+      "components": [
+        {
+          "id": "menu-screen",
+          "type": "app",
+          "title": "Menu",
+          "options": {
+            "entry": "ui/menu/index.html",
+            "height": "auto",
+            "minHeight": 640
+          }
+        }
+      ]
+    },
+    {
+      "id": "stock",
+      "title": "Stock",
+      "routePath": "stock",
+      "permission": "wattanam.cafe-pos.stock",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "supplies",
+          "method": "GET",
+          "path": "supplies",
+          "permission": "wattanam.cafe-pos.stock",
+          "autoload": false
+        },
+        {
+          "id": "addSupply",
+          "method": "POST",
+          "path": "supplies",
+          "permission": "wattanam.cafe-pos.stock",
+          "autoload": false
+        },
+        {
+          "id": "saveSupply",
+          "method": "PUT",
+          "path": "supplies/:id",
+          "permission": "wattanam.cafe-pos.stock",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        },
+        {
+          "id": "move",
+          "method": "POST",
+          "path": "supplies/:id/movements",
+          "permission": "wattanam.cafe-pos.stock",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        },
+        {
+          "id": "moves",
+          "method": "GET",
+          "path": "supplies/:id/movements",
+          "permission": "wattanam.cafe-pos.stock",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        },
+        {
+          "id": "menu",
+          "method": "GET",
+          "path": "menu/all",
+          "permission": "wattanam.cafe-pos.menu",
+          "autoload": false
+        },
+        {
+          "id": "recipe",
+          "method": "GET",
+          "path": "recipes/:productId",
+          "permission": "wattanam.cafe-pos.stock",
+          "autoload": false,
+          "parameters": [
+            "productId"
+          ]
+        },
+        {
+          "id": "saveRecipe",
+          "method": "PUT",
+          "path": "recipes/:productId",
+          "permission": "wattanam.cafe-pos.stock",
+          "autoload": false,
+          "parameters": [
+            "productId"
+          ]
+        }
+      ],
+      "components": [
+        {
+          "id": "stock-screen",
+          "type": "app",
+          "title": "Stock",
+          "options": {
+            "entry": "ui/stock/index.html",
+            "height": "auto",
+            "minHeight": 640
+          }
+        }
+      ]
+    },
+    {
+      "id": "customers",
+      "title": "Customers",
+      "routePath": "customers",
+      "permission": "wattanam.cafe-pos.customers",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "customers",
+          "method": "GET",
+          "path": "customers",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false
+        },
+        {
+          "id": "add",
+          "method": "POST",
+          "path": "customers",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false
+        },
+        {
+          "id": "customer",
+          "method": "GET",
+          "path": "customers/:id",
+          "permission": "wattanam.cafe-pos.customers",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        },
+        {
+          "id": "save",
+          "method": "PUT",
+          "path": "customers/:id",
+          "permission": "wattanam.cafe-pos.customers",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        },
+        {
+          "id": "points",
+          "method": "POST",
+          "path": "customers/:id/points",
+          "permission": "wattanam.cafe-pos.customers",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        }
+      ],
+      "components": [
+        {
+          "id": "customers-screen",
+          "type": "app",
+          "title": "Customers",
+          "options": {
+            "entry": "ui/customers/index.html",
+            "height": "auto",
+            "minHeight": 640
+          }
+        }
+      ]
+    },
+    {
+      "id": "reports",
+      "title": "Sales Reports",
+      "routePath": "reports",
+      "permission": "wattanam.cafe-pos.reports",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "summary",
+          "method": "GET",
+          "path": "reports/summary",
+          "permission": "wattanam.cafe-pos.reports",
+          "autoload": false
+        },
+        {
+          "id": "export",
+          "method": "GET",
+          "path": "reports/export",
+          "permission": "wattanam.cafe-pos.reports",
+          "autoload": false
+        }
+      ],
+      "components": [
+        {
+          "id": "reports-screen",
+          "type": "app",
+          "title": "Sales Reports",
+          "options": {
+            "entry": "ui/reports/index.html",
+            "height": "auto",
+            "minHeight": 640
+          }
+        }
+      ]
+    },
+    {
+      "id": "settings",
+      "title": "POS Settings",
+      "routePath": "settings",
+      "permission": "wattanam.cafe-pos.configure",
+      "parameters": [],
+      "dataSources": [
+        {
+          "id": "settings",
+          "method": "GET",
+          "path": "settings",
+          "permission": "wattanam.cafe-pos.sell",
+          "autoload": false
+        },
+        {
+          "id": "save",
+          "method": "PUT",
+          "path": "settings",
+          "permission": "wattanam.cafe-pos.configure",
+          "autoload": false
+        },
+        {
+          "id": "menu",
+          "method": "GET",
+          "path": "menu/all",
+          "permission": "wattanam.cafe-pos.menu",
+          "autoload": false
+        },
+        {
+          "id": "addStation",
+          "method": "POST",
+          "path": "stations",
+          "permission": "wattanam.cafe-pos.configure",
+          "autoload": false
+        },
+        {
+          "id": "saveStation",
+          "method": "PUT",
+          "path": "stations/:id",
+          "permission": "wattanam.cafe-pos.configure",
+          "autoload": false,
+          "parameters": [
+            "id"
+          ]
+        }
+      ],
+      "components": [
+        {
+          "id": "settings-screen",
+          "type": "app",
+          "title": "POS Settings",
+          "options": {
+            "entry": "ui/settings/index.html",
+            "height": "auto",
+            "minHeight": 640,
+            "devices": [
+              "printer"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

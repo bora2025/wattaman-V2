@@ -37,7 +37,7 @@ function validatePluginUiFiles(root, descriptor) {
       else if (!fs.existsSync(path.join(root, entry))) problems.push(`app ${component.id}: entry ${entry} is missing`);
       else entries.push(entry);
       const devices = component.options && component.options.devices;
-      if (devices !== undefined && (!Array.isArray(devices) || new Set(devices).size !== devices.length || devices.some((device) => !['scanner', 'location', 'device-id', 'face', 'nfc', 'storage'].includes(device)))) problems.push(`app ${component.id}: devices must be a list of scanner, location, device-id, face, nfc, storage`);
+      if (devices !== undefined && (!Array.isArray(devices) || new Set(devices).size !== devices.length || devices.some((device) => !['scanner', 'location', 'device-id', 'face', 'nfc', 'storage', 'printer'].includes(device)))) problems.push(`app ${component.id}: devices must be a list of scanner, location, device-id, face, nfc, storage, printer`);
       const apis = component.options && component.options.apis;
       if (apis !== undefined && (!Array.isArray(apis) || apis.length > 5 || new Set(apis).size !== apis.length || apis.some((id) => !partners.has(id)))) problems.push(`app ${component.id}: apis must list dependencies of the plugin (at most 5)`);
     }
@@ -56,7 +56,7 @@ const UI_ID = /^[a-z0-9][a-zA-Z0-9._-]*$/;
 // Same allow-list the school core enforces (backend/src/plugins/plugin-ui-appearance.ts). Plugins
 // style pages with these values only; raw CSS or Tailwind class names are refused.
 const UI_TONES = ['neutral', 'brand', 'info', 'success', 'warning', 'danger'];
-const UI_PAGE_APPEARANCE = { theme: ['standard', 'company'], layout: ['stack', 'grid'], accent: UI_TONES };
+const UI_PAGE_APPEARANCE = { theme: ['standard', 'company'], layout: ['stack', 'grid'], accent: UI_TONES, screen: ['kiosk'] };
 const UI_COMPONENT_APPEARANCE = { width: ['full', 'half', 'third', 'two-thirds'], tone: UI_TONES, surface: ['default', 'plain', 'card', 'tinted'] };
 
 function validateAppearance(value, vocabulary, label) {

@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="km">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Waiter</title>
+  <link rel="stylesheet" href="../pos.css">
+  <link rel="stylesheet" href="../counter/counter.css">
+</head>
+<body data-mode="waiter">
+  <main id="app" aria-busy="true">
+    <div id="error" class="notice bad" role="alert" hidden></div>
+
+    <!-- waiter: choose the table first -->
+    <section id="table-picker" class="panel" hidden>
+      <div class="spread"><h1>🍽️ Choose a table · ជ្រើសតុ</h1><span class="muted" id="picker-note"></span></div>
+      <div id="picker-tables" class="tables-grid"></div>
+    </section>
+
+    <div class="pos" id="pos">
+      <section class="menu-side">
+        <div class="topbar">
+          <input id="search" type="search" placeholder="Search or scan a barcode · ស្វែងរក" autocomplete="off" aria-label="Search the menu or scan a barcode">
+          <button type="button" id="shift" class="badge" style="min-height:0;border:0;cursor:pointer"></button>
+          <span id="queue" class="badge warn" hidden></span>
+          <button type="button" id="open-orders" class="small">🧾 Open orders</button>
+        </div>
+        <div id="categories" class="tabs" role="tablist"></div>
+        <div id="products" class="products"></div>
+      </section>
+
+      <aside class="cart-side" aria-label="Order">
+        <div class="cart-head">
+          <div class="row">
+            <select id="type" aria-label="Order type">
+              <option value="TAKEAWAY">🥡 Take away</option>
+              <option value="DINE_IN">🍽️ Dine-in</option>
+              <option value="DELIVERY">🛵 Delivery</option>
+            </select>
+            <select id="table" aria-label="Table" hidden></select>
+            <button type="button" id="customer" class="small">👤 Customer</button>
+          </div>
+          <div class="muted" id="order-info"></div>
+        </div>
+        <div id="cart" class="cart"></div>
+        <div class="totals" id="totals"></div>
+        <div class="cart-actions">
+          <button type="button" id="hold" title="Keep the order open and start another">⏸ Hold</button>
+          <button type="button" id="discount" hidden>％ Discount</button>
+          <button type="button" id="bill">🧾 Bill</button>
+          <button type="button" id="clear" class="danger">✕</button>
+          <button type="button" id="send" class="primary big" hidden>🍳 Send to kitchen</button>
+          <button type="button" id="charge" class="primary big">💵 Charge</button>
+        </div>
+      </aside>
+    </div>
+
+    <!-- choices: size and add-ons -->
+    <dialog id="options-dialog">
+      <form method="dialog">
+        <div class="dialog-body">
+          <h2 id="options-title"></h2>
+          <div id="options-body"></div>
+          <label class="row" style="margin-top:10px">Note<input id="options-note" maxlength="200" placeholder="less ice, no sugar…"></label>
+          <div class="row" style="margin-top:10px"><button type="button" id="qty-minus">−</button><b id="options-qty">1</b><button type="button" id="qty-plus">+</button><span class="muted" id="options-price"></span></div>
+          <div id="options-error" class="notice bad" hidden></div>
+        </div>
+        <div class="dialog-foot"><button value="cancel">Cancel</button><button type="button" class="primary" id="options-add">Add</button></div>
+      </form>
+    </dialog>
+
+    <!-- paying -->
+    <dialog id="pay-dialog">
+      <form method="dialog">
+        <div class="dialog-body">
+          <div class="spread"><h2>Pay · បង់ប្រាក់ <span id="pay-number"></span></h2><b class="money big-due" id="pay-due"></b></div>
+          <div class="muted" id="pay-other"></div>
+          <div class="tabs" id="pay-methods"></div>
+          <div id="pay-cash">
+            <div class="row"><label>Dollars given ($)<input id="cash-usd" inputmode="decimal" autocomplete="off"></label><label>Riel given (៛)<input id="cash-khr" inputmode="numeric" autocomplete="off"></label></div>
+            <div class="quick" id="quick-cash"></div>
+            <div class="change" id="change"></div>
+            <div class="notice warn" id="pay-noshift" hidden>⚠️ No cash shift is open: cash needs one. <button type="button" class="small" id="pay-open-shift">Open a shift</button></div>
+          </div>
+          <div id="pay-other-method" hidden>
+            <div class="row"><label>Amount<input id="pay-amount" inputmode="decimal"></label><label>Reference (bank, card slip)<input id="pay-ref" maxlength="120"></label></div>
+            <div id="khqr" class="center" hidden></div>
+          </div>
+          <div id="pay-error" class="notice bad" hidden></div>
+          <div id="pay-done" class="notice ok" hidden></div>
+        </div>
+        <div class="dialog-foot">
+          <label class="row muted" style="margin-right:auto"><input type="checkbox" id="auto-print"> Print the receipt</label>
+          <button value="cancel" id="pay-close">Close</button>
+          <button type="button" class="primary big" id="pay-confirm">Confirm</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- customer -->
+    <dialog id="customer-dialog">
+      <form method="dialog">
+        <div class="dialog-body">
+          <h2>Customer · អតិថិជន</h2>
+          <input id="customer-search" type="search" placeholder="Name or phone" style="width:100%">
+          <div id="customer-results"></div>
+          <details style="margin-top:10px"><summary>➕ New customer</summary>
+            <div class="row"><label>Name<input id="new-name" maxlength="100"></label><label>Phone<input id="new-phone" inputmode="tel" maxlength="20"></label><button type="button" id="new-save">Add</button></div>
+          </details>
+          <div id="customer-error" class="notice bad" hidden></div>
+        </div>
+        <div class="dialog-foot"><button type="button" id="customer-none">No customer</button><button value="cancel">Close</button></div>
+      </form>
+    </dialog>
+
+    <!-- open orders (held, tables) -->
+    <dialog id="open-dialog">
+      <form method="dialog">
+        <div class="dialog-body"><h2>Open orders</h2><div id="open-list"></div></div>
+        <div class="dialog-foot"><button value="cancel">Close</button></div>
+      </form>
+    </dialog>
+
+    <!-- no cash shift: open one here, or pay another way -->
+    <dialog id="shift-dialog">
+      <form method="dialog">
+        <div class="dialog-body">
+          <h2>⚪ No cash shift · មិនទាន់បើកវេនសាច់ប្រាក់</h2>
+          <p class="muted">Cash payments go into a shift (the drawer). Count the float in the drawer and open it — or take this payment by card, transfer or KHQR.</p>
+          <div id="shift-open-form" class="row"><label>Float in dollars ($)<input id="shift-usd" inputmode="decimal" value="0"></label><label>Float in riel (៛)<input id="shift-khr" inputmode="numeric" value="0"></label></div>
+          <p id="shift-ask" class="notice warn" hidden>Only a manager or cashier with “Cash shifts” can open it: ask them, or pay another way.</p>
+          <div id="shift-error" class="notice bad" hidden></div>
+        </div>
+        <div class="dialog-foot"><button value="cancel">Close</button><button type="button" id="shift-other">Pay another way</button><button type="button" class="primary" id="shift-open">🟢 Open shift</button></div>
+      </form>
+    </dialog>
+
+    <!-- discount -->
+    <dialog id="discount-dialog">
+      <form method="dialog">
+        <div class="dialog-body">
+          <h2>Discount · បញ្ចុះតម្លៃ</h2>
+          <div class="row"><label>Type<select id="discount-type"><option value="PERCENT">Percent %</option><option value="AMOUNT">Amount</option><option value="">No discount</option></select></label><label>Value<input id="discount-value" inputmode="decimal"></label></div>
+          <div class="quick" id="discount-quick"></div>
+          <div id="discount-error" class="notice bad" hidden></div>
+        </div>
+        <div class="dialog-foot"><button value="cancel">Cancel</button><button type="button" class="primary" id="discount-save">Apply</button></div>
+      </form>
+    </dialog>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="../pos.js"></script>
+  <script src="../counter/counter.js"></script>
+</body>
+</html>

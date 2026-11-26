@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="km">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Customer Display</title>
+  <link rel="stylesheet" href="../pos.css">
+  <style>
+    body { background: #0b1f1c; color: #fff; }
+    main { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 40%); gap: 16px; padding: 24px; }
+    @media (max-width: 760px) { main { grid-template-columns: 1fr; } }
+    .shop { font-size: 28px; font-weight: 900; } .shop small { display: block; font-size: 18px; opacity: .8; font-family: var(--khmer); }
+    .lines { margin-top: 16px; font-size: 20px; }
+    .lines div { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.12); }
+    .total { background: rgba(255,255,255,.07); border-radius: 20px; padding: 24px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 10px; text-align: center; }
+    .total .amount { font-size: 56px; font-weight: 900; } .total .other { font-size: 26px; opacity: .85; }
+    .total img { width: 260px; max-width: 90%; background: #fff; border-radius: 12px; padding: 8px; }
+    .thanks { font-size: 40px; font-weight: 900; }
+    .change { font-size: 28px; color: #86efac; }
+    .setup { position: fixed; bottom: 8px; right: 8px; opacity: .4; } .setup:hover { opacity: 1; }
+    .setup input { width: 120px; }
+  </style>
+</head>
+<body>
+  <main id="app" aria-busy="true">
+    <section>
+      <div class="shop" id="shop"></div>
+      <div class="lines" id="lines"></div>
+    </section>
+    <section class="total" id="total" aria-live="polite"></section>
+    <div class="setup"><label>Register <input id="register" maxlength="40" value="main"></label></div>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="../pos.js"></script>
+  <script src="display.js"></script>
+</body>
+</html>
