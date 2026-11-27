@@ -102,7 +102,9 @@
   function go(routePath, extra) {
     var query = { classId: state.classId };
     Object.keys(extra || {}).forEach(function (k) { query[k] = extra[k]; });
-    ui.navigate(routePath, query);
+    // Take Attendance is a Smart Attendance screen; it opens on this class.
+    if (routePath === 'attendance') ui.partner('wattanam.smart-attendance').navigate('take', query);
+    else ui.navigate(routePath, query);
   }
   // one column (phones, narrow screens): the side panel is below the list, so bring it into view
   function revealSide() {

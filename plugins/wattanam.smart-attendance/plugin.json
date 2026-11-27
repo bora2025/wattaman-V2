@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "id": "wattanam.smart-attendance",
   "name": "Smart Attendance",
-  "description": "Attendance stations: students scan their QR code, tap their NFC card or show their face at a gate or classroom tablet, and Academic Management records it.",
-  "version": "0.2.1",
-  "requiresCore": ">=0.1.35 <1.0.0",
+  "description": "Take attendance in one place: by hand, QR code, NFC card or face, at stations, terminals and phones; students' self-scan, staff and workforce attendance. Records stay in Academic Management (schools) or Organizing Management (organizations).",
+  "version": "0.4.1",
+  "requiresCore": ">=0.1.36 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
   "backendEntry": "backend/index.js",
@@ -32,12 +32,21 @@
     "wattanam.smart-attendance.cards.manage",
     "wattanam.smart-attendance.configure",
     "wattanam.smart-attendance.faces.enroll",
-    "wattanam.smart-attendance.faces.manage"
+    "wattanam.smart-attendance.faces.manage",
+    "wattanam.smart-attendance.take",
+    "wattanam.smart-attendance.self.scan",
+    "wattanam.smart-attendance.self.windows",
+    "wattanam.smart-attendance.self.review",
+    "wattanam.smart-attendance.staff.scan",
+    "wattanam.smart-attendance.staff.reports",
+    "wattanam.smart-attendance.workforce.scan",
+    "wattanam.smart-attendance.workforce.settings"
   ],
-  "dependencies": {
-    "wattanam.academic-management": ">=0.33.0 <1.0.0"
+  "dependencies": {},
+  "optionalDependencies": {
+    "wattanam.academic-management": ">=0.33.0 <1.0.0",
+    "wattanam.organizing-management": ">=0.27.0 <1.0.0"
   },
-  "optionalDependencies": {},
   "contracts": {
     "schemaVersion": 1,
     "deprecationNoticeDays": 180,
@@ -199,6 +208,60 @@
       "label": "Face Enrolment",
       "href": "/plugins/wattanam.smart-attendance/faces",
       "permission": "wattanam.smart-attendance.faces.enroll"
+    },
+    {
+      "id": "take",
+      "label": "Take Attendance",
+      "href": "/plugins/wattanam.smart-attendance/take",
+      "permission": "wattanam.smart-attendance.take"
+    },
+    {
+      "id": "attendance-settings",
+      "label": "Attendance Settings",
+      "href": "/plugins/wattanam.smart-attendance/attendance-settings",
+      "permission": "wattanam.smart-attendance.configure"
+    },
+    {
+      "id": "self-scan",
+      "label": "Scan Attendance",
+      "href": "/plugins/wattanam.smart-attendance/self-attendance/scan",
+      "permission": "wattanam.smart-attendance.self.scan"
+    },
+    {
+      "id": "self-windows",
+      "label": "Self-Attendance Windows",
+      "href": "/plugins/wattanam.smart-attendance/self-attendance/windows",
+      "permission": "wattanam.smart-attendance.self.windows"
+    },
+    {
+      "id": "self-review",
+      "label": "Self-Attendance Review",
+      "href": "/plugins/wattanam.smart-attendance/self-attendance/review",
+      "permission": "wattanam.smart-attendance.self.review"
+    },
+    {
+      "id": "staff",
+      "label": "Staff Attendance",
+      "href": "/plugins/wattanam.smart-attendance/staff",
+      "permission": "wattanam.smart-attendance.staff.scan"
+    },
+    {
+      "id": "staff-reports",
+      "label": "Staff Attendance Reports",
+      "href": "/plugins/wattanam.smart-attendance/staff/reports",
+      "permission": "wattanam.smart-attendance.staff.reports"
+    },
+    {
+      "id": "workforce-scan",
+      "label": "Workforce Scan Attendance",
+      "href": "/plugins/wattanam.smart-attendance/workforce/scan",
+      "permission": "wattanam.smart-attendance.workforce.scan"
+    },
+    {
+      "id": "workforce-settings",
+      "label": "Workforce Attendance Settings",
+      "href": "/plugins/wattanam.smart-attendance/workforce/settings",
+      "permission": "wattanam.smart-attendance.workforce.settings"
     }
   ],
   "supportedLanguages": [

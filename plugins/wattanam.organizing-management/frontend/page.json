@@ -28,12 +28,30 @@
             "showDashboard": false,
             "activeStep": 0,
             "steps": [
-              { "label": "Setup", "route": "organization" },
-              { "label": "People", "route": "employees" },
-              { "label": "Time & leave", "route": "hr-calendar" },
-              { "label": "Attendance", "route": "attendance-scan" },
-              { "label": "Payroll", "route": "payroll" },
-              { "label": "Reports", "route": "reports" }
+              {
+                "label": "Setup",
+                "route": "organization"
+              },
+              {
+                "label": "People",
+                "route": "employees"
+              },
+              {
+                "label": "Time & leave",
+                "route": "hr-calendar"
+              },
+              {
+                "label": "Attendance",
+                "route": "attendance-scan"
+              },
+              {
+                "label": "Payroll",
+                "route": "payroll"
+              },
+              {
+                "label": "Reports",
+                "route": "reports"
+              }
             ]
           }
         },
@@ -42,28 +60,40 @@
           "type": "metric",
           "title": "Active workforce",
           "source": "dashboard",
-          "options": { "valuePath": "workforce.active", "format": "number" }
+          "options": {
+            "valuePath": "workforce.active",
+            "format": "number"
+          }
         },
         {
           "id": "present",
           "type": "metric",
           "title": "Present today",
           "source": "dashboard",
-          "options": { "valuePath": "attendance.present", "format": "number" }
+          "options": {
+            "valuePath": "attendance.present",
+            "format": "number"
+          }
         },
         {
           "id": "late",
           "type": "metric",
           "title": "Late today",
           "source": "dashboard",
-          "options": { "valuePath": "attendance.late", "format": "number" }
+          "options": {
+            "valuePath": "attendance.late",
+            "format": "number"
+          }
         },
         {
           "id": "rate",
           "type": "metric",
           "title": "Attendance rate",
           "source": "dashboard",
-          "options": { "valuePath": "attendance.rate", "format": "percent" }
+          "options": {
+            "valuePath": "attendance.rate",
+            "format": "percent"
+          }
         },
         {
           "id": "recent",
@@ -71,12 +101,32 @@
           "title": "Recent attendance",
           "source": "dashboard",
           "fields": [
-            { "id": "fullName", "label": "Name" },
-            { "id": "employeeNumber", "label": "Employee #" },
-            { "id": "position", "label": "Position" },
-            { "id": "status", "label": "Status" },
-            { "id": "checkInAt", "label": "Check-in", "format": "datetime" },
-            { "id": "checkOutAt", "label": "Check-out", "format": "datetime" }
+            {
+              "id": "fullName",
+              "label": "Name"
+            },
+            {
+              "id": "employeeNumber",
+              "label": "Employee #"
+            },
+            {
+              "id": "position",
+              "label": "Position"
+            },
+            {
+              "id": "status",
+              "label": "Status"
+            },
+            {
+              "id": "checkInAt",
+              "label": "Check-in",
+              "format": "datetime"
+            },
+            {
+              "id": "checkOutAt",
+              "label": "Check-out",
+              "format": "datetime"
+            }
           ],
           "options": {
             "itemsPath": "recent",
@@ -90,10 +140,24 @@
           "title": "Upcoming calendar",
           "source": "dashboard",
           "fields": [
-            { "id": "title", "label": "Event" },
-            { "id": "eventType", "label": "Type" },
-            { "id": "startsAt", "label": "Starts", "format": "datetime" },
-            { "id": "endsAt", "label": "Ends", "format": "datetime" }
+            {
+              "id": "title",
+              "label": "Event"
+            },
+            {
+              "id": "eventType",
+              "label": "Type"
+            },
+            {
+              "id": "startsAt",
+              "label": "Starts",
+              "format": "datetime"
+            },
+            {
+              "id": "endsAt",
+              "label": "Ends",
+              "format": "datetime"
+            }
           ],
           "options": {
             "itemsPath": "upcoming",
@@ -133,12 +197,30 @@
             "description": "Configure the organization identity, operating model, and regional settings used throughout workforce management.",
             "activeStep": 0,
             "steps": [
-              { "label": "Setup", "route": "organization" },
-              { "label": "People", "route": "employees" },
-              { "label": "Time & leave", "route": "hr-calendar" },
-              { "label": "Attendance", "route": "attendance-scan" },
-              { "label": "Payroll", "route": "payroll" },
-              { "label": "Reports", "route": "reports" }
+              {
+                "label": "Setup",
+                "route": "organization"
+              },
+              {
+                "label": "People",
+                "route": "employees"
+              },
+              {
+                "label": "Time & leave",
+                "route": "hr-calendar"
+              },
+              {
+                "label": "Attendance",
+                "route": "attendance-scan"
+              },
+              {
+                "label": "Payroll",
+                "route": "payroll"
+              },
+              {
+                "label": "Reports",
+                "route": "reports"
+              }
             ]
           }
         },
@@ -148,9 +230,18 @@
           "title": "Current organization",
           "source": "profile",
           "fields": [
-            { "label": "Name", "path": "name" },
-            { "label": "Type", "path": "organizationType" },
-            { "label": "Timezone", "path": "timezone" }
+            {
+              "label": "Name",
+              "path": "name"
+            },
+            {
+              "label": "Type",
+              "path": "organizationType"
+            },
+            {
+              "label": "Timezone",
+              "path": "timezone"
+            }
           ]
         },
         {
@@ -173,11 +264,26 @@
               "label": "Organization type",
               "required": true,
               "options": [
-                { "label": "Company", "value": "COMPANY" },
-                { "label": "Shop", "value": "SHOP" },
-                { "label": "Store", "value": "STORE" },
-                { "label": "Nonprofit", "value": "NONPROFIT" },
-                { "label": "Other", "value": "OTHER" }
+                {
+                  "label": "Company",
+                  "value": "COMPANY"
+                },
+                {
+                  "label": "Shop",
+                  "value": "SHOP"
+                },
+                {
+                  "label": "Store",
+                  "value": "STORE"
+                },
+                {
+                  "label": "Nonprofit",
+                  "value": "NONPROFIT"
+                },
+                {
+                  "label": "Other",
+                  "value": "OTHER"
+                }
               ]
             },
             {
@@ -220,7 +326,9 @@
           "method": "DELETE",
           "path": "positions/:id",
           "permission": "wattanam.organizing-management.employees.manage",
-          "parameters": ["id"],
+          "parameters": [
+            "id"
+          ],
           "autoload": false
         }
       ],
@@ -234,12 +342,30 @@
             "description": "Define professional positions and teams before assigning workforce members.",
             "activeStep": 0,
             "steps": [
-              { "label": "Setup", "route": "organization" },
-              { "label": "People", "route": "employees" },
-              { "label": "Time & leave", "route": "hr-calendar" },
-              { "label": "Attendance", "route": "attendance-scan" },
-              { "label": "Payroll", "route": "payroll" },
-              { "label": "Reports", "route": "reports" }
+              {
+                "label": "Setup",
+                "route": "organization"
+              },
+              {
+                "label": "People",
+                "route": "employees"
+              },
+              {
+                "label": "Time & leave",
+                "route": "hr-calendar"
+              },
+              {
+                "label": "Attendance",
+                "route": "attendance-scan"
+              },
+              {
+                "label": "Payroll",
+                "route": "payroll"
+              },
+              {
+                "label": "Reports",
+                "route": "reports"
+              }
             ]
           }
         },
@@ -292,11 +418,28 @@
           "title": "Organization positions",
           "source": "list",
           "fields": [
-            { "id": "code", "label": "Code" },
-            { "id": "title", "label": "Position", "filterable": true },
-            { "id": "department", "label": "Team", "filterable": true },
-            { "id": "employeeCount", "label": "People" },
-            { "id": "active", "label": "Active" }
+            {
+              "id": "code",
+              "label": "Code"
+            },
+            {
+              "id": "title",
+              "label": "Position",
+              "filterable": true
+            },
+            {
+              "id": "department",
+              "label": "Team",
+              "filterable": true
+            },
+            {
+              "id": "employeeCount",
+              "label": "People"
+            },
+            {
+              "id": "active",
+              "label": "Active"
+            }
           ],
           "options": {
             "pageSize": 50,
@@ -304,7 +447,9 @@
             "rowClickable": true,
             "rowActionLabel": "Edit position",
             "rowRoute": "positions/:id",
-            "rowParameterMap": { "id": "id" },
+            "rowParameterMap": {
+              "id": "id"
+            },
             "rowActions": [
               {
                 "id": "removePosition",
@@ -325,7 +470,13 @@
       "title": "Edit Position",
       "routePath": "positions/:id",
       "permission": "wattanam.organizing-management.employees.manage",
-      "parameters": [{ "name": "id", "type": "string", "maximumLength": 100 }],
+      "parameters": [
+        {
+          "name": "id",
+          "type": "string",
+          "maximumLength": 100
+        }
+      ],
       "dataSources": [
         {
           "id": "position",
@@ -350,12 +501,30 @@
             "description": "Maintain the position title, responsibilities, team assignment, and availability.",
             "activeStep": 0,
             "steps": [
-              { "label": "Setup", "route": "organization" },
-              { "label": "People", "route": "employees" },
-              { "label": "Time & leave", "route": "hr-calendar" },
-              { "label": "Attendance", "route": "attendance-scan" },
-              { "label": "Payroll", "route": "payroll" },
-              { "label": "Reports", "route": "reports" }
+              {
+                "label": "Setup",
+                "route": "organization"
+              },
+              {
+                "label": "People",
+                "route": "employees"
+              },
+              {
+                "label": "Time & leave",
+                "route": "hr-calendar"
+              },
+              {
+                "label": "Attendance",
+                "route": "attendance-scan"
+              },
+              {
+                "label": "Payroll",
+                "route": "payroll"
+              },
+              {
+                "label": "Reports",
+                "route": "reports"
+              }
             ]
           }
         },
@@ -436,7 +605,9 @@
           "method": "DELETE",
           "path": "employees/:id",
           "permission": "wattanam.organizing-management.employees.manage",
-          "parameters": ["id"],
+          "parameters": [
+            "id"
+          ],
           "autoload": false
         }
       ],
@@ -450,12 +621,30 @@
             "description": "Manage leadership, employees, contractors, and interns from one modern workforce workspace.",
             "activeStep": 1,
             "steps": [
-              { "label": "Setup", "route": "organization" },
-              { "label": "People", "route": "employees" },
-              { "label": "Time & leave", "route": "hr-calendar" },
-              { "label": "Attendance", "route": "attendance-scan" },
-              { "label": "Payroll", "route": "payroll" },
-              { "label": "Reports", "route": "reports" }
+              {
+                "label": "Setup",
+                "route": "organization"
+              },
+              {
+                "label": "People",
+                "route": "employees"
+              },
+              {
+                "label": "Time & leave",
+                "route": "hr-calendar"
+              },
+              {
+                "label": "Attendance",
+                "route": "attendance-scan"
+              },
+              {
+                "label": "Payroll",
+                "route": "payroll"
+              },
+              {
+                "label": "Reports",
+                "route": "reports"
+              }
             ]
           }
         },
@@ -472,10 +661,22 @@
               "required": true,
               "defaultValue": "EMPLOYEE",
               "options": [
-                { "label": "Employer / owner", "value": "EMPLOYER" },
-                { "label": "Employee", "value": "EMPLOYEE" },
-                { "label": "Contractor", "value": "CONTRACTOR" },
-                { "label": "Intern", "value": "INTERN" }
+                {
+                  "label": "Employer / owner",
+                  "value": "EMPLOYER"
+                },
+                {
+                  "label": "Employee",
+                  "value": "EMPLOYEE"
+                },
+                {
+                  "label": "Contractor",
+                  "value": "CONTRACTOR"
+                },
+                {
+                  "label": "Intern",
+                  "value": "INTERN"
+                }
               ]
             },
             {
@@ -498,7 +699,11 @@
               "label": "Profile photo URL or uploaded image",
               "maxLength": 750000
             },
-            { "id": "email", "type": "email", "label": "Email address" },
+            {
+              "id": "email",
+              "type": "email",
+              "label": "Email address"
+            },
             {
               "id": "phone",
               "type": "text",
@@ -539,21 +744,46 @@
               "required": true,
               "defaultValue": "ACTIVE",
               "options": [
-                { "label": "Active", "value": "ACTIVE" },
-                { "label": "On leave", "value": "ON_LEAVE" },
-                { "label": "Inactive", "value": "INACTIVE" },
-                { "label": "Terminated", "value": "TERMINATED" }
+                {
+                  "label": "Active",
+                  "value": "ACTIVE"
+                },
+                {
+                  "label": "On leave",
+                  "value": "ON_LEAVE"
+                },
+                {
+                  "label": "Inactive",
+                  "value": "INACTIVE"
+                },
+                {
+                  "label": "Terminated",
+                  "value": "TERMINATED"
+                }
               ]
             },
-            { "id": "dateOfBirth", "type": "date", "label": "Date of birth" },
+            {
+              "id": "dateOfBirth",
+              "type": "date",
+              "label": "Date of birth"
+            },
             {
               "id": "gender",
               "type": "select",
               "label": "Gender",
               "options": [
-                { "label": "Female", "value": "FEMALE" },
-                { "label": "Male", "value": "MALE" },
-                { "label": "Other / prefer not to say", "value": "OTHER" }
+                {
+                  "label": "Female",
+                  "value": "FEMALE"
+                },
+                {
+                  "label": "Male",
+                  "value": "MALE"
+                },
+                {
+                  "label": "Other / prefer not to say",
+                  "value": "OTHER"
+                }
               ]
             },
             {
@@ -603,17 +833,44 @@
           "title": "Workforce export & print",
           "source": "list",
           "fields": [
-            { "label": "Employee number", "path": "employeeNumber" },
-            { "label": "Name", "path": "fullName" },
-            { "label": "Type", "path": "employmentType" },
-            { "label": "Position", "path": "positionTitle" },
-            { "label": "Department", "path": "department" },
-            { "label": "Email", "path": "email" },
-            { "label": "Phone", "path": "phone" },
-            { "label": "Status", "path": "employmentStatus" }
+            {
+              "label": "Employee number",
+              "path": "employeeNumber"
+            },
+            {
+              "label": "Name",
+              "path": "fullName"
+            },
+            {
+              "label": "Type",
+              "path": "employmentType"
+            },
+            {
+              "label": "Position",
+              "path": "positionTitle"
+            },
+            {
+              "label": "Department",
+              "path": "department"
+            },
+            {
+              "label": "Email",
+              "path": "email"
+            },
+            {
+              "label": "Phone",
+              "path": "phone"
+            },
+            {
+              "label": "Status",
+              "path": "employmentStatus"
+            }
           ],
           "options": {
-            "formats": ["print", "xlsx"],
+            "formats": [
+              "print",
+              "xlsx"
+            ],
             "filename": "employers-employees",
             "maximumRows": 10000,
             "showPreview": false
@@ -625,12 +882,36 @@
           "title": "People directory",
           "source": "list",
           "fields": [
-            { "id": "employeeNumber", "label": "Number", "filterable": true },
-            { "id": "fullName", "label": "Name", "filterable": true },
-            { "id": "employmentType", "label": "Type", "filterable": true },
-            { "id": "positionTitle", "label": "Position", "filterable": true },
-            { "id": "department", "label": "Team", "filterable": true },
-            { "id": "employmentStatus", "label": "Status", "filterable": true }
+            {
+              "id": "employeeNumber",
+              "label": "Number",
+              "filterable": true
+            },
+            {
+              "id": "fullName",
+              "label": "Name",
+              "filterable": true
+            },
+            {
+              "id": "employmentType",
+              "label": "Type",
+              "filterable": true
+            },
+            {
+              "id": "positionTitle",
+              "label": "Position",
+              "filterable": true
+            },
+            {
+              "id": "department",
+              "label": "Team",
+              "filterable": true
+            },
+            {
+              "id": "employmentStatus",
+              "label": "Status",
+              "filterable": true
+            }
           ],
           "options": {
             "pageSize": 50,
@@ -640,7 +921,9 @@
             "rowClickable": true,
             "rowActionLabel": "Open profile",
             "rowRoute": "profiles/:id",
-            "rowParameterMap": { "id": "id" },
+            "rowParameterMap": {
+              "id": "id"
+            },
             "rowActions": [
               {
                 "id": "archiveWorkforceMember",
@@ -661,7 +944,13 @@
       "title": "Edit Workforce Member",
       "routePath": "employees/:id",
       "permission": "wattanam.organizing-management.employees.manage",
-      "parameters": [{ "name": "id", "type": "string", "maximumLength": 100 }],
+      "parameters": [
+        {
+          "name": "id",
+          "type": "string",
+          "maximumLength": 100
+        }
+      ],
       "dataSources": [
         {
           "id": "employee",
@@ -686,12 +975,30 @@
             "description": "Review the secure attendance identity and update the employment record.",
             "activeStep": 1,
             "steps": [
-              { "label": "Setup", "route": "organization" },
-              { "label": "People", "route": "employees" },
-              { "label": "Time & leave", "route": "hr-calendar" },
-              { "label": "Attendance", "route": "attendance-scan" },
-              { "label": "Payroll", "route": "payroll" },
-              { "label": "Reports", "route": "reports" }
+              {
+                "label": "Setup",
+                "route": "organization"
+              },
+              {
+                "label": "People",
+                "route": "employees"
+              },
+              {
+                "label": "Time & leave",
+                "route": "hr-calendar"
+              },
+              {
+                "label": "Attendance",
+                "route": "attendance-scan"
+              },
+              {
+                "label": "Payroll",
+                "route": "payroll"
+              },
+              {
+                "label": "Reports",
+                "route": "reports"
+              }
             ]
           }
         },
@@ -701,8 +1008,14 @@
           "title": "Attendance identity",
           "source": "employee",
           "fields": [
-            { "label": "Employee number", "path": "employeeNumber" },
-            { "label": "QR identifier", "path": "qrIdentifier" }
+            {
+              "label": "Employee number",
+              "path": "employeeNumber"
+            },
+            {
+              "label": "QR identifier",
+              "path": "qrIdentifier"
+            }
           ]
         },
         {
@@ -732,10 +1045,22 @@
               "label": "Role type",
               "required": true,
               "options": [
-                { "label": "Employer / owner", "value": "EMPLOYER" },
-                { "label": "Employee", "value": "EMPLOYEE" },
-                { "label": "Contractor", "value": "CONTRACTOR" },
-                { "label": "Intern", "value": "INTERN" }
+                {
+                  "label": "Employer / owner",
+                  "value": "EMPLOYER"
+                },
+                {
+                  "label": "Employee",
+                  "value": "EMPLOYEE"
+                },
+                {
+                  "label": "Contractor",
+                  "value": "CONTRACTOR"
+                },
+                {
+                  "label": "Intern",
+                  "value": "INTERN"
+                }
               ]
             },
             {
@@ -750,7 +1075,11 @@
               "label": "Team / department",
               "maxLength": 200
             },
-            { "id": "email", "type": "email", "label": "Email" },
+            {
+              "id": "email",
+              "type": "email",
+              "label": "Email"
+            },
             {
               "id": "phone",
               "type": "text",
@@ -763,17 +1092,33 @@
               "label": "Photo URL",
               "maxLength": 2000
             },
-            { "id": "startDate", "type": "date", "label": "Start date" },
+            {
+              "id": "startDate",
+              "type": "date",
+              "label": "Start date"
+            },
             {
               "id": "employmentStatus",
               "type": "select",
               "label": "Status",
               "required": true,
               "options": [
-                { "label": "Active", "value": "ACTIVE" },
-                { "label": "On leave", "value": "ON_LEAVE" },
-                { "label": "Inactive", "value": "INACTIVE" },
-                { "label": "Terminated", "value": "TERMINATED" }
+                {
+                  "label": "Active",
+                  "value": "ACTIVE"
+                },
+                {
+                  "label": "On leave",
+                  "value": "ON_LEAVE"
+                },
+                {
+                  "label": "Inactive",
+                  "value": "INACTIVE"
+                },
+                {
+                  "label": "Terminated",
+                  "value": "TERMINATED"
+                }
               ]
             }
           ],
@@ -808,7 +1153,9 @@
           "method": "DELETE",
           "path": "calendar/:id",
           "permission": "wattanam.organizing-management.calendar.manage",
-          "parameters": ["id"],
+          "parameters": [
+            "id"
+          ],
           "autoload": false
         }
       ],
@@ -822,12 +1169,30 @@
             "description": "Plan holidays, meetings, paydays, organization events, and reminders.",
             "activeStep": 2,
             "steps": [
-              { "label": "Setup", "route": "organization" },
-              { "label": "People", "route": "employees" },
-              { "label": "Time & leave", "route": "hr-calendar" },
-              { "label": "Attendance", "route": "attendance-scan" },
-              { "label": "Payroll", "route": "payroll" },
-              { "label": "Reports", "route": "reports" }
+              {
+                "label": "Setup",
+                "route": "organization"
+              },
+              {
+                "label": "People",
+                "route": "employees"
+              },
+              {
+                "label": "Time & leave",
+                "route": "hr-calendar"
+              },
+              {
+                "label": "Attendance",
+                "route": "attendance-scan"
+              },
+              {
+                "label": "Payroll",
+                "route": "payroll"
+              },
+              {
+                "label": "Reports",
+                "route": "reports"
+              }
             ]
           }
         },
@@ -856,11 +1221,26 @@
               "required": true,
               "defaultValue": "EVENT",
               "options": [
-                { "label": "Holiday", "value": "HOLIDAY" },
-                { "label": "Company event", "value": "EVENT" },
-                { "label": "Payday", "value": "PAYDAY" },
-                { "label": "Meeting", "value": "MEETING" },
-                { "label": "Reminder", "value": "REMINDER" }
+                {
+                  "label": "Holiday",
+                  "value": "HOLIDAY"
+                },
+                {
+                  "label": "Company event",
+                  "value": "EVENT"
+                },
+                {
+                  "label": "Payday",
+                  "value": "PAYDAY"
+                },
+                {
+                  "label": "Meeting",
+                  "value": "MEETING"
+                },
+                {
+                  "label": "Reminder",
+                  "value": "REMINDER"
+                }
               ]
             },
             {
@@ -869,8 +1249,16 @@
               "label": "Starts",
               "required": true
             },
-            { "id": "endsAt", "type": "datetime", "label": "Ends" },
-            { "id": "allDay", "type": "checkbox", "label": "All-day event" }
+            {
+              "id": "endsAt",
+              "type": "datetime",
+              "label": "Ends"
+            },
+            {
+              "id": "allDay",
+              "type": "checkbox",
+              "label": "All-day event"
+            }
           ],
           "options": {
             "collapsible": true,
@@ -888,11 +1276,30 @@
           "title": "HR calendar",
           "source": "list",
           "fields": [
-            { "id": "title", "label": "Item", "filterable": true },
-            { "id": "eventType", "label": "Type", "filterable": true },
-            { "id": "startsAt", "label": "Starts", "format": "datetime" },
-            { "id": "endsAt", "label": "Ends", "format": "datetime" },
-            { "id": "allDay", "label": "All day" }
+            {
+              "id": "title",
+              "label": "Item",
+              "filterable": true
+            },
+            {
+              "id": "eventType",
+              "label": "Type",
+              "filterable": true
+            },
+            {
+              "id": "startsAt",
+              "label": "Starts",
+              "format": "datetime"
+            },
+            {
+              "id": "endsAt",
+              "label": "Ends",
+              "format": "datetime"
+            },
+            {
+              "id": "allDay",
+              "label": "All day"
+            }
           ],
           "options": {
             "pageSize": 50,
@@ -900,7 +1307,9 @@
             "rowClickable": true,
             "rowActionLabel": "Edit calendar item",
             "rowRoute": "hr-calendar/:id",
-            "rowParameterMap": { "id": "id" },
+            "rowParameterMap": {
+              "id": "id"
+            },
             "rowActions": [
               {
                 "id": "removeCalendarItem",
@@ -921,7 +1330,13 @@
       "title": "Edit HR Calendar Item",
       "routePath": "hr-calendar/:id",
       "permission": "wattanam.organizing-management.calendar.manage",
-      "parameters": [{ "name": "id", "type": "string", "maximumLength": 100 }],
+      "parameters": [
+        {
+          "name": "id",
+          "type": "string",
+          "maximumLength": 100
+        }
+      ],
       "dataSources": [
         {
           "id": "record",
@@ -946,12 +1361,30 @@
             "description": "Update an HR calendar event while retaining its audit history.",
             "activeStep": 2,
             "steps": [
-              { "label": "Setup", "route": "organization" },
-              { "label": "People", "route": "employees" },
-              { "label": "Time & leave", "route": "hr-calendar" },
-              { "label": "Attendance", "route": "attendance-scan" },
-              { "label": "Payroll", "route": "payroll" },
-              { "label": "Reports", "route": "reports" }
+              {
+                "label": "Setup",
+                "route": "organization"
+              },
+              {
+                "label": "People",
+                "route": "employees"
+              },
+              {
+                "label": "Time & leave",
+                "route": "hr-calendar"
+              },
+              {
+                "label": "Attendance",
+                "route": "attendance-scan"
+              },
+              {
+                "label": "Payroll",
+                "route": "payroll"
+              },
+              {
+                "label": "Reports",
+                "route": "reports"
+              }
             ]
           }
         },
@@ -975,11 +1408,26 @@
               "label": "Event type",
               "required": true,
               "options": [
-                { "label": "Holiday", "value": "HOLIDAY" },
-                { "label": "Company event", "value": "EVENT" },
-                { "label": "Payday", "value": "PAYDAY" },
-                { "label": "Meeting", "value": "MEETING" },
-                { "label": "Reminder", "value": "REMINDER" }
+                {
+                  "label": "Holiday",
+                  "value": "HOLIDAY"
+                },
+                {
+                  "label": "Company event",
+                  "value": "EVENT"
+                },
+                {
+                  "label": "Payday",
+                  "value": "PAYDAY"
+                },
+                {
+                  "label": "Meeting",
+                  "value": "MEETING"
+                },
+                {
+                  "label": "Reminder",
+                  "value": "REMINDER"
+                }
               ]
             },
             {
@@ -988,8 +1436,16 @@
               "label": "Starts",
               "required": true
             },
-            { "id": "endsAt", "type": "datetime", "label": "Ends" },
-            { "id": "allDay", "type": "checkbox", "label": "All-day event" }
+            {
+              "id": "endsAt",
+              "type": "datetime",
+              "label": "Ends"
+            },
+            {
+              "id": "allDay",
+              "type": "checkbox",
+              "label": "All-day event"
+            }
           ],
           "options": {
             "submitLabel": "Save calendar item",
@@ -1029,12 +1485,30 @@
             "description": "Submit and review leave requests used by attendance and payroll.",
             "activeStep": 2,
             "steps": [
-              { "label": "Setup", "route": "organization" },
-              { "label": "People", "route": "employees" },
-              { "label": "Time & leave", "route": "hr-calendar" },
-              { "label": "Attendance", "route": "attendance-scan" },
-              { "label": "Payroll", "route": "payroll" },
-              { "label": "Reports", "route": "reports" }
+              {
+                "label": "Setup",
+                "route": "organization"
+              },
+              {
+                "label": "People",
+                "route": "employees"
+              },
+              {
+                "label": "Time & leave",
+                "route": "hr-calendar"
+              },
+              {
+                "label": "Attendance",
+                "route": "attendance-scan"
+              },
+              {
+                "label": "Payroll",
+                "route": "payroll"
+              },
+              {
+                "label": "Reports",
+                "route": "reports"
+              }
             ]
           }
         },
@@ -1061,11 +1535,26 @@
               "label": "Leave type",
               "required": true,
               "options": [
-                { "label": "Annual leave", "value": "ANNUAL" },
-                { "label": "Sick leave", "value": "SICK" },
-                { "label": "Personal leave", "value": "PERSONAL" },
-                { "label": "Unpaid leave", "value": "UNPAID" },
-                { "label": "Other", "value": "OTHER" }
+                {
+                  "label": "Annual leave",
+                  "value": "ANNUAL"
+                },
+                {
+                  "label": "Sick leave",
+                  "value": "SICK"
+                },
+                {
+                  "label": "Personal leave",
+                  "value": "PERSONAL"
+                },
+                {
+                  "label": "Unpaid leave",
+                  "value": "UNPAID"
+                },
+                {
+                  "label": "Other",
+                  "value": "OTHER"
+                }
               ]
             },
             {
@@ -1098,19 +1587,48 @@
           "title": "Leave requests",
           "source": "list",
           "fields": [
-            { "id": "employeeNumber", "label": "Number", "filterable": true },
-            { "id": "fullName", "label": "Employee", "filterable": true },
-            { "id": "leaveType", "label": "Leave", "filterable": true },
-            { "id": "startsOn", "label": "From", "format": "date" },
-            { "id": "endsOn", "label": "To", "format": "date" },
-            { "id": "status", "label": "Status", "filterable": true },
-            { "id": "decisionNote", "label": "Decision note" }
+            {
+              "id": "employeeNumber",
+              "label": "Number",
+              "filterable": true
+            },
+            {
+              "id": "fullName",
+              "label": "Employee",
+              "filterable": true
+            },
+            {
+              "id": "leaveType",
+              "label": "Leave",
+              "filterable": true
+            },
+            {
+              "id": "startsOn",
+              "label": "From",
+              "format": "date"
+            },
+            {
+              "id": "endsOn",
+              "label": "To",
+              "format": "date"
+            },
+            {
+              "id": "status",
+              "label": "Status",
+              "filterable": true
+            },
+            {
+              "id": "decisionNote",
+              "label": "Decision note"
+            }
           ],
           "options": {
             "pageSize": 50,
             "selectable": false,
             "rowRoute": "day-off/:id",
-            "rowParameterMap": { "id": "id" }
+            "rowParameterMap": {
+              "id": "id"
+            }
           }
         }
       ]
@@ -1120,7 +1638,13 @@
       "title": "Review Day-Off Request",
       "routePath": "day-off/:id",
       "permission": "wattanam.organizing-management.calendar.manage",
-      "parameters": [{ "name": "id", "type": "string", "maximumLength": 100 }],
+      "parameters": [
+        {
+          "name": "id",
+          "type": "string",
+          "maximumLength": 100
+        }
+      ],
       "dataSources": [
         {
           "id": "request",
@@ -1145,12 +1669,30 @@
             "description": "Review the request evidence and record an accountable decision.",
             "activeStep": 2,
             "steps": [
-              { "label": "Setup", "route": "organization" },
-              { "label": "People", "route": "employees" },
-              { "label": "Time & leave", "route": "hr-calendar" },
-              { "label": "Attendance", "route": "attendance-scan" },
-              { "label": "Payroll", "route": "payroll" },
-              { "label": "Reports", "route": "reports" }
+              {
+                "label": "Setup",
+                "route": "organization"
+              },
+              {
+                "label": "People",
+                "route": "employees"
+              },
+              {
+                "label": "Time & leave",
+                "route": "hr-calendar"
+              },
+              {
+                "label": "Attendance",
+                "route": "attendance-scan"
+              },
+              {
+                "label": "Payroll",
+                "route": "payroll"
+              },
+              {
+                "label": "Reports",
+                "route": "reports"
+              }
             ]
           }
         },
@@ -1160,13 +1702,36 @@
           "title": "Request details",
           "source": "request",
           "fields": [
-            { "label": "Employee", "path": "fullName" },
-            { "label": "Employee number", "path": "employeeNumber" },
-            { "label": "Leave type", "path": "leaveType" },
-            { "label": "First day", "path": "startsOn", "format": "date" },
-            { "label": "Last day", "path": "endsOn", "format": "date" },
-            { "label": "Reason", "path": "reason" },
-            { "label": "Current status", "path": "status" }
+            {
+              "label": "Employee",
+              "path": "fullName"
+            },
+            {
+              "label": "Employee number",
+              "path": "employeeNumber"
+            },
+            {
+              "label": "Leave type",
+              "path": "leaveType"
+            },
+            {
+              "label": "First day",
+              "path": "startsOn",
+              "format": "date"
+            },
+            {
+              "label": "Last day",
+              "path": "endsOn",
+              "format": "date"
+            },
+            {
+              "label": "Reason",
+              "path": "reason"
+            },
+            {
+              "label": "Current status",
+              "path": "status"
+            }
           ]
         },
         {
@@ -1181,9 +1746,18 @@
               "label": "Decision",
               "required": true,
               "options": [
-                { "label": "Approve", "value": "APPROVED" },
-                { "label": "Reject", "value": "REJECTED" },
-                { "label": "Cancel request", "value": "CANCELLED" }
+                {
+                  "label": "Approve",
+                  "value": "APPROVED"
+                },
+                {
+                  "label": "Reject",
+                  "value": "REJECTED"
+                },
+                {
+                  "label": "Cancel request",
+                  "value": "CANCELLED"
+                }
               ]
             },
             {
@@ -1225,7 +1799,9 @@
           "method": "DELETE",
           "path": "compensation/:id",
           "permission": "wattanam.organizing-management.payroll.manage",
-          "parameters": ["id"],
+          "parameters": [
+            "id"
+          ],
           "autoload": false
         }
       ],
@@ -1239,12 +1815,30 @@
             "description": "Record approved bonuses, rewards, salary deductions, and wage deductions before payroll calculation.",
             "activeStep": 4,
             "steps": [
-              { "label": "Setup", "route": "organization" },
-              { "label": "People", "route": "employees" },
-              { "label": "Time & leave", "route": "hr-calendar" },
-              { "label": "Attendance", "route": "attendance-scan" },
-              { "label": "Payroll", "route": "payroll" },
-              { "label": "Reports", "route": "reports" }
+              {
+                "label": "Setup",
+                "route": "organization"
+              },
+              {
+                "label": "People",
+                "route": "employees"
+              },
+              {
+                "label": "Time & leave",
+                "route": "hr-calendar"
+              },
+              {
+                "label": "Attendance",
+                "route": "attendance-scan"
+              },
+              {
+                "label": "Payroll",
+                "route": "payroll"
+              },
+              {
+                "label": "Reports",
+                "route": "reports"
+              }
             ]
           }
         },
@@ -1271,13 +1865,34 @@
               "label": "Adjustment",
               "required": true,
               "options": [
-                { "label": "Good-job reward", "value": "GOOD_JOB_REWARD" },
-                { "label": "Seniority bonus", "value": "SENIORITY_BONUS" },
-                { "label": "Year-end bonus", "value": "YEAR_END_BONUS" },
-                { "label": "Salary deduction", "value": "SALARY_DEDUCTION" },
-                { "label": "Wage deduction", "value": "WAGE_DEDUCTION" },
-                { "label": "Other earning", "value": "OTHER_EARNING" },
-                { "label": "Other deduction", "value": "OTHER_DEDUCTION" }
+                {
+                  "label": "Good-job reward",
+                  "value": "GOOD_JOB_REWARD"
+                },
+                {
+                  "label": "Seniority bonus",
+                  "value": "SENIORITY_BONUS"
+                },
+                {
+                  "label": "Year-end bonus",
+                  "value": "YEAR_END_BONUS"
+                },
+                {
+                  "label": "Salary deduction",
+                  "value": "SALARY_DEDUCTION"
+                },
+                {
+                  "label": "Wage deduction",
+                  "value": "WAGE_DEDUCTION"
+                },
+                {
+                  "label": "Other earning",
+                  "value": "OTHER_EARNING"
+                },
+                {
+                  "label": "Other deduction",
+                  "value": "OTHER_DEDUCTION"
+                }
               ]
             },
             {
@@ -1325,13 +1940,38 @@
           "title": "Adjustment history",
           "source": "list",
           "fields": [
-            { "id": "employeeNumber", "label": "Number", "filterable": true },
-            { "id": "fullName", "label": "Employee", "filterable": true },
-            { "id": "adjustmentType", "label": "Type", "filterable": true },
-            { "id": "amount", "label": "Amount" },
-            { "id": "currency", "label": "Currency" },
-            { "id": "effectiveDate", "label": "Effective", "format": "date" },
-            { "id": "reason", "label": "Reason" }
+            {
+              "id": "employeeNumber",
+              "label": "Number",
+              "filterable": true
+            },
+            {
+              "id": "fullName",
+              "label": "Employee",
+              "filterable": true
+            },
+            {
+              "id": "adjustmentType",
+              "label": "Type",
+              "filterable": true
+            },
+            {
+              "id": "amount",
+              "label": "Amount"
+            },
+            {
+              "id": "currency",
+              "label": "Currency"
+            },
+            {
+              "id": "effectiveDate",
+              "label": "Effective",
+              "format": "date"
+            },
+            {
+              "id": "reason",
+              "label": "Reason"
+            }
           ],
           "options": {
             "pageSize": 50,
@@ -1339,7 +1979,9 @@
             "rowClickable": true,
             "rowActionLabel": "Edit adjustment",
             "rowRoute": "compensation/:id",
-            "rowParameterMap": { "id": "id" },
+            "rowParameterMap": {
+              "id": "id"
+            },
             "rowActions": [
               {
                 "id": "removeAdjustment",
@@ -1360,7 +2002,13 @@
       "title": "Edit Reward or Deduction",
       "routePath": "compensation/:id",
       "permission": "wattanam.organizing-management.payroll.manage",
-      "parameters": [{ "name": "id", "type": "string", "maximumLength": 100 }],
+      "parameters": [
+        {
+          "name": "id",
+          "type": "string",
+          "maximumLength": 100
+        }
+      ],
       "dataSources": [
         {
           "id": "record",
@@ -1385,12 +2033,30 @@
             "description": "Update an adjustment before payroll approval. Payroll-linked history remains protected.",
             "activeStep": 4,
             "steps": [
-              { "label": "Setup", "route": "organization" },
-              { "label": "People", "route": "employees" },
-              { "label": "Time & leave", "route": "hr-calendar" },
-              { "label": "Attendance", "route": "attendance-scan" },
-              { "label": "Payroll", "route": "payroll" },
-              { "label": "Reports", "route": "reports" }
+              {
+                "label": "Setup",
+                "route": "organization"
+              },
+              {
+                "label": "People",
+                "route": "employees"
+              },
+              {
+                "label": "Time & leave",
+                "route": "hr-calendar"
+              },
+              {
+                "label": "Attendance",
+                "route": "attendance-scan"
+              },
+              {
+                "label": "Payroll",
+                "route": "payroll"
+              },
+              {
+                "label": "Reports",
+                "route": "reports"
+              }
             ]
           }
         },
@@ -1400,8 +2066,14 @@
           "title": "Workforce member",
           "source": "record",
           "fields": [
-            { "label": "Workforce number", "path": "employeeNumber" },
-            { "label": "Name", "path": "fullName" }
+            {
+              "label": "Workforce number",
+              "path": "employeeNumber"
+            },
+            {
+              "label": "Name",
+              "path": "fullName"
+            }
           ]
         },
         {
@@ -1417,13 +2089,34 @@
               "label": "Adjustment",
               "required": true,
               "options": [
-                { "label": "Good-job reward", "value": "GOOD_JOB_REWARD" },
-                { "label": "Seniority bonus", "value": "SENIORITY_BONUS" },
-                { "label": "Year-end bonus", "value": "YEAR_END_BONUS" },
-                { "label": "Salary deduction", "value": "SALARY_DEDUCTION" },
-                { "label": "Wage deduction", "value": "WAGE_DEDUCTION" },
-                { "label": "Other earning", "value": "OTHER_EARNING" },
-                { "label": "Other deduction", "value": "OTHER_DEDUCTION" }
+                {
+                  "label": "Good-job reward",
+                  "value": "GOOD_JOB_REWARD"
+                },
+                {
+                  "label": "Seniority bonus",
+                  "value": "SENIORITY_BONUS"
+                },
+                {
+                  "label": "Year-end bonus",
+                  "value": "YEAR_END_BONUS"
+                },
+                {
+                  "label": "Salary deduction",
+                  "value": "SALARY_DEDUCTION"
+                },
+                {
+                  "label": "Wage deduction",
+                  "value": "WAGE_DEDUCTION"
+                },
+                {
+                  "label": "Other earning",
+                  "value": "OTHER_EARNING"
+                },
+                {
+                  "label": "Other deduction",
+                  "value": "OTHER_DEDUCTION"
+                }
               ]
             },
             {
@@ -1486,7 +2179,9 @@
           "method": "DELETE",
           "path": "payroll-types/:id",
           "permission": "wattanam.organizing-management.payroll.manage",
-          "parameters": ["id"],
+          "parameters": [
+            "id"
+          ],
           "autoload": false
         },
         {
@@ -1494,7 +2189,9 @@
           "method": "PUT",
           "path": "payroll-assignment/:employeeId",
           "permission": "wattanam.organizing-management.payroll.manage",
-          "parameters": ["employeeId"],
+          "parameters": [
+            "employeeId"
+          ],
           "autoload": false
         },
         {
@@ -1514,12 +2211,30 @@
             "description": "Create reusable payroll formats for CEO, Head Office, Staff, or any workforce group, then assign people and generate payroll in controlled batches.",
             "activeStep": 4,
             "steps": [
-              { "label": "Setup", "route": "organization" },
-              { "label": "People", "route": "employees" },
-              { "label": "Time & leave", "route": "hr-calendar" },
-              { "label": "Attendance", "route": "attendance-scan" },
-              { "label": "Payroll", "route": "payroll" },
-              { "label": "Reports", "route": "reports" }
+              {
+                "label": "Setup",
+                "route": "organization"
+              },
+              {
+                "label": "People",
+                "route": "employees"
+              },
+              {
+                "label": "Time & leave",
+                "route": "hr-calendar"
+              },
+              {
+                "label": "Attendance",
+                "route": "attendance-scan"
+              },
+              {
+                "label": "Payroll",
+                "route": "payroll"
+              },
+              {
+                "label": "Reports",
+                "route": "reports"
+              }
             ]
           }
         },
@@ -1728,15 +2443,44 @@
           "title": "Reusable payroll types",
           "source": "list",
           "fields": [
-            { "id": "id", "label": "Template ID" },
-            { "id": "code", "label": "Code", "filterable": true },
-            { "id": "name", "label": "Payroll type", "filterable": true },
-            { "id": "memberCount", "label": "Assigned members" },
-            { "id": "allowances", "label": "Allowances" },
-            { "id": "overtimePay", "label": "Overtime" },
-            { "id": "bonuses", "label": "Bonuses" },
-            { "id": "reimbursements", "label": "Reimbursements" },
-            { "id": "active", "label": "Active" }
+            {
+              "id": "id",
+              "label": "Template ID"
+            },
+            {
+              "id": "code",
+              "label": "Code",
+              "filterable": true
+            },
+            {
+              "id": "name",
+              "label": "Payroll type",
+              "filterable": true
+            },
+            {
+              "id": "memberCount",
+              "label": "Assigned members"
+            },
+            {
+              "id": "allowances",
+              "label": "Allowances"
+            },
+            {
+              "id": "overtimePay",
+              "label": "Overtime"
+            },
+            {
+              "id": "bonuses",
+              "label": "Bonuses"
+            },
+            {
+              "id": "reimbursements",
+              "label": "Reimbursements"
+            },
+            {
+              "id": "active",
+              "label": "Active"
+            }
           ],
           "options": {
             "pageSize": 50,
@@ -1744,7 +2488,9 @@
             "rowClickable": true,
             "rowActionLabel": "Edit payroll type",
             "rowRoute": "payroll-types/:id",
-            "rowParameterMap": { "id": "id" },
+            "rowParameterMap": {
+              "id": "id"
+            },
             "rowActions": [
               {
                 "id": "deleteUnusedPayrollType",
@@ -1765,7 +2511,13 @@
       "title": "Edit Payroll Type",
       "routePath": "payroll-types/:id",
       "permission": "wattanam.organizing-management.payroll.manage",
-      "parameters": [{ "name": "id", "type": "string", "maximumLength": 100 }],
+      "parameters": [
+        {
+          "name": "id",
+          "type": "string",
+          "maximumLength": 100
+        }
+      ],
       "dataSources": [
         {
           "id": "record",
@@ -1790,12 +2542,30 @@
             "description": "Update the recurring earning, deduction, and tax defaults used for future batch payroll drafts.",
             "activeStep": 4,
             "steps": [
-              { "label": "Setup", "route": "organization" },
-              { "label": "People", "route": "employees" },
-              { "label": "Time & leave", "route": "hr-calendar" },
-              { "label": "Attendance", "route": "attendance-scan" },
-              { "label": "Payroll", "route": "payroll" },
-              { "label": "Reports", "route": "reports" }
+              {
+                "label": "Setup",
+                "route": "organization"
+              },
+              {
+                "label": "People",
+                "route": "employees"
+              },
+              {
+                "label": "Time & leave",
+                "route": "hr-calendar"
+              },
+              {
+                "label": "Attendance",
+                "route": "attendance-scan"
+              },
+              {
+                "label": "Payroll",
+                "route": "payroll"
+              },
+              {
+                "label": "Reports",
+                "route": "reports"
+              }
             ]
           }
         },
@@ -1949,7 +2719,9 @@
           "method": "PUT",
           "path": "salary/:employeeId",
           "permission": "wattanam.organizing-management.payroll.manage",
-          "parameters": ["employeeId"],
+          "parameters": [
+            "employeeId"
+          ],
           "autoload": false
         },
         {
@@ -1957,7 +2729,9 @@
           "method": "DELETE",
           "path": "salary/:employeeId",
           "permission": "wattanam.organizing-management.payroll.manage",
-          "parameters": ["employeeId"],
+          "parameters": [
+            "employeeId"
+          ],
           "autoload": false
         },
         {
@@ -1971,7 +2745,9 @@
           "method": "DELETE",
           "path": "payroll/:id",
           "permission": "wattanam.organizing-management.payroll.manage",
-          "parameters": ["id"],
+          "parameters": [
+            "id"
+          ],
           "autoload": false
         },
         {
@@ -1991,12 +2767,30 @@
             "description": "Configure salary, capture period earnings, deductions, and taxes, then approve and pay an audit-ready payroll record.",
             "activeStep": 4,
             "steps": [
-              { "label": "Setup", "route": "organization" },
-              { "label": "People", "route": "employees" },
-              { "label": "Time & leave", "route": "hr-calendar" },
-              { "label": "Attendance", "route": "attendance-scan" },
-              { "label": "Payroll", "route": "payroll" },
-              { "label": "Reports", "route": "reports" }
+              {
+                "label": "Setup",
+                "route": "organization"
+              },
+              {
+                "label": "People",
+                "route": "employees"
+              },
+              {
+                "label": "Time & leave",
+                "route": "hr-calendar"
+              },
+              {
+                "label": "Attendance",
+                "route": "attendance-scan"
+              },
+              {
+                "label": "Payroll",
+                "route": "payroll"
+              },
+              {
+                "label": "Reports",
+                "route": "reports"
+              }
             ]
           }
         },
@@ -2039,9 +2833,18 @@
               "required": true,
               "defaultValue": "MONTHLY",
               "options": [
-                { "label": "Monthly salary", "value": "MONTHLY" },
-                { "label": "Daily wage", "value": "DAILY" },
-                { "label": "Hourly wage", "value": "HOURLY" }
+                {
+                  "label": "Monthly salary",
+                  "value": "MONTHLY"
+                },
+                {
+                  "label": "Daily wage",
+                  "value": "DAILY"
+                },
+                {
+                  "label": "Hourly wage",
+                  "value": "HOURLY"
+                }
               ]
             }
           ],
@@ -2064,13 +2867,36 @@
               "label": "Workforce number",
               "filterable": true
             },
-            { "id": "fullName", "label": "Name", "filterable": true },
-            { "id": "position", "label": "Position" },
-            { "id": "department", "label": "Department" },
-            { "id": "baseSalary", "label": "Base salary" },
-            { "id": "salaryCurrency", "label": "Currency" },
-            { "id": "salaryBasis", "label": "Pay basis" },
-            { "id": "employmentStatus", "label": "Status", "filterable": true }
+            {
+              "id": "fullName",
+              "label": "Name",
+              "filterable": true
+            },
+            {
+              "id": "position",
+              "label": "Position"
+            },
+            {
+              "id": "department",
+              "label": "Department"
+            },
+            {
+              "id": "baseSalary",
+              "label": "Base salary"
+            },
+            {
+              "id": "salaryCurrency",
+              "label": "Currency"
+            },
+            {
+              "id": "salaryBasis",
+              "label": "Pay basis"
+            },
+            {
+              "id": "employmentStatus",
+              "label": "Status",
+              "filterable": true
+            }
           ],
           "options": {
             "pageSize": 50,
@@ -2078,7 +2904,9 @@
             "rowClickable": true,
             "rowActionLabel": "Edit salary terms",
             "rowRoute": "salary/:employeeId",
-            "rowParameterMap": { "employeeId": "id" },
+            "rowParameterMap": {
+              "employeeId": "id"
+            },
             "rowActions": [
               {
                 "id": "removeSalaryTerms",
@@ -2220,20 +3048,56 @@
           "title": "Payroll register",
           "source": "list",
           "fields": [
-            { "label": "Employee ID", "path": "employeeNumber" },
-            { "label": "Name", "path": "fullName" },
-            { "label": "Period start", "path": "periodStart" },
-            { "label": "Period end", "path": "periodEnd" },
-            { "label": "Basic salary", "path": "basePay" },
-            { "label": "Gross pay", "path": "grossPay" },
-            { "label": "Total deductions", "path": "totalDeductions" },
-            { "label": "Total taxes", "path": "totalTaxes" },
-            { "label": "Net pay", "path": "netPay" },
-            { "label": "Currency", "path": "currency" },
-            { "label": "Status", "path": "status" }
+            {
+              "label": "Employee ID",
+              "path": "employeeNumber"
+            },
+            {
+              "label": "Name",
+              "path": "fullName"
+            },
+            {
+              "label": "Period start",
+              "path": "periodStart"
+            },
+            {
+              "label": "Period end",
+              "path": "periodEnd"
+            },
+            {
+              "label": "Basic salary",
+              "path": "basePay"
+            },
+            {
+              "label": "Gross pay",
+              "path": "grossPay"
+            },
+            {
+              "label": "Total deductions",
+              "path": "totalDeductions"
+            },
+            {
+              "label": "Total taxes",
+              "path": "totalTaxes"
+            },
+            {
+              "label": "Net pay",
+              "path": "netPay"
+            },
+            {
+              "label": "Currency",
+              "path": "currency"
+            },
+            {
+              "label": "Status",
+              "path": "status"
+            }
           ],
           "options": {
-            "formats": ["print", "xlsx"],
+            "formats": [
+              "print",
+              "xlsx"
+            ],
             "filename": "payroll-register",
             "maximumRows": 10000,
             "showPreview": false
@@ -2250,15 +3114,45 @@
               "label": "Employee ID",
               "filterable": true
             },
-            { "id": "fullName", "label": "Name", "filterable": true },
-            { "id": "periodEnd", "label": "Pay period", "format": "date" },
-            { "id": "basePay", "label": "Basic salary" },
-            { "id": "grossPay", "label": "Gross pay" },
-            { "id": "totalDeductions", "label": "Deductions" },
-            { "id": "totalTaxes", "label": "Taxes" },
-            { "id": "netPay", "label": "Net pay" },
-            { "id": "currency", "label": "Currency" },
-            { "id": "status", "label": "Status", "filterable": true }
+            {
+              "id": "fullName",
+              "label": "Name",
+              "filterable": true
+            },
+            {
+              "id": "periodEnd",
+              "label": "Pay period",
+              "format": "date"
+            },
+            {
+              "id": "basePay",
+              "label": "Basic salary"
+            },
+            {
+              "id": "grossPay",
+              "label": "Gross pay"
+            },
+            {
+              "id": "totalDeductions",
+              "label": "Deductions"
+            },
+            {
+              "id": "totalTaxes",
+              "label": "Taxes"
+            },
+            {
+              "id": "netPay",
+              "label": "Net pay"
+            },
+            {
+              "id": "currency",
+              "label": "Currency"
+            },
+            {
+              "id": "status",
+              "label": "Status",
+              "filterable": true
+            }
           ],
           "options": {
             "pageSize": 50,
@@ -2266,7 +3160,9 @@
             "rowClickable": true,
             "rowActionLabel": "Review payroll / payslip",
             "rowRoute": "payroll/:id",
-            "rowParameterMap": { "id": "id" },
+            "rowParameterMap": {
+              "id": "id"
+            },
             "rowActions": [
               {
                 "id": "deleteDraftPayroll",
@@ -2288,7 +3184,11 @@
       "routePath": "salary/:employeeId",
       "permission": "wattanam.organizing-management.payroll.manage",
       "parameters": [
-        { "name": "employeeId", "type": "string", "maximumLength": 100 }
+        {
+          "name": "employeeId",
+          "type": "string",
+          "maximumLength": 100
+        }
       ],
       "dataSources": [
         {
@@ -2314,12 +3214,30 @@
             "description": "Review and update the employee or employer base salary using normal currency amounts.",
             "activeStep": 4,
             "steps": [
-              { "label": "Setup", "route": "organization" },
-              { "label": "People", "route": "employees" },
-              { "label": "Time & leave", "route": "hr-calendar" },
-              { "label": "Attendance", "route": "attendance-scan" },
-              { "label": "Payroll", "route": "payroll" },
-              { "label": "Reports", "route": "reports" }
+              {
+                "label": "Setup",
+                "route": "organization"
+              },
+              {
+                "label": "People",
+                "route": "employees"
+              },
+              {
+                "label": "Time & leave",
+                "route": "hr-calendar"
+              },
+              {
+                "label": "Attendance",
+                "route": "attendance-scan"
+              },
+              {
+                "label": "Payroll",
+                "route": "payroll"
+              },
+              {
+                "label": "Reports",
+                "route": "reports"
+              }
             ]
           }
         },
@@ -2329,11 +3247,26 @@
           "title": "Workforce member",
           "source": "record",
           "fields": [
-            { "label": "Workforce number", "path": "employeeNumber" },
-            { "label": "Name", "path": "fullName" },
-            { "label": "Position", "path": "position" },
-            { "label": "Department", "path": "department" },
-            { "label": "Status", "path": "employmentStatus" }
+            {
+              "label": "Workforce number",
+              "path": "employeeNumber"
+            },
+            {
+              "label": "Name",
+              "path": "fullName"
+            },
+            {
+              "label": "Position",
+              "path": "position"
+            },
+            {
+              "label": "Department",
+              "path": "department"
+            },
+            {
+              "label": "Status",
+              "path": "employmentStatus"
+            }
           ]
         },
         {
@@ -2363,9 +3296,18 @@
               "label": "Employment pay basis",
               "required": true,
               "options": [
-                { "label": "Monthly salary", "value": "MONTHLY" },
-                { "label": "Daily wage", "value": "DAILY" },
-                { "label": "Hourly wage", "value": "HOURLY" }
+                {
+                  "label": "Monthly salary",
+                  "value": "MONTHLY"
+                },
+                {
+                  "label": "Daily wage",
+                  "value": "DAILY"
+                },
+                {
+                  "label": "Hourly wage",
+                  "value": "HOURLY"
+                }
               ]
             }
           ],
@@ -2382,7 +3324,13 @@
       "title": "Payroll Review & Payslip",
       "routePath": "payroll/:id",
       "permission": "wattanam.organizing-management.payroll.manage",
-      "parameters": [{ "name": "id", "type": "string", "maximumLength": 100 }],
+      "parameters": [
+        {
+          "name": "id",
+          "type": "string",
+          "maximumLength": 100
+        }
+      ],
       "dataSources": [
         {
           "id": "record",
@@ -2413,12 +3361,30 @@
             "description": "Review identity, attendance, earnings, deductions, taxes, gross pay, and net pay before approval or payment.",
             "activeStep": 4,
             "steps": [
-              { "label": "Setup", "route": "organization" },
-              { "label": "People", "route": "employees" },
-              { "label": "Time & leave", "route": "hr-calendar" },
-              { "label": "Attendance", "route": "attendance-scan" },
-              { "label": "Payroll", "route": "payroll" },
-              { "label": "Reports", "route": "reports" }
+              {
+                "label": "Setup",
+                "route": "organization"
+              },
+              {
+                "label": "People",
+                "route": "employees"
+              },
+              {
+                "label": "Time & leave",
+                "route": "hr-calendar"
+              },
+              {
+                "label": "Attendance",
+                "route": "attendance-scan"
+              },
+              {
+                "label": "Payroll",
+                "route": "payroll"
+              },
+              {
+                "label": "Reports",
+                "route": "reports"
+              }
             ]
           }
         },
@@ -2428,10 +3394,22 @@
           "title": "Gross-to-net calculation",
           "source": "record",
           "fields": [
-            { "label": "Employee ID", "path": "employeeNumber" },
-            { "label": "Full name", "path": "fullName" },
-            { "label": "Department / cost center", "path": "department" },
-            { "label": "Employment type", "path": "employmentType" },
+            {
+              "label": "Employee ID",
+              "path": "employeeNumber"
+            },
+            {
+              "label": "Full name",
+              "path": "fullName"
+            },
+            {
+              "label": "Department / cost center",
+              "path": "department"
+            },
+            {
+              "label": "Employment type",
+              "path": "employmentType"
+            },
             {
               "label": "Pay period start",
               "path": "periodStart",
@@ -2442,38 +3420,98 @@
               "path": "periodEnd",
               "format": "date"
             },
-            { "label": "Basic salary", "path": "basePay" },
-            { "label": "Allowances", "path": "allowances" },
-            { "label": "Overtime pay", "path": "overtimePay" },
-            { "label": "Rewards from HR records", "path": "earnings" },
-            { "label": "Bonuses / incentives", "path": "bonuses" },
-            { "label": "Reimbursements", "path": "reimbursements" },
+            {
+              "label": "Basic salary",
+              "path": "basePay"
+            },
+            {
+              "label": "Allowances",
+              "path": "allowances"
+            },
+            {
+              "label": "Overtime pay",
+              "path": "overtimePay"
+            },
+            {
+              "label": "Rewards from HR records",
+              "path": "earnings"
+            },
+            {
+              "label": "Bonuses / incentives",
+              "path": "bonuses"
+            },
+            {
+              "label": "Reimbursements",
+              "path": "reimbursements"
+            },
             {
               "label": "Leave encashment / adjustment",
               "path": "leaveAdjustment"
             },
-            { "label": "Gross pay", "path": "grossPay" },
-            { "label": "Attendance deduction", "path": "attendanceDeduction" },
-            { "label": "Other recorded deductions", "path": "deductions" },
+            {
+              "label": "Gross pay",
+              "path": "grossPay"
+            },
+            {
+              "label": "Attendance deduction",
+              "path": "attendanceDeduction"
+            },
+            {
+              "label": "Other recorded deductions",
+              "path": "deductions"
+            },
             {
               "label": "Retirement contribution",
               "path": "retirementContribution"
             },
-            { "label": "Insurance premium", "path": "insurancePremium" },
-            { "label": "Loan / advance recovery", "path": "loanRecovery" },
-            { "label": "Loss of pay", "path": "lossOfPay" },
+            {
+              "label": "Insurance premium",
+              "path": "insurancePremium"
+            },
+            {
+              "label": "Loan / advance recovery",
+              "path": "loanRecovery"
+            },
+            {
+              "label": "Loss of pay",
+              "path": "lossOfPay"
+            },
             {
               "label": "Other post-tax deduction",
               "path": "otherPostTaxDeduction"
             },
-            { "label": "Total deductions", "path": "totalDeductions" },
-            { "label": "Income tax", "path": "incomeTax" },
-            { "label": "Social security", "path": "socialSecurity" },
-            { "label": "Local / state tax", "path": "localTax" },
-            { "label": "Total taxes", "path": "totalTaxes" },
-            { "label": "Net pay", "path": "netPay" },
-            { "label": "Pay currency", "path": "currency" },
-            { "label": "Status", "path": "status" }
+            {
+              "label": "Total deductions",
+              "path": "totalDeductions"
+            },
+            {
+              "label": "Income tax",
+              "path": "incomeTax"
+            },
+            {
+              "label": "Social security",
+              "path": "socialSecurity"
+            },
+            {
+              "label": "Local / state tax",
+              "path": "localTax"
+            },
+            {
+              "label": "Total taxes",
+              "path": "totalTaxes"
+            },
+            {
+              "label": "Net pay",
+              "path": "netPay"
+            },
+            {
+              "label": "Pay currency",
+              "path": "currency"
+            },
+            {
+              "label": "Status",
+              "path": "status"
+            }
           ]
         },
         {
@@ -2482,23 +3520,69 @@
           "title": "Employee payslip",
           "source": "record",
           "fields": [
-            { "label": "Employee ID", "path": "employeeNumber" },
-            { "label": "Name", "path": "fullName" },
-            { "label": "Period start", "path": "periodStart" },
-            { "label": "Period end", "path": "periodEnd" },
-            { "label": "Basic salary", "path": "basePay" },
-            { "label": "Allowances", "path": "allowances" },
-            { "label": "Overtime", "path": "overtimePay" },
-            { "label": "Bonuses and rewards", "path": "earnings" },
-            { "label": "Gross pay", "path": "grossPay" },
-            { "label": "Total deductions", "path": "totalDeductions" },
-            { "label": "Total taxes", "path": "totalTaxes" },
-            { "label": "Net pay", "path": "netPay" },
-            { "label": "Currency", "path": "currency" },
-            { "label": "Status", "path": "status" }
+            {
+              "label": "Employee ID",
+              "path": "employeeNumber"
+            },
+            {
+              "label": "Name",
+              "path": "fullName"
+            },
+            {
+              "label": "Period start",
+              "path": "periodStart"
+            },
+            {
+              "label": "Period end",
+              "path": "periodEnd"
+            },
+            {
+              "label": "Basic salary",
+              "path": "basePay"
+            },
+            {
+              "label": "Allowances",
+              "path": "allowances"
+            },
+            {
+              "label": "Overtime",
+              "path": "overtimePay"
+            },
+            {
+              "label": "Bonuses and rewards",
+              "path": "earnings"
+            },
+            {
+              "label": "Gross pay",
+              "path": "grossPay"
+            },
+            {
+              "label": "Total deductions",
+              "path": "totalDeductions"
+            },
+            {
+              "label": "Total taxes",
+              "path": "totalTaxes"
+            },
+            {
+              "label": "Net pay",
+              "path": "netPay"
+            },
+            {
+              "label": "Currency",
+              "path": "currency"
+            },
+            {
+              "label": "Status",
+              "path": "status"
+            }
           ],
           "options": {
-            "formats": ["print", "pdf", "xlsx"],
+            "formats": [
+              "print",
+              "pdf",
+              "xlsx"
+            ],
             "filename": "employee-payslip",
             "maximumRows": 1
           }
@@ -2623,9 +3707,18 @@
               "label": "Next action",
               "required": true,
               "options": [
-                { "label": "Approve draft", "value": "APPROVED" },
-                { "label": "Mark approved payroll paid", "value": "PAID" },
-                { "label": "Void payroll", "value": "VOID" }
+                {
+                  "label": "Approve draft",
+                  "value": "APPROVED"
+                },
+                {
+                  "label": "Mark approved payroll paid",
+                  "value": "PAID"
+                },
+                {
+                  "label": "Void payroll",
+                  "value": "VOID"
+                }
               ]
             },
             {
@@ -2673,12 +3766,30 @@
             "description": "Manage late arrival, early departure, short leave, remote-work, and other attendance permissions.",
             "activeStep": 2,
             "steps": [
-              { "label": "Setup", "route": "organization" },
-              { "label": "People", "route": "employees" },
-              { "label": "Time & leave", "route": "hr-calendar" },
-              { "label": "Attendance", "route": "attendance-scan" },
-              { "label": "Payroll", "route": "payroll" },
-              { "label": "Reports", "route": "reports" }
+              {
+                "label": "Setup",
+                "route": "organization"
+              },
+              {
+                "label": "People",
+                "route": "employees"
+              },
+              {
+                "label": "Time & leave",
+                "route": "hr-calendar"
+              },
+              {
+                "label": "Attendance",
+                "route": "attendance-scan"
+              },
+              {
+                "label": "Payroll",
+                "route": "payroll"
+              },
+              {
+                "label": "Reports",
+                "route": "reports"
+              }
             ]
           }
         },
@@ -2700,11 +3811,26 @@
               "label": "Permission type",
               "required": true,
               "options": [
-                { "label": "Late arrival", "value": "LATE_ARRIVAL" },
-                { "label": "Early departure", "value": "EARLY_DEPARTURE" },
-                { "label": "Short leave", "value": "SHORT_LEAVE" },
-                { "label": "Remote work", "value": "REMOTE_WORK" },
-                { "label": "Other", "value": "OTHER" }
+                {
+                  "label": "Late arrival",
+                  "value": "LATE_ARRIVAL"
+                },
+                {
+                  "label": "Early departure",
+                  "value": "EARLY_DEPARTURE"
+                },
+                {
+                  "label": "Short leave",
+                  "value": "SHORT_LEAVE"
+                },
+                {
+                  "label": "Remote work",
+                  "value": "REMOTE_WORK"
+                },
+                {
+                  "label": "Other",
+                  "value": "OTHER"
+                }
               ]
             },
             {
@@ -2713,8 +3839,16 @@
               "label": "Date",
               "required": true
             },
-            { "id": "startsAt", "type": "text", "label": "Start time (HH:MM)" },
-            { "id": "endsAt", "type": "text", "label": "End time (HH:MM)" },
+            {
+              "id": "startsAt",
+              "type": "text",
+              "label": "Start time (HH:MM)"
+            },
+            {
+              "id": "endsAt",
+              "type": "text",
+              "label": "End time (HH:MM)"
+            },
             {
               "id": "reason",
               "type": "textarea",
@@ -2734,23 +3868,47 @@
           "title": "Permission requests",
           "source": "list",
           "fields": [
-            { "id": "employeeNumber", "label": "Number", "filterable": true },
-            { "id": "fullName", "label": "Employee", "filterable": true },
+            {
+              "id": "employeeNumber",
+              "label": "Number",
+              "filterable": true
+            },
+            {
+              "id": "fullName",
+              "label": "Employee",
+              "filterable": true
+            },
             {
               "id": "permissionType",
               "label": "Permission",
               "filterable": true
             },
-            { "id": "permissionDate", "label": "Date", "format": "date" },
-            { "id": "startsAt", "label": "Starts" },
-            { "id": "endsAt", "label": "Ends" },
-            { "id": "status", "label": "Status", "filterable": true }
+            {
+              "id": "permissionDate",
+              "label": "Date",
+              "format": "date"
+            },
+            {
+              "id": "startsAt",
+              "label": "Starts"
+            },
+            {
+              "id": "endsAt",
+              "label": "Ends"
+            },
+            {
+              "id": "status",
+              "label": "Status",
+              "filterable": true
+            }
           ],
           "options": {
             "pageSize": 50,
             "selectable": false,
             "rowRoute": "permissions/:id",
-            "rowParameterMap": { "id": "id" }
+            "rowParameterMap": {
+              "id": "id"
+            }
           }
         }
       ]
@@ -2760,7 +3918,13 @@
       "title": "Review Employee Permission",
       "routePath": "permissions/:id",
       "permission": "wattanam.organizing-management.permissions.review",
-      "parameters": [{ "name": "id", "type": "string", "maximumLength": 100 }],
+      "parameters": [
+        {
+          "name": "id",
+          "type": "string",
+          "maximumLength": 100
+        }
+      ],
       "dataSources": [
         {
           "id": "request",
@@ -2785,12 +3949,30 @@
             "description": "Review the request and save an accountable approval or rejection.",
             "activeStep": 2,
             "steps": [
-              { "label": "Setup", "route": "organization" },
-              { "label": "People", "route": "employees" },
-              { "label": "Time & leave", "route": "hr-calendar" },
-              { "label": "Attendance", "route": "attendance-scan" },
-              { "label": "Payroll", "route": "payroll" },
-              { "label": "Reports", "route": "reports" }
+              {
+                "label": "Setup",
+                "route": "organization"
+              },
+              {
+                "label": "People",
+                "route": "employees"
+              },
+              {
+                "label": "Time & leave",
+                "route": "hr-calendar"
+              },
+              {
+                "label": "Attendance",
+                "route": "attendance-scan"
+              },
+              {
+                "label": "Payroll",
+                "route": "payroll"
+              },
+              {
+                "label": "Reports",
+                "route": "reports"
+              }
             ]
           }
         },
@@ -2800,14 +3982,39 @@
           "title": "Permission details",
           "source": "request",
           "fields": [
-            { "label": "Employee", "path": "fullName" },
-            { "label": "Employee number", "path": "employeeNumber" },
-            { "label": "Permission", "path": "permissionType" },
-            { "label": "Date", "path": "permissionDate", "format": "date" },
-            { "label": "Starts", "path": "startsAt" },
-            { "label": "Ends", "path": "endsAt" },
-            { "label": "Reason", "path": "reason" },
-            { "label": "Status", "path": "status" }
+            {
+              "label": "Employee",
+              "path": "fullName"
+            },
+            {
+              "label": "Employee number",
+              "path": "employeeNumber"
+            },
+            {
+              "label": "Permission",
+              "path": "permissionType"
+            },
+            {
+              "label": "Date",
+              "path": "permissionDate",
+              "format": "date"
+            },
+            {
+              "label": "Starts",
+              "path": "startsAt"
+            },
+            {
+              "label": "Ends",
+              "path": "endsAt"
+            },
+            {
+              "label": "Reason",
+              "path": "reason"
+            },
+            {
+              "label": "Status",
+              "path": "status"
+            }
           ]
         },
         {
@@ -2822,9 +4029,18 @@
               "label": "Decision",
               "required": true,
               "options": [
-                { "label": "Approve", "value": "APPROVED" },
-                { "label": "Reject", "value": "REJECTED" },
-                { "label": "Cancel", "value": "CANCELLED" }
+                {
+                  "label": "Approve",
+                  "value": "APPROVED"
+                },
+                {
+                  "label": "Reject",
+                  "value": "REJECTED"
+                },
+                {
+                  "label": "Cancel",
+                  "value": "CANCELLED"
+                }
               ]
             },
             {
@@ -2872,12 +4088,30 @@
             "description": "Record workplace actions with evidence and auditable lifecycle status.",
             "activeStep": 1,
             "steps": [
-              { "label": "Setup", "route": "organization" },
-              { "label": "People", "route": "employees" },
-              { "label": "Time & leave", "route": "hr-calendar" },
-              { "label": "Attendance", "route": "attendance-scan" },
-              { "label": "Payroll", "route": "payroll" },
-              { "label": "Reports", "route": "reports" }
+              {
+                "label": "Setup",
+                "route": "organization"
+              },
+              {
+                "label": "People",
+                "route": "employees"
+              },
+              {
+                "label": "Time & leave",
+                "route": "hr-calendar"
+              },
+              {
+                "label": "Attendance",
+                "route": "attendance-scan"
+              },
+              {
+                "label": "Payroll",
+                "route": "payroll"
+              },
+              {
+                "label": "Reports",
+                "route": "reports"
+              }
             ]
           }
         },
@@ -2904,15 +4138,30 @@
               "label": "Action type",
               "required": true,
               "options": [
-                { "label": "Verbal warning", "value": "VERBAL_WARNING" },
-                { "label": "Written warning", "value": "WRITTEN_WARNING" },
-                { "label": "Final warning", "value": "FINAL_WARNING" },
-                { "label": "Suspension", "value": "SUSPENSION" },
+                {
+                  "label": "Verbal warning",
+                  "value": "VERBAL_WARNING"
+                },
+                {
+                  "label": "Written warning",
+                  "value": "WRITTEN_WARNING"
+                },
+                {
+                  "label": "Final warning",
+                  "value": "FINAL_WARNING"
+                },
+                {
+                  "label": "Suspension",
+                  "value": "SUSPENSION"
+                },
                 {
                   "label": "Termination recommendation",
                   "value": "TERMINATION_RECOMMENDATION"
                 },
-                { "label": "Other", "value": "OTHER" }
+                {
+                  "label": "Other",
+                  "value": "OTHER"
+                }
               ]
             },
             {
@@ -2948,8 +4197,14 @@
               "required": true,
               "defaultValue": "ACTIVE",
               "options": [
-                { "label": "Draft", "value": "DRAFT" },
-                { "label": "Active", "value": "ACTIVE" }
+                {
+                  "label": "Draft",
+                  "value": "DRAFT"
+                },
+                {
+                  "label": "Active",
+                  "value": "ACTIVE"
+                }
               ]
             }
           ],
@@ -2965,23 +4220,49 @@
           "title": "Disciplinary history",
           "source": "list",
           "fields": [
-            { "id": "employeeNumber", "label": "Number", "filterable": true },
+            {
+              "id": "employeeNumber",
+              "label": "Number",
+              "filterable": true
+            },
             {
               "id": "fullName",
               "label": "Employee / employer",
               "filterable": true
             },
-            { "id": "actionType", "label": "Action", "filterable": true },
-            { "id": "incidentDate", "label": "Incident", "format": "date" },
-            { "id": "effectiveDate", "label": "Effective", "format": "date" },
-            { "id": "title", "label": "Title", "filterable": true },
-            { "id": "status", "label": "Status", "filterable": true }
+            {
+              "id": "actionType",
+              "label": "Action",
+              "filterable": true
+            },
+            {
+              "id": "incidentDate",
+              "label": "Incident",
+              "format": "date"
+            },
+            {
+              "id": "effectiveDate",
+              "label": "Effective",
+              "format": "date"
+            },
+            {
+              "id": "title",
+              "label": "Title",
+              "filterable": true
+            },
+            {
+              "id": "status",
+              "label": "Status",
+              "filterable": true
+            }
           ],
           "options": {
             "pageSize": 50,
             "selectable": false,
             "rowRoute": "disciplinary-actions/:id",
-            "rowParameterMap": { "id": "id" }
+            "rowParameterMap": {
+              "id": "id"
+            }
           }
         }
       ]
@@ -2991,7 +4272,13 @@
       "title": "Review Disciplinary Action",
       "routePath": "disciplinary-actions/:id",
       "permission": "wattanam.organizing-management.discipline.manage",
-      "parameters": [{ "name": "id", "type": "string", "maximumLength": 100 }],
+      "parameters": [
+        {
+          "name": "id",
+          "type": "string",
+          "maximumLength": 100
+        }
+      ],
       "dataSources": [
         {
           "id": "record",
@@ -3016,12 +4303,30 @@
             "description": "Review evidence and manage the controlled resolution lifecycle.",
             "activeStep": 1,
             "steps": [
-              { "label": "Setup", "route": "organization" },
-              { "label": "People", "route": "employees" },
-              { "label": "Time & leave", "route": "hr-calendar" },
-              { "label": "Attendance", "route": "attendance-scan" },
-              { "label": "Payroll", "route": "payroll" },
-              { "label": "Reports", "route": "reports" }
+              {
+                "label": "Setup",
+                "route": "organization"
+              },
+              {
+                "label": "People",
+                "route": "employees"
+              },
+              {
+                "label": "Time & leave",
+                "route": "hr-calendar"
+              },
+              {
+                "label": "Attendance",
+                "route": "attendance-scan"
+              },
+              {
+                "label": "Payroll",
+                "route": "payroll"
+              },
+              {
+                "label": "Reports",
+                "route": "reports"
+              }
             ]
           }
         },
@@ -3031,9 +4336,18 @@
           "title": "Disciplinary record",
           "source": "record",
           "fields": [
-            { "label": "Employee", "path": "fullName" },
-            { "label": "Employee number", "path": "employeeNumber" },
-            { "label": "Action", "path": "actionType" },
+            {
+              "label": "Employee",
+              "path": "fullName"
+            },
+            {
+              "label": "Employee number",
+              "path": "employeeNumber"
+            },
+            {
+              "label": "Action",
+              "path": "actionType"
+            },
             {
               "label": "Incident date",
               "path": "incidentDate",
@@ -3044,10 +4358,22 @@
               "path": "effectiveDate",
               "format": "date"
             },
-            { "label": "Title", "path": "title" },
-            { "label": "Description and evidence", "path": "description" },
-            { "label": "Status", "path": "status" },
-            { "label": "Resolution", "path": "resolutionNote" }
+            {
+              "label": "Title",
+              "path": "title"
+            },
+            {
+              "label": "Description and evidence",
+              "path": "description"
+            },
+            {
+              "label": "Status",
+              "path": "status"
+            },
+            {
+              "label": "Resolution",
+              "path": "resolutionNote"
+            }
           ]
         },
         {
@@ -3062,9 +4388,18 @@
               "label": "Next status",
               "required": true,
               "options": [
-                { "label": "Activate draft", "value": "ACTIVE" },
-                { "label": "Resolve", "value": "RESOLVED" },
-                { "label": "Void", "value": "VOID" }
+                {
+                  "label": "Activate draft",
+                  "value": "ACTIVE"
+                },
+                {
+                  "label": "Resolve",
+                  "value": "RESOLVED"
+                },
+                {
+                  "label": "Void",
+                  "value": "VOID"
+                }
               ]
             },
             {
@@ -3112,12 +4447,30 @@
             "description": "Promote workforce members while preserving position and salary history.",
             "activeStep": 1,
             "steps": [
-              { "label": "Setup", "route": "organization" },
-              { "label": "People", "route": "employees" },
-              { "label": "Time & leave", "route": "hr-calendar" },
-              { "label": "Attendance", "route": "attendance-scan" },
-              { "label": "Payroll", "route": "payroll" },
-              { "label": "Reports", "route": "reports" }
+              {
+                "label": "Setup",
+                "route": "organization"
+              },
+              {
+                "label": "People",
+                "route": "employees"
+              },
+              {
+                "label": "Time & leave",
+                "route": "hr-calendar"
+              },
+              {
+                "label": "Attendance",
+                "route": "attendance-scan"
+              },
+              {
+                "label": "Payroll",
+                "route": "payroll"
+              },
+              {
+                "label": "Reports",
+                "route": "reports"
+              }
             ]
           }
         },
@@ -3177,20 +4530,46 @@
           "title": "Promotion history",
           "source": "list",
           "fields": [
-            { "id": "employeeNumber", "label": "Number", "filterable": true },
+            {
+              "id": "employeeNumber",
+              "label": "Number",
+              "filterable": true
+            },
             {
               "id": "fullName",
               "label": "Employee / employer",
               "filterable": true
             },
-            { "id": "fromPosition", "label": "Previous position" },
-            { "id": "toPosition", "label": "New position" },
-            { "id": "effectiveDate", "label": "Effective", "format": "date" },
-            { "id": "previousBaseSalary", "label": "Previous salary" },
-            { "id": "newBaseSalary", "label": "New salary" },
-            { "id": "reason", "label": "Reason" }
+            {
+              "id": "fromPosition",
+              "label": "Previous position"
+            },
+            {
+              "id": "toPosition",
+              "label": "New position"
+            },
+            {
+              "id": "effectiveDate",
+              "label": "Effective",
+              "format": "date"
+            },
+            {
+              "id": "previousBaseSalary",
+              "label": "Previous salary"
+            },
+            {
+              "id": "newBaseSalary",
+              "label": "New salary"
+            },
+            {
+              "id": "reason",
+              "label": "Reason"
+            }
           ],
-          "options": { "pageSize": 50, "selectable": false }
+          "options": {
+            "pageSize": 50,
+            "selectable": false
+          }
         }
       ]
     },
@@ -3218,12 +4597,30 @@
             "description": "Review the authoritative attendance totals and deductions used in each payroll calculation.",
             "activeStep": 4,
             "steps": [
-              { "label": "Setup", "route": "organization" },
-              { "label": "People", "route": "employees" },
-              { "label": "Time & leave", "route": "hr-calendar" },
-              { "label": "Attendance", "route": "attendance-scan" },
-              { "label": "Payroll", "route": "payroll" },
-              { "label": "Reports", "route": "reports" }
+              {
+                "label": "Setup",
+                "route": "organization"
+              },
+              {
+                "label": "People",
+                "route": "employees"
+              },
+              {
+                "label": "Time & leave",
+                "route": "hr-calendar"
+              },
+              {
+                "label": "Attendance",
+                "route": "attendance-scan"
+              },
+              {
+                "label": "Payroll",
+                "route": "payroll"
+              },
+              {
+                "label": "Reports",
+                "route": "reports"
+              }
             ]
           }
         },
@@ -3238,24 +4635,63 @@
           "title": "Attendance-based payroll report",
           "source": "list",
           "fields": [
-            { "id": "employeeNumber", "label": "Number", "filterable": true },
+            {
+              "id": "employeeNumber",
+              "label": "Number",
+              "filterable": true
+            },
             {
               "id": "fullName",
               "label": "Employee / employer",
               "filterable": true
             },
-            { "id": "periodStart", "label": "From", "format": "date" },
-            { "id": "periodEnd", "label": "To", "format": "date" },
-            { "id": "presentDays", "label": "Present" },
-            { "id": "lateDays", "label": "Late" },
-            { "id": "absentDays", "label": "Absent after permission" },
-            { "id": "permissionDays", "label": "Approved permission" },
-            { "id": "leaveDays", "label": "Leave" },
-            { "id": "attendanceDeduction", "label": "Attendance deduction" },
-            { "id": "netPay", "label": "Net salary" },
-            { "id": "currency", "label": "Currency" }
+            {
+              "id": "periodStart",
+              "label": "From",
+              "format": "date"
+            },
+            {
+              "id": "periodEnd",
+              "label": "To",
+              "format": "date"
+            },
+            {
+              "id": "presentDays",
+              "label": "Present"
+            },
+            {
+              "id": "lateDays",
+              "label": "Late"
+            },
+            {
+              "id": "absentDays",
+              "label": "Absent after permission"
+            },
+            {
+              "id": "permissionDays",
+              "label": "Approved permission"
+            },
+            {
+              "id": "leaveDays",
+              "label": "Leave"
+            },
+            {
+              "id": "attendanceDeduction",
+              "label": "Attendance deduction"
+            },
+            {
+              "id": "netPay",
+              "label": "Net salary"
+            },
+            {
+              "id": "currency",
+              "label": "Currency"
+            }
           ],
-          "options": { "pageSize": 50, "selectable": false }
+          "options": {
+            "pageSize": 50,
+            "selectable": false
+          }
         },
         {
           "id": "payroll-attendance-print",
@@ -3263,21 +4699,63 @@
           "title": "Print or export payroll attendance",
           "source": "list",
           "fields": [
-            { "label": "Number", "path": "employeeNumber" },
-            { "label": "Employer / employee", "path": "fullName" },
-            { "label": "From", "path": "periodStart", "format": "date" },
-            { "label": "To", "path": "periodEnd", "format": "date" },
-            { "label": "Present", "path": "presentDays" },
-            { "label": "Late", "path": "lateDays" },
-            { "label": "Absent", "path": "absentDays" },
-            { "label": "Permission", "path": "permissionDays" },
-            { "label": "Leave", "path": "leaveDays" },
-            { "label": "Attendance deduction", "path": "attendanceDeduction" },
-            { "label": "Net salary", "path": "netPay" },
-            { "label": "Currency", "path": "currency" }
+            {
+              "label": "Number",
+              "path": "employeeNumber"
+            },
+            {
+              "label": "Employer / employee",
+              "path": "fullName"
+            },
+            {
+              "label": "From",
+              "path": "periodStart",
+              "format": "date"
+            },
+            {
+              "label": "To",
+              "path": "periodEnd",
+              "format": "date"
+            },
+            {
+              "label": "Present",
+              "path": "presentDays"
+            },
+            {
+              "label": "Late",
+              "path": "lateDays"
+            },
+            {
+              "label": "Absent",
+              "path": "absentDays"
+            },
+            {
+              "label": "Permission",
+              "path": "permissionDays"
+            },
+            {
+              "label": "Leave",
+              "path": "leaveDays"
+            },
+            {
+              "label": "Attendance deduction",
+              "path": "attendanceDeduction"
+            },
+            {
+              "label": "Net salary",
+              "path": "netPay"
+            },
+            {
+              "label": "Currency",
+              "path": "currency"
+            }
           ],
           "options": {
-            "formats": ["print", "csv", "pdf"],
+            "formats": [
+              "print",
+              "csv",
+              "pdf"
+            ],
             "filename": "payroll-attendance-report",
             "maximumRows": 10000
           }
@@ -3333,12 +4811,30 @@
             "description": "Build printable workforce, attendance, and salary reports with an editable header and signer.",
             "activeStep": 5,
             "steps": [
-              { "label": "Setup", "route": "organization" },
-              { "label": "People", "route": "employees" },
-              { "label": "Time & leave", "route": "hr-calendar" },
-              { "label": "Attendance", "route": "attendance-scan" },
-              { "label": "Payroll", "route": "payroll" },
-              { "label": "Reports", "route": "reports" }
+              {
+                "label": "Setup",
+                "route": "organization"
+              },
+              {
+                "label": "People",
+                "route": "employees"
+              },
+              {
+                "label": "Time & leave",
+                "route": "hr-calendar"
+              },
+              {
+                "label": "Attendance",
+                "route": "attendance-scan"
+              },
+              {
+                "label": "Payroll",
+                "route": "payroll"
+              },
+              {
+                "label": "Reports",
+                "route": "reports"
+              }
             ]
           }
         },
@@ -3404,9 +4900,18 @@
               "label": "Paper size",
               "required": true,
               "options": [
-                { "label": "A4", "value": "A4" },
-                { "label": "Letter", "value": "LETTER" },
-                { "label": "Legal", "value": "LEGAL" }
+                {
+                  "label": "A4",
+                  "value": "A4"
+                },
+                {
+                  "label": "Letter",
+                  "value": "LETTER"
+                },
+                {
+                  "label": "Legal",
+                  "value": "LEGAL"
+                }
               ]
             },
             {
@@ -3415,8 +4920,14 @@
               "label": "Orientation",
               "required": true,
               "options": [
-                { "label": "Portrait", "value": "PORTRAIT" },
-                { "label": "Landscape", "value": "LANDSCAPE" }
+                {
+                  "label": "Portrait",
+                  "value": "PORTRAIT"
+                },
+                {
+                  "label": "Landscape",
+                  "value": "LANDSCAPE"
+                }
               ]
             }
           ],
@@ -3437,15 +4948,39 @@
           "title": "Workforce",
           "source": "employees",
           "fields": [
-            { "id": "employeeNumber", "label": "Number" },
-            { "id": "fullName", "label": "Name" },
-            { "id": "employmentType", "label": "Type" },
-            { "id": "position", "label": "Position" },
-            { "id": "department", "label": "Department" },
-            { "id": "phone", "label": "Phone" },
-            { "id": "employmentStatus", "label": "Status" }
+            {
+              "id": "employeeNumber",
+              "label": "Number"
+            },
+            {
+              "id": "fullName",
+              "label": "Name"
+            },
+            {
+              "id": "employmentType",
+              "label": "Type"
+            },
+            {
+              "id": "position",
+              "label": "Position"
+            },
+            {
+              "id": "department",
+              "label": "Department"
+            },
+            {
+              "id": "phone",
+              "label": "Phone"
+            },
+            {
+              "id": "employmentStatus",
+              "label": "Status"
+            }
           ],
-          "options": { "pageSize": 50, "selectable": false }
+          "options": {
+            "pageSize": 50,
+            "selectable": false
+          }
         },
         {
           "id": "employees-print",
@@ -3453,16 +4988,41 @@
           "title": "Employee and employer list",
           "source": "employees",
           "fields": [
-            { "label": "Number", "path": "employeeNumber" },
-            { "label": "Name", "path": "fullName" },
-            { "label": "Type", "path": "employmentType" },
-            { "label": "Position", "path": "position" },
-            { "label": "Department", "path": "department" },
-            { "label": "Phone", "path": "phone" },
-            { "label": "Status", "path": "employmentStatus" }
+            {
+              "label": "Number",
+              "path": "employeeNumber"
+            },
+            {
+              "label": "Name",
+              "path": "fullName"
+            },
+            {
+              "label": "Type",
+              "path": "employmentType"
+            },
+            {
+              "label": "Position",
+              "path": "position"
+            },
+            {
+              "label": "Department",
+              "path": "department"
+            },
+            {
+              "label": "Phone",
+              "path": "phone"
+            },
+            {
+              "label": "Status",
+              "path": "employmentStatus"
+            }
           ],
           "options": {
-            "formats": ["print", "csv", "pdf"],
+            "formats": [
+              "print",
+              "csv",
+              "pdf"
+            ],
             "filename": "workforce-list",
             "maximumRows": 5000
           }
@@ -3490,7 +5050,9 @@
             }
           ],
           "options": {
-            "sources": ["attendance"],
+            "sources": [
+              "attendance"
+            ],
             "applyLabel": "Load attendance report",
             "clearLabel": "Clear period"
           }
@@ -3501,17 +5063,47 @@
           "title": "Attendance totals",
           "source": "attendance",
           "fields": [
-            { "id": "employeeNumber", "label": "Number" },
-            { "id": "fullName", "label": "Name" },
-            { "id": "position", "label": "Position" },
-            { "id": "expectedDays", "label": "Expected" },
-            { "id": "presentDays", "label": "Present" },
-            { "id": "lateDays", "label": "Late" },
-            { "id": "absentDays", "label": "Absent" },
-            { "id": "permissionDays", "label": "Permission" },
-            { "id": "leaveDays", "label": "Leave" }
+            {
+              "id": "employeeNumber",
+              "label": "Number"
+            },
+            {
+              "id": "fullName",
+              "label": "Name"
+            },
+            {
+              "id": "position",
+              "label": "Position"
+            },
+            {
+              "id": "expectedDays",
+              "label": "Expected"
+            },
+            {
+              "id": "presentDays",
+              "label": "Present"
+            },
+            {
+              "id": "lateDays",
+              "label": "Late"
+            },
+            {
+              "id": "absentDays",
+              "label": "Absent"
+            },
+            {
+              "id": "permissionDays",
+              "label": "Permission"
+            },
+            {
+              "id": "leaveDays",
+              "label": "Leave"
+            }
           ],
-          "options": { "pageSize": 50, "selectable": false }
+          "options": {
+            "pageSize": 50,
+            "selectable": false
+          }
         },
         {
           "id": "attendance-print",
@@ -3519,42 +5111,115 @@
           "title": "Attendance report",
           "source": "attendance",
           "fields": [
-            { "label": "Number", "path": "employeeNumber" },
-            { "label": "Name", "path": "fullName" },
-            { "label": "Position", "path": "position" },
-            { "label": "Expected", "path": "expectedDays" },
-            { "label": "Present", "path": "presentDays" },
-            { "label": "Late", "path": "lateDays" },
-            { "label": "Absent", "path": "absentDays" },
-            { "label": "Permission", "path": "permissionDays" },
-            { "label": "Leave", "path": "leaveDays" }
+            {
+              "label": "Number",
+              "path": "employeeNumber"
+            },
+            {
+              "label": "Name",
+              "path": "fullName"
+            },
+            {
+              "label": "Position",
+              "path": "position"
+            },
+            {
+              "label": "Expected",
+              "path": "expectedDays"
+            },
+            {
+              "label": "Present",
+              "path": "presentDays"
+            },
+            {
+              "label": "Late",
+              "path": "lateDays"
+            },
+            {
+              "label": "Absent",
+              "path": "absentDays"
+            },
+            {
+              "label": "Permission",
+              "path": "permissionDays"
+            },
+            {
+              "label": "Leave",
+              "path": "leaveDays"
+            }
           ],
           "options": {
-            "formats": ["print", "csv", "pdf"],
+            "formats": [
+              "print",
+              "csv",
+              "pdf"
+            ],
             "filename": "attendance-report",
             "maximumRows": 5000
           }
         },
-        { "id": "salary-title", "type": "heading", "title": "Salary report" },
+        {
+          "id": "salary-title",
+          "type": "heading",
+          "title": "Salary report"
+        },
         {
           "id": "salary",
           "type": "table",
           "title": "Payroll salary history",
           "source": "salary",
           "fields": [
-            { "id": "employeeNumber", "label": "Number" },
-            { "id": "fullName", "label": "Name" },
-            { "id": "position", "label": "Position" },
-            { "id": "periodStart", "label": "From", "format": "date" },
-            { "id": "periodEnd", "label": "To", "format": "date" },
-            { "id": "basePay", "label": "Base" },
-            { "id": "earnings", "label": "Bonus" },
-            { "id": "deductions", "label": "Deduction" },
-            { "id": "netPay", "label": "Net" },
-            { "id": "currency", "label": "Currency" },
-            { "id": "status", "label": "Status" }
+            {
+              "id": "employeeNumber",
+              "label": "Number"
+            },
+            {
+              "id": "fullName",
+              "label": "Name"
+            },
+            {
+              "id": "position",
+              "label": "Position"
+            },
+            {
+              "id": "periodStart",
+              "label": "From",
+              "format": "date"
+            },
+            {
+              "id": "periodEnd",
+              "label": "To",
+              "format": "date"
+            },
+            {
+              "id": "basePay",
+              "label": "Base"
+            },
+            {
+              "id": "earnings",
+              "label": "Bonus"
+            },
+            {
+              "id": "deductions",
+              "label": "Deduction"
+            },
+            {
+              "id": "netPay",
+              "label": "Net"
+            },
+            {
+              "id": "currency",
+              "label": "Currency"
+            },
+            {
+              "id": "status",
+              "label": "Status"
+            }
           ],
-          "options": { "pageSize": 50, "selectable": false }
+          "options": {
+            "pageSize": 50,
+            "selectable": false
+          }
         },
         {
           "id": "salary-print",
@@ -3562,20 +5227,59 @@
           "title": "Salary report",
           "source": "salary",
           "fields": [
-            { "label": "Number", "path": "employeeNumber" },
-            { "label": "Name", "path": "fullName" },
-            { "label": "Position", "path": "position" },
-            { "label": "From", "path": "periodStart", "format": "date" },
-            { "label": "To", "path": "periodEnd", "format": "date" },
-            { "label": "Base", "path": "basePay" },
-            { "label": "Bonus", "path": "earnings" },
-            { "label": "Deduction", "path": "deductions" },
-            { "label": "Net", "path": "netPay" },
-            { "label": "Currency", "path": "currency" },
-            { "label": "Status", "path": "status" }
+            {
+              "label": "Number",
+              "path": "employeeNumber"
+            },
+            {
+              "label": "Name",
+              "path": "fullName"
+            },
+            {
+              "label": "Position",
+              "path": "position"
+            },
+            {
+              "label": "From",
+              "path": "periodStart",
+              "format": "date"
+            },
+            {
+              "label": "To",
+              "path": "periodEnd",
+              "format": "date"
+            },
+            {
+              "label": "Base",
+              "path": "basePay"
+            },
+            {
+              "label": "Bonus",
+              "path": "earnings"
+            },
+            {
+              "label": "Deduction",
+              "path": "deductions"
+            },
+            {
+              "label": "Net",
+              "path": "netPay"
+            },
+            {
+              "label": "Currency",
+              "path": "currency"
+            },
+            {
+              "label": "Status",
+              "path": "status"
+            }
           ],
           "options": {
-            "formats": ["print", "csv", "pdf"],
+            "formats": [
+              "print",
+              "csv",
+              "pdf"
+            ],
             "filename": "salary-report",
             "maximumRows": 5000
           }
@@ -3606,12 +5310,30 @@
             "description": "Open complete employer and employee profiles from the secure workforce directory.",
             "activeStep": 1,
             "steps": [
-              { "label": "Setup", "route": "organization" },
-              { "label": "People", "route": "employees" },
-              { "label": "Time & leave", "route": "hr-calendar" },
-              { "label": "Attendance", "route": "attendance-scan" },
-              { "label": "Payroll", "route": "payroll" },
-              { "label": "Reports", "route": "reports" }
+              {
+                "label": "Setup",
+                "route": "organization"
+              },
+              {
+                "label": "People",
+                "route": "employees"
+              },
+              {
+                "label": "Time & leave",
+                "route": "hr-calendar"
+              },
+              {
+                "label": "Attendance",
+                "route": "attendance-scan"
+              },
+              {
+                "label": "Payroll",
+                "route": "payroll"
+              },
+              {
+                "label": "Reports",
+                "route": "reports"
+              }
             ]
           }
         },
@@ -3621,18 +5343,44 @@
           "title": "Employee and employer profiles",
           "source": "list",
           "fields": [
-            { "id": "employeeNumber", "label": "Number", "filterable": true },
-            { "id": "fullName", "label": "Name", "filterable": true },
-            { "id": "employmentType", "label": "Type", "filterable": true },
-            { "id": "positionTitle", "label": "Position", "filterable": true },
-            { "id": "department", "label": "Department", "filterable": true },
-            { "id": "employmentStatus", "label": "Status", "filterable": true }
+            {
+              "id": "employeeNumber",
+              "label": "Number",
+              "filterable": true
+            },
+            {
+              "id": "fullName",
+              "label": "Name",
+              "filterable": true
+            },
+            {
+              "id": "employmentType",
+              "label": "Type",
+              "filterable": true
+            },
+            {
+              "id": "positionTitle",
+              "label": "Position",
+              "filterable": true
+            },
+            {
+              "id": "department",
+              "label": "Department",
+              "filterable": true
+            },
+            {
+              "id": "employmentStatus",
+              "label": "Status",
+              "filterable": true
+            }
           ],
           "options": {
             "pageSize": 50,
             "selectable": false,
             "rowRoute": "profiles/:id",
-            "rowParameterMap": { "id": "id" }
+            "rowParameterMap": {
+              "id": "id"
+            }
           }
         }
       ]
@@ -3642,7 +5390,13 @@
       "title": "Employee / Employer Profile",
       "routePath": "profiles/:id",
       "permission": "wattanam.organizing-management.employees.manage",
-      "parameters": [{ "name": "id", "type": "string", "maximumLength": 100 }],
+      "parameters": [
+        {
+          "name": "id",
+          "type": "string",
+          "maximumLength": 100
+        }
+      ],
       "dataSources": [
         {
           "id": "profile",
@@ -3700,12 +5454,30 @@
             "description": "Search and maintain complete workforce identity and emergency information.",
             "activeStep": 1,
             "steps": [
-              { "label": "Setup", "route": "organization" },
-              { "label": "People", "route": "employees" },
-              { "label": "Time & leave", "route": "hr-calendar" },
-              { "label": "Attendance", "route": "attendance-scan" },
-              { "label": "Payroll", "route": "payroll" },
-              { "label": "Reports", "route": "reports" }
+              {
+                "label": "Setup",
+                "route": "organization"
+              },
+              {
+                "label": "People",
+                "route": "employees"
+              },
+              {
+                "label": "Time & leave",
+                "route": "hr-calendar"
+              },
+              {
+                "label": "Attendance",
+                "route": "attendance-scan"
+              },
+              {
+                "label": "Payroll",
+                "route": "payroll"
+              },
+              {
+                "label": "Reports",
+                "route": "reports"
+              }
             ]
           }
         },
@@ -3715,14 +5487,38 @@
           "title": "Employee and employer directory",
           "source": "profiles",
           "fields": [
-            { "id": "employeeNumber", "label": "Employee #" },
-            { "id": "fullName", "label": "Name" },
-            { "id": "employmentType", "label": "Type" },
-            { "id": "positionTitle", "label": "Position" },
-            { "id": "department", "label": "Team" },
-            { "id": "email", "label": "Email" },
-            { "id": "phone", "label": "Phone" },
-            { "id": "employmentStatus", "label": "Status" }
+            {
+              "id": "employeeNumber",
+              "label": "Employee #"
+            },
+            {
+              "id": "fullName",
+              "label": "Name"
+            },
+            {
+              "id": "employmentType",
+              "label": "Type"
+            },
+            {
+              "id": "positionTitle",
+              "label": "Position"
+            },
+            {
+              "id": "department",
+              "label": "Team"
+            },
+            {
+              "id": "email",
+              "label": "Email"
+            },
+            {
+              "id": "phone",
+              "label": "Phone"
+            },
+            {
+              "id": "employmentStatus",
+              "label": "Status"
+            }
           ],
           "options": {
             "pageSize": 25,
@@ -3730,7 +5526,9 @@
             "rowClickable": true,
             "rowActionLabel": "Edit employee/employer HR lifecycle",
             "rowRoute": "profiles/:id",
-            "rowParameterMap": { "id": "id" }
+            "rowParameterMap": {
+              "id": "id"
+            }
           }
         }
       ]
@@ -3759,7 +5557,9 @@
           "method": "PUT",
           "path": "id-card-template/:type",
           "permission": "wattanam.organizing-management.id-cards.manage",
-          "parameters": ["type"],
+          "parameters": [
+            "type"
+          ],
           "autoload": false
         }
       ],
@@ -3773,12 +5573,30 @@
             "description": "Design, preview, and print secure QR identity cards for attendance scanning.",
             "activeStep": 1,
             "steps": [
-              { "label": "Setup", "route": "organization" },
-              { "label": "People", "route": "employees" },
-              { "label": "Time & leave", "route": "hr-calendar" },
-              { "label": "Attendance", "route": "attendance-scan" },
-              { "label": "Payroll", "route": "payroll" },
-              { "label": "Reports", "route": "reports" }
+              {
+                "label": "Setup",
+                "route": "organization"
+              },
+              {
+                "label": "People",
+                "route": "employees"
+              },
+              {
+                "label": "Time & leave",
+                "route": "hr-calendar"
+              },
+              {
+                "label": "Attendance",
+                "route": "attendance-scan"
+              },
+              {
+                "label": "Payroll",
+                "route": "payroll"
+              },
+              {
+                "label": "Reports",
+                "route": "reports"
+              }
             ]
           }
         },
@@ -3791,99 +5609,6 @@
             "height": "auto",
             "minHeight": 640
           }
-        }
-      ]
-    },
-    {
-      "id": "attendance-scan",
-      "title": "Scan Attendance",
-      "routePath": "attendance-scan",
-      "permission": "wattanam.organizing-management.attendance.scan",
-      "parameters": [],
-      "dataSources": [
-        {
-          "id": "scan",
-          "method": "POST",
-          "path": "attendance/scan",
-          "permission": "wattanam.organizing-management.attendance.scan"
-        },
-        {
-          "id": "today",
-          "method": "GET",
-          "path": "attendance/records",
-          "permission": "wattanam.organizing-management.attendance.report"
-        }
-      ],
-      "components": [
-        {
-          "id": "workflow",
-          "type": "workflow",
-          "title": "Workforce Attendance",
-          "options": {
-            "eyebrow": "Camera and USB scanner",
-            "description": "Scan an employer or employee ID card, review today’s result, and continue to reports or corrections.",
-            "activeStep": 0,
-            "steps": [
-              { "label": "Scan", "route": "attendance-scan" },
-              { "label": "Report", "route": "attendance-records" },
-              { "label": "Correct", "route": "attendance-corrections" },
-              { "label": "Settings", "route": "attendance-settings" }
-            ]
-          }
-        },
-        {
-          "id": "heading",
-          "type": "heading",
-          "title": "Camera / USB workforce attendance scanner"
-        },
-        {
-          "id": "scanner",
-          "type": "scanner",
-          "title": "Scan employer or employee ID card",
-          "source": "scan",
-          "options": {
-            "station": true,
-            "autoLocation": true,
-            "modes": ["camera", "keyboard"],
-            "field": "code",
-            "minLength": 4,
-            "maxLength": 1000,
-            "debounceMs": 1000,
-            "contextFields": [
-              { "id": "latitude", "type": "number", "label": "Latitude" },
-              { "id": "longitude", "type": "number", "label": "Longitude" },
-              { "id": "location", "type": "text", "label": "Location label" }
-            ]
-          }
-        },
-        {
-          "id": "today-heading",
-          "type": "heading",
-          "title": "Today’s attendance activity"
-        },
-        {
-          "id": "today",
-          "type": "table",
-          "title": "Employer and employee check-ins",
-          "source": "today",
-          "fields": [
-            {
-              "id": "fullName",
-              "label": "Employer / employee",
-              "filterable": true
-            },
-            {
-              "id": "employeeNumber",
-              "label": "ID number",
-              "filterable": true
-            },
-            { "id": "position", "label": "Position", "filterable": true },
-            { "id": "status", "label": "Status", "filterable": true },
-            { "id": "checkInAt", "label": "Check in", "format": "datetime" },
-            { "id": "checkOutAt", "label": "Check out", "format": "datetime" },
-            { "id": "source", "label": "Scanner" }
-          ],
-          "options": { "pageSize": 50, "selectable": false }
         }
       ]
     },
@@ -3917,10 +5642,22 @@
             "description": "Filter daily attendance, review scanner evidence, and print or export an official workforce report.",
             "activeStep": 1,
             "steps": [
-              { "label": "Scan", "route": "attendance-scan" },
-              { "label": "Report", "route": "attendance-records" },
-              { "label": "Correct", "route": "attendance-corrections" },
-              { "label": "Settings", "route": "attendance-settings" }
+              {
+                "label": "Scan",
+                "route": "attendance-scan"
+              },
+              {
+                "label": "Report",
+                "route": "attendance-records"
+              },
+              {
+                "label": "Correct",
+                "route": "attendance-corrections"
+              },
+              {
+                "label": "Settings",
+                "route": "attendance-settings"
+              }
             ]
           }
         },
@@ -3928,11 +5665,21 @@
           "id": "filters",
           "type": "filter",
           "fields": [
-            { "id": "from", "type": "date", "label": "Start date" },
-            { "id": "to", "type": "date", "label": "End date" }
+            {
+              "id": "from",
+              "type": "date",
+              "label": "Start date"
+            },
+            {
+              "id": "to",
+              "type": "date",
+              "label": "End date"
+            }
           ],
           "options": {
-            "sources": ["records"],
+            "sources": [
+              "records"
+            ],
             "applyLabel": "Apply report period",
             "clearLabel": "Clear period"
           }
@@ -3948,17 +5695,54 @@
           "title": "Attendance detail",
           "source": "records",
           "fields": [
-            { "id": "attendanceDate", "label": "Date", "format": "date" },
-            { "id": "employeeNumber", "label": "Number", "filterable": true },
-            { "id": "fullName", "label": "Name", "filterable": true },
-            { "id": "position", "label": "Position", "filterable": true },
-            { "id": "status", "label": "Status", "filterable": true },
-            { "id": "checkInAt", "label": "Check in", "format": "datetime" },
-            { "id": "checkOutAt", "label": "Check out", "format": "datetime" },
-            { "id": "source", "label": "Source" },
-            { "id": "notes", "label": "Notes" }
+            {
+              "id": "attendanceDate",
+              "label": "Date",
+              "format": "date"
+            },
+            {
+              "id": "employeeNumber",
+              "label": "Number",
+              "filterable": true
+            },
+            {
+              "id": "fullName",
+              "label": "Name",
+              "filterable": true
+            },
+            {
+              "id": "position",
+              "label": "Position",
+              "filterable": true
+            },
+            {
+              "id": "status",
+              "label": "Status",
+              "filterable": true
+            },
+            {
+              "id": "checkInAt",
+              "label": "Check in",
+              "format": "datetime"
+            },
+            {
+              "id": "checkOutAt",
+              "label": "Check out",
+              "format": "datetime"
+            },
+            {
+              "id": "source",
+              "label": "Source"
+            },
+            {
+              "id": "notes",
+              "label": "Notes"
+            }
           ],
-          "options": { "pageSize": 50, "selectable": false }
+          "options": {
+            "pageSize": 50,
+            "selectable": false
+          }
         },
         {
           "id": "records-print",
@@ -3966,22 +5750,52 @@
           "title": "Print or export workforce attendance",
           "source": "records",
           "fields": [
-            { "label": "Date", "path": "attendanceDate", "format": "date" },
-            { "label": "Employee number", "path": "employeeNumber" },
-            { "label": "Employer / employee", "path": "fullName" },
-            { "label": "Position", "path": "position" },
-            { "label": "Status", "path": "status" },
-            { "label": "Check in", "path": "checkInAt", "format": "datetime" },
+            {
+              "label": "Date",
+              "path": "attendanceDate",
+              "format": "date"
+            },
+            {
+              "label": "Employee number",
+              "path": "employeeNumber"
+            },
+            {
+              "label": "Employer / employee",
+              "path": "fullName"
+            },
+            {
+              "label": "Position",
+              "path": "position"
+            },
+            {
+              "label": "Status",
+              "path": "status"
+            },
+            {
+              "label": "Check in",
+              "path": "checkInAt",
+              "format": "datetime"
+            },
             {
               "label": "Check out",
               "path": "checkOutAt",
               "format": "datetime"
             },
-            { "label": "Source", "path": "source" },
-            { "label": "Notes", "path": "notes" }
+            {
+              "label": "Source",
+              "path": "source"
+            },
+            {
+              "label": "Notes",
+              "path": "notes"
+            }
           ],
           "options": {
-            "formats": ["print", "csv", "pdf"],
+            "formats": [
+              "print",
+              "csv",
+              "pdf"
+            ],
             "filename": "workforce-attendance-report",
             "maximumRows": 10000
           }
@@ -3997,15 +5811,42 @@
           "title": "Recent camera and USB scans",
           "source": "scans",
           "fields": [
-            { "id": "receivedAt", "label": "Received", "format": "datetime" },
-            { "id": "employeeNumber", "label": "Number", "filterable": true },
-            { "id": "fullName", "label": "Name", "filterable": true },
-            { "id": "scanMode", "label": "Device" },
-            { "id": "outcome", "label": "Outcome" },
-            { "id": "action", "label": "Action" },
-            { "id": "errorCode", "label": "Reason" }
+            {
+              "id": "receivedAt",
+              "label": "Received",
+              "format": "datetime"
+            },
+            {
+              "id": "employeeNumber",
+              "label": "Number",
+              "filterable": true
+            },
+            {
+              "id": "fullName",
+              "label": "Name",
+              "filterable": true
+            },
+            {
+              "id": "scanMode",
+              "label": "Device"
+            },
+            {
+              "id": "outcome",
+              "label": "Outcome"
+            },
+            {
+              "id": "action",
+              "label": "Action"
+            },
+            {
+              "id": "errorCode",
+              "label": "Reason"
+            }
           ],
-          "options": { "pageSize": 50, "selectable": false }
+          "options": {
+            "pageSize": 50,
+            "selectable": false
+          }
         }
       ]
     },
@@ -4039,10 +5880,22 @@
             "description": "Select a workforce attendance record, correct its status or times, and retain the original values in audit history.",
             "activeStep": 2,
             "steps": [
-              { "label": "Scan", "route": "attendance-scan" },
-              { "label": "Report", "route": "attendance-records" },
-              { "label": "Correct", "route": "attendance-corrections" },
-              { "label": "Settings", "route": "attendance-settings" }
+              {
+                "label": "Scan",
+                "route": "attendance-scan"
+              },
+              {
+                "label": "Report",
+                "route": "attendance-records"
+              },
+              {
+                "label": "Correct",
+                "route": "attendance-corrections"
+              },
+              {
+                "label": "Settings",
+                "route": "attendance-settings"
+              }
             ]
           }
         },
@@ -4055,11 +5908,21 @@
           "id": "filters",
           "type": "filter",
           "fields": [
-            { "id": "from", "type": "date", "label": "Start date" },
-            { "id": "to", "type": "date", "label": "End date" }
+            {
+              "id": "from",
+              "type": "date",
+              "label": "Start date"
+            },
+            {
+              "id": "to",
+              "type": "date",
+              "label": "End date"
+            }
           ],
           "options": {
-            "sources": ["records"],
+            "sources": [
+              "records"
+            ],
             "applyLabel": "Find attendance records",
             "clearLabel": "Clear period"
           }
@@ -4070,23 +5933,49 @@
           "title": "Attendance records available for correction",
           "source": "records",
           "fields": [
-            { "id": "attendanceDate", "label": "Date", "format": "date" },
-            { "id": "employeeNumber", "label": "Number", "filterable": true },
+            {
+              "id": "attendanceDate",
+              "label": "Date",
+              "format": "date"
+            },
+            {
+              "id": "employeeNumber",
+              "label": "Number",
+              "filterable": true
+            },
             {
               "id": "fullName",
               "label": "Employer / employee",
               "filterable": true
             },
-            { "id": "position", "label": "Position", "filterable": true },
-            { "id": "status", "label": "Status", "filterable": true },
-            { "id": "checkInAt", "label": "Check in", "format": "datetime" },
-            { "id": "checkOutAt", "label": "Check out", "format": "datetime" }
+            {
+              "id": "position",
+              "label": "Position",
+              "filterable": true
+            },
+            {
+              "id": "status",
+              "label": "Status",
+              "filterable": true
+            },
+            {
+              "id": "checkInAt",
+              "label": "Check in",
+              "format": "datetime"
+            },
+            {
+              "id": "checkOutAt",
+              "label": "Check out",
+              "format": "datetime"
+            }
           ],
           "options": {
             "pageSize": 50,
             "selectable": false,
             "rowRoute": "attendance-corrections/:id",
-            "rowParameterMap": { "id": "id" }
+            "rowParameterMap": {
+              "id": "id"
+            }
           }
         },
         {
@@ -4100,15 +5989,42 @@
           "title": "Recorded adjustments",
           "source": "history",
           "fields": [
-            { "id": "createdAt", "label": "Corrected", "format": "datetime" },
-            { "id": "employeeNumber", "label": "Number", "filterable": true },
-            { "id": "fullName", "label": "Name", "filterable": true },
-            { "id": "previousStatus", "label": "Previous status" },
-            { "id": "newStatus", "label": "New status" },
-            { "id": "reason", "label": "Reason" },
-            { "id": "correctedById", "label": "Corrected by" }
+            {
+              "id": "createdAt",
+              "label": "Corrected",
+              "format": "datetime"
+            },
+            {
+              "id": "employeeNumber",
+              "label": "Number",
+              "filterable": true
+            },
+            {
+              "id": "fullName",
+              "label": "Name",
+              "filterable": true
+            },
+            {
+              "id": "previousStatus",
+              "label": "Previous status"
+            },
+            {
+              "id": "newStatus",
+              "label": "New status"
+            },
+            {
+              "id": "reason",
+              "label": "Reason"
+            },
+            {
+              "id": "correctedById",
+              "label": "Corrected by"
+            }
           ],
-          "options": { "pageSize": 50, "selectable": false }
+          "options": {
+            "pageSize": 50,
+            "selectable": false
+          }
         }
       ]
     },
@@ -4117,7 +6033,13 @@
       "title": "Correct Attendance",
       "routePath": "attendance-corrections/:id",
       "permission": "wattanam.organizing-management.attendance.correct",
-      "parameters": [{ "name": "id", "type": "string", "maximumLength": 100 }],
+      "parameters": [
+        {
+          "name": "id",
+          "type": "string",
+          "maximumLength": 100
+        }
+      ],
       "dataSources": [
         {
           "id": "record",
@@ -4142,32 +6064,71 @@
             "description": "Review the original record before changing its status or timestamps.",
             "activeStep": 2,
             "steps": [
-              { "label": "Scan", "route": "attendance-scan" },
-              { "label": "Report", "route": "attendance-records" },
-              { "label": "Correct", "route": "attendance-corrections" },
-              { "label": "Settings", "route": "attendance-settings" }
+              {
+                "label": "Scan",
+                "route": "attendance-scan"
+              },
+              {
+                "label": "Report",
+                "route": "attendance-records"
+              },
+              {
+                "label": "Correct",
+                "route": "attendance-corrections"
+              },
+              {
+                "label": "Settings",
+                "route": "attendance-settings"
+              }
             ]
           }
         },
-        { "id": "heading", "type": "heading", "title": "Recorded attendance" },
+        {
+          "id": "heading",
+          "type": "heading",
+          "title": "Recorded attendance"
+        },
         {
           "id": "current",
           "type": "detail",
           "title": "Original workforce record",
           "source": "record",
           "fields": [
-            { "label": "Employee number", "path": "employeeNumber" },
-            { "label": "Employer / employee", "path": "fullName" },
-            { "label": "Position", "path": "position" },
-            { "label": "Date", "path": "attendanceDate", "format": "date" },
-            { "label": "Current status", "path": "status" },
-            { "label": "Check in", "path": "checkInAt", "format": "datetime" },
+            {
+              "label": "Employee number",
+              "path": "employeeNumber"
+            },
+            {
+              "label": "Employer / employee",
+              "path": "fullName"
+            },
+            {
+              "label": "Position",
+              "path": "position"
+            },
+            {
+              "label": "Date",
+              "path": "attendanceDate",
+              "format": "date"
+            },
+            {
+              "label": "Current status",
+              "path": "status"
+            },
+            {
+              "label": "Check in",
+              "path": "checkInAt",
+              "format": "datetime"
+            },
             {
               "label": "Check out",
               "path": "checkOutAt",
               "format": "datetime"
             },
-            { "label": "Source", "path": "source" }
+            {
+              "label": "Source",
+              "path": "source"
+            }
           ]
         },
         {
@@ -4183,10 +6144,22 @@
               "label": "Corrected status",
               "required": true,
               "options": [
-                { "label": "Present", "value": "PRESENT" },
-                { "label": "Late", "value": "LATE" },
-                { "label": "Absent", "value": "ABSENT" },
-                { "label": "On leave", "value": "ON_LEAVE" }
+                {
+                  "label": "Present",
+                  "value": "PRESENT"
+                },
+                {
+                  "label": "Late",
+                  "value": "LATE"
+                },
+                {
+                  "label": "Absent",
+                  "value": "ABSENT"
+                },
+                {
+                  "label": "On leave",
+                  "value": "ON_LEAVE"
+                }
               ]
             },
             {
@@ -4212,67 +6185,6 @@
             "submitLabel": "Save audited correction",
             "confirmation": "Save this attendance correction? The original values remain permanently available in audit history.",
             "successMessage": "Attendance correction saved"
-          }
-        }
-      ]
-    },
-    {
-      "id": "attendance-settings",
-      "title": "Attendance Settings",
-      "routePath": "attendance-settings",
-      "permission": "wattanam.organizing-management.attendance.configure",
-      "parameters": [],
-      "dataSources": [
-        {
-          "id": "sessions",
-          "method": "GET",
-          "path": "attendance/sessions",
-          "permission": "wattanam.organizing-management.attendance.configure"
-        },
-        {
-          "id": "saveSession",
-          "method": "POST",
-          "path": "attendance/sessions",
-          "permission": "wattanam.organizing-management.attendance.configure"
-        },
-        {
-          "id": "sessionSettings",
-          "method": "GET",
-          "path": "attendance/session-settings",
-          "permission": "wattanam.organizing-management.attendance.configure"
-        },
-        {
-          "id": "saveSessionSettings",
-          "method": "PUT",
-          "path": "attendance/session-settings",
-          "permission": "wattanam.organizing-management.attendance.configure"
-        }
-      ],
-      "components": [
-        {
-          "id": "workflow",
-          "type": "workflow",
-          "title": "Attendance Settings",
-          "options": {
-            "eyebrow": "Work schedule and scanner policy",
-            "description": "Configure work days, attendance windows, late rules, check-out protection, and offline scanner tolerance.",
-            "activeStep": 3,
-            "steps": [
-              { "label": "Scan", "route": "attendance-scan" },
-              { "label": "Report", "route": "attendance-records" },
-              { "label": "Correct", "route": "attendance-corrections" },
-              { "label": "Settings", "route": "attendance-settings" }
-            ]
-          }
-        },
-        {
-          "id": "workforce-session-settings",
-          "type": "app",
-          "title": "Workforce Session Settings",
-          "options": {
-            "entry": "ui/attendance-settings/index.html",
-            "height": "auto",
-            "minHeight": 420
           }
         }
       ]
@@ -4307,12 +6219,30 @@
             "description": "Create a complete employer, employee, contractor, or intern profile with a secure attendance identity.",
             "activeStep": 1,
             "steps": [
-              { "label": "Setup", "route": "organization" },
-              { "label": "People", "route": "employees" },
-              { "label": "Time & leave", "route": "hr-calendar" },
-              { "label": "Attendance", "route": "attendance-scan" },
-              { "label": "Payroll", "route": "payroll" },
-              { "label": "Reports", "route": "reports" }
+              {
+                "label": "Setup",
+                "route": "organization"
+              },
+              {
+                "label": "People",
+                "route": "employees"
+              },
+              {
+                "label": "Time & leave",
+                "route": "hr-calendar"
+              },
+              {
+                "label": "Attendance",
+                "route": "attendance-scan"
+              },
+              {
+                "label": "Payroll",
+                "route": "payroll"
+              },
+              {
+                "label": "Reports",
+                "route": "reports"
+              }
             ]
           }
         },
@@ -4334,10 +6264,22 @@
               "required": true,
               "defaultValue": "EMPLOYEE",
               "options": [
-                { "label": "Employer / owner", "value": "EMPLOYER" },
-                { "label": "Employee", "value": "EMPLOYEE" },
-                { "label": "Contractor", "value": "CONTRACTOR" },
-                { "label": "Intern", "value": "INTERN" }
+                {
+                  "label": "Employer / owner",
+                  "value": "EMPLOYER"
+                },
+                {
+                  "label": "Employee",
+                  "value": "EMPLOYEE"
+                },
+                {
+                  "label": "Contractor",
+                  "value": "CONTRACTOR"
+                },
+                {
+                  "label": "Intern",
+                  "value": "INTERN"
+                }
               ]
             },
             {
@@ -4360,7 +6302,11 @@
               "label": "Profile photo URL or uploaded image",
               "maxLength": 750000
             },
-            { "id": "email", "type": "email", "label": "Email address" },
+            {
+              "id": "email",
+              "type": "email",
+              "label": "Email address"
+            },
             {
               "id": "phone",
               "type": "text",
@@ -4401,21 +6347,46 @@
               "required": true,
               "defaultValue": "ACTIVE",
               "options": [
-                { "label": "Active", "value": "ACTIVE" },
-                { "label": "On leave", "value": "ON_LEAVE" },
-                { "label": "Inactive", "value": "INACTIVE" },
-                { "label": "Terminated", "value": "TERMINATED" }
+                {
+                  "label": "Active",
+                  "value": "ACTIVE"
+                },
+                {
+                  "label": "On leave",
+                  "value": "ON_LEAVE"
+                },
+                {
+                  "label": "Inactive",
+                  "value": "INACTIVE"
+                },
+                {
+                  "label": "Terminated",
+                  "value": "TERMINATED"
+                }
               ]
             },
-            { "id": "dateOfBirth", "type": "date", "label": "Date of birth" },
+            {
+              "id": "dateOfBirth",
+              "type": "date",
+              "label": "Date of birth"
+            },
             {
               "id": "gender",
               "type": "select",
               "label": "Gender",
               "options": [
-                { "label": "Female", "value": "FEMALE" },
-                { "label": "Male", "value": "MALE" },
-                { "label": "Other / prefer not to say", "value": "OTHER" }
+                {
+                  "label": "Female",
+                  "value": "FEMALE"
+                },
+                {
+                  "label": "Male",
+                  "value": "MALE"
+                },
+                {
+                  "label": "Other / prefer not to say",
+                  "value": "OTHER"
+                }
               ]
             },
             {

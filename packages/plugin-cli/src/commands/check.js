@@ -19,7 +19,17 @@ const UI_FILE_TYPES = new Set(['.html', '.js', '.mjs', '.css', '.json', '.svg', 
 function validatePluginUiFiles(root, descriptor) {
   const problems = [];
   const entries = [];
+  // Partner screens: a page may call the APIs of the plugin's dependencies (data source "plugin", app
+  // options.apis); the partner's routes must list this plugin in "callers".
+  let manifest = {};
+  try { manifest = JSON.parse(fs.readFileSync(path.join(root, 'plugin.json'), 'utf8')); } catch { manifest = {}; }
+  const partners = new Set([...Object.keys(manifest.dependencies || {}), ...Object.keys(manifest.optionalDependencies || {})]);
   for (const page of (descriptor && descriptor.pages) || []) {
+    for (const source of page.dataSources || []) {
+      if (!source || source.plugin === undefined) continue;
+      if (!partners.has(source.plugin)) problems.push(`page ${page.id}: data source ${source.id} calls ${source.plugin}, which is not a dependency`);
+      else if (typeof source.permission !== 'string' || !source.permission.startsWith(`${source.plugin}.`)) problems.push(`page ${page.id}: data source ${source.id} must use a permission of ${source.plugin}`);
+    }
     for (const component of page.components || []) {
       if (component.type !== 'app') continue;
       const entry = component.options && component.options.entry;
@@ -28,6 +38,8 @@ function validatePluginUiFiles(root, descriptor) {
       else entries.push(entry);
       const devices = component.options && component.options.devices;
       if (devices !== undefined && (!Array.isArray(devices) || new Set(devices).size !== devices.length || devices.some((device) => !['scanner', 'location', 'device-id', 'face', 'nfc', 'storage'].includes(device)))) problems.push(`app ${component.id}: devices must be a list of scanner, location, device-id, face, nfc, storage`);
+      const apis = component.options && component.options.apis;
+      if (apis !== undefined && (!Array.isArray(apis) || apis.length > 5 || new Set(apis).size !== apis.length || apis.some((id) => !partners.has(id)))) problems.push(`app ${component.id}: apis must list dependencies of the plugin (at most 5)`);
     }
   }
   const uiRoot = path.join(root, 'ui');

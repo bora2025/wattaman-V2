@@ -4,6 +4,8 @@
 (function () {
   'use strict';
   var ui = window.WattanamPluginUI;
+  // Moved into Smart Attendance: the records and rules stay with wattanam.academic-management, called as a partner.
+  var academic = ui.partner('wattanam.academic-management');
   var classDefaults = [
     { scope: 'STUDENT', session: 1, type: 'CHECK_IN', startTime: '07:00', endTime: '07:15' },
     { scope: 'STUDENT', session: 2, type: 'CHECK_OUT', startTime: '12:00', endTime: '12:15' },
@@ -149,16 +151,16 @@
     }
     state.busy = true; show('message'); show('error'); render();
     list.reduce(function (chain, item) {
-      return chain.then(function () { return ui.api.post('sessions', Object.assign({}, item, { classId: '' })); });
+      return chain.then(function () { return academic.post('sessions', Object.assign({}, item, { classId: '' })); });
     }, Promise.resolve())
-      .then(function () { return ui.api.put('session-settings', state.settings); })
+      .then(function () { return academic.put('session-settings', state.settings); })
       .then(function () { show('message', (state.tab === 'STUDENT' ? 'Class' : 'Staff') + ' session settings saved.'); return load(); })
       .catch(function (error) { show('error', error.message || 'Settings could not be saved.'); })
       .then(function () { state.busy = false; render(); });
   }
 
   function load() {
-    return Promise.all([ui.api.get('sessions'), ui.api.get('session-settings')]).then(function (results) {
+    return Promise.all([academic.get('sessions'), academic.get('session-settings')]).then(function (results) {
       state.student = normalize(results[0], 'STUDENT', classDefaults);
       state.staff = normalize(results[0], 'STAFF', staffDefaults);
       if (results[1] && typeof results[1] === 'object') state.settings = Object.assign({}, state.settings, results[1]);

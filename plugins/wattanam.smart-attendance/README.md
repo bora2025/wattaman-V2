@@ -1,9 +1,23 @@
 # Smart Attendance
 
-Official Wattanam plugin for **attendance stations**: a tablet or PC at a gate or in a classroom where
-students scan the QR code on their ID card or tap their NFC card. Architecture and phases:
-`architecture/smart-attendance-plugin-plan.md`.
+Official Wattanam plugin and **the one place to take attendance** (since 0.3.0): by hand, by QR code,
+NFC card or face, at stations, terminals and phones. Architecture and phases:
+`architecture/smart-attendance-plugin-plan.md` (§17 for the move).
 
+- **Take Attendance** (teachers), **Attendance Settings**, the students' **Scan Attendance** with
+  **Self-Attendance Windows** and **Review**, **Staff Attendance** and its reports: the screens moved here from
+  Academic Management 0.35.0. **Workforce Scan Attendance** and **Workforce Attendance Settings**: from
+  Organizing Management 0.28.0.
+- These screens are **partner screens**: the records, rules, corrections and reports stay with Academic
+  Management (schools) or Organizing Management (organizations), and the screens call their routes, which
+  those plugins open to Smart Attendance. Each call needs the user's permission in that plugin as before.
+- A school installs it with Academic Management, an organization with Organizing Management (both are
+  optional dependencies); the sidebar shows the screens of the installed ones.
+
+- **Automatic station (0.4).** Opening *Attendance Station* registers the device by itself (nothing to type) and opens
+  straight into automatic attendance: one camera reads faces and ID-card QR codes together, USB readers and the
+  phone's NFC listen too. Each student's class comes from their enrolment. A **Wattaman**'s device is approved at
+  once (setting on *Attendance Stations*); other devices wait for an administrator.
 - **Stations.** A device opens *Attendance Station* and asks for approval; an administrator approves it
   on *Attendance Stations* and chooses what it accepts (QR, NFC), check-in / check-out, and its classes.
 - **QR codes.** The school page's camera (the host scanner) or a USB 2D scanner. Codes are matched against
@@ -25,4 +39,4 @@ Needs Academic Management 0.34.0 or newer for the student list and the station i
 - **Terminals.** Face or card terminals post events with a device key issued on *Attendance Stations*
   (`POST /api/plugin-device/wattanam.smart-attendance/terminal/events`, header `Authorization: Bearer <key>`).
 
-Version 0.2 needs a school core with the face, nfc and storage devices and device credentials.
+Version 0.3 needs school core 0.1.36 or newer: the face, nfc and storage devices, device credentials and partner screens.

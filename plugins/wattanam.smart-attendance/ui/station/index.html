@@ -13,13 +13,9 @@
 
     <!-- 1. a device that is not a station yet asks to become one -->
     <section id="register" class="panel" hidden>
-      <h1>🛰️ Make this device an attendance station</h1>
-      <p class="muted">An administrator approves the station on <b>Attendance Stations</b> and chooses what it accepts (QR codes, NFC cards) and for which classes.</p>
-      <form id="register-form" class="row" novalidate>
-        <label>Station name *<input id="r-name" maxlength="80" placeholder="e.g. Main gate"></label>
-        <label>Place<input id="r-place" maxlength="120" placeholder="e.g. Building A, ground floor"></label>
-        <button type="submit" class="primary" id="r-save">Ask for approval</button>
-      </form>
+      <h1>🛰️ Setting up this device…</h1>
+      <p class="muted">It registers itself as an attendance station; nothing to type. A Wattaman's device starts at once; other devices wait for an administrator on <b>Attendance Stations</b>.</p>
+      <button type="button" class="primary" id="r-retry" hidden>Try again</button>
     </section>
 
     <!-- 2. waiting for approval, or turned off -->
@@ -65,6 +61,8 @@
       <p class="notice info" id="queue" hidden></p>
 
       <div class="controls">
+        <!-- the automatic station: face, QR codes and card readers at the same time, nothing to press -->
+        <button type="button" class="primary" id="auto">⚡ Start automatic attendance</button>
         <button type="button" class="primary" id="face">🙂 Face attendance</button>
         <button type="button" class="primary" id="camera">📷 Scan QR with the camera</button>
         <button type="button" id="phone-nfc">📶 Read cards with this phone</button>

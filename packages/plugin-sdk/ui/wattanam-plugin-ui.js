@@ -69,6 +69,8 @@
       if (typeof handlers.onClose === 'function') handlers.onClose();
     } else if (data.type === 'face-result' && faceHandlers) {
       if (typeof faceHandlers.onResult === 'function' && data.result && typeof data.result === 'object') faceHandlers.onResult(data.result);
+    } else if (data.type === 'face-code' && faceHandlers) {
+      if (typeof faceHandlers.onCode === 'function' && typeof data.text === 'string') faceHandlers.onCode(data.text, data.source === 'USB' ? 'USB' : 'CAMERA');
     } else if ((data.type === 'face-closed' || data.type === 'face-error') && faceHandlers) {
       var face = faceHandlers;
       faceHandlers = null;
@@ -110,7 +112,7 @@
     return promise;
   }
 
-  function request(method, path, body, query) {
+  function request(method, path, body, query, plugin) {
     return new Promise(function (resolve, reject) {
       var id = 'r' + (++counter) + '_' + Date.now().toString(36);
       var timer = setTimeout(function () {
@@ -121,6 +123,7 @@
       }, 30000);
       pending[id] = { resolve: resolve, reject: reject, timer: timer };
       var message = { type: 'request', id: id, method: method, path: String(path).replace(/^\/+/, '') };
+      if (plugin) message.plugin = plugin;
       if (query) message.query = query;
       if (body !== undefined) message.body = body;
       send(message);
@@ -144,9 +147,10 @@
     });
   }
 
-  // This browser's identifier for this plugin (the sandbox has no storage of its own).
-  function deviceId() {
-    return hostRequest('device-id', 'd', 'Device identifier is unavailable (school core older than 0.1.35, or no answer).').then(function (body) { return body && body.deviceId; });
+  // This browser's identifier for this plugin (the sandbox has no storage of its own). pluginId (optional,
+  // school core 0.1.36+): a partner's identifier, for devices registered with that plugin (options.apis).
+  function deviceId(pluginId) {
+    return hostRequest('device-id', 'd', 'Device identifier is unavailable (school core older than 0.1.35, or no answer).', pluginId ? { plugin: pluginId } : undefined).then(function (body) { return body && body.deviceId; });
   }
 
   // One position from the school page (the sandbox has no location API of its own).
@@ -183,12 +187,15 @@
   };
 
   // Faces: the school page runs the camera and the face model and returns face vectors only.
+  // Automatic station (school core 0.1.36+): codes: true also reads QR codes from the same camera and USB
+  // readers (needs the scanner device) and calls onCode(text, 'CAMERA' | 'USB'); faces: false reads codes only.
   var face = {
     start: function (handlers) {
       faceHandlers = handlers || {};
       var message = { type: 'face-start', mode: faceHandlers.mode === 'enroll' ? 'enroll' : 'identify', liveness: faceHandlers.liveness !== false };
       if (faceHandlers.title) message.title = String(faceHandlers.title);
       if (faceHandlers.samples) message.samples = Number(faceHandlers.samples);
+      if (faceHandlers.codes) { message.codes = true; message.faces = faceHandlers.faces !== false; }
       send(message);
     },
     stop: function () { send({ type: 'face-stop' }); },
@@ -241,6 +248,18 @@
     },
     // query (optional, school core 0.1.34+): plain values the opened page reads from context.query.
     navigate: function (routePath, query) { var message = { type: 'navigate', routePath: routePath }; if (query) message.query = query; send(message); },
+    // A partner plugin's API and pages (school core 0.2+): the page lists the partner in options.apis and
+    // the partner's routes list this plugin as a caller. Same calls as api, plus navigate.
+    partner: function (pluginId) {
+      return {
+        get: function (path, query) { return request('GET', path, undefined, query, pluginId); },
+        post: function (path, body) { return request('POST', path, body, undefined, pluginId); },
+        put: function (path, body) { return request('PUT', path, body, undefined, pluginId); },
+        patch: function (path, body) { return request('PATCH', path, body, undefined, pluginId); },
+        delete: function (path, body) { return request('DELETE', path, body, undefined, pluginId); },
+        navigate: function (routePath, query) { var message = { type: 'navigate', routePath: routePath, plugin: pluginId }; if (query) message.query = query; send(message); },
+      };
+    },
     autoResize: autoResize,
     scanner: scanner,
     location: location,
