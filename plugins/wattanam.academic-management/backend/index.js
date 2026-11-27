@@ -10,6 +10,7 @@ const { registerTranscripts } = require('./transcripts');
 const { registerDashboard } = require('./dashboard');
 const { registerStudentPermissions } = require('./student-permissions');
 const { withPublicErrors } = require('./public-errors');
+const { registerStationIntake } = require('./station-intake');
 const studentDetails = require('./student-details');
 const { registerMyProfile } = require('./my-profile');
 const { registerMyClass } = require('./my-class');
@@ -182,7 +183,7 @@ function attendanceContext(context, captured = new Map()) {
     },
     permissions: { register: (items) => context.permissions.register(items.map((item) => ({ ...item, id: attendancePermission(item.id) }))) },
     navigation: { register: (items) => context.navigation.register(items
-      .filter((item) => !['study-years', 'scanner'].includes(item.id))
+      .filter((item) => !['study-years', 'scanner', 'attendance', 'settings'].includes(item.id))
       .map((item) => ({
         ...item,
         id: item.id === 'attendance' ? 'attendance-records' : `attendance-${item.id}`,
@@ -293,13 +294,16 @@ function sanitizeFieldTypeAndOptions(fieldType, options) {
   return { fieldType: type, options: cleaned };
 }
 
+const withSmartAttendanceCallers = require('./smart-attendance-callers');
+
 module.exports = {
   id: 'wattanam.academic-management',
   health() { return { status: 'ready' }; },
   async activate(hostContext) {
     // Every route declares this plugin's messages (users see them instead of "Internal server error"),
     // and class membership comes from this plugin's tables.
-    const context = withPublicErrors(withPluginDirectory(hostContext));
+    // Smart Attendance's screens take attendance with this plugin's routes (smart-attendance-callers.js).
+    const context = withSmartAttendanceCallers(withPublicErrors(withPluginDirectory(hostContext)));
     context.logger.log('Wattanam Academic Management activated');
     const lookupUserMap = async (ids) => new Map(
       (await context.directory.lookupUsers(Array.from(new Set(ids.filter(Boolean))))).map((user) => [user.id, user]),
@@ -2354,7 +2358,11 @@ module.exports = {
     });
     const attendanceRoutes = new Map();
     const academicAttendanceContext = attendanceContext(context, attendanceRoutes);
+    // hooks the attendance runtime fills in for Smart Attendance stations (station-intake.js)
+    const stationHooks = {};
+    academicAttendanceContext.internal = stationHooks;
     await attendanceRuntime.activate(academicAttendanceContext);
+    registerStationIntake(context, { internal: stationHooks, decorateStudentRows });
     registerSelfAttendance(context);
     registerStaffAttendance(context);
     registerTranscripts(context, { requireClassStaffScope, requireAdministrativePrincipal, decorateStudentRows });

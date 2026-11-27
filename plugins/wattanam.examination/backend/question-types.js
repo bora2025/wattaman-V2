@@ -21,6 +21,10 @@ function parseMarked(text, pattern, prefix, splitAnswers = false) {
 function parseDragWords(text) { return parseMarked(text, /(\*[^*]+\*|#[^#]+#)/g, 'b'); }
 function parseFillBlanks(text) { return parseMarked(text, /(\*[^*]+\*)/g, 'fb', true); }
 function requireCount(items, count, message) { if (items.length < count) fail(message); return items; }
+// A picture or recording stored with the exam ("media:<id>", backend/media.js); older questions kept the picture inline.
+const MEDIA_REF = /^media:[0-9a-f-]{36}$/;
+const INLINE_IMAGE = /^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/]+=*$/;
+function picture(value) { const ref = clean(value); if (MEDIA_REF.test(ref) || (INLINE_IMAGE.test(ref) && ref.length < 3000000)) return ref; return ''; }
 
 function sanitizeQuestionData(type, raw = {}) {
   if (!QUESTION_TYPES.has(type)) fail(`question type must be one of ${[...QUESTION_TYPES].join(', ')}`);
@@ -38,15 +42,21 @@ function sanitizeQuestionData(type, raw = {}) {
   if (type === 'DRAG_WORDS') { const text = clean(raw.text); const blanks = parseDragWords(text).filter((item) => item.type === 'blank'); requireCount(blanks, 1, 'Drag the Words needs at least one marked blank'); return { text, distractors:list(raw.distractors).map(clean).filter(Boolean) }; }
   if (type === 'FILL_BLANKS') { const text = clean(raw.text); const blanks = parseFillBlanks(text).filter((item) => item.type === 'blank'); requireCount(blanks, 1, 'Fill in the Blanks needs at least one marked blank'); if (blanks.some((item) => !item.answers.length)) fail('Every blank needs an accepted answer'); return { text, style:raw.style && typeof raw.style === 'object' && !Array.isArray(raw.style) ? raw.style : {} }; }
   if (type === 'DRAG_DROP') {
-    const backgroundImage = clean(raw.backgroundImage); if (!backgroundImage) fail('Drag and Drop needs a background image');
+    const backgroundImage = picture(raw.backgroundImage); if (!backgroundImage) fail('Drag and Drop needs a background image');
     const zones = requireCount(list(raw.zones).filter((item) => clean(item?.id)).map((item) => ({ id:clean(item.id), x:Math.max(0,Math.min(100,Number(item.x)||0)), y:Math.max(0,Math.min(100,Number(item.y)||0)), width:Math.max(1,Math.min(100,Number(item.width)||10)), height:Math.max(1,Math.min(100,Number(item.height)||10)) })), 1, 'Drag and Drop needs a drop zone');
     const zoneIds = new Set(zones.map((item) => item.id));
     const items = requireCount(list(raw.items).filter((item) => clean(item?.label) && zoneIds.has(clean(item.correctZoneId))).map((item,index) => ({ id:clean(item.id)||`i${index}`, label:clean(item.label), correctZoneId:clean(item.correctZoneId) })), 1, 'Drag and Drop needs an item assigned to a valid zone');
     return { backgroundImage, zones, items };
   }
-  if (type === 'SPEAK_WORDS') { const prompt=clean(raw.prompt); const acceptedAnswers=list(raw.acceptedAnswers).map(clean).filter(Boolean); if (!prompt || !acceptedAnswers.length) fail('Speak the Words needs a prompt and accepted answer'); return { prompt, acceptedAnswers }; }
-  if (type === 'SPEAK_WORDS_SET') { const items=list(raw.items).map((item,index)=>({id:clean(item?.id)||`sw${index}`,prompt:clean(item?.prompt),acceptedAnswers:list(item?.acceptedAnswers).map(clean).filter(Boolean)})).filter((item)=>item.prompt&&item.acceptedAnswers.length); return { items:requireCount(items,1,'Speak the Words Set needs a prompt and accepted answer') }; }
-  if (type === 'DICTATION') { const script=clean(raw.script); if (!script) fail('Dictation needs a script'); const audioUrl=clean(raw.audioUrl); return audioUrl ? { script, audioUrl } : { script }; }
+  if (type === 'SPEAK_WORDS') { const prompt=clean(raw.prompt); const acceptedAnswers=list(raw.acceptedAnswers).map(clean).filter(Boolean); if (!prompt || !acceptedAnswers.length) fail('Speak the Words needs a prompt and accepted answer'); const lang=/^[a-z]{2,3}(-[A-Za-z0-9]{2,8}){0,2}$/.test(clean(raw.lang)) ? clean(raw.lang) : ''; return lang ? { prompt, acceptedAnswers, lang } : { prompt, acceptedAnswers }; }
+  if (type === 'SPEAK_WORDS_SET') { const items=list(raw.items).map((item,index)=>({id:clean(item?.id)||`sw${index}`,prompt:clean(item?.prompt),acceptedAnswers:list(item?.acceptedAnswers).map(clean).filter(Boolean)})).filter((item)=>item.prompt&&item.acceptedAnswers.length); const lang=/^[a-z]{2,3}(-[A-Za-z0-9]{2,8}){0,2}$/.test(clean(raw.lang)) ? clean(raw.lang) : ''; return { items:requireCount(items,1,'Speak the Words Set needs a prompt and accepted answer'), ...(lang ? { lang } : {}) }; }
+  if (type === 'DICTATION') {
+    const script=clean(raw.script); if (!script) fail('Dictation needs a script');
+    const audio=clean(raw.audio); if (audio && !MEDIA_REF.test(audio)) fail('Dictation audio must be a recording uploaded with the exam');
+    const audioUrl=clean(raw.audioUrl); const lang=/^[a-z]{2,3}(-[A-Za-z0-9]{2,8}){0,2}$/.test(clean(raw.lang)) ? clean(raw.lang) : '';
+    const rate=Math.min(2, Math.max(0.5, Number(raw.rate) || 1)); const plays=Math.min(10, Math.max(0, Math.round(Number(raw.plays) || 0)));
+    return { script, ...(audio ? { audio } : {}), ...(audioUrl ? { audioUrl } : {}), ...(lang ? { lang } : {}), rate, plays };
+  }
   fail('question type is invalid');
 }
 
@@ -58,9 +68,10 @@ function safeQuestionData(type, raw = {}) {
   if (type === 'DRAG_WORDS') { const parsed=parseDragWords(raw.text); return { segments:parsed.map((item)=>item.type==='blank'?{type:'blank',id:item.id,group:item.group}:item), wordBank:shuffle([...parsed.filter((item)=>item.type==='blank').map((item)=>({word:item.answer,group:item.group})),...list(raw.distractors).map((word)=>({word,group:'a'}))]) }; }
   if (type === 'FILL_BLANKS') return { segments:parseFillBlanks(raw.text).map((item)=>item.type==='blank'?{type:'blank',id:item.id}:item), style:raw.style||{} };
   if (type === 'DRAG_DROP') return { backgroundImage:raw.backgroundImage, zones:list(raw.zones).map(({id,x,y,width,height})=>({id,x,y,width,height})), items:shuffle(list(raw.items).map(({id,label})=>({id,label}))) };
-  if (type === 'SPEAK_WORDS') return { prompt:raw.prompt };
-  if (type === 'SPEAK_WORDS_SET') return { items:list(raw.items).map(({id,prompt})=>({id,prompt})) };
-  if (type === 'DICTATION') return raw.audioUrl ? { audioUrl:raw.audioUrl, script:raw.script } : { script:raw.script };
+  if (type === 'SPEAK_WORDS') return { prompt:raw.prompt, ...(raw.lang ? { lang:raw.lang } : {}) };
+  if (type === 'SPEAK_WORDS_SET') return { items:list(raw.items).map(({id,prompt})=>({id,prompt})), ...(raw.lang ? { lang:raw.lang } : {}) };
+  // The script goes to the screen only to be read aloud by the school page (as in mono; the screen never shows it).
+  if (type === 'DICTATION') return { script:raw.script, ...(raw.audio ? { audio:raw.audio } : {}), ...(raw.audioUrl ? { audioUrl:raw.audioUrl } : {}), ...(raw.lang ? { lang:raw.lang } : {}), rate:Number(raw.rate)||1, plays:Number(raw.plays)||0 };
   return {};
 }
 

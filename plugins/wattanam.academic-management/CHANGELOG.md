@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.35.1
+- The class lists (`GET classes`, `GET my/classes`) are opened to Examination 0.3.0, so its exam editor can offer the class an exam is for. The signed-in user still needs this plugin's permission.
+
+## 0.35.0
+Needs school core 0.1.36 or newer (partner screens), like Smart Attendance 0.3.0, so schools on an older core keep 0.34 and their own screens.
+Taking attendance moved to **Smart Attendance 0.3.0**. Install or update it first, or the school has no screen to take attendance.
+- Moved: Take Attendance (Student Attendance), Attendance Settings, the students' Scan Attendance, Self-Attendance Windows, Self-Attendance Review, Staff Attendance and Staff Attendance Reports. My Class and the Attendance Dashboard open the Smart Attendance screens.
+- Stay here: attendance records and rules, student permissions, corrections, alerts, student attendance reports, the dashboard and every document (progress book, record book, year reports).
+- The routes those screens use are opened to Smart Attendance (`backend/smart-attendance-callers.js`); the signed-in user still needs this plugin's permissions.
+
 ## 0.6.0
 
 - Students get their own **Scan Attendance** screen (`ui/student-attendance`) instead of a generic scanner form with hand-typed device ID, latitude and longitude.
