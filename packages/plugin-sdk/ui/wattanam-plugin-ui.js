@@ -131,7 +131,7 @@
   }
 
   // A request answered by the school page itself (not the plugin API).
-  function hostRequest(type, prefix, unavailable, extra) {
+  function hostRequest(type, prefix, unavailable, extra, waitMs) {
     return new Promise(function (resolve, reject) {
       var id = prefix + (++counter) + '_' + Date.now().toString(36);
       var timer = setTimeout(function () {
@@ -139,7 +139,7 @@
         delete pending[id];
         var error = new Error(unavailable);
         error.status = 0; reject(error);
-      }, 15000);
+      }, waitMs || 15000);
       pending[id] = { resolve: resolve, reject: reject, timer: timer };
       var message = { type: type, id: id };
       Object.keys(extra || {}).forEach(function (key) { message[key] = extra[key]; });
@@ -222,6 +222,32 @@
     keys: function () { return store('keys'); },
   };
 
+  // USB receipt printers through the school page (school core 0.1.36+, device "printer"; Chrome or Edge).
+  // job: { width: 58 | 80, lines: [{ text, right?, align?, bold?, size? } | { divider: true } | { image: dataUrl, width? }
+  //        | { feed: n }], cut?: true, drawer?: false }. The first print asks the person to choose the printer.
+  var printer = {
+    print: function (job) { return hostRequest('printer-print', 'p', 'The printer is unavailable (school core without the printer device, or no answer).', { job: job }, 120000); },
+    openDrawer: function () { return hostRequest('printer-drawer', 'p', 'The printer is unavailable.', undefined, 120000); },
+    status: function () { return hostRequest('printer-status', 'p', 'The printer is unavailable.'); },
+  };
+
+  // Speech through the school page (school core 0.1.36+, device "speech"): the frame has no microphone and
+  // no media, so the school page listens (returns { transcript, alternatives } only), reads text aloud and
+  // plays audio (a data:audio/… URL up to 6 MB). A new request stops the previous one.
+  var speech = {
+    listen: function (options) {
+      var o = options || {}; var extra = { seconds: Number(o.seconds) || 15 }; if (o.lang) extra.lang = String(o.lang);
+      return hostRequest('speech-listen', 'v', 'Speech recognition is unavailable (school core without the speech device, or no answer).', extra, (extra.seconds + 20) * 1000);
+    },
+    speak: function (text, options) {
+      var o = options || {}; var extra = { text: String(text || '') }; if (o.lang) extra.lang = String(o.lang); if (o.rate) extra.rate = Number(o.rate);
+      return hostRequest('speech-speak', 'v', 'Text-to-speech is unavailable (school core without the speech device, or no answer).', extra, 600000);
+    },
+    play: function (audio) { return hostRequest('speech-play', 'v', 'Audio is unavailable (school core without the speech device, or no answer).', { audio: String(audio || '') }, 1800000); },
+    status: function () { return hostRequest('speech-status', 'v', 'Speech is unavailable (school core without the speech device).', undefined, 5000); },
+    stop: function () { send({ type: 'speech-stop' }); },
+  };
+
   function autoResize() {
     // Measure the content, not the document: inside an iframe documentElement.scrollHeight is never
     // smaller than the frame itself, so the frame could grow but never shrink back.
@@ -267,5 +293,7 @@
     face: face,
     nfc: nfc,
     storage: storage,
+    printer: printer,
+    speech: speech,
   };
 })(window);

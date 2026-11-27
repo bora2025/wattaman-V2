@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="km">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Orders</title>
+  <link rel="stylesheet" href="../pos.css">
+  <style>
+    .layout { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+    tr.pick { cursor: pointer; } tr.pick:hover td { background: #f7f9fb; } tr[aria-selected="true"] td { background: var(--brand-soft); }
+    .void td { text-decoration: line-through; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <main id="app" aria-busy="true">
+    <div class="spread"><h1>🧾 Orders · ការបញ្ជាទិញ</h1>
+      <div class="row"><label>Day<input type="date" id="date"></label><label>Status<select id="status"><option value="">All</option><option value="OPEN">Open</option><option value="PAID">Paid</option><option value="VOIDED">Voided</option><option value="REFUNDED">Refunded</option></select></label><label>Order #<input id="number" inputmode="numeric" size="6"></label><button type="button" id="reload">Show</button></div>
+    </div>
+    <div id="error" class="notice bad" hidden></div>
+    <div id="message" class="notice ok" hidden></div>
+    <div class="layout">
+      <section class="panel"><table><thead><tr><th>#</th><th>Time</th><th>Where</th><th>Paid by</th><th class="num">Total</th><th>Status</th></tr></thead><tbody id="list"></tbody></table></section>
+      <section class="panel" id="detail" hidden>
+        <div class="spread"><h2 id="d-title"></h2><span id="d-status" class="badge"></span></div>
+        <p class="muted" id="d-meta"></p>
+        <table><tbody id="d-items"></tbody></table>
+        <div id="d-totals" style="margin-top:8px"></div>
+        <h2 style="margin-top:12px">Payments</h2><div id="d-payments"></div>
+        <div class="row" style="margin-top:12px">
+          <button type="button" id="reprint">🖨️ Reprint</button>
+          <button type="button" id="continue" hidden>➡️ Open in counter</button>
+          <button type="button" id="void" class="danger" hidden>Cancel order</button>
+          <button type="button" id="refund" class="danger" hidden>↩️ Refund</button>
+        </div>
+        <div id="refund-form" class="panel" hidden style="margin-top:10px">
+          <div class="row"><label>Amount<input id="r-amount" inputmode="decimal"></label><label>Paid back by<select id="r-method"><option value="CASH">Cash</option><option value="CARD">Card</option><option value="TRANSFER">Transfer</option><option value="KHQR">KHQR</option></select></label><label>Reason<input id="r-reason" maxlength="200"></label><button type="button" class="danger" id="r-save">Refund</button></div>
+        </div>
+      </section>
+    </div>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="../pos.js"></script>
+  <script src="orders.js"></script>
+</body>
+</html>

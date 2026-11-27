@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="km">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kitchen Display</title>
+  <link rel="stylesheet" href="../pos.css">
+  <style>
+    body { background: #111827; color: #f3f4f6; }
+    .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+    .bar h1 { color: #fff; margin-right: auto; }
+    .bar select, .bar button { background: #1f2937; color: #fff; border-color: #374151; }
+    .board { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+    .ticket { background: #1f2937; border-radius: 14px; border-top: 6px solid #60a5fa; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+    .ticket.late { border-top-color: #f59e0b; } .ticket.very-late { border-top-color: #ef4444; }
+    .ticket.ready { border-top-color: #22c55e; }
+    .ticket header { display: flex; justify-content: space-between; font-weight: 800; font-size: 18px; }
+    .ticket .meta { color: #9ca3af; font-size: 13px; }
+    .item { display: flex; gap: 8px; align-items: flex-start; padding: 6px; border-radius: 8px; background: #111827; cursor: pointer; border: 1px solid transparent; text-align: left; color: #f3f4f6; font-weight: 600; min-height: 0; }
+    .item .q { font-size: 18px; font-weight: 900; min-width: 28px; }
+    .item small { display: block; color: #9ca3af; font-weight: 500; }
+    .item.PREPARING { border-color: #f59e0b; } .item.READY { border-color: #22c55e; opacity: .7; }
+    .item .st { margin-left: auto; font-size: 11px; text-transform: uppercase; color: #9ca3af; }
+    .bump { background: #2563eb; color: #fff; border: 0; min-height: 48px; font-size: 16px; }
+    .empty { color: #9ca3af; }
+  </style>
+</head>
+<body>
+  <main id="app" aria-busy="true">
+    <div class="bar">
+      <h1>🍳 Kitchen · ផ្ទះបាយ</h1>
+      <select id="station" aria-label="Station"><option value="">All stations</option></select>
+      <span id="clock" class="badge"></span>
+      <button type="button" id="sound" class="small">🔔 Sound on</button>
+    </div>
+    <div id="error" class="notice bad" hidden></div>
+    <div id="board" class="board"></div>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="../pos.js"></script>
+  <script src="kitchen.js"></script>
+</body>
+</html>

@@ -1,9 +1,15 @@
 'use strict';
 
+const { isAdmin, withRoles } = require('./roles');
 const { randomUUID } = require('crypto');
 const { registerAttempts } = require('./attempts');
 const { registerGradebooks } = require('./gradebooks');
 const { QUESTION_TYPES, sanitizeQuestionData } = require('./question-types');
+const { withContract } = require('./errors');
+const { cleanRichText } = require('./rich-text');
+const { registerWorkspace } = require('./workspace');
+const { registerMedia } = require('./media');
+const ATTEMPT = 'plugin_wattanam_examination_attempt';
 const EXAM = 'plugin_wattanam_examination_exam';
 const QUESTION = 'plugin_wattanam_examination_question';
 const EXAM_STATUSES = new Set(['DRAFT', 'PUBLISHED', 'ACTIVE', 'COMPLETED']);
@@ -37,7 +43,7 @@ function questionInput(body) {
   const type = String(body?.type || 'MCQ').toUpperCase();
   if (!QUESTION_TYPES.has(type)) throw new Error('question type is invalid');
   const marks = type === 'TEXT' ? 0 : number(body?.marks, 'marks', 0, 1);
-  return { text: text(body?.text, 'question text', 10000), type, data: JSON.stringify(sanitizeQuestionData(type, body?.data || {})), marks, order: integer(body?.order, 'order', 0, 0), section: text(body?.section, 'section', 200, true) };
+  return { text: cleanRichText(text(body?.text, 'question text', 20000)), type, data: JSON.stringify(sanitizeQuestionData(type, body?.data || {})), marks, order: integer(body?.order, 'order', 0, 0), section: text(body?.section, 'section', 200, true) };
 }
 function examInput(body, partial = false) {
   const result = {};
@@ -62,14 +68,16 @@ async function validateReferences(context, values, principal) {
 async function ownedExam(db, examId, principal) {
   const rows = await db.query(`SELECT * FROM ${EXAM} WHERE "id"=$1`, [id(examId)]);
   if (!rows.length) throw new Error('Exam not found');
-  if (principal?.role !== 'ADMIN' && rows[0].createdByDirectoryUserId !== principal?.userId) throw new Error('Only the exam creator or an administrator may change this exam');
+  if (!isAdmin(principal) && rows[0].createdByDirectoryUserId !== principal?.userId) throw new Error('Only the exam creator or an administrator may change this exam');
   return rows[0];
 }
 
 module.exports = {
   id: 'wattanam.examination',
   health() { return { status: 'ready' }; },
-  async activate(context) {
+  async activate(host) {
+    // every route answers in the platform error contract (backend/errors.js)
+    const context = withRoles(withContract(host));
     const db = context.database; const view = 'wattanam.examination.exams.view'; const manage = 'wattanam.examination.exams.manage';
     context.permissions.register([
       { id: view, label: 'View examinations' }, { id: manage, label: 'Manage examinations' },
@@ -79,17 +87,19 @@ module.exports = {
     context.navigation.register([
       { id: 'exams', label: 'Examinations', href: '/plugins/wattanam.examination/exams', permission: view, dashboard: { title: 'Examination', description: 'Author exams, grade attempts, and manage gradebooks.', priority: 130 } },
       { id: 'gradebooks', label: 'Gradebooks', href: '/plugins/wattanam.examination/gradebooks', permission: 'wattanam.examination.gradebook.view' },
+      { id: 'my-exams', label: 'My Exams', href: '/plugins/wattanam.examination/my-exams', permission: 'wattanam.examination.attempts.take', dashboard: { title: 'My Exams', description: 'Take the exams of your class and see your results.', priority: 131 } },
+      { id: 'my-results', label: 'My Results', href: '/plugins/wattanam.examination/my-results', permission: 'wattanam.examination.attempts.take' },
     ]);
     context.routes.register({ method: 'GET', path: 'exams', permission: view, handler: async (request) => {
       const principal = request?.principal || {};
-      if (principal.role === 'ADMIN') return db.query(`SELECT * FROM ${EXAM} ORDER BY "createdAt" DESC LIMIT 500`);
+      if (isAdmin(principal)) return db.query(`SELECT * FROM ${EXAM} ORDER BY "createdAt" DESC LIMIT 500`);
       const classIds = await context.directory.classesForUser(principal.userId, principal.role);
       return db.query(`SELECT * FROM ${EXAM} WHERE "createdByDirectoryUserId"=$1 OR "academicClassId" = ANY($2::text[]) ORDER BY "createdAt" DESC LIMIT 500`, [principal.userId, classIds]);
     }});
     context.routes.register({ method: 'GET', path: 'exams/:id', permission: view, handler: async (request) => {
       const rows = await db.query(`SELECT * FROM ${EXAM} WHERE "id"=$1`, [id(request?.params?.id)]); if (!rows.length) throw new Error('Exam not found');
       const principal = request?.principal || {};
-      if (principal.role !== 'ADMIN' && rows[0].createdByDirectoryUserId !== principal.userId) {
+      if (!isAdmin(principal) && rows[0].createdByDirectoryUserId !== principal.userId) {
         const classes = await context.directory.classesForUser(principal.userId, principal.role);
         if (!rows[0].academicClassId || !classes.includes(rows[0].academicClassId)) throw new Error('Exam is outside your assigned classes');
       }
@@ -118,14 +128,18 @@ module.exports = {
     context.routes.register({ method: 'PATCH', path: 'exams/:id/status', permission: manage, handler: async (request) => {
       const examId = id(request?.params?.id); const existing = await ownedExam(db, examId, request?.principal || {});
       const status = String(request?.body?.status || '').toUpperCase(); if (!EXAM_STATUSES.has(status)) throw new Error('status is invalid');
-      const transitions = { DRAFT: ['PUBLISHED'], PUBLISHED: ['DRAFT', 'ACTIVE'], ACTIVE: ['COMPLETED'], COMPLETED: [] };
+      // as in mono's status menu (and "Activate now" straight from a draft), with V2's guards: no exam opens
+      // without questions, and one goes back to draft only while nobody has taken it
+      const transitions = { DRAFT: ['PUBLISHED', 'ACTIVE'], PUBLISHED: ['DRAFT', 'ACTIVE', 'COMPLETED'], ACTIVE: ['PUBLISHED', 'COMPLETED'], COMPLETED: ['ACTIVE', 'PUBLISHED'] };
       if (!transitions[existing.status]?.includes(status)) throw new Error(`Cannot transition exam from ${existing.status} to ${status}`);
-      if (status === 'PUBLISHED' && !(await db.query(`SELECT "id" FROM ${QUESTION} WHERE "examId"=$1 LIMIT 1`, [examId])).length) throw new Error('An exam must contain at least one question before publication');
+      if (status !== 'DRAFT' && !(await db.query(`SELECT "id" FROM ${QUESTION} WHERE "examId"=$1 LIMIT 1`, [examId])).length) throw new Error('An exam must contain at least one question before publication');
+      if (status === 'DRAFT' && (await db.query(`SELECT "id" FROM ${ATTEMPT} WHERE "examId"=$1 LIMIT 1`, [examId])).length) throw new Error('Cannot transition exam back to DRAFT: students have already taken it');
       await db.execute(`UPDATE ${EXAM} SET "status"=$2,"updatedAt"=CURRENT_TIMESTAMP WHERE "id"=$1`, [examId, status]); return { id: examId, status };
     }});
     context.routes.register({ method: 'DELETE', path: 'exams/:id', permission: manage, handler: async (request) => {
       const examId = id(request?.params?.id); const existing = await ownedExam(db, examId, request?.principal || {});
-      if (existing.status !== 'DRAFT') throw new Error('Only draft exams may be deleted');
+      // a draft, or an exam nobody has taken yet (attempts and their scores are never deleted with an exam)
+      if (existing.status !== 'DRAFT' && (await db.query(`SELECT "id" FROM ${ATTEMPT} WHERE "examId"=$1 LIMIT 1`, [examId])).length) throw new Error('Only draft exams, or exams nobody has taken, may be deleted');
       await db.execute(`DELETE FROM ${EXAM} WHERE "id"=$1`, [examId]); return { deleted: true, id: examId };
     }});
     context.routes.register({ method: 'POST', path: 'exams/:id/questions', permission: manage, handler: async (request) => {
@@ -138,7 +152,7 @@ module.exports = {
     context.routes.register({ method: 'PUT', path: 'questions/:id', permission: manage, handler: async (request) => {
       const questionId = id(request?.params?.id); const rows = await db.query(`SELECT q.*,e."createdByDirectoryUserId",e."status" AS "examStatus" FROM ${QUESTION} q JOIN ${EXAM} e ON e."id"=q."examId" WHERE q."id"=$1`, [questionId]);
       if (!rows.length) throw new Error('Question not found');
-      if (request?.principal?.role !== 'ADMIN' && rows[0].createdByDirectoryUserId !== request?.principal?.userId) throw new Error('Only the exam creator or an administrator may change this question');
+      if (!isAdmin(request?.principal) && rows[0].createdByDirectoryUserId !== request?.principal?.userId) throw new Error('Only the exam creator or an administrator may change this question');
       if (rows[0].examStatus !== 'DRAFT') throw new Error('Only draft exams may be edited');
       const values = questionInput(request?.body || {}); await db.execute(`UPDATE ${QUESTION} SET "text"=$2,"type"=$3,"data"=$4::jsonb,"marks"=$5,"order"=$6,"section"=$7 WHERE "id"=$1`, [questionId, values.text, values.type, values.data, values.marks, values.order, values.section]);
       return (await db.query(`SELECT * FROM ${QUESTION} WHERE "id"=$1`, [questionId]))[0];
@@ -146,11 +160,13 @@ module.exports = {
     context.routes.register({ method: 'DELETE', path: 'questions/:id', permission: manage, handler: async (request) => {
       const questionId = id(request?.params?.id); const rows = await db.query(`SELECT q."id",e."createdByDirectoryUserId",e."status" AS "examStatus" FROM ${QUESTION} q JOIN ${EXAM} e ON e."id"=q."examId" WHERE q."id"=$1`, [questionId]);
       if (!rows.length) throw new Error('Question not found');
-      if (request?.principal?.role !== 'ADMIN' && rows[0].createdByDirectoryUserId !== request?.principal?.userId) throw new Error('Only the exam creator or an administrator may change this question');
+      if (!isAdmin(request?.principal) && rows[0].createdByDirectoryUserId !== request?.principal?.userId) throw new Error('Only the exam creator or an administrator may change this question');
       if (rows[0].examStatus !== 'DRAFT') throw new Error('Only draft exams may be edited');
       await db.execute(`DELETE FROM ${QUESTION} WHERE "id"=$1`, [questionId]); return { deleted: true, id: questionId };
     }});
     registerAttempts(context);
     registerGradebooks(context);
+    registerWorkspace(context);
+    registerMedia(context);
   },
 };

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="km">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Menu</title>
+  <link rel="stylesheet" href="../pos.css">
+  <style>
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 12px; align-items: start; }
+    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+    .thumb { width: 44px; height: 44px; object-fit: cover; border-radius: 8px; background: #eef0f3; display: block; }
+    tr.pick { cursor: pointer; } tr.pick:hover td { background: #f7f9fb; }
+    tr.off td { opacity: .5; }
+    .sub-row { display: grid; grid-template-columns: 1fr 1fr 110px 90px auto; gap: 6px; margin-bottom: 6px; }
+    .checks { display: flex; flex-wrap: wrap; gap: 8px; }
+    .checks label { display: flex; gap: 4px; align-items: center; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <main id="app" aria-busy="true">
+    <h1>📋 Menu · មុខម្ហូប</h1>
+    <div class="tabs" id="tabs">
+      <button type="button" data-tab="items" aria-pressed="true">Items</button>
+      <button type="button" data-tab="categories" aria-pressed="false">Categories</button>
+      <button type="button" data-tab="groups" aria-pressed="false">Add-ons (milk, sugar…)</button>
+      <button type="button" data-tab="import" aria-pressed="false">Import</button>
+    </div>
+    <div id="error" class="notice bad" hidden></div>
+    <div id="message" class="notice ok" hidden></div>
+
+    <div class="layout" data-pane="items">
+      <section class="panel">
+        <div class="spread"><input id="item-search" type="search" placeholder="Search items"><button type="button" class="primary" id="item-new">➕ New item</button></div>
+        <table><tbody id="item-list"></tbody></table>
+      </section>
+      <section class="panel" id="item-form" hidden>
+        <h2 id="item-title">New item</h2>
+        <div class="row">
+          <label>Name<input id="i-name" maxlength="120"></label><label>Khmer name<input id="i-namekh" maxlength="120" class="kh"></label>
+          <label>Category<select id="i-category"></select></label>
+        </div>
+        <div class="row">
+          <label>Price<input id="i-price" inputmode="decimal" size="8"></label><label>Currency<select id="i-currency"><option value="USD">$ dollars</option><option value="KHR">៛ riel</option></select></label>
+          <label>Cost<input id="i-cost" inputmode="decimal" size="8"></label><label>SKU<input id="i-sku" maxlength="60" size="10"></label><label>Barcode<input id="i-barcode" maxlength="60" size="14"></label>
+        </div>
+        <div class="row"><label>Description<input id="i-description" maxlength="500" size="40"></label><label>Order<input id="i-sort" type="number" style="width:80px"></label></div>
+        <div class="row"><label class="checks"><label><input type="checkbox" id="i-taxable" checked> VAT applies</label><label><input type="checkbox" id="i-active" checked> On the menu</label></label></div>
+        <div class="row"><label>Photo<input type="file" id="i-photo" accept="image/*"></label><img id="i-photo-preview" class="thumb" alt="" hidden><button type="button" class="small" id="i-photo-remove" hidden>Remove photo</button></div>
+        <h2 style="margin-top:12px">Sizes <span class="muted">(each with its own price; leave empty for one price)</span></h2>
+        <div id="i-variants"></div><button type="button" class="small" id="i-variant-add">➕ Size</button>
+        <h2 style="margin-top:12px">Add-ons offered</h2><div class="checks" id="i-groups"></div>
+        <div class="row" style="margin-top:12px"><button type="button" class="primary" id="i-save">Save</button><button type="button" id="i-cancel">Close</button></div>
+      </section>
+    </div>
+
+    <section class="panel" data-pane="categories" hidden>
+      <div class="row"><label>Name<input id="c-name" maxlength="80"></label><label>Khmer name<input id="c-namekh" maxlength="80" class="kh"></label><label>Colour<input id="c-color" type="color" value="#0f766e"></label><label>Order<input id="c-sort" type="number" value="0" style="width:80px"></label><label class="checks"><label><input type="checkbox" id="c-active" checked> Shown</label></label><button type="button" class="primary" id="c-save">Add category</button></div>
+      <table><tbody id="c-list"></tbody></table>
+    </section>
+
+    <section class="panel" data-pane="groups" hidden>
+      <div class="row"><label>Group name<input id="g-name" maxlength="80" placeholder="Milk, Sugar level, Extra shot"></label><label>Khmer name<input id="g-namekh" maxlength="80" class="kh"></label><label>Min<input id="g-min" type="number" min="0" value="0" style="width:70px"></label><label>Max<input id="g-max" type="number" min="1" value="1" style="width:70px"></label><label class="checks"><label><input type="checkbox" id="g-required"> Must choose</label><label><input type="checkbox" id="g-active" checked> On</label></label></div>
+      <div id="g-addons"></div><button type="button" class="small" id="g-addon-add">➕ Choice</button>
+      <div class="row" style="margin-top:10px"><button type="button" class="primary" id="g-save">Save group</button><button type="button" id="g-new">New group</button></div>
+      <table style="margin-top:12px"><tbody id="g-list"></tbody></table>
+    </section>
+
+    <section class="panel" data-pane="import" hidden>
+      <h2>Import items from a spreadsheet (CSV)</h2>
+      <p class="muted">Columns: <code>category, name, nameKh, price, currency, sku, barcode</code>. Price in dollars (3.50) or riel (5000) as the currency says. Up to 1,000 rows; new categories are created.</p>
+      <div class="row"><input type="file" id="csv" accept=".csv,text/csv"><button type="button" id="csv-template">Download a template</button></div>
+      <pre id="csv-result" class="muted"></pre>
+    </section>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="../pos.js"></script>
+  <script src="menu.js"></script>
+</body>
+</html>

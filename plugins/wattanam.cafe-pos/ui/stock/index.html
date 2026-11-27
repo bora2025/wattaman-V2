@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="km">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Stock</title>
+  <link rel="stylesheet" href="../pos.css">
+  <style>
+    .layout { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+    tr.pick { cursor: pointer; } tr.pick:hover td { background: #f7f9fb; }
+    .recipe-row { display: grid; grid-template-columns: 1fr 120px 100px auto; gap: 6px; margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+  <main id="app" aria-busy="true">
+    <h1>📦 Stock · ស្តុក</h1>
+    <div class="tabs"><button type="button" data-tab="supplies" aria-pressed="true">Supplies</button><button type="button" data-tab="recipes" aria-pressed="false">Recipes</button></div>
+    <div id="error" class="notice bad" hidden></div>
+    <div id="message" class="notice ok" hidden></div>
+
+    <div class="layout" data-pane="supplies">
+      <section class="panel">
+        <div class="spread"><h2>Supplies</h2><button type="button" id="s-new" class="primary">➕ New supply</button></div>
+        <table><thead><tr><th>Supply</th><th class="num">In stock</th><th></th></tr></thead><tbody id="s-list"></tbody></table>
+      </section>
+      <section class="panel" id="s-form" hidden>
+        <h2 id="s-title">New supply</h2>
+        <div class="row"><label>Name<input id="s-name" maxlength="80"></label><label>Unit<input id="s-unit" maxlength="20" value="pcs" size="6"></label><label>Warn below<input id="s-low" inputmode="decimal" size="6" value="0"></label><label id="s-opening-label">Opening stock<input id="s-opening" inputmode="decimal" size="6" value="0"></label></div>
+        <div class="row"><label>Cost per unit<input id="s-cost" inputmode="decimal" size="8"></label><label>Currency<select id="s-currency"><option value="USD">$</option><option value="KHR">៛</option></select></label><label class="row"><input type="checkbox" id="s-active" checked> In use</label><button type="button" class="primary" id="s-save">Save</button></div>
+        <div id="s-moves" hidden>
+          <h2 style="margin-top:12px">Record</h2>
+          <div class="row"><label>What<select id="m-kind"><option value="RECEIVE">Delivery received (+)</option><option value="WASTE">Waste / spoiled (−)</option><option value="COUNT">Stock count (set to)</option></select></label><label>Quantity<input id="m-qty" inputmode="decimal" size="8"></label><label>Note<input id="m-note" maxlength="200"></label><button type="button" id="m-save">Record</button></div>
+          <h2 style="margin-top:12px">History</h2>
+          <table><tbody id="m-list"></tbody></table>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel" data-pane="recipes" hidden>
+      <p class="muted">What one of an item uses. When an order is paid, its recipes take the supplies; a full refund puts them back.</p>
+      <div class="row"><label>Item<select id="r-product"></select></label></div>
+      <div id="r-lines" style="margin-top:10px"></div>
+      <div class="row"><button type="button" class="small" id="r-add">➕ Supply</button><button type="button" class="primary" id="r-save">Save recipe</button></div>
+    </section>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="../pos.js"></script>
+  <script src="stock.js"></script>
+</body>
+</html>

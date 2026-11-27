@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My Results</title>
+  <link rel="stylesheet" href="../exam.css">
+</head>
+<body class="student">
+  <main id="app" class="narrow" aria-busy="true">
+    <div class="head">
+      <div>
+        <h1>📊 My Results <span class="kh muted" style="font-weight:600;font-size:16px">· លទ្ធផលរបស់ខ្ញុំ</span></h1>
+        <p class="sub">Your submitted exams, scores and your teachers' feedback</p>
+      </div>
+      <button type="button" class="sm" id="exams">📝 My exams</button>
+    </div>
+    <div id="error" class="notice bad" hidden></div>
+    <div id="stats" class="grid4" style="margin-bottom:16px" hidden></div>
+    <div id="list" class="stack"></div>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="../exam.js"></script>
+  <script src="results.js"></script>
+</body>
+</html>

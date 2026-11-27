@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="km">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Customers</title>
+  <link rel="stylesheet" href="../pos.css">
+  <style>
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+    tr.pick { cursor: pointer; } tr.pick:hover td { background: #f7f9fb; }
+  </style>
+</head>
+<body>
+  <main id="app" aria-busy="true">
+    <h1>👥 Customers · អតិថិជន</h1>
+    <div id="error" class="notice bad" hidden></div>
+    <div id="message" class="notice ok" hidden></div>
+    <div class="layout">
+      <section class="panel">
+        <div class="spread"><input id="search" type="search" placeholder="Name or phone"><button type="button" class="primary" id="new">➕ New customer</button></div>
+        <table><thead><tr><th>Name</th><th>Phone</th><th class="num">Points</th></tr></thead><tbody id="list"></tbody></table>
+      </section>
+      <section class="panel" id="form" hidden>
+        <h2 id="title">New customer</h2>
+        <div class="row"><label>Name<input id="name" maxlength="100"></label><label>Phone<input id="phone" inputmode="tel" maxlength="20"></label><label>Note<input id="note" maxlength="300"></label><label class="row"><input type="checkbox" id="active" checked> Active</label><button type="button" class="primary" id="save">Save</button></div>
+        <div id="detail" hidden>
+          <h2 style="margin-top:12px">Points: <span id="points"></span></h2>
+          <div class="row"><label>Add or remove points<input id="adjust" type="number" step="1"></label><label>Reason<input id="adjust-note" maxlength="200"></label><button type="button" id="adjust-save">Apply</button></div>
+          <h2 style="margin-top:12px">History</h2><table><tbody id="history"></tbody></table>
+          <h2 style="margin-top:12px">Recent orders</h2><table><tbody id="orders"></tbody></table>
+        </div>
+      </section>
+    </div>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="../pos.js"></script>
+  <script src="customers.js"></script>
+</body>
+</html>

@@ -113,3 +113,21 @@ academic.navigate('student-permissions');   // a page of the partner
 A screen moved from the partner keeps the devices registered there: `WattanamPluginUI.deviceId('<partner id>')` returns the partner's identifier for this browser (the screen must declare `device-id` and list the partner in `apis`).
 
 The school page marks each such call with the screen's plugin. A route that does not list that plugin answers 404, and the signed-in user still needs the partner's permission. A page with partner data sources can use these components only: heading, text, status, card, metric, table, form, detail, chart, print, scanner, filter, actions and app. `wattanam-plugin check` checks that partners are dependencies.
+
+### Receipt printers (school core 0.1.36+)
+
+A screen declaring the `printer` device can print on a USB thermal receipt printer (ESC/POS, 58 or 80 mm) and open the cash drawer wired to it. The school page draws the receipt, Khmer included, and sends it as an image:
+
+```js
+await WattanamPluginUI.printer.print({ width: 80, cut: true, drawer: false, lines: [
+  { text: 'Kafe', align: 'center', bold: true, size: 2 },
+  { divider: true },
+  { text: '2 × Iced Latte', right: '$7.00' },
+  { image: 'data:image/png;base64,…', width: 0.6 },   // a logo or KHQR
+] });
+await WattanamPluginUI.printer.openDrawer();
+```
+
+- **Choosing the printer:** the first print asks the person to choose it, once per browser.
+- **Browser support:** it works in Chrome and Edge (WebUSB). Elsewhere the call fails and the screen should fall back to `window.print()`.
+- **What the screen sends:** only plain lines and pictures, never HTML.
