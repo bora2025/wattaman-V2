@@ -229,9 +229,12 @@ test('Academic Management exposes the streamlined administration and attendance 
     navigation.map((item) => item.id),
     ['attendance-dashboard', 'study-years', 'classes', 'student-id-cards', 'officers', 'staff-id-cards', 'score-sheets', 'score-entry', 'student-ranking', 'year-ranking', 'honor-roll', 'year-honor-roll', 'subject-ranking', 'year-report-cards', 'record-books', 'progress-books', 'my-class', 'student-permissions', 'attendance-corrections', 'attendance-alerts', 'attendance-reports'],
   );
-  // Open to Smart Attendance's screens, and only routes this plugin registers.
+  // Open to Smart Attendance's screens, and only routes this plugin registers; the class lists also to
+  // Examination's exam editor (0.35.1).
   const shapes = new Map([...routes].map(([key, route]) => [key.replace(/:[^/]+/g, ':id'), route]));
-  for (const route of smartCallers) assert.deepEqual(shapes.get(route)?.callers, ['wattanam.smart-attendance'], `${route} is registered and open to Smart Attendance`);
+  const examCallers = ['GET classes', 'GET my/classes'];
+  for (const route of smartCallers) assert.deepEqual(shapes.get(route)?.callers, examCallers.includes(route) ? ['wattanam.smart-attendance', 'wattanam.examination'] : ['wattanam.smart-attendance'], `${route} is registered and open to its partner screens`);
+  assert.deepEqual(require(path.join(root, 'backend', 'smart-attendance-callers.js')).EXAM_ROUTES, examCallers);
   assert.equal(routes.get('PATCH records/:id/correct')?.callers, undefined, 'corrections stay with Academic Management');
   assert.equal(navigation.find((item) => item.id === 'attendance-reports')?.label, 'Student Attendance Reports');
 

@@ -37,7 +37,7 @@ function validatePluginUiFiles(root, descriptor) {
       else if (!fs.existsSync(path.join(root, entry))) problems.push(`app ${component.id}: entry ${entry} is missing`);
       else entries.push(entry);
       const devices = component.options && component.options.devices;
-      if (devices !== undefined && (!Array.isArray(devices) || new Set(devices).size !== devices.length || devices.some((device) => !['scanner', 'location', 'device-id', 'face', 'nfc', 'storage', 'printer'].includes(device)))) problems.push(`app ${component.id}: devices must be a list of scanner, location, device-id, face, nfc, storage, printer`);
+      if (devices !== undefined && (!Array.isArray(devices) || new Set(devices).size !== devices.length || devices.some((device) => !['scanner', 'location', 'device-id', 'face', 'nfc', 'storage', 'printer', 'speech'].includes(device)))) problems.push(`app ${component.id}: devices must be a list of scanner, location, device-id, face, nfc, storage, printer, speech`);
       const apis = component.options && component.options.apis;
       if (apis !== undefined && (!Array.isArray(apis) || apis.length > 5 || new Set(apis).size !== apis.length || apis.some((id) => !partners.has(id)))) problems.push(`app ${component.id}: apis must list dependencies of the plugin (at most 5)`);
     }
