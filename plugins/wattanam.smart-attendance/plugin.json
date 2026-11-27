@@ -3,7 +3,7 @@
   "id": "wattanam.smart-attendance",
   "name": "Smart Attendance",
   "description": "Take attendance in one place: by hand, QR code, NFC card or face, at stations, terminals and phones; students' self-scan, staff and workforce attendance. Records stay in Academic Management (schools) or Organizing Management (organizations).",
-  "version": "0.3.0",
+  "version": "0.4.1",
   "requiresCore": ">=0.1.36 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",

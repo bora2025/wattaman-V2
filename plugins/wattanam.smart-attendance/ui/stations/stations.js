@@ -60,7 +60,7 @@
   }
   function fillSettings(s) {
     $('cooldown').value = s.cooldownSeconds; $('offline').value = s.maxOfflineHours;
-    $('accept').value = s.faceAccept; $('review').value = s.faceReview; $('margin').value = s.faceMargin; $('liveness').checked = s.livenessRequired;
+    $('accept').value = s.faceAccept; $('review').value = s.faceReview; $('margin').value = s.faceMargin; $('liveness').checked = s.livenessRequired; $('wattaman-auto').checked = s.wattamanAutoApprove !== false;
   }
   // a terminal's key: shown once, with what to put in the terminal (or its bridge program)
   function showKey(r) {
@@ -93,7 +93,7 @@
   $('reload').addEventListener('click', function () { say('message'); load().catch(function (e) { say('error', e.message); }); });
   $('settings').addEventListener('submit', function (event) {
     event.preventDefault(); say('error'); say('message');
-    ui.api.put('settings', { cooldownSeconds: Number($('cooldown').value), maxOfflineHours: Number($('offline').value), faceAccept: Number($('accept').value), faceReview: Number($('review').value), faceMargin: Number($('margin').value), livenessRequired: $('liveness').checked })
+    ui.api.put('settings', { cooldownSeconds: Number($('cooldown').value), maxOfflineHours: Number($('offline').value), faceAccept: Number($('accept').value), faceReview: Number($('review').value), faceMargin: Number($('margin').value), livenessRequired: $('liveness').checked, wattamanAutoApprove: $('wattaman-auto').checked })
       .then(function (s) { fillSettings(s); say('message', 'Settings saved.'); })
       .catch(function (e) { say('error', e.message || 'The settings could not be saved.'); });
   });

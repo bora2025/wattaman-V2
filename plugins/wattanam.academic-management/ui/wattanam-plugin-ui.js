@@ -69,6 +69,8 @@
       if (typeof handlers.onClose === 'function') handlers.onClose();
     } else if (data.type === 'face-result' && faceHandlers) {
       if (typeof faceHandlers.onResult === 'function' && data.result && typeof data.result === 'object') faceHandlers.onResult(data.result);
+    } else if (data.type === 'face-code' && faceHandlers) {
+      if (typeof faceHandlers.onCode === 'function' && typeof data.text === 'string') faceHandlers.onCode(data.text, data.source === 'USB' ? 'USB' : 'CAMERA');
     } else if ((data.type === 'face-closed' || data.type === 'face-error') && faceHandlers) {
       var face = faceHandlers;
       faceHandlers = null;
@@ -185,12 +187,15 @@
   };
 
   // Faces: the school page runs the camera and the face model and returns face vectors only.
+  // Automatic station (school core 0.1.36+): codes: true also reads QR codes from the same camera and USB
+  // readers (needs the scanner device) and calls onCode(text, 'CAMERA' | 'USB'); faces: false reads codes only.
   var face = {
     start: function (handlers) {
       faceHandlers = handlers || {};
       var message = { type: 'face-start', mode: faceHandlers.mode === 'enroll' ? 'enroll' : 'identify', liveness: faceHandlers.liveness !== false };
       if (faceHandlers.title) message.title = String(faceHandlers.title);
       if (faceHandlers.samples) message.samples = Number(faceHandlers.samples);
+      if (faceHandlers.codes) { message.codes = true; message.faces = faceHandlers.faces !== false; }
       send(message);
     },
     stop: function () { send({ type: 'face-stop' }); },
