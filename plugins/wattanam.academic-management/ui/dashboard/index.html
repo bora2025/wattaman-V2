@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Attendance Dashboard</title>
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+  <main id="app" aria-busy="true">
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-left">
+        <p class="greeting" id="greeting">Good morning</p>
+        <h1 id="date-title">Attendance Dashboard</h1>
+        <div class="hero-meta">
+          <span class="clock"><span class="muted-light">School time</span> <strong id="clock">--:--:--</strong></span>
+          <span class="live" id="live"><span class="dot"></span><span id="live-text">Live</span></span>
+        </div>
+        <div class="hero-controls">
+          <input type="date" id="date" aria-label="Dashboard date">
+          <button type="button" id="today" class="ghost">⏎ Today</button>
+          <button type="button" id="refresh" class="ghost">↻ Refresh</button>
+        </div>
+        <p class="holiday" id="holiday" hidden></p>
+      </div>
+      <div class="hero-right">
+        <div class="gauge" id="gauge"></div>
+        <div class="kpis" id="kpis"></div>
+      </div>
+    </section>
+
+    <p id="error" class="notice danger" role="alert" hidden></p>
+
+    <!-- Quick actions -->
+    <section class="card">
+      <div class="card-head"><div><p class="eyebrow">Workspace</p><h2>Quick actions</h2></div><span class="muted small">Open the tools you use every day</span></div>
+      <div class="actions" id="actions"></div>
+    </section>
+
+    <!-- Insights -->
+    <section class="insights" id="insights"></section>
+
+    <!-- Student summary -->
+    <section class="card">
+      <div class="card-head">
+        <div class="title-bar violet"><h2>Student summary</h2></div>
+        <button type="button" id="open-milestones" class="pill-btn">🏆 Perfect attendance milestones <span id="milestone-badge" class="badge" hidden></span></button>
+      </div>
+      <div class="summary" id="student-summary"></div>
+      <p class="muted small" id="student-permissions"></p>
+    </section>
+
+    <!-- Staff summary -->
+    <section class="card">
+      <div class="card-head"><div class="title-bar cyan"><h2>Staff summary</h2></div></div>
+      <div class="summary" id="staff-summary"></div>
+      <p class="muted small" id="staff-permissions"></p>
+    </section>
+
+    <!-- Milestones -->
+    <section class="card" id="milestones" hidden>
+      <div class="card-head">
+        <div><h2>🏆 Perfect attendance milestones</h2><p class="muted small" id="milestone-help"></p></div>
+        <button type="button" id="close-milestones" class="ghost-dark">Close</button>
+      </div>
+      <div class="tabs" id="milestone-tabs"></div>
+      <input type="search" id="milestone-search" placeholder="Search students…" aria-label="Search milestone students">
+      <div class="people-grid" id="milestone-list"></div>
+    </section>
+
+    <!-- Class progress -->
+    <section class="card">
+      <div class="card-head">
+        <div class="title-bar emerald"><h2>Class attendance progress</h2></div>
+        <div class="inline-controls">
+          <input type="search" id="class-search" placeholder="Search classes…" aria-label="Search classes">
+          <select id="class-sort" aria-label="Sort classes"><option value="name">Name</option><option value="pctAsc">Lowest first</option><option value="pctDesc">Highest first</option></select>
+        </div>
+      </div>
+      <div class="progress" id="class-progress"></div>
+    </section>
+
+    <!-- Distribution -->
+    <section class="two">
+      <div class="card"><h3>Students — attendance distribution</h3><div class="donut-wrap" id="student-donut"></div></div>
+      <div class="card"><h3>Staff — attendance distribution</h3><div class="donut-wrap" id="staff-donut"></div></div>
+    </section>
+
+    <!-- Monthly trend -->
+    <section class="card">
+      <div class="card-head">
+        <h3>Monthly attendance trend</h3>
+        <div class="inline-controls">
+          <select id="trend-month" aria-label="Month"></select>
+          <select id="trend-year" aria-label="Year"></select>
+        </div>
+      </div>
+      <div id="trend" class="trend"></div>
+      <div class="legend" id="trend-legend"></div>
+    </section>
+
+    <!-- Perfect attendance this month -->
+    <section class="card">
+      <div class="card-head"><div><h3>⭐ Perfect attendance this month</h3><p class="muted small">Students present every recorded session this month — no absence, late or permission.</p></div><span class="badge big" id="perfect-count">0</span></div>
+      <div class="people-grid" id="perfect-list"></div>
+      <button type="button" id="perfect-more" class="ghost-dark" hidden>Show all</button>
+    </section>
+
+    <!-- Detailed table -->
+    <section class="card">
+      <div class="card-head">
+        <h3>Detailed list</h3>
+        <div class="inline-controls">
+          <button type="button" id="clear-filters" class="ghost-dark" hidden>✕ Clear filter</button>
+          <button type="button" id="export" class="ghost-dark">↓ Export CSV</button>
+        </div>
+      </div>
+      <div class="filters">
+        <input type="search" id="search" placeholder="Search name, ID, class…" aria-label="Search people">
+        <select id="role" aria-label="Role"><option value="all">All roles</option><option value="Student">Students</option><option value="Staff">Staff</option></select>
+        <select id="group" aria-label="Class or department"></select>
+      </div>
+      <div class="status-pills" id="status-pills"></div>
+      <div class="table-wrap">
+        <table><thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Class / Department</th><th>Status</th><th>Address / Position</th></tr></thead><tbody id="rows"></tbody></table>
+        <p class="empty" id="rows-empty" hidden>Nobody matches these filters.</p>
+      </div>
+      <button type="button" id="rows-more" class="ghost-dark" hidden>Show more</button>
+    </section>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="dashboard.js"></script>
+</body>
+</html>

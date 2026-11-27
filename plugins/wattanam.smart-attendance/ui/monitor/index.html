@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="km">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Station Monitor</title>
+  <link rel="stylesheet" href="../smart.css">
+  <style>
+    .totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 14px; }
+    .total { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; }
+    .total b { display: block; font-size: 26px; }
+    .total span { font-size: 12px; color: var(--muted); font-weight: 700; }
+    td.kh { font-family: var(--khmer); }
+  </style>
+</head>
+<body>
+  <main id="app" aria-busy="true">
+    <header class="appbar">
+      <div><h1>📊 Station Monitor</h1><p>Every scan and card tap at the attendance stations, and what was recorded.</p></div>
+      <div class="row">
+        <label>Day<input id="day" type="date"></label>
+        <label>Show<select id="status">
+          <option value="">Everything</option><option value="RECORDED">Recorded</option><option value="ALREADY_RECORDED">Already recorded</option>
+          <option value="REJECTED">Not recorded (rejected)</option><option value="NOT_SENT">Not recognised / not sent</option><option value="PENDING">Waiting</option>
+        </select></label>
+        <label style="flex-direction:row;display:flex;gap:6px;align-items:center"><input id="live" type="checkbox" checked> Live</label>
+      </div>
+    </header>
+    <p id="error" class="notice bad" role="alert" hidden></p>
+    <div class="totals" id="totals"></div>
+    <section class="panel">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Time</th><th>Station</th><th>Student</th><th>How</th><th>Result</th><th>Reason</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="monitor.js"></script>
+</body>
+</html>

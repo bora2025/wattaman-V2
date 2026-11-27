@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My Class</title>
+  <link rel="stylesheet" href="my-class.css">
+</head>
+<body>
+  <main id="app" aria-busy="true">
+    <p id="error" class="notice danger" role="alert" hidden></p>
+
+    <!-- the class -->
+    <section class="hero" aria-labelledby="class-name">
+      <div class="hero-top">
+        <div>
+          <p class="eyebrow">🏫 My Class <span class="kh">ថ្នាក់របស់ខ្ញុំ</span></p>
+          <h1 id="class-name">…</h1>
+          <p id="class-meta" class="meta"></p>
+        </div>
+        <label class="class-pick" id="class-pick-wrap" hidden>Class<select id="class" aria-label="Class"></select></label>
+      </div>
+      <div class="stats" id="stats"></div>
+      <div class="actions">
+        <button type="button" class="action primary" data-go="attendance">📷 Take attendance</button>
+        <button type="button" class="action" data-go="student-permissions">📝 Student permission</button>
+        <button type="button" class="action" data-go="score-entry">📊 Enter scores</button>
+      </div>
+    </section>
+
+    <div class="layout">
+      <!-- the students -->
+      <section class="card students-card" aria-labelledby="students-title">
+        <div class="list-head">
+          <h2 id="students-title">Students <span id="count" class="count"></span></h2>
+          <div class="list-tools">
+            <input id="search" type="search" placeholder="Search name or ID…" aria-label="Search students">
+            <button type="button" id="add-student" class="add" hidden>＋ Add student</button>
+          </div>
+        </div>
+        <p id="notice" class="notice ok" role="status" hidden></p>
+        <div class="filters" role="tablist" aria-label="Today's status" id="filters"></div>
+        <div id="students" class="students"></div>
+        <p id="empty" class="empty" hidden>No student matches.</p>
+      </section>
+
+      <!-- one student, or the class's recent permissions -->
+      <aside class="card side" id="side" aria-live="polite"></aside>
+    </div>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="../student-details.js"></script>
+  <script src="my-class.js"></script>
+</body>
+</html>

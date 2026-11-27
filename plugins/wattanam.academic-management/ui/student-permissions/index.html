@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Student Permissions</title>
+  <link rel="stylesheet" href="student-permissions.css">
+</head>
+<body>
+  <main id="app" aria-busy="true">
+    <header class="head">
+      <div>
+        <h1>📝 Student Permissions <span class="kh">ច្បាប់ឈប់សម្រាក</span></h1>
+        <p class="muted">Record a student's permission: a morning, an afternoon, a full day or several days. The attendance shows <b>Permission</b> for those sessions.</p>
+      </div>
+      <label class="class-pick">Class<select id="class" aria-label="Class"></select></label>
+    </header>
+
+    <p id="notice" class="notice success" role="status" hidden></p>
+    <p id="error" class="notice danger" role="alert" hidden></p>
+
+    <div class="layout">
+      <form id="form" class="card form" novalidate>
+        <h2>New permission</h2>
+        <label>Student
+          <input id="student-search" type="search" placeholder="Type a name or ID…" autocomplete="off" aria-label="Find a student">
+        </label>
+        <div id="student-list" class="students" role="listbox" aria-label="Students"></div>
+        <p id="student-chosen" class="chosen" hidden></p>
+
+        <fieldset class="parts">
+          <legend>For</legend>
+          <div class="segmented" role="radiogroup" aria-label="Part of the day">
+            <button type="button" data-part="MORNING" aria-pressed="false">🌅 Morning<small>ពេលព្រឹក</small></button>
+            <button type="button" data-part="AFTERNOON" aria-pressed="false">🌤️ Afternoon<small>ពេលរសៀល</small></button>
+            <button type="button" data-part="FULL_DAY" aria-pressed="true">☀️ Full day<small>ពេញមួយថ្ងៃ</small></button>
+            <button type="button" data-part="DAYS" aria-pressed="false">📅 Several days<small>ច្រើនថ្ងៃ</small></button>
+          </div>
+        </fieldset>
+        <div class="dates">
+          <label>Day<input id="from" type="date" required></label>
+          <label id="to-wrap" hidden>Until<input id="to" type="date"></label>
+        </div>
+        <label>Reason
+          <textarea id="reason" rows="2" maxlength="500" placeholder="e.g. ឈឺ (sick)"></textarea>
+        </label>
+        <div class="chips" aria-label="Common reasons">
+          <button type="button" data-reason="ឈឺ (sick)">ឈឺ · Sick</button>
+          <button type="button" data-reason="ធុរៈគ្រួសារ (family matter)">ធុរៈគ្រួសារ · Family</button>
+          <button type="button" data-reason="ធ្វើដំណើរ (travelling)">ធ្វើដំណើរ · Travel</button>
+          <button type="button" data-reason="ពិធីបុណ្យ (ceremony)">ពិធីបុណ្យ · Ceremony</button>
+        </div>
+        <p id="form-error" class="notice danger" role="alert" hidden></p>
+        <button type="submit" id="save" class="primary">Save permission</button>
+      </form>
+
+      <section class="card list" aria-labelledby="list-title">
+        <div class="list-head">
+          <h2 id="list-title">Permissions in this class</h2>
+          <span id="count" class="muted"></span>
+        </div>
+        <div id="permissions"></div>
+        <p id="empty" class="empty" hidden>No permission recorded yet in this class.</p>
+      </section>
+    </div>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="student-permissions.js"></script>
+</body>
+</html>

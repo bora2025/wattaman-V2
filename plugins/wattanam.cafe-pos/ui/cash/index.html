@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="km">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cash Shifts</title>
+  <link rel="stylesheet" href="../pos.css">
+</head>
+<body>
+  <main id="app" aria-busy="true">
+    <h1>💵 Cash shifts · វេនសាច់ប្រាក់</h1>
+    <p class="muted">One drawer: open it with the float, record cash taken out or put in, and count it at the end. Dollars and riel are counted separately.</p>
+    <div id="error" class="notice bad" hidden></div>
+    <div id="message" class="notice ok" hidden></div>
+
+    <section class="panel" id="open-panel" hidden>
+      <h2>Open a shift</h2>
+      <div class="row"><label>Float in dollars ($)<input id="float-usd" inputmode="decimal" value="0"></label><label>Float in riel (៛)<input id="float-khr" inputmode="numeric" value="0"></label><button type="button" class="primary" id="open">Open shift</button></div>
+    </section>
+
+    <section class="panel" id="current" hidden>
+      <div class="spread"><h2 id="c-title"></h2><button type="button" id="print">🖨️ Print X report</button></div>
+      <div class="grid-cards" id="c-kpis"></div>
+      <h2 style="margin-top:14px">Cash in or out</h2>
+      <div class="row"><label>Kind<select id="m-kind"><option value="OUT">Take out (pay-out)</option><option value="IN">Put in (pay-in)</option></select></label><label>Currency<select id="m-currency"><option value="USD">$</option><option value="KHR">៛</option></select></label><label>Amount<input id="m-amount" inputmode="decimal"></label><label>Reason<input id="m-reason" maxlength="200" placeholder="Ice delivery, change from the bank…"></label><button type="button" id="move">Record</button></div>
+      <h2 style="margin-top:14px">Close the shift</h2>
+      <div class="row"><label>Counted dollars ($)<input id="count-usd" inputmode="decimal"></label><label>Counted riel (៛)<input id="count-khr" inputmode="numeric"></label><label>Note<input id="close-note" maxlength="300"></label><button type="button" class="danger" id="close">Close shift</button></div>
+    </section>
+
+    <section class="panel">
+      <h2>Past shifts</h2>
+      <table><thead><tr><th>Opened</th><th>Closed</th><th class="num">Expected</th><th class="num">Counted</th><th class="num">Difference</th><th></th></tr></thead><tbody id="history"></tbody></table>
+    </section>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="../pos.js"></script>
+  <script src="cash.js"></script>
+</body>
+</html>

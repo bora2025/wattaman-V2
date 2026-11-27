@@ -49,14 +49,11 @@ function staffRole(request) {
 
 function registerStaffAttendance(context) {
   context.permissions.register([
-    { id: scanPermission, label: 'Scan and record staff attendance' },
+    { id: scanPermission, label: 'Scan and record staff attendance', roles: ['WATTAMAN'] },
     { id: reportPermission, label: 'View and export staff attendance reports' },
     { id: correctPermission, label: 'Correct staff attendance records' },
   ]);
-  context.navigation.register([
-    { id: 'staff-attendance-scanner', label: 'Staff Attendance', href: '/plugins/wattanam.academic-management/staff-attendance', permission: scanPermission },
-    { id: 'staff-attendance-reports', label: 'Staff Attendance Reports', href: '/plugins/wattanam.academic-management/staff-attendance-reports', permission: reportPermission },
-  ]);
+  // Staff Attendance and its reports are Smart Attendance screens (staff, staff/reports).
 
   context.routes.register({
     method: 'GET', path: 'staff-attendance/records', permission: scanPermission,

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="km">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sales Reports</title>
+  <link rel="stylesheet" href="../pos.css">
+  <style>
+    .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+    .bar { height: 10px; background: var(--brand); border-radius: 6px; min-width: 2px; }
+    @media print { body > main { display: block !important; } #print-area { display: none !important; } .no-print { display: none !important; } }
+  </style>
+</head>
+<body>
+  <main id="app" aria-busy="true">
+    <div class="spread"><h1>📊 Sales reports · របាយការណ៍លក់</h1>
+      <div class="row no-print"><label>From<input type="date" id="from"></label><label>To<input type="date" id="to"></label>
+        <button type="button" data-range="today">Today</button><button type="button" data-range="week">7 days</button><button type="button" data-range="month">This month</button>
+        <button type="button" class="primary" id="show">Show</button><button type="button" id="export">⬇️ CSV</button><button type="button" id="print">🖨️ Print</button></div>
+    </div>
+    <div id="error" class="notice bad" hidden></div>
+    <div class="grid-cards" id="kpis"></div>
+    <div class="cols" style="margin-top:12px">
+      <section class="panel"><h2>Best sellers</h2><table><tbody id="items"></tbody></table></section>
+      <section class="panel"><h2>Categories</h2><table><tbody id="categories"></tbody></table></section>
+      <section class="panel"><h2>Payments</h2><table><tbody id="methods"></tbody></table></section>
+      <section class="panel"><h2>By day</h2><table><tbody id="days"></tbody></table></section>
+      <section class="panel"><h2>By hour</h2><table><tbody id="hours"></tbody></table></section>
+      <section class="panel"><h2>Staff</h2><table><tbody id="staff"></tbody></table></section>
+      <section class="panel"><h2>Refunds and cancellations</h2><div id="voids" class="muted"></div><table><tbody id="refunds"></tbody></table></section>
+    </div>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="../pos.js"></script>
+  <script src="reports.js"></script>
+</body>
+</html>

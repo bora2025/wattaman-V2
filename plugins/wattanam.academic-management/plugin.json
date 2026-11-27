@@ -3,8 +3,8 @@
   "id": "wattanam.academic-management",
   "name": "Academic Management",
   "description": "Official Wattanam academic structures, profiles, admissions, enrollment, and roster contracts.",
-  "version": "0.6.0",
-  "requiresCore": ">=0.1.35 <1.0.0",
+  "version": "0.35.1",
+  "requiresCore": ">=0.1.36 <1.0.0",
   "publisher": "wattanam",
   "license": "commercial",
   "backendEntry": "backend/index.js",
@@ -56,44 +56,118 @@
     "wattanam.academic-management.attendance.self.review",
     "wattanam.academic-management.attendance.staff.scan",
     "wattanam.academic-management.attendance.staff.report",
-    "wattanam.academic-management.attendance.staff.correct"
+    "wattanam.academic-management.attendance.staff.correct",
+    "wattanam.academic-management.transcripts.edit",
+    "wattanam.academic-management.profile.self",
+    "wattanam.academic-management.class.students",
+    "wattanam.academic-management.transcripts.print"
   ],
   "dependencies": {},
-  "optionalDependencies": {},
+  "optionalDependencies": {
+    "wattanam.smart-attendance": ">=0.1.0 <1.0.0"
+  },
   "contracts": {
     "schemaVersion": 1,
     "deprecationNoticeDays": 180,
     "events": {
       "publishes": {
-        "wattanam.academic-management.attendance.corrected": [1],
-        "wattanam.academic-management.attendance.recorded": [1],
-        "wattanam.academic-management.attendance.staff-recorded": [1],
-        "wattanam.academic-management.attendance.study-year.created": [1],
-        "wattanam.academic-management.attendance.study-year.deleted": [1],
-        "wattanam.academic-management.attendance.study-year.set-current": [1],
-        "wattanam.academic-management.attendance.study-year.updated": [1],
-        "wattanam.academic-management.attendance.student-self-recorded": [1],
-        "wattanam.academic-management.class.created": [1],
-        "wattanam.academic-management.class.deleted": [1],
-        "wattanam.academic-management.class.updated": [1],
-        "wattanam.academic-management.department.created": [1],
-        "wattanam.academic-management.department.deleted": [1],
-        "wattanam.academic-management.department.updated": [1],
-        "wattanam.academic-management.identity.detached": [1],
-        "wattanam.academic-management.registration.approved": [2],
-        "wattanam.academic-management.student.added-to-class": [1],
-        "wattanam.academic-management.student.created": [1],
-        "wattanam.academic-management.student.imported": [1],
-        "wattanam.academic-management.student.removed-from-class": [1],
-        "wattanam.academic-management.student.updated": [1],
-        "wattanam.academic-management.students.cleaned-up": [1],
-        "wattanam.academic-management.subject.created": [1],
-        "wattanam.academic-management.subject.updated": [1]
+        "wattanam.academic-management.attendance.corrected": [
+          1
+        ],
+        "wattanam.academic-management.attendance.recorded": [
+          1
+        ],
+        "wattanam.academic-management.attendance.staff-recorded": [
+          1
+        ],
+        "wattanam.academic-management.attendance.station-result": [
+          1
+        ],
+        "wattanam.academic-management.attendance.study-year.created": [
+          1
+        ],
+        "wattanam.academic-management.attendance.study-year.deleted": [
+          1
+        ],
+        "wattanam.academic-management.attendance.study-year.set-current": [
+          1
+        ],
+        "wattanam.academic-management.attendance.study-year.updated": [
+          1
+        ],
+        "wattanam.academic-management.attendance.student-self-recorded": [
+          1
+        ],
+        "wattanam.academic-management.class.created": [
+          1
+        ],
+        "wattanam.academic-management.class.deleted": [
+          1
+        ],
+        "wattanam.academic-management.class.updated": [
+          1
+        ],
+        "wattanam.academic-management.department.created": [
+          1
+        ],
+        "wattanam.academic-management.department.deleted": [
+          1
+        ],
+        "wattanam.academic-management.department.updated": [
+          1
+        ],
+        "wattanam.academic-management.identity.detached": [
+          1
+        ],
+        "wattanam.academic-management.registration.approved": [
+          2
+        ],
+        "wattanam.academic-management.student.added-to-class": [
+          1
+        ],
+        "wattanam.academic-management.student.created": [
+          1
+        ],
+        "wattanam.academic-management.student.imported": [
+          1
+        ],
+        "wattanam.academic-management.student.removed-from-class": [
+          1
+        ],
+        "wattanam.academic-management.student.updated": [
+          1
+        ],
+        "wattanam.academic-management.students.cleaned-up": [
+          1
+        ],
+        "wattanam.academic-management.subject.created": [
+          1
+        ],
+        "wattanam.academic-management.subject.updated": [
+          1
+        ]
       },
-      "subscribes": {}
+      "subscribes": {
+        "wattanam.smart-attendance.presence.captured": [
+          1
+        ]
+      }
     },
     "readModels": {
-      "publishes": { "study-year": [1], "student-attendance-summary": [1] },
+      "publishes": {
+        "study-year": [
+          1
+        ],
+        "student-attendance-summary": [
+          1
+        ],
+        "attendance-people": [
+          1
+        ],
+        "attendance-person-photo": [
+          1
+        ]
+      },
       "reads": {}
     }
   },
@@ -499,9 +573,171 @@
       "path": "migrations/067_index_user_department_departmentid.sql",
       "checksum": "464b145abaf2b5ff46d0dc1dc8817caf359a4a39d51b03a069869a7b8258c173",
       "destructive": false
+    },
+    {
+      "id": "068_create_transcript_sheet",
+      "path": "migrations/068_create_transcript_sheet.sql",
+      "checksum": "491d7bb4b14729c41e316963bebb43516bde030f3be79e2cc4db28491f527bb8",
+      "destructive": false
+    },
+    {
+      "id": "069_create_transcript_sheet_class",
+      "path": "migrations/069_create_transcript_sheet_class.sql",
+      "checksum": "697f75e9aeea157a05c61b124f660e7aa2950d5be938ac42ceaca01a426b33d3",
+      "destructive": false
+    },
+    {
+      "id": "070_index_transcript_sheet_class_classid",
+      "path": "migrations/070_index_transcript_sheet_class_classid.sql",
+      "checksum": "941a6829d4ad634a4a6ce86f64b4a0dcfc9eb8a2273a857e2b9aea17721ddc88",
+      "destructive": false
+    },
+    {
+      "id": "071_create_transcript_subject",
+      "path": "migrations/071_create_transcript_subject.sql",
+      "checksum": "c5cd360ca1098cf822eea62054b138276d37e52b2bc1f10b580e619c9defa5d0",
+      "destructive": false
+    },
+    {
+      "id": "072_index_transcript_subject_sheetid",
+      "path": "migrations/072_index_transcript_subject_sheetid.sql",
+      "checksum": "9a98d6f6d95ed4fe7bb3209681118556bc93b09c0de6a2d8f558caa4b582da4a",
+      "destructive": false
+    },
+    {
+      "id": "073_create_transcript_tab",
+      "path": "migrations/073_create_transcript_tab.sql",
+      "checksum": "4630eef29e72c1da40cbe3fd24f43276232b16d07d517ada6e0c755a0626dbcb",
+      "destructive": false
+    },
+    {
+      "id": "074_index_transcript_tab_sheetid",
+      "path": "migrations/074_index_transcript_tab_sheetid.sql",
+      "checksum": "798eb2b949523695d455f6c5a0975c4e1f05ea1d947deb00a3657c5a0ddaee43",
+      "destructive": false
+    },
+    {
+      "id": "075_create_transcript_score",
+      "path": "migrations/075_create_transcript_score.sql",
+      "checksum": "2d59eb5efc6afdee0f04b593681d14907a4145d9773a33ba8b1f50786e534d3a",
+      "destructive": false
+    },
+    {
+      "id": "076_index_transcript_score_subjectid",
+      "path": "migrations/076_index_transcript_score_subjectid.sql",
+      "checksum": "9d6de0feb04674c46927441ca2e168d2d31b1ffa9d5f7c7ce70be3cc48eb137a",
+      "destructive": false
+    },
+    {
+      "id": "077_index_transcript_score_studentid",
+      "path": "migrations/077_index_transcript_score_studentid.sql",
+      "checksum": "fc226bf887c64fe370901f8b26794c18974c631f3e793b0930a670b8616ac796",
+      "destructive": false
+    },
+    {
+      "id": "078_create_transcript_remark",
+      "path": "migrations/078_create_transcript_remark.sql",
+      "checksum": "59c4980db49be4d3067d7870612b4e40df1276681c751bf4b38953b653a567ca",
+      "destructive": false
+    },
+    {
+      "id": "079_index_transcript_remark_studentid",
+      "path": "migrations/079_index_transcript_remark_studentid.sql",
+      "checksum": "6407c605447c59cd1082d86d65ef767ebede34a0cf513dbf0b6f4d5371683b74",
+      "destructive": false
+    },
+    {
+      "id": "080_allow_staff_attendance_records",
+      "path": "migrations/080_allow_staff_attendance_records.sql",
+      "checksum": "5f7a7718c9b989c181f13dc3be9b0f8f81bc7dc7a96d6324d2eeceb245f3840f",
+      "destructive": true
+    },
+    {
+      "id": "081_add_transcript_subject_coefficient",
+      "path": "migrations/081_add_transcript_subject_coefficient.sql",
+      "checksum": "24400f615315241117c1a6a3140c749a251074370cd01afe5ae52b888df09509",
+      "destructive": false
+    },
+    {
+      "id": "082_add_transcript_subject_parent",
+      "path": "migrations/082_add_transcript_subject_parent.sql",
+      "checksum": "73901d929b22afa5589ee4ff30bcb96dfc733f116c008582a1c919a6909e8518",
+      "destructive": false
+    },
+    {
+      "id": "083_index_transcript_subject_parentid",
+      "path": "migrations/083_index_transcript_subject_parentid.sql",
+      "checksum": "d03fc6a477b30c9ba31dee9f742561a66d7ca5beda164d8db11f680e5dc38ca8",
+      "destructive": false
+    },
+    {
+      "id": "084_add_transcript_sheet_coefficient",
+      "path": "migrations/084_add_transcript_sheet_coefficient.sql",
+      "checksum": "9330a1883771c726baeb0aaab9ad7073308d0c5bcae3df74d42847a9618b3efc",
+      "destructive": false
+    },
+    {
+      "id": "085_add_transcript_sheet_average_max",
+      "path": "migrations/085_add_transcript_sheet_average_max.sql",
+      "checksum": "9d089b793f186bcfa2a5209f9d38b546d0ed241c9d8c0c77c2d0fcaf058d4fbb",
+      "destructive": false
+    },
+    {
+      "id": "086_add_transcript_sheet_grade_scale",
+      "path": "migrations/086_add_transcript_sheet_grade_scale.sql",
+      "checksum": "a4dec265a0e47aabe5f381901151572aa2c46e344c517909e7b3a8705b9abcbc",
+      "destructive": false
+    },
+    {
+      "id": "087_create_student_permission",
+      "path": "migrations/087_create_student_permission.sql",
+      "checksum": "0fb88e5ccce9e7da4e52d1c84022de7fc4170dd0897cfa64a8dfac3f86ad554e",
+      "destructive": false
+    },
+    {
+      "id": "088_index_student_permission_classid",
+      "path": "migrations/088_index_student_permission_classid.sql",
+      "checksum": "52b3d115feddfba05b5200ccf5e2a7a901e7eb50e38b6048d3df04e083c8d358",
+      "destructive": false
+    },
+    {
+      "id": "089_add_transcript_sheet_kind",
+      "path": "migrations/089_add_transcript_sheet_kind.sql",
+      "checksum": "381d0b255aee860d80891aed03fd96ca303232e8df405f73267fab3b270a8cd4",
+      "destructive": false
+    },
+    {
+      "id": "090_add_transcript_subject_tab",
+      "path": "migrations/090_add_transcript_subject_tab.sql",
+      "checksum": "ac0dfcade87ada2820d2758a99dc3d53fd17dd035ec9872bcb14fc6ec370f141",
+      "destructive": false
+    },
+    {
+      "id": "091_index_transcript_subject_tabid",
+      "path": "migrations/091_index_transcript_subject_tabid.sql",
+      "checksum": "ed03f872cfa248b8188c8a5fdcd466339992713458beb03b769b21956be0b65f",
+      "destructive": false
+    },
+    {
+      "id": "092_add_class_level",
+      "path": "migrations/092_add_class_level.sql",
+      "checksum": "4ea833640730f5bd8fe87e59ebda0266cbcd76987057e360184fdcc6aeccdc0a",
+      "destructive": false
+    },
+    {
+      "id": "093_add_student_details",
+      "path": "migrations/093_add_student_details.sql",
+      "checksum": "a42bed990e668b2a13fbe13d964dd551fed5728ed077443993f345ebc4240ec1",
+      "destructive": false
     }
   ],
   "navigation": [
+    {
+      "id": "attendance-dashboard",
+      "label": "Attendance Dashboard",
+      "href": "/plugins/wattanam.academic-management/dashboard",
+      "permission": "wattanam.academic-management.attendance.view"
+    },
     {
       "id": "study-years",
       "label": "Study Years",
@@ -533,12 +769,6 @@
       "permission": "wattanam.academic-management.manage"
     },
     {
-      "id": "attendance-records",
-      "label": "Student Attendance",
-      "href": "/plugins/wattanam.academic-management/attendance",
-      "permission": "wattanam.academic-management.attendance.view"
-    },
-    {
       "id": "attendance-corrections",
       "label": "Attendance Corrections",
       "href": "/plugins/wattanam.academic-management/corrections",
@@ -557,22 +787,76 @@
       "permission": "wattanam.academic-management.attendance.report"
     },
     {
-      "id": "attendance-settings",
-      "label": "Attendance Settings",
-      "href": "/plugins/wattanam.academic-management/settings",
-      "permission": "wattanam.academic-management.attendance.configure"
+      "id": "score-sheets",
+      "label": "Score Sheets",
+      "href": "/plugins/wattanam.academic-management/score-sheets",
+      "permission": "wattanam.academic-management.view"
     },
     {
-      "id": "staff-attendance-scanner",
-      "label": "Staff Attendance",
-      "href": "/plugins/wattanam.academic-management/staff-attendance",
-      "permission": "wattanam.academic-management.attendance.staff.scan"
+      "id": "score-entry",
+      "label": "Enter Scores",
+      "href": "/plugins/wattanam.academic-management/score-entry?entry=1",
+      "permission": "wattanam.academic-management.transcripts.edit"
     },
     {
-      "id": "staff-attendance-reports",
-      "label": "Staff Attendance Reports",
-      "href": "/plugins/wattanam.academic-management/staff-attendance-reports",
-      "permission": "wattanam.academic-management.attendance.staff.report"
+      "id": "student-ranking",
+      "label": "Student Ranking",
+      "href": "/plugins/wattanam.academic-management/score-sheets?view=ranking",
+      "permission": "wattanam.academic-management.view"
+    },
+    {
+      "id": "year-ranking",
+      "label": "Year Ranking",
+      "href": "/plugins/wattanam.academic-management/score-sheets?view=ranking&scope=year",
+      "permission": "wattanam.academic-management.view"
+    },
+    {
+      "id": "honor-roll",
+      "label": "Honor Roll",
+      "href": "/plugins/wattanam.academic-management/score-sheets?view=honor",
+      "permission": "wattanam.academic-management.view"
+    },
+    {
+      "id": "year-honor-roll",
+      "label": "Year Honor Roll",
+      "href": "/plugins/wattanam.academic-management/score-sheets?view=honor&scope=year",
+      "permission": "wattanam.academic-management.view"
+    },
+    {
+      "id": "subject-ranking",
+      "label": "Subject Ranking",
+      "href": "/plugins/wattanam.academic-management/score-sheets?view=subjects",
+      "permission": "wattanam.academic-management.view"
+    },
+    {
+      "id": "year-report-cards",
+      "label": "Year Report Cards",
+      "href": "/plugins/wattanam.academic-management/score-sheets?view=yearcard",
+      "permission": "wattanam.academic-management.view"
+    },
+    {
+      "id": "record-books",
+      "label": "Record Books",
+      "href": "/plugins/wattanam.academic-management/score-sheets?view=recordbook",
+      "permission": "wattanam.academic-management.view"
+    },
+    {
+      "id": "progress-books",
+      "label": "Progress Books",
+      "href": "/plugins/wattanam.academic-management/progress-books",
+      "permission": "wattanam.academic-management.view"
+    },
+    {
+      "id": "my-class",
+      "label": "My Class",
+      "href": "/plugins/wattanam.academic-management/my-class",
+      "permission": "wattanam.academic-management.attendance.view"
+    },
+    {
+      "id": "student-permissions",
+      "label": "Student Permissions",
+      "href": "/plugins/wattanam.academic-management/student-permissions",
+      "permission": "wattanam.academic-management.attendance.mark"
     }
   ],
   "supportedLanguages": [

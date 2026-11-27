@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="km">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Attendance Station</title>
+  <link rel="stylesheet" href="../smart.css">
+  <link rel="stylesheet" href="station.css">
+</head>
+<body>
+  <main id="app" aria-busy="true">
+    <p id="error" class="notice bad" role="alert" hidden></p>
+
+    <!-- 1. a device that is not a station yet asks to become one -->
+    <section id="register" class="panel" hidden>
+      <h1>🛰️ Setting up this device…</h1>
+      <p class="muted">It registers itself as an attendance station; nothing to type. A Wattaman's device starts at once; other devices wait for an administrator on <b>Attendance Stations</b>.</p>
+      <button type="button" class="primary" id="r-retry" hidden>Try again</button>
+    </section>
+
+    <!-- 2. waiting for approval, or turned off -->
+    <section id="waiting" class="panel waiting" hidden>
+      <div class="big-icon" aria-hidden="true">⏳</div>
+      <h1 id="waiting-title">Waiting for approval</h1>
+      <p class="muted" id="waiting-text"></p>
+      <button type="button" id="refresh">Check again</button>
+    </section>
+
+    <!-- 3. the station -->
+    <section id="station" hidden>
+      <header class="station-head">
+        <div>
+          <h1 id="s-name"></h1>
+          <p class="muted" id="s-place"></p>
+        </div>
+        <div class="clock" id="clock" aria-live="off"></div>
+      </header>
+      <div class="methods" id="methods"></div>
+
+      <div class="stage">
+        <div class="result idle" id="result" role="status" aria-live="polite">
+          <div class="photo" id="r-photo" aria-hidden="true">👋</div>
+          <div class="who">
+            <div class="name-kh kh" id="r-namekh">Scan your QR code, tap your card or show your face</div>
+            <div class="name" id="r-name-latin">ស្កេន QR កូដ ប៉ះកាត ឬ បង្ហាញមុខ</div>
+            <div class="meta" id="r-meta"></div>
+            <div class="status" id="r-status"></div>
+          </div>
+        </div>
+        <aside class="recent">
+          <h2>Recent</h2>
+          <ol id="recent"></ol>
+        </aside>
+      </div>
+
+      <!-- face matches that are only fairly close: the teacher at the station decides -->
+      <section class="review-panel" id="review-panel" hidden aria-label="Faces to confirm">
+        <h2>👀 Confirm these faces</h2>
+        <div id="reviews"></div>
+      </section>
+      <p class="notice info" id="queue" hidden></p>
+
+      <div class="controls">
+        <!-- the automatic station: face, QR codes and card readers at the same time, nothing to press -->
+        <button type="button" class="primary" id="auto">⚡ Start automatic attendance</button>
+        <button type="button" class="primary" id="face">🙂 Face attendance</button>
+        <button type="button" class="primary" id="camera">📷 Scan QR with the camera</button>
+        <button type="button" id="phone-nfc">📶 Read cards with this phone</button>
+        <!-- USB readers (QR scanners, NFC card readers) type like a keyboard and press Enter -->
+        <label class="usb">USB reader <span class="muted" id="usb-state">ready</span>
+          <input id="usb" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Code from a USB scanner or card reader">
+        </label>
+      </div>
+    </section>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="station.js"></script>
+</body>
+</html>

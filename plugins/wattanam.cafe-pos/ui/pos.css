@@ -1,0 +1,68 @@
+/* Café POS screens: touch-friendly, light, Khmer and Latin text. */
+:root {
+  --bg: #f5f6f8; --card: #fff; --line: #e3e6eb; --text: #16202c; --muted: #6a7686;
+  --brand: var(--host-primary, #0f766e); --brand-soft: #e6f4f2; --ok: #15803d; --warn: #b45309; --bad: #b91c1c;
+  --khmer: "Kantumruy Pro", "Battambang", "Khmer OS", "Noto Sans Khmer", system-ui, sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, var(--khmer), sans-serif;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; } /* hidden wins over .badge, .row… */
+body { margin: 0; background: var(--bg); color: var(--text); font-size: 15px; }
+main { padding: 14px; }
+h1 { font-size: 20px; margin: 0 0 4px; }
+h2 { font-size: 16px; margin: 0 0 10px; }
+.muted { color: var(--muted); }
+.kh { font-family: var(--khmer); }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; }
+.row > label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.spread { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+input, select, textarea { font: inherit; padding: 9px 10px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--text); min-width: 0; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand); outline-offset: 1px; }
+button { font: inherit; font-weight: 600; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line); background: #fff; color: var(--text); cursor: pointer; min-height: 42px; }
+button:hover { border-color: var(--brand); }
+button:disabled { opacity: .5; cursor: default; }
+button.primary { background: var(--brand); color: #fff; border-color: var(--brand); }
+button.danger { color: var(--bad); border-color: #f1c4c4; }
+button.small { min-height: 32px; padding: 5px 10px; font-size: 13px; }
+button.big { min-height: 56px; font-size: 18px; }
+.notice { padding: 10px 12px; border-radius: 10px; margin: 0 0 10px; font-weight: 600; }
+.notice.ok { background: #e8f6ee; color: var(--ok); }
+.notice.bad { background: #fdecec; color: var(--bad); }
+.notice.warn { background: #fff4e0; color: var(--warn); }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 12px; font-weight: 700; background: #eef0f3; color: var(--muted); }
+.badge.ok { background: #e8f6ee; color: var(--ok); } .badge.warn { background: #fff4e0; color: var(--warn); } .badge.bad { background: #fdecec; color: var(--bad); } .badge.brand { background: var(--brand-soft); color: var(--brand); }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .02em; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.tabs button[aria-pressed="true"] { background: var(--brand); color: #fff; border-color: var(--brand); }
+.grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.kpi { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; }
+.kpi b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
+.kpi span { font-size: 12px; color: var(--muted); font-weight: 700; }
+dialog { border: 0; border-radius: 16px; padding: 0; width: min(560px, 96vw); max-height: 92vh; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+dialog::backdrop { background: rgba(10, 20, 30, .45); }
+dialog .dialog-body { padding: 16px; overflow: auto; max-height: calc(92vh - 70px); }
+dialog .dialog-foot { padding: 12px 16px; border-top: 1px solid var(--line); display: flex; gap: 8px; justify-content: flex-end; }
+.empty { color: var(--muted); text-align: center; padding: 24px 8px; }
+.money { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* The receipt: only it prints (58 or 80 mm thermal rolls, or any printer). */
+#print-area { display: none; }
+@media print {
+  body > *:not(#print-area) { display: none !important; }
+  #print-area { display: block; color: #000; background: #fff; margin: 0; padding: 0; }
+  @page { margin: 2mm; }
+}
+.receipt { font-family: "Courier New", ui-monospace, var(--khmer), monospace; font-size: 12px; line-height: 1.35; color: #000; }
+.receipt.w58 { width: 54mm; } .receipt.w80 { width: 74mm; }
+.receipt .center { text-align: center; } .receipt .right { text-align: right; }
+.receipt .line { display: flex; justify-content: space-between; gap: 6px; }
+.receipt .line span:last-child { white-space: nowrap; }
+.receipt hr { border: 0; border-top: 1px dashed #000; margin: 4px 0; }
+.receipt .big { font-size: 15px; font-weight: 700; }
+.receipt .sub { font-size: 11px; padding-left: 8px; }
+.receipt img.logo { max-width: 40mm; max-height: 20mm; display: block; margin: 0 auto 2px; }
+.receipt img.qr { width: 36mm; display: block; margin: 4px auto; }

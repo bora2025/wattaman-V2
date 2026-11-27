@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="km">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Score Sheets</title>
+  <link rel="stylesheet" href="score-sheets.css">
+  <link rel="stylesheet" href="score-sheets-ui.css">
+  <style id="page-style">@page { size: A4 landscape; margin: 7mm; }</style>
+</head>
+<body>
+  <main id="app" aria-busy="true">
+    <!-- Score sheets come in two kinds: the ministry's primary, secondary & high school sheets, and university sheets -->
+    <nav class="kind-tabs no-print" id="kind-tabs" role="tablist" aria-label="Type of score sheet">
+      <button type="button" role="tab" aria-selected="true" id="tab-school">🏫 Primary, secondary &amp; high school <span class="kh">បឋមសិក្សា អនុវិទ្យាល័យ និង វិទ្យាល័យ</span></button>
+      <button type="button" role="tab" aria-selected="false" id="tab-university">🎓 University <span class="kh">សាកលវិទ្យាល័យ</span></button>
+    </nav>
+    <!-- App bar: title, live context, main actions; the rest under "More" -->
+    <header class="appbar no-print">
+      <div class="brand">
+        <span class="brand-icon" aria-hidden="true">📊</span>
+        <div>
+          <h1>Score Sheets <span class="kh">· តារាងសម្រង់ពិន្ទុ</span></h1>
+          <p class="context" id="context-line">Monthly and semester results in the ministry layout</p>
+        </div>
+      </div>
+      <div class="actions">
+        <span id="saved" class="saved toast" role="status" hidden></span>
+        <details class="menu" id="more-menu">
+          <summary class="btn ghost" aria-label="More actions">⋯ More</summary>
+          <div class="menu-list" role="menu">
+            <button type="button" id="open-setup" role="menuitem"><span>⚙️</span><span><b>Subjects &amp; classes</b><small>Score sheets, subjects, coefficients, months</small></span></button>
+            <button type="button" id="edit-header" role="menuitem" aria-pressed="false"><span>🖋️</span><span><b>Edit header &amp; footer</b><small>Type and format the text on the page</small></span></button>
+            <button type="button" id="open-form" role="menuitem"><span>🧾</span><span><b>Print form</b><small>Paper, orientation, lunar date</small></span></button>
+          </div>
+        </details>
+        <button type="button" id="export" class="btn ghost">⤓ Export CSV</button>
+        <button type="button" id="print" class="btn primary">🖨️ Print</button>
+      </div>
+    </header>
+
+    <!-- Which document -->
+    <nav class="doc-tabs no-print" aria-label="Document">
+      <button type="button" id="view-sheet" aria-pressed="true"><span class="ico">📄</span><span class="txt"><b>តារាងសម្រង់ពិន្ទុ</b><small>Score sheet</small></span></button>
+      <button type="button" id="view-ranking" aria-pressed="false"><span class="ico">🏆</span><span class="txt"><b>ចំណាត់ថ្នាក់</b><small>Student ranking</small></span></button>
+      <button type="button" id="view-honor" aria-pressed="false"><span class="ico">🏅</span><span class="txt"><b>កិត្តិយស</b><small>Honor roll</small></span></button>
+      <button type="button" id="view-subjects" aria-pressed="false"><span class="ico">📈</span><span class="txt"><b>តាមមុខវិជ្ជា</b><small>Subject ranking</small></span></button>
+      <button type="button" id="view-yearcard" aria-pressed="false"><span class="ico">🎓</span><span class="txt"><b>ព្រឹត្តិបត្រប្រចាំឆ្នាំ</b><small>Year report card</small></span></button>
+      <button type="button" id="view-recordbook" aria-pressed="false"><span class="ico">📗</span><span class="txt"><b>សៀវភៅសិក្ខាគារិក</b><small>Record book</small></span></button>
+    </nav>
+
+    <!-- What to show -->
+    <section class="filters no-print" aria-label="Choose the class and period">
+      <div class="fields">
+        <label class="field wide">Score sheet<select id="sheet"></select></label>
+        <label class="field">Class<select id="class"></select></label>
+        <div class="field">
+          <span class="field-label">Period</span>
+          <div class="segmented" role="group" aria-label="Sheet kind">
+            <button type="button" id="kind-monthly" aria-pressed="true" title="ប្រចាំខែ · Monthly">ខែ</button>
+            <button type="button" id="kind-semester" aria-pressed="false" title="ប្រចាំឆមាស · Semester">ឆមាស</button>
+          </div>
+        </div>
+        <label class="field"><span id="tab-label">Month</span><select id="tab"></select></label>
+        <div class="field" id="period-wrap" hidden>
+          <span class="field-label" title="Absences are counted between these dates">Dates</span>
+          <div class="period-dates">
+            <input type="date" id="period-start" aria-label="Period start">
+            <span aria-hidden="true">→</span>
+            <input type="date" id="period-end" aria-label="Period end">
+            <button type="button" id="save-period" class="btn small" disabled>Save</button>
+          </div>
+        </div>
+        <label class="field" id="rank-scope-wrap" hidden>For<select id="rank-scope"><option value="period">This month / semester</option><option value="year">ប្រចាំឆ្នាំ · Whole year</option></select></label>
+        <label class="field" id="card-student-wrap" hidden>Student<select id="card-student"></select></label>
+        <div class="field rb-parts" id="rb-parts-wrap" hidden>
+          <span class="field-label">Pages</span>
+          <div class="checks">
+            <label><input type="checkbox" id="rb-part-cover" checked> Cover</label>
+            <label><input type="checkbox" id="rb-part-guidance" checked> Guidance</label>
+            <label><input type="checkbox" id="rb-part-info" checked> Student info</label>
+            <label><input type="checkbox" id="rb-part-results" checked> Results</label>
+          </div>
+        </div>
+        <label class="field">Order<select id="sort"><option value="number">Student number</option><option value="name">Name (ក-អ)</option><option value="rank">Rank</option></select></label>
+      </div>
+      <div class="filter-actions">
+        <button type="button" id="edit-toggle" class="btn ghost" aria-pressed="false">✏️ Enter scores</button>
+        <div class="add-tab">
+          <button type="button" id="add-tab" class="btn ghost" aria-expanded="false" aria-controls="tab-panel">＋ Add / delete</button>
+          <div id="tab-panel" class="tab-panel" hidden>
+            <form id="tab-form" class="inline">
+              <select id="tab-type" aria-label="Type"><option value="MONTHLY">Month</option><option value="SEMESTER">Semester</option></select>
+              <input id="tab-name" placeholder="e.g. ខែ កុម្ភៈ / ឆមាសទី១" maxlength="80" aria-label="Name">
+              <button type="submit" class="btn primary">＋ Add</button>
+            </form>
+            <p class="tab-panel-title">Months &amp; semesters of this sheet <small>· × deletes one with its scores and comments</small></p>
+            <div id="tab-chips" class="chips" aria-label="Months and semesters"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- How the average is worked out -->
+    <div id="averaging" class="averaging no-print" hidden>
+      <span class="calc-title">🧮 Calculation</span>
+      <label class="calc-field">មេគុណ<input id="avg-coefficient" type="text" inputmode="decimal" aria-label="មេគុណ"></label>
+      <label class="calc-field">Average out of<input id="avg-max" type="text" inputmode="decimal" aria-label="Full average"></label>
+      <button type="button" id="avg-save" class="btn small" disabled>Save</button>
+      <p id="avg-hint" class="muted small"></p>
+      <button type="button" id="open-grades" class="btn small ghost">🎓 Grade scale</button>
+    </div>
+
+    <!-- Score sheets setup: sheets, their classes, subjects and months (administrators) -->
+    <section id="setup" class="panel setup-panel no-print" hidden>
+      <div class="panel-head">
+        <div><h2>⚙️ Subjects &amp; classes</h2><p class="muted">A score sheet lists its subjects, the classes that use it, and its months and semesters.</p></div>
+        <button type="button" id="close-setup" class="btn ghost">Close</button>
+      </div>
+      <div class="setup-grid">
+        <div>
+          <div id="sheet-list" class="sheet-list"></div>
+          <button type="button" id="new-sheet" class="btn ghost wide">＋ New score sheet</button>
+        </div>
+        <form id="sheet-form" class="sheet-form" novalidate>
+          <h3 id="sheet-form-title">New score sheet</h3>
+          <fieldset id="f-kind-wrap" class="kind-choice"><legend>Type of score sheet</legend>
+            <label><input type="radio" name="f-kind" value="SCHOOL" checked> <span><b>🏫 Primary, secondary &amp; high school</b><small>Months and semesters in the ministry layout, ranking, honor roll, report cards</small></span></label>
+            <label><input type="radio" name="f-kind" value="UNIVERSITY"> <span><b>🎓 University</b><small>Semesters with their own subjects, letter grades, GPA and rank</small></span></label>
+          </fieldset>
+          <div class="row2">
+            <label>Name *<input id="f-name" maxlength="160" placeholder="e.g. ថ្នាក់ទី៧ ២០២៥-២០២៦"></label>
+            <label>Degree / level<input id="f-degree" maxlength="160" placeholder="e.g. Lower secondary"></label>
+          </div>
+          <fieldset><legend>Classes using this sheet</legend><div id="f-classes" class="checks"></div></fieldset>
+          <div class="buttons">
+            <button type="submit" id="save-sheet" class="btn primary">Save score sheet</button>
+            <button type="button" id="delete-sheet" class="btn danger" hidden>Delete sheet</button>
+          </div>
+          <div id="sheet-extra" hidden>
+            <h3>Subjects</h3>
+            <p class="muted small">Coefficient (មេគុណ): what the subject counts for when the total is averaged. A part (e.g. dictation, part of Khmer) is added into its subject and not counted again.</p>
+            <table class="mini"><thead><tr><th>Subject</th><th>Max score</th><th>Coefficient</th><th>Part of</th><th>Colour</th><th></th></tr></thead><tbody id="subjects"></tbody></table>
+            <div class="add-row">
+              <input id="sub-name" placeholder="Subject name" maxlength="120" aria-label="Subject name">
+              <input id="sub-max" type="number" min="1" max="1000" value="100" aria-label="Max score">
+              <input id="sub-coefficient" type="number" min="0" max="10" step="any" value="1" aria-label="Coefficient" title="Coefficient (មេគុណ)">
+              <select id="sub-parent" aria-label="Part of"></select>
+              <input id="sub-color" type="color" value="#334155" aria-label="Colour">
+              <button type="button" id="add-subject" class="btn ghost">＋ Add subject</button>
+            </div>
+            <h3>Months &amp; semesters</h3>
+            <p class="muted small">Add them in order with ＋ Add above the sheet; delete one here (its scores and comments go with it).</p>
+            <div id="setup-tabs" class="chips"></div>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- The score sheet's grade scale -->
+    <section id="grades-panel" class="grades-panel no-print" hidden>
+      <div class="panel-head">
+        <div><h2>🎓 Grades · និទ្ទេស</h2><p class="muted" id="grades-help"></p></div>
+        <button type="button" id="grades-close" class="secondary">Close</button>
+      </div>
+      <table class="grades-table">
+        <thead><tr><th>Grade</th><th>Khmer name</th><th id="grades-from">From average</th><th>%</th></tr></thead>
+        <tbody id="grades-rows"></tbody>
+      </table>
+      <p id="grades-error" class="notice danger" role="alert" hidden></p>
+      <div class="buttons">
+        <button type="button" id="grades-save" class="primary" disabled>💾 Save grades</button>
+        <button type="button" id="grades-reset" class="secondary">↺ Ministry scale</button>
+      </div>
+    </section>
+
+    <div id="header-bar" class="header-bar no-print" hidden>
+      <p><b>Editing the header &amp; footer.</b> Click any text in the dashed boxes to change it — header: office lines, school, motto, title; footer: lunar date, date line, approval, signers and their names. Leave the date line or the last name empty to fill them in automatically. Press Enter for a new line.</p>
+      <div class="buttons"><button type="button" id="header-save" class="primary">💾 Save header &amp; footer</button><button type="button" id="header-cancel" class="secondary">Cancel</button></div>
+      <!-- Formatting of the selected block -->
+      <div class="style-bar" id="style-bar" role="toolbar" aria-label="Format the selected text">
+        <span class="style-target" id="style-target">Click a box on the page to format it</span>
+        <div class="segmented small" role="group" aria-label="Alignment">
+          <button type="button" data-control data-align="left" title="Align left">⫷ Left</button>
+          <button type="button" data-control data-align="center" title="Centre">☰ Centre</button>
+          <button type="button" data-control data-align="right" title="Align right">Right ⫸</button>
+        </div>
+        <label class="inline-label">Font<select id="style-font" data-control><option value="">Default</option></select></label>
+        <label class="inline-label">Size (pt)<input id="style-size" data-control type="number" min="6" max="48" step="0.5" placeholder="auto"></label>
+        <label class="inline-label">Colour<input id="style-color" data-control type="color" value="#000000"></label>
+        <button type="button" id="style-bold" data-control class="secondary bold-btn" aria-pressed="false" title="Bold">B</button>
+        <button type="button" id="style-reset" data-control class="secondary" title="Back to the default look">↺ Reset</button>
+        <label class="inline-label" id="symbol-picker" hidden>Symbol<select aria-label="Choose a symbol"><option value="">Choose…</option><option value="❧❧❧">❧❧❧</option><option value="❧ ❧ ❧">❧ ❧ ❧</option><option value="❦❦❦">❦❦❦</option><option value="✿✿✿">✿✿✿</option><option value="❀ ❀ ❀">❀ ❀ ❀</option><option value="៚ ៚ ៚">៚ ៚ ៚</option><option value="※※※">※※※</option><option value="✦✦✦">✦✦✦</option><option value="◆◆◆">◆◆◆</option><option value="— ❧ —">— ❧ —</option><option value="————">————</option><option value="none">(none)</option></select></label>
+      </div>
+    </div>
+
+    <p id="months-note" class="notice info no-print" hidden></p>
+    <p id="error" class="notice danger no-print" role="alert" hidden></p>
+    <p id="empty" class="empty no-print" hidden></p>
+
+    <!-- Print form editor -->
+    <section id="form-editor" class="panel no-print" hidden>
+      <div class="panel-head">
+        <div><h2>Score sheet print form</h2><p class="muted">Letterhead, title, signatures and paper. Saved for the whole school.</p></div>
+        <button type="button" id="close-form" class="secondary">Close</button>
+      </div>
+      <div class="row3">
+        <label>Title<input id="t-title" maxlength="120"></label>
+        <label>School name<input id="t-orgName" maxlength="160" placeholder="e.g. វិទ្យាល័យ អនុវត្ត"></label>
+        <label>Place signed (date line)<input id="t-place" maxlength="200" placeholder="e.g. អនុវត្ត"></label>
+      </div>
+      <div class="row3">
+        <label>Office lines, top left (one per line)<textarea id="t-headerLines" rows="3"></textarea></label>
+        <label>Signatures, left to right (one per line)<textarea id="t-signers" rows="3"></textarea></label>
+        <div class="stack">
+          <label>Paper<select id="t-paper"><option>A4</option><option>A3</option><option>Letter</option><option>Legal</option></select></label>
+          <label>Orientation<select id="t-orientation"><option value="landscape">Landscape</option><option value="portrait">Portrait</option></select></label>
+        </div>
+      </div>
+      <div class="row3">
+        <label>Lunar date line<input id="p-lunar" maxlength="200" placeholder="e.g. ថ្ងៃសុក្រ ១១កើត ខែផល្គុន ឆ្នាំម្សាញ់ សប្តស័ក ព.ស. ២៥៦៩"></label>
+        <label>Date (this print only)<input id="p-date" type="date"></label>
+        <label class="check"><input id="p-stats" type="checkbox" checked> Print the grade statistics page</label>
+      </div>
+      <p id="form-error" class="notice danger" role="alert" hidden></p>
+      <div class="buttons"><button type="button" id="save-form" class="primary">💾 Save print form</button></div>
+    </section>
+
+    <!-- The sheet: what is shown is what prints -->
+    <div class="canvas-bar no-print" id="canvas-bar" hidden>
+      <span class="canvas-info" id="canvas-info"></span>
+      <label class="zoom">Zoom<select id="zoom"><option value="fit">Fit width</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100%</option><option value="1.25">125%</option></select></label>
+    </div>
+    <div class="paper-wrap" id="paper-wrap" hidden>
+      <article id="sheet-doc" class="doc">
+        <header class="letterhead">
+          <div class="offices" id="d-offices"></div>
+          <div class="motto" id="d-motto"></div>
+        </header>
+        <h2 class="doc-title" id="d-title"></h2>
+        <p class="doc-info" id="d-info"></p>
+        <div class="table-wrap"><table class="sheet" id="d-table"></table></div>
+        <section class="summary" id="d-summary"></section>
+        <footer class="signs" id="d-signs"></footer>
+      </article>
+
+      <!-- Student ranking (ចំណាត់ថ្នាក់): the class list in two columns with total, average, rank and grade -->
+      <article id="ranking-doc" class="doc ranking fit-box fit-soft" hidden>
+        <header class="letterhead">
+          <div class="offices" id="r-offices"></div>
+          <div class="motto" id="r-motto"></div>
+        </header>
+        <h2 class="doc-title" id="r-title"></h2>
+        <p class="doc-info" id="r-info"></p>
+        <div class="rank-cols" id="r-cols"></div>
+        <section class="summary" id="r-summary"></section>
+        <footer class="signs" id="r-signs"></footer>
+      </article>
+
+      <!-- Honor roll (តារាងកិត្តិយស): the top five, លេខ ១ in the middle, then 2 · 3 and 4 · 5 -->
+      <article id="honor-doc" class="doc honor fit-box" hidden>
+        <header class="letterhead">
+          <div class="offices" id="h-offices"></div>
+          <div class="motto" id="h-motto"></div>
+        </header>
+        <h2 class="doc-title honor-title" id="h-title"></h2>
+        <p class="doc-info" id="h-info"></p>
+        <div class="podium" id="h-podium"></div>
+        <footer class="signs" id="h-signs"></footer>
+      </article>
+
+      <!-- Subject ranking (ចំណាត់ថ្នាក់តាមមុខវិជ្ជា): each subject's score and rank, the averages and their ranks, the year -->
+      <article id="subjects-doc" class="doc subjects" hidden>
+        <header class="letterhead">
+          <div class="offices" id="sr-offices"></div>
+          <div class="motto" id="sr-motto"></div>
+        </header>
+        <h2 class="doc-title" id="sr-title"></h2>
+        <p class="doc-info" id="sr-info"></p>
+        <div class="table-wrap"><table class="sheet subject-rank" id="sr-table"></table></div>
+        <section class="summary" id="sr-summary"></section>
+        <footer class="signs" id="sr-signs"></footer>
+      </article>
+
+      <!-- Academic year report cards (ព្រឹត្តិបត្រពិន្ទុប្រចាំឆ្នាំសិក្សា): one A4 page per student -->
+      <div id="yearcard-docs" class="yearcards" hidden></div>
+      <!-- Student Academic Record Books (សៀវភៅសិក្ខាគារិក): A4 landscape booklet sheets, two A5 pages each -->
+      <div id="recordbook-docs" class="yearcards" hidden></div>
+
+      <article id="stats-doc" class="doc stats-page">
+        <h2 class="doc-title" id="s-title"></h2>
+        <p class="doc-info" id="s-info"></p>
+        <div class="table-wrap"><table class="stats" id="s-grades"></table></div>
+        <h3 class="sub-title">ចលនាសិស្ស · Student movement</h3>
+        <div class="table-wrap"><table class="stats" id="s-movement"></table></div>
+      </article>
+    </div>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="../score-math.js"></script>
+  <script src="score-sheets.js"></script>
+</body>
+</html>

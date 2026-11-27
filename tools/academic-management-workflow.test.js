@@ -7,6 +7,11 @@ const path = require('node:path');
 const test = require('node:test');
 
 const root = path.resolve(__dirname, '..', 'plugins', 'wattanam.academic-management');
+// Since Academic Management 0.35.0 the screens that TAKE attendance are Smart Attendance's (partner screens);
+// the records, rules and reports stay here.
+const smartRoot = path.resolve(__dirname, '..', 'plugins', 'wattanam.smart-attendance');
+const smartUi = JSON.parse(fs.readFileSync(path.join(smartRoot, 'frontend', 'page.json'), 'utf8'));
+const { ROUTES: smartCallers } = require(path.join(root, 'backend', 'smart-attendance-callers.js'));
 const plugin = require(path.join(root, 'backend', 'index.js'));
 const { registerAuthoritativeReports } = require(path.join(root, 'backend', 'authoritative-reports.js'));
 const { registerSelfAttendance } = require(path.join(root, 'backend', 'self-attendance.js'));
@@ -31,8 +36,11 @@ test('Academic Management uses the universal SDK 1.3 UI contract', () => {
   assert.equal(components.filter((component) => component.type === 'table' && component.options?.selectable).length, 0);
   const recordActions = components.reduce((count, component) => count + (component.options?.rowActions?.length || 0), 0)
     // The officers screen is the plugin's own (ui/officers) and carries its edit, deactivate and delete actions.
-    + components.filter((component) => component.type === 'app' && component.options?.entry === 'ui/officers/index.html').length;
-  assert.ok(recordActions >= 10);
+    + components.filter((component) => component.type === 'app' && component.options?.entry === 'ui/officers/index.html').length
+    // So is Academic Years (ui/study-years): set current and delete on each year.
+    + 2 * descriptor.pages.filter((page) => page.id === 'study-years' && page.components.some((component) => component.options?.entry === 'ui/study-years/index.html')).length;
+  // The self-attendance window and review actions moved to Smart Attendance in 0.35.0.
+  assert.ok(recordActions >= 6);
 });
 
 test('class roster groups single, CSV, and existing-student creation behind one action menu', () => {
@@ -172,19 +180,23 @@ test('activated authoritative reports use Academic Management enrollment rosters
   assert.deepEqual(report.people.map((person) => person.id), ['student-1']);
 });
 
-test('Academic Year writes cast browser date strings to PostgreSQL timestamps', async () => {
+test('Academic Year writes keep browser dates as days and save the school name and logo', async () => {
   const writes = [];
   const database = {
-    query: async (sql) => sql.includes('_study_year') ? [{ id: 'year-1', year: 2026 }] : [],
+    query: async (sql) => sql.includes('_study_year') && !sql.includes('"year" = $1') ? [{ id: 'year-1', year: 2026 }] : [],
     execute: async (sql, params) => { writes.push({ sql, params }); return { count: 1 }; },
     transaction: async (work) => work({ query: async () => [{ id: 'year-1', year: 2026 }], execute: async (sql, params) => { writes.push({ sql, params }); return { count: 1 }; }, publish: async () => {} }),
   };
   const { routes } = await activate(undefined, database);
   const principal = { role: 'SUPER_ADMIN', userId: 'admin-1' };
   await routes.get('POST study-years').handler({ principal, body: { year: 2026, startDate: '2026-10-26', endDate: '2026-12-31' } });
-  await routes.get('PUT study-years/:id').handler({ principal, params: { id: 'year-1' }, body: { year: 2026, startDate: '2026-10-26', endDate: '2026-12-31' } });
-  assert.match(writes[0].sql, /\$4::timestamptz,\$5::timestamptz/);
-  assert.match(writes[1].sql, /"startDate"=\$3::timestamptz,"endDate"=\$4::timestamptz/);
+  const logo = 'data:image/png;base64,iVBORw0KGgo=';
+  await routes.get('PUT study-years/:id').handler({ principal, params: { id: 'year-1' }, body: { year: 2026, startDate: '2026-10-26T00:00:00.000Z', endDate: '2026-12-31', schoolName: ' Wattanam High School ', logoUrl: logo } });
+  assert.match(writes[0].sql, /\$4::date,\$5::date/);
+  assert.match(writes[1].sql, /"startDate"=\$3::date,"endDate"=\$4::date/);
+  assert.deepEqual(writes[1].params.slice(2, 6), ['2026-10-26', '2026-12-31', 'Wattanam High School', logo]);
+  await assert.rejects(routes.get('PUT study-years/:id').handler({ principal, params: { id: 'year-1' }, body: { year: 2026, startDate: '2026-12-31', endDate: '2026-10-26' } }), /endDate/);
+  await assert.rejects(routes.get('PUT study-years/:id').handler({ principal, params: { id: 'year-1' }, body: { year: 2026, logoUrl: 'javascript:alert(1)' } }), /logo/);
 });
 
 test('Academic Management exposes the streamlined administration and attendance workflows', async () => {
@@ -215,21 +227,33 @@ test('Academic Management exposes the streamlined administration and attendance 
   assert.ok(permissions.some((permission) => permission.id === 'wattanam.academic-management.attendance.self.scan'));
   assert.deepEqual(
     navigation.map((item) => item.id),
-    ['study-years', 'classes', 'student-id-cards', 'officers', 'staff-id-cards', 'attendance-records', 'attendance-corrections', 'attendance-alerts', 'attendance-reports', 'attendance-settings', 'student-attendance-scan', 'staff-attendance-scanner', 'staff-attendance-reports'],
+    ['attendance-dashboard', 'study-years', 'classes', 'student-id-cards', 'officers', 'staff-id-cards', 'score-sheets', 'score-entry', 'student-ranking', 'year-ranking', 'honor-roll', 'year-honor-roll', 'subject-ranking', 'year-report-cards', 'record-books', 'progress-books', 'my-class', 'student-permissions', 'attendance-corrections', 'attendance-alerts', 'attendance-reports'],
   );
-  assert.equal(navigation.find((item) => item.id === 'attendance-records')?.label, 'Student Attendance');
+  // Open to Smart Attendance's screens, and only routes this plugin registers; the class lists also to
+  // Examination's exam editor (0.35.1).
+  const shapes = new Map([...routes].map(([key, route]) => [key.replace(/:[^/]+/g, ':id'), route]));
+  const examCallers = ['GET classes', 'GET my/classes'];
+  for (const route of smartCallers) assert.deepEqual(shapes.get(route)?.callers, examCallers.includes(route) ? ['wattanam.smart-attendance', 'wattanam.examination'] : ['wattanam.smart-attendance'], `${route} is registered and open to its partner screens`);
+  assert.deepEqual(require(path.join(root, 'backend', 'smart-attendance-callers.js')).EXAM_ROUTES, examCallers);
+  assert.equal(routes.get('PATCH records/:id/correct')?.callers, undefined, 'corrections stay with Academic Management');
   assert.equal(navigation.find((item) => item.id === 'attendance-reports')?.label, 'Student Attendance Reports');
 
   const ui = JSON.parse(fs.readFileSync(path.join(root, 'frontend', 'page.json'), 'utf8'));
   const dashboard = ui.pages.find((candidate) => candidate.id === 'attendance-dashboard');
-  assert.ok(dashboard?.components.some((component) => component.type === 'metric'), 'missing universal Attendance Dashboard metrics');
-  assert.ok(dashboard?.components.some((component) => component.type === 'table' && component.options?.itemsPath === 'classProgress'), 'missing universal class attendance progress');
-  for (const page of ['study-years', 'classes', 'officers', 'officer-edit', 'officer-attendance', 'attendance-records', 'attendance-corrections', 'attendance-reports', 'attendance-settings', 'attendance-windows', 'student-attendance-scan', 'attendance-self-review', 'staff-attendance-scanner', 'staff-attendance-reports']) {
+  // The Attendance Dashboard is the plugin's own screen (summaries, class progress, trend, milestones).
+  assert.equal(dashboard?.components.find((component) => component.type === 'app')?.options?.entry, 'ui/dashboard/index.html', 'missing Attendance Dashboard screen');
+  const dashboardScript = fs.readFileSync(path.join(root, 'ui/dashboard/dashboard.js'), 'utf8');
+  for (const call of ["ui.api.get('dashboard/day'", "ui.api.get('dashboard/month'", "ui.api.get('dashboard/milestones')"]) assert.ok(dashboardScript.includes(call), `dashboard must use ${call}`);
+  assert.ok(routes.has('GET dashboard/day') && routes.has('GET dashboard/month') && routes.has('GET dashboard/milestones'), 'missing dashboard routes');
+  for (const page of ['study-years', 'classes', 'officers', 'officer-edit', 'officer-attendance', 'attendance-corrections', 'attendance-reports']) {
     assert.ok(ui.pages.some((candidate) => candidate.id === page), `missing UI page ${page}`);
   }
   const studyYears = ui.pages.find((candidate) => candidate.id === 'study-years');
-  assert.ok(studyYears.components.some((component) => component.type === 'form' && component.source === 'createStudyYear'), 'missing universal Academic Year creation workflow');
-  assert.ok(studyYears.components.some((component) => component.type === 'table' && component.options?.rowActions?.some((action) => action.source === 'setCurrentStudyYear')), 'missing per-record current Academic Year action');
+  // Since 0.17.0 Academic Years is the plugin's own screen (dates, school name, logo, current year).
+  assert.equal(studyYears.components.find((component) => component.type === 'app')?.options?.entry, 'ui/study-years/index.html', 'missing Academic Years screen');
+  for (const source of ['studyYears', 'createStudyYear', 'saveStudyYear', 'setCurrentStudyYear', 'deleteStudyYear']) assert.ok(studyYears.dataSources.some((s) => s.id === source), `Academic Years must declare ${source}`);
+  const yearScreen = fs.readFileSync(path.join(root, 'ui/study-years/study-years.js'), 'utf8');
+  for (const call of ["ui.api.get('study-years')", "ui.api.post('study-years', body)", "ui.api.put('study-years/' + encodeURIComponent(editing.id), body)", "'/set-current'", "ui.api.delete('study-years/' + encodeURIComponent(item.id))"]) assert.ok(yearScreen.includes(call), `Academic Years screen must use ${call}`);
   const classes = ui.pages.find((candidate) => candidate.id === 'classes');
   // Since 0.5.0 the guided class workflow is the plugin's own screen, not one built into the core.
   const classManager = classes.components.find((component) => component.type === 'app');
@@ -269,36 +293,43 @@ test('Academic Management exposes the streamlined administration and attendance 
   assert.ok(officers.dataSources.some((source) => source.id === 'deleteOfficer' && source.method === 'DELETE'), 'officer CRUD requires a guarded delete source');
   const officerEdit = ui.pages.find((candidate) => candidate.id === 'officer-edit');
   assert.ok(officerEdit.components.some((component) => component.type === 'form' && component.fields?.some((field) => field.id === 'photoUrl' && field.type === 'url')), 'officer edit must expose a secure photo URL');
-  const settings = ui.pages.find((candidate) => candidate.id === 'attendance-settings');
-  // Since 0.3.7 Session Time Settings is the plugin's own sandboxed screen, not a core component.
+  // The screens that take attendance are Smart Attendance's: every data source calls this plugin.
+  const smartPage = (id) => smartUi.pages.find((candidate) => candidate.id === id);
+  const smartFile = (file) => fs.readFileSync(path.join(smartRoot, file), 'utf8');
+  for (const id of ['take', 'attendance-settings', 'self-windows', 'self-scan', 'self-review', 'staff', 'staff-reports']) {
+    assert.ok(smartPage(id)?.dataSources.every((source) => source.plugin === 'wattanam.academic-management'), `Smart Attendance ${id} calls Academic Management`);
+  }
+  const settings = smartPage('attendance-settings');
   assert.ok(settings.components.some((component) => component.type === 'app' && component.options?.entry === 'ui/sessions/index.html'), 'missing dedicated Session Time Settings screen');
-  assert.ok(fs.existsSync(path.join(root, 'ui', 'sessions', 'index.html')), 'Session Time Settings screen files are missing');
-  const attendance = ui.pages.find((candidate) => candidate.id === 'attendance-records');
-  // Since 0.5.0 the attendance station is the plugin's own screen; the school page runs the camera for it.
+  assert.ok(fs.existsSync(path.join(smartRoot, 'ui', 'sessions', 'index.html')), 'Session Time Settings screen files are missing');
+  const attendance = smartPage('take');
   const takeAttendance = attendance.components.find((component) => component.type === 'app');
-  assert.equal(takeAttendance?.options?.entry, 'ui/attendance/index.html', 'missing guided student attendance station');
+  assert.equal(takeAttendance?.options?.entry, 'ui/take/index.html', 'missing guided student attendance station');
   assert.deepEqual(takeAttendance.options.devices, ['scanner', 'location'], 'attendance station must declare the scanner and location');
-  const attendanceScreen = fs.readFileSync(path.join(root, 'ui/attendance/attendance.js'), 'utf8');
-  for (const call of ["ui.api.get('classes')", "ui.api.get('sessions')", "ui.api.get('records'", "'/students')", "ui.api.post('records'", "ui.api.post('scan'", 'ui.scanner.start(']) {
+  assert.deepEqual(takeAttendance.options.apis, ['wattanam.academic-management']);
+  const attendanceScreen = smartFile('ui/take/attendance.js');
+  for (const call of ["academic.get('my/classes')", "academic.get('sessions')", "academic.get('records'", "'/students')", "academic.post('records'", "academic.post('scan'", 'ui.scanner.start(']) {
     assert.ok(attendanceScreen.includes(call), `student attendance station must use ${call}`);
   }
   assert.ok(attendance.dataSources.some((source) => source.id === 'classStudents' && source.autoload === false), 'missing runtime class roster source');
-  assert.equal(ui.pages.some((candidate) => candidate.id === 'attendance-scanner'), false, 'legacy student scanner page must be removed');
-  const studentScanner = ui.pages.find((candidate) => candidate.id === 'student-attendance-scan');
-  // Since 0.6.0 students use the plugin's own Scan Attendance screen; the school page runs the camera.
+  for (const moved of ['attendance-records', 'attendance-settings', 'attendance-windows', 'student-attendance-scan', 'attendance-self-review', 'staff-attendance-scanner', 'staff-attendance-reports', 'attendance-scanner']) {
+    assert.equal(ui.pages.some((candidate) => candidate.id === moved), false, `${moved} is a Smart Attendance screen now`);
+  }
+  for (const gone of ['ui/attendance', 'ui/sessions', 'ui/student-attendance', 'ui/reports/staff.html']) assert.equal(fs.existsSync(path.join(root, gone)), false, `${gone} moved to Smart Attendance`);
+  const studentScanner = smartPage('self-scan');
   const studentScreen = studentScanner?.components.find((component) => component.type === 'app');
-  assert.equal(studentScreen?.options?.entry, 'ui/student-attendance/index.html', 'student scanner must use the student attendance screen');
+  assert.equal(studentScreen?.options?.entry, 'ui/self-scan/index.html', 'student scanner must use the student attendance screen');
   assert.deepEqual(studentScreen.options.devices, ['scanner', 'location', 'device-id'], 'student scanner must declare the camera, location and device identifier');
-  const studentScript = fs.readFileSync(path.join(root, 'ui/student-attendance/student-attendance.js'), 'utf8');
-  for (const call of ["ui.api.post('student/self-scan'", "ui.api.get('student/attendance-history')", "ui.api.get('student/attendance-devices'", "ui.api.post('student/attendance-devices'", 'clientRequestId: newKey()', 'ui.scanner.start(']) {
+  const studentScript = smartFile('ui/self-scan/student-attendance.js');
+  for (const call of ["academic.post('student/self-scan'", "academic.get('student/attendance-history')", "academic.get('student/attendance-devices'", "academic.post('student/attendance-devices'", 'clientRequestId: newKey()', 'ui.scanner.start(']) {
     assert.ok(studentScript.includes(call), `student scanner must use ${call}`);
   }
   assert.ok(studentScanner?.dataSources.some((source) => source.id === 'selfScan' && source.path === 'student/self-scan'), 'student scanner must submit to the secure self-scan route');
-  const attendanceWindows = ui.pages.find((candidate) => candidate.id === 'attendance-windows');
+  const attendanceWindows = smartPage('self-windows');
   assert.ok(attendanceWindows?.components.some((component) => component.type === 'form' && component.source === 'openWindow'), 'missing universal attendance window creation workflow');
   assert.ok(attendanceWindows?.components.some((component) => component.type === 'table' && component.options?.rowActions?.some((action) => action.source === 'rotateWindow')), 'missing per-record attendance window rotation action');
   assert.ok(attendanceWindows?.dataSources.some((source) => source.id === 'windowLive' && source.path === 'attendance-windows/:id/live'), 'attendance window workspace requires live confirmation data');
-  const staffScanner = ui.pages.find((candidate) => candidate.id === 'staff-attendance-scanner');
+  const staffScanner = smartPage('staff');
   const staffScannerComponent = staffScanner?.components.find((component) => component.id === 'staff-scanner');
   assert.equal(staffScannerComponent?.options?.station, true, 'staff attendance must use the fullscreen attendance-station workflow');
   assert.equal(staffScannerComponent?.options?.autoLocation, true, 'staff attendance station must capture location automatically');
@@ -312,11 +343,20 @@ test('Academic Management exposes the streamlined administration and attendance 
     assert.match(cardScreen, /data-save-template="id-cards\/templates\/(student|staff)"/, `missing editable ${pageId} template route`);
     assert.ok(navigation.some((entry) => entry.id === pageId), `missing runtime navigation for ${pageId}`);
   }
-  for (const pageId of ['attendance-reports', 'staff-attendance-reports']) {
-    const reports = ui.pages.find((candidate) => candidate.id === pageId);
-    assert.ok(reports?.components.some((component) => component.type === 'table'), `missing universal ${pageId} table`);
-    assert.ok(reports?.components.some((component) => component.type === 'print'), `missing universal ${pageId} print workflow`);
+  // Staff attendance reports use the same report screen in staff mode, with their own saved print form.
+  // (a Smart Attendance screen since 0.35.0, calling this plugin's routes)
+  const staffReports = smartUi.pages.find((candidate) => candidate.id === 'staff-reports');
+  assert.equal(staffReports?.components.find((component) => component.type === 'app')?.options?.entry, 'ui/staff-reports/index.html', 'missing staff attendance report screen');
+  assert.match(fs.readFileSync(path.join(smartRoot, 'ui/staff-reports/index.html'), 'utf8'), /data-mode="staff"/, 'staff report page must run the screen in staff mode');
+  assert.ok(routes.has('GET reports/staff-print-template') && routes.has('PUT reports/staff-print-template'), 'missing saved staff report print form routes');
+  // Student attendance reports are the plugin's own screen: daily/period report, print and a saved print form.
+  const studentReports = ui.pages.find((candidate) => candidate.id === 'attendance-reports');
+  assert.equal(studentReports?.components.find((component) => component.type === 'app')?.options?.entry, 'ui/reports/index.html', 'missing attendance report screen');
+  const reportScript = fs.readFileSync(path.join(root, 'ui/reports/reports.js'), 'utf8');
+  for (const call of ["ui.api.get('reports/print-data'", "ui.api.get('staff-attendance/reports'", "'reports/print-template'", "'reports/staff-print-template'", 'ui.api.get(TEMPLATE_PATH)', 'ui.api.put(TEMPLATE_PATH', 'window.print()']) {
+    assert.ok(reportScript.includes(call), `attendance report screen must use ${call}`);
   }
+  assert.ok(routes.has('GET reports/print-template') && routes.has('PUT reports/print-template'), 'missing saved report print form routes');
   assert.ok(routes.has('POST id-cards/classes/:id/ensure'), 'missing student card identifier backfill route');
   assert.ok(routes.has('GET id-cards/staff'), 'missing staff card route');
   assert.ok(routes.has('GET id-cards/templates/:type'), 'missing ID card template read route');
@@ -478,8 +518,10 @@ test('embedded attendance durable events map to the declared Academic namespace'
 test('staff navigation exposes one canonical attendance workflow', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'plugin.json'), 'utf8'));
   const ids = manifest.navigation.map((item) => item.id);
-  assert.ok(ids.includes('staff-attendance-scanner'));
-  assert.ok(ids.includes('staff-attendance-reports'));
+  // Staff Attendance and its reports are Smart Attendance screens since Academic Management 0.35.0.
+  const smartIds = JSON.parse(fs.readFileSync(path.join(smartRoot, 'plugin.json'), 'utf8')).navigation.map((item) => item.id);
+  assert.ok(smartIds.includes('staff') && smartIds.includes('staff-reports'));
+  assert.ok(!ids.includes('staff-attendance-scanner') && !ids.includes('staff-attendance-reports'));
   assert.ok(!ids.includes('officer-attendance'));
   assert.ok(!ids.includes('officer-attendance-reports'));
 });
@@ -679,3 +721,84 @@ test('valid student self attendance creates exactly one record across repeated s
   assert.equal(harness.audits.length, 1);
 });
 
+
+test('Academic Management declares its own messages so users see them, and keeps other failures private', async () => {
+  // the message table matches the plugin's source
+  require('node:child_process').execFileSync(process.execPath, [path.join(__dirname, 'generate-academic-public-errors.js'), '--check']);
+  const { routes } = await activate();
+  for (const [key, route] of routes) {
+    assert.equal(route.contract?.version, '1.0', `${key} must declare the error contract`);
+  }
+  const route = routes.get('POST attendance/permissions');
+  assert.equal(route.contract.errors.CLASSID_AND_STUDENTID_ARE_REQUIRED.status, 400);
+  await assert.rejects(route.handler({ principal: { userId: 'u1', role: 'TEACHER' }, body: {} }),
+    (error) => error.isPluginContractError === true && error.code === 'CLASSID_AND_STUDENTID_ARE_REQUIRED');
+  const { publicCode } = require(path.join(root, 'backend', 'public-errors.js'));
+  assert.equal(publicCode('startedAt must be a valid ISO date (YYYY-MM-DD)'), 'X_MUST_BE_A_VALID_ISO_DATE_YYYY_MM_DD');
+  assert.equal(publicCode('relation "plugin_x" does not exist'), null, 'database errors stay private');
+});
+
+// The school's university result sheet (Result.xlsx 2025-2026): ten subjects (five a semester, out of 100),
+// with the sheet's own totals, averages, grades, GPA and ranks.
+test('university results match the school\'s university result sheet', () => {
+  const U = require(path.join(root, 'ui', 'university-math.js'));
+  const rows = [
+    [[70.5, 54.5, 69, 79.5, 86, 0, 4, 0, 0, 29], 392.5, 39.25, 'F', 1.75, 28],
+    [[87, 72, 95, 76.5, 96, 90, 69.5, 89, 77, 84.5], 836.5, 83.65, 'B+', 3.75, 5],
+    [[78.5, 59, 84.5, 63.5, 91.5, 82, 52.5, 80, 51.5, 52.5], 695.5, 69.55, 'C+', 3, 17],
+    [[90, 68.5, 98, 78, 97, 99, 84.5, 95, 66.5, 90], 866.5, 86.65, 'A', 4, 2],
+    [[97, 64, 66, 76, 95.5, 98.5, 51, 56.5, 73.5, 90], 768, 76.8, 'B', 3.5, 12],
+    [[89, 74, 83.5, 73, 93, 88.5, 88, 86.5, 70, 84], 829.5, 82.95, 'B+', 3.75, 6],
+    [[52, 55, 72.5, 52, 57, 23, 2.5, 17, 3, 0], 334, 33.4, 'F', 1.75, 30],
+    [[59.5, 54.5, 74.5, 79, 90.5, 21, 2.5, 29, 2.5, 29], 442, 44.2, 'E', 2, 23],
+    [[63, 81.5, 93, 76.5, 91, 54, 52, 79, 67, 86], 743, 74.3, 'B', 3.5, 14],
+    [[59.5, 75.5, 82.5, 51, 92, 29, 7, 32.5, 4, 29], 462, 46.2, 'D', 2.25, 22],
+    [[54, 62, 83, 63, 92, 53.5, 54.5, 82.5, 51, 85.5], 681, 68.1, 'C+', 3, 18],
+    [[52, 51, 52, 51, 72, 24, 0, 17, 0.5, 0.5], 320, 32, 'F', 1.75, 31],
+    [[72, 79.5, 97, 66, 94, 64, 77, 82, 54, 90], 775.5, 77.55, 'B', 3.5, 11],
+    [[53, 54, 64, 52, 90, 28.5, 2.5, 23, 2, 26.5], 395.5, 39.55, 'F', 1.75, 27],
+    [[62, 53, 81, 51, 52, 26.5, 3, 19.5, 1.5, 0], 349.5, 34.95, 'F', 1.75, 29],
+    [[93, 85, 95, 66.5, 93, 88.5, 87, 82, 68, 84.5], 842.5, 84.25, 'B+', 3.75, 3],
+    [[85.5, 64, 86, 70, 93, 23.5, 1, 4, 2.5, 3.5], 433, 43.3, 'E', 2, 24],
+    [[95, 69.5, 65, 60, 96, 66.5, 85.5, 84, 54.5, 88], 764, 76.4, 'B', 3.5, 13],
+    [[90.5, 77, 93, 60, 93, 69, 91, 78, 53, 89.5], 794, 79.4, 'B', 3.5, 8],
+    [[48.5, 59, 89, 64, 73, 66.5, 87.5, 82.5, 36.5, 71.5], 678, 67.8, 'C+', 3, 19],
+    [[74, 78.5, 85.5, 70, 91.5, 76, 81, 81, 68, 82], 787.5, 78.75, 'B', 3.5, 10],
+    [[80, 69, 96, 73, 93, 55, 86, 84.5, 67, 90.5], 794, 79.4, 'B', 3.5, 8],
+    [[91, 90.5, 97.5, 71, 97, 25, 3, 31, 4.5, 27.5], 538, 53.8, 'C', 2.5, 21],
+    [[96, 86.5, 98.5, 75, 96, 26, 3, 31, 4.5, 27.5], 544, 54.4, 'C', 2.5, 20],
+    [[95, 71, 91, 79, 96, 70.5, 85.5, 93, 68, 91], 840, 84, 'B+', 3.75, 4],
+    [[52, 52, 65, 55.5, 77.5, 20, 8.5, 38, 1.5, 32], 402, 40.2, 'E', 2, 26],
+    [[82.5, 64.5, 67.5, 86, 94.5, 94.5, 83, 94, 56, 90.5], 813, 81.3, 'B+', 3.75, 7],
+    [[77.5, 72, 77, 73.5, 91, 56, 71.5, 56, 51, 78], 703.5, 70.35, 'B', 3.5, 16],
+    [[63, 52, 80.5, 67.5, 79.5, 28.5, 4.5, 28.5, 2.5, 25.5], 432, 43.2, 'E', 2, 25],
+    [[100, 83, 95, 80.5, 96, 100, 80, 86.5, 58.5, 92], 871.5, 87.15, 'A', 4, 1],
+    [[92, 67, 74, 61.5, 87.5, 67, 82, 72.5, 54.5, 78.5], 736.5, 73.65, 'B', 3.5, 15],
+  ];
+  const semesters = [{ id: 's1' }, { id: 's2' }];
+  const subjects = Array.from({ length: 10 }, (_, i) => ({ id: 'u' + i, tabId: i < 5 ? 's1' : 's2', maxScore: 100 }));
+  const students = rows.map((_, i) => ({ id: 'st' + i }));
+  const scores = { s1: {}, s2: {} };
+  rows.forEach(([marks], i) => marks.forEach((mark, j) => { ((scores[j < 5 ? 's1' : 's2'])['st' + i] ||= {})['u' + j] = mark; }));
+  const out = U.results({ semesters, subjects, students }, scores);
+  rows.forEach(([, total, average, grade, gpa, rank], i) => {
+    assert.deepEqual([out['st' + i].total, out['st' + i].average, out['st' + i].grade, out['st' + i].gpa, out['st' + i].rank], [total, average, grade, gpa, rank], 'student ' + (i + 1));
+  });
+  // subject letters, as on the sheet
+  for (const [score, letter] of [[100, 'A'], [85, 'A'], [84.5, 'B+'], [80, 'B+'], [79.5, 'B'], [70, 'B'], [69.5, 'C+'], [65, 'C+'], [64, 'C'], [50, 'C'], [48.5, 'D'], [45, 'D'], [44, 'E'], [40, 'E'], [36.5, 'F'], [0, 'F']]) {
+    assert.equal(U.letter(score, 100, U.SCALE), letter, String(score));
+  }
+  assert.equal(U.letter(null, 100), '');
+  assert.equal(U.letter(42.5, 50), 'A', 'a share of the subject\'s maximum');
+  // each semester's own total, grade, GPA and rank (ranked by the semester's total)
+  const s1 = rows.map((r, i) => ({ id: 'st' + i, value: r[0].slice(0, 5).reduce((x, y) => x + y, 0) }));
+  const best = s1.slice().sort((x, y) => y.value - x.value)[0];
+  assert.equal(out[best.id].semesters.s1.rank, 1);
+  assert.equal(out.st0.semesters.s1.total, 359.5); assert.equal(out.st0.semesters.s1.average, 71.9); assert.equal(out.st0.semesters.s1.grade, 'B'); assert.equal(out.st0.semesters.s1.gpa, 3.5);
+  assert.equal(out.st0.semesters.s2.total, 33); assert.equal(out.st0.semesters.s2.grade, 'F');
+  // no score at all: no total, no rank
+  const empty = U.results({ semesters, subjects, students: [{ id: 'x' }] }, {});
+  assert.deepEqual([empty.x.total, empty.x.average, empty.x.grade, empty.x.rank], [null, null, '', null]);
+  // the backend's default scale is the screen's
+  assert.deepEqual(require(path.join(root, 'backend', 'transcripts.js')).UNIVERSITY_SCALE, U.SCALE);
+});

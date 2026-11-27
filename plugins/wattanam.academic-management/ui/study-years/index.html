@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Academic Years</title>
+  <link rel="stylesheet" href="study-years.css">
+</head>
+<body>
+  <main id="app" aria-busy="true">
+    <header class="head">
+      <div>
+        <h1>🎓 Academic Years <span class="kh">ឆ្នាំសិក្សា</span></h1>
+        <p class="muted">Each year carries the school's name, logo and dates. Score sheets, report cards, record books and progress books print them.</p>
+      </div>
+      <button type="button" id="add-year" class="primary">＋ New academic year</button>
+    </header>
+
+    <p id="notice" class="notice success" role="status" hidden></p>
+    <p id="error" class="notice danger" role="alert" hidden></p>
+
+    <!-- The create / edit form -->
+    <section id="editor" class="editor" hidden aria-labelledby="editor-title">
+      <div class="editor-head">
+        <h2 id="editor-title">New academic year</h2>
+        <button type="button" id="close-editor" class="ghost" aria-label="Close">✕</button>
+      </div>
+      <form id="year-form" novalidate>
+        <div class="form-grid">
+          <div class="form-main">
+            <fieldset>
+              <legend>The year</legend>
+              <div class="row3">
+                <label>Year *<input id="f-year" type="number" min="2020" max="2100" required></label>
+                <label>Label<input id="f-label" maxlength="120" placeholder="2025-2026"></label>
+                <label>Length<output id="f-length" class="readout">—</output></label>
+              </div>
+              <div class="row2">
+                <label>Start date *<input id="f-start" type="date" required></label>
+                <label>End date *<input id="f-end" type="date" required></label>
+              </div>
+              <p class="hint">The yearly report card counts absences between these dates.</p>
+            </fieldset>
+            <fieldset>
+              <legend>The school</legend>
+              <label>School name<input id="f-school" maxlength="160" placeholder="e.g. វិទ្យាល័យ ហ៊ុន សែន …"></label>
+              <div class="logo-field">
+                <div id="f-logo-preview" class="logo-preview" aria-hidden="true">🏫</div>
+                <div class="logo-actions">
+                  <span class="field-label">Logo</span>
+                  <div class="buttons">
+                    <button type="button" id="logo-pick" class="secondary">📷 Upload logo</button>
+                    <button type="button" id="logo-remove" class="link" hidden>Remove</button>
+                    <input id="logo-file" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+                  </div>
+                  <p id="logo-note" class="hint">PNG or JPG. It is made small automatically and printed on the documents.</p>
+                </div>
+              </div>
+            </fieldset>
+          </div>
+          <aside class="preview-wrap">
+            <span class="field-label">How documents show it</span>
+            <div class="doc-preview" id="doc-preview">
+              <div class="dp-left">
+                <div id="dp-logo" class="dp-logo"></div>
+                <p id="dp-school" class="dp-school">School name</p>
+              </div>
+              <div class="dp-center">
+                <p>ព្រះរាជាណាចក្រកម្ពុជា</p>
+                <p>ជាតិ សាសនា ព្រះមហាក្សត្រ</p>
+                <p class="dp-orn">❧❧❧</p>
+              </div>
+              <p id="dp-year" class="dp-year">ឆ្នាំសិក្សា</p>
+            </div>
+            <p class="hint">A document's own header text, when set in its print settings, still wins.</p>
+          </aside>
+        </div>
+        <p id="form-error" class="notice danger" role="alert" hidden></p>
+        <div class="buttons end">
+          <button type="button" id="cancel" class="secondary">Cancel</button>
+          <button type="submit" id="save" class="primary">Save academic year</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- The years -->
+    <section id="list" class="years" aria-label="Academic years"></section>
+    <div id="empty" class="empty" hidden>
+      <p class="big">📅</p>
+      <h2>No academic years yet</h2>
+      <p class="muted">Add the first one: its dates, the school's name and logo.</p>
+    </div>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="../photo-upload.js"></script>
+  <script src="study-years.js"></script>
+</body>
+</html>

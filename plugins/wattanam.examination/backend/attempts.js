@@ -1,5 +1,6 @@
 'use strict';
 
+const { isAdmin } = require('./roles');
 const { randomUUID } = require('crypto');
 const { gradeQuestionData, safeQuestionData } = require('./question-types');
 const { publishStudentGradeSummary } = require('./student-grade-summary');
@@ -121,15 +122,16 @@ function registerAttempts(context) {
   context.routes.register({ method: 'GET', path: 'exams/:id/attempts', permission: grade, handler: async (request) => {
     const examId = id(request?.params?.id); const exams = await db.query(`SELECT "createdByDirectoryUserId" FROM ${EXAM} WHERE "id"=$1`, [examId]);
     if (!exams.length) throw new Error('Exam not found');
-    if (request?.principal?.role !== 'ADMIN' && exams[0].createdByDirectoryUserId !== request?.principal?.userId) throw new Error('Only the exam creator or an administrator may view attempts');
+    if (!isAdmin(request?.principal) && exams[0].createdByDirectoryUserId !== request?.principal?.userId) throw new Error('Only the exam creator or an administrator may view attempts');
     return db.query(`SELECT * FROM ${ATTEMPT} WHERE "examId"=$1 ORDER BY "submittedAt" DESC NULLS LAST LIMIT 1000`, [examId]);
   }});
   context.routes.register({ method: 'POST', path: 'attempts/:id/grade', permission: grade, handler: async (request) => {
     let studentId;
     const result = await db.transaction(async (tx) => {
     const attempt = await loadStudentAttempt(tx, request?.params?.id, request?.principal || {}, true); studentId = attempt.academicStudentId;
-    if (request?.principal?.role !== 'ADMIN' && attempt.createdByDirectoryUserId !== request?.principal?.userId) throw new Error('Only the exam creator or an administrator may grade this attempt');
-    if (attempt.status !== 'SUBMITTED') throw new Error('Only a submitted attempt may be manually graded');
+    if (!isAdmin(request?.principal) && attempt.createdByDirectoryUserId !== request?.principal?.userId) throw new Error('Only the exam creator or an administrator may grade this attempt');
+    // a submitted attempt, or a graded one being reviewed (marks or feedback changed), as in mono's gradebook
+    if (!['SUBMITTED', 'GRADED'].includes(attempt.status)) throw new Error('Only a submitted attempt may be manually graded');
     const manualMarks = object(request?.body?.perQuestionMarks, 'perQuestionMarks'); const answers = json(attempt.answers);
     const questions = await tx.query(`SELECT * FROM ${QUESTION} WHERE "examId"=$1`, [attempt.examId]); let total = 0; const sanitized = {};
     for (const question of questions) {
@@ -146,7 +148,7 @@ function registerAttempts(context) {
   }});
   context.routes.register({ method: 'DELETE', path: 'attempts/:id/reset', permission: grade, handler: async (request) => {
     const attempt = await loadStudentAttempt(db, request?.params?.id, request?.principal || {});
-    if (request?.principal?.role !== 'ADMIN' && attempt.createdByDirectoryUserId !== request?.principal?.userId) throw new Error('Only the exam creator or an administrator may reset this attempt');
+    if (!isAdmin(request?.principal) && attempt.createdByDirectoryUserId !== request?.principal?.userId) throw new Error('Only the exam creator or an administrator may reset this attempt');
     await db.execute(`DELETE FROM ${ATTEMPT} WHERE "id"=$1`, [attempt.id]);
     if (attempt.directoryUserId) await context.notifications.notifyInApp(attempt.directoryUserId, `Your attempt on "${attempt.title}" was reset. You may start again.`, 'exam_reset');
     return { reset: true, id: attempt.id, notified: Boolean(attempt.directoryUserId) };
