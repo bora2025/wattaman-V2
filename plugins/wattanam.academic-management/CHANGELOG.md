@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.35.1
+- The class lists (`GET classes`, `GET my/classes`) are opened to Examination 0.3.0, so its exam editor can offer the class an exam is for. The signed-in user still needs this plugin's permission.
+
 ## 0.35.0
 Needs school core 0.1.36 or newer (partner screens), like Smart Attendance 0.3.0, so schools on an older core keep 0.34 and their own screens.
 Taking attendance moved to **Smart Attendance 0.3.0**. Install or update it first, or the school has no screen to take attendance.

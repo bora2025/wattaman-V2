@@ -231,6 +231,23 @@
     status: function () { return hostRequest('printer-status', 'p', 'The printer is unavailable.'); },
   };
 
+  // Speech through the school page (school core 0.1.36+, device "speech"): the frame has no microphone and
+  // no media, so the school page listens (returns { transcript, alternatives } only), reads text aloud and
+  // plays audio (a data:audio/… URL up to 6 MB). A new request stops the previous one.
+  var speech = {
+    listen: function (options) {
+      var o = options || {}; var extra = { seconds: Number(o.seconds) || 15 }; if (o.lang) extra.lang = String(o.lang);
+      return hostRequest('speech-listen', 'v', 'Speech recognition is unavailable (school core without the speech device, or no answer).', extra, (extra.seconds + 20) * 1000);
+    },
+    speak: function (text, options) {
+      var o = options || {}; var extra = { text: String(text || '') }; if (o.lang) extra.lang = String(o.lang); if (o.rate) extra.rate = Number(o.rate);
+      return hostRequest('speech-speak', 'v', 'Text-to-speech is unavailable (school core without the speech device, or no answer).', extra, 600000);
+    },
+    play: function (audio) { return hostRequest('speech-play', 'v', 'Audio is unavailable (school core without the speech device, or no answer).', { audio: String(audio || '') }, 1800000); },
+    status: function () { return hostRequest('speech-status', 'v', 'Speech is unavailable (school core without the speech device).', undefined, 5000); },
+    stop: function () { send({ type: 'speech-stop' }); },
+  };
+
   function autoResize() {
     // Measure the content, not the document: inside an iframe documentElement.scrollHeight is never
     // smaller than the frame itself, so the frame could grow but never shrink back.
@@ -277,5 +294,6 @@
     nfc: nfc,
     storage: storage,
     printer: printer,
+    speech: speech,
   };
 })(window);

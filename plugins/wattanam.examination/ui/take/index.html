@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Exam</title>
+  <link rel="stylesheet" href="../exam.css">
+</head>
+<body class="student" data-height="fill">
+  <div id="app" aria-busy="true">
+    <header class="take-head" id="head">
+      <div class="inner">
+        <div class="row" style="justify-content:space-between;flex-wrap:nowrap">
+          <div class="grow">
+            <p id="title" style="font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Loading…</p>
+            <p id="meta" class="tiny faint"></p>
+          </div>
+          <span id="saved" class="tiny faint" aria-live="polite"></span>
+          <div id="timer" class="timer" role="timer" aria-live="off" hidden></div>
+        </div>
+        <div id="progress-wrap" style="margin-top:10px" hidden>
+          <div class="progress"><i id="progress"></i></div>
+          <p id="progress-text" class="tiny muted" style="margin-top:3px"></p>
+        </div>
+        <div id="sections" hidden>
+          <p id="section-name" style="text-align:center;font-weight:800;font-size:14px;margin-top:6px"></p>
+          <div class="pager" id="pager"></div>
+        </div>
+      </div>
+    </header>
+    <main class="narrow" style="padding-top:16px">
+      <div id="error" class="notice bad" hidden></div>
+      <div id="intro" class="card center-card" hidden></div>
+      <div id="questions" class="stack pad-bottom" hidden></div>
+      <div id="done" class="card center-card" hidden></div>
+    </main>
+    <div class="bottom-bar" id="bar" hidden>
+      <div class="inner">
+        <button type="button" class="primary wide lg" id="next" hidden>Next Section →</button>
+        <button type="button" class="go wide lg" id="submit" hidden>Submit Exam</button>
+        <p class="tiny faint" id="bar-hint" style="text-align:center;margin-top:5px">Make sure all questions are answered before submitting</p>
+        <p class="small" id="bar-error" style="text-align:center;color:var(--bad);margin-top:4px" hidden></p>
+      </div>
+    </div>
+  </div>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="../exam.js"></script>
+  <script src="../questions.js"></script>
+  <script src="../question-editor.js"></script>
+  <script src="take.js"></script>
+</body>
+</html>

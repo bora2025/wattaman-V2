@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Exam editor</title>
+  <link rel="stylesheet" href="../exam.css">
+</head>
+<body>
+  <main id="app" aria-busy="true">
+    <div class="head">
+      <div class="row" style="gap:12px">
+        <button type="button" class="link" id="back">← Back</button>
+        <div>
+          <h1 id="heading">Create Exam</h1>
+          <p class="sub" id="subheading">Write the questions, preview them as a student, then publish to a class</p>
+        </div>
+      </div>
+      <span id="status-chip"></span>
+    </div>
+    <div id="error" class="notice bad" hidden></div>
+    <div id="message" class="notice ok" hidden></div>
+
+    <section class="card pad stack" style="margin-bottom:16px">
+      <h2>Exam details</h2>
+      <label class="field">Title<input id="title" maxlength="300" placeholder="e.g. Grade 7 English — Unit 3 test" required></label>
+      <label class="field">Description <span class="hint">Instructions shown to students before they start (optional)</span><textarea id="description" rows="2" maxlength="10000"></textarea></label>
+      <div class="grid2">
+        <label class="field">Class<select id="class"><option value="">All classes</option></select><span class="hint" id="class-hint"></span></label>
+        <label class="field">Duration (minutes)<input id="duration" type="number" min="1" max="1440" value="60"></label>
+      </div>
+      <div class="grid4">
+        <label class="field">Total marks<input id="totalMarks" type="number" min="0" step="any" value="100"><span class="hint" id="sum-hint"></span></label>
+        <label class="field">Pass mark<input id="passMark" type="number" min="0" step="any" value="50"></label>
+        <label class="field">Attempts allowed<input id="maxAttempts" type="number" min="0" max="100" value="1"><span class="hint">0 = unlimited</span></label>
+      </div>
+      <div class="grid2">
+        <label class="field">Opens (optional)<input id="startTime" type="datetime-local"><span class="hint">Students cannot start before this time</span></label>
+        <label class="field">Closes (optional)<input id="endTime" type="datetime-local"><span class="hint">Students cannot start after this time</span></label>
+      </div>
+    </section>
+
+    <section class="card pad" style="margin-bottom:16px">
+      <div class="head" style="margin-bottom:8px">
+        <div><h2 style="margin:0">Questions</h2><p class="sub" id="q-summary"></p></div>
+        <button type="button" class="outline sm" id="preview">👁 Preview</button>
+      </div>
+      <div id="locked" class="locked" hidden></div>
+      <div id="questions"></div>
+    </section>
+
+    <div class="sticky-save">
+      <button type="button" id="cancel">Cancel</button>
+      <button type="button" class="primary lg" id="save">💾 Save exam</button>
+    </div>
+  </main>
+  <script src="../wattanam-plugin-ui.js"></script>
+  <script src="../exam.js"></script>
+  <script src="../questions.js"></script>
+  <script src="../question-editor.js"></script>
+  <script src="editor.js"></script>
+</body>
+</html>

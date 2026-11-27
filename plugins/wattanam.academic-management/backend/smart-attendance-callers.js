@@ -2,7 +2,10 @@
 // Partner screens (school core 0.2+): Smart Attendance's screens (Take Attendance, settings, self-scan,
 // staff and workforce attendance) call these routes of wattanam.academic-management. The core answers another plugin's
 // screen only on routes that name it in "callers"; the signed-in user still needs this plugin's permission.
+// Examination's exam editor lists the classes an exam can be set for (EXAM_ROUTES).
 const SMART = 'wattanam.smart-attendance';
+const EXAM = 'wattanam.examination';
+const EXAM_ROUTES = new Set(["GET classes", "GET my/classes"]);
 const ROUTES = [
   "GET alert-rules",
   "GET attendance-self-review",
@@ -53,10 +56,13 @@ module.exports = function withSmartAttendanceCallers(context) {
     routes: {
       ...context.routes,
       register(definition) {
-        if (!definition || !OPEN.has(shape(definition.method, definition.path))) return context.routes.register(definition);
-        return context.routes.register({ ...definition, callers: [...new Set([...(definition.callers || []), SMART])] });
+        const key = definition ? shape(definition.method, definition.path) : '';
+        const callers = [...(OPEN.has(key) ? [SMART] : []), ...(EXAM_ROUTES.has(key) ? [EXAM] : [])];
+        if (!callers.length) return context.routes.register(definition);
+        return context.routes.register({ ...definition, callers: [...new Set([...(definition.callers || []), ...callers])] });
       },
     },
   };
 };
 module.exports.ROUTES = ROUTES;
+module.exports.EXAM_ROUTES = [...EXAM_ROUTES];

@@ -1,5 +1,6 @@
 'use strict';
 
+const { isAdmin } = require('./roles');
 const { randomUUID } = require('crypto');
 const { publishStudentGradeSummary } = require('./student-grade-summary');
 const SHEET = 'plugin_wattanam_examination_score_sheet';
@@ -16,19 +17,19 @@ function ids(values, label) { if (!Array.isArray(values)) throw new Error(`${lab
 async function validateClasses(context, classIds) { if (!classIds.length) return; const found = await context.directory.lookupClasses(classIds); if (new Set(found.map((row) => row.id)).size !== classIds.length) throw new Error('One or more Academic classes are unavailable'); }
 async function sheet(db, sheetId, principal, requireOwner = false) {
   const rows = await db.query(`SELECT * FROM ${SHEET} WHERE "id"=$1`, [id(sheetId)]); if (!rows.length) throw new Error('Gradebook not found');
-  if (requireOwner && principal?.role !== 'ADMIN' && rows[0].createdByDirectoryUserId !== principal?.userId) throw new Error('Only the gradebook creator or an administrator may change it');
+  if (requireOwner && !isAdmin(principal) && rows[0].createdByDirectoryUserId !== principal?.userId) throw new Error('Only the gradebook creator or an administrator may change it');
   return rows[0];
 }
 async function sheetClassIds(db, sheetId) { return (await db.query(`SELECT "academicClassId" FROM ${SHEET_CLASS} WHERE "scoreSheetId"=$1`, [sheetId])).map((row) => row.academicClassId); }
 async function authorizeView(context, db, record, principal) {
-  if (principal?.role === 'ADMIN' || record.createdByDirectoryUserId === principal?.userId) return;
+  if (isAdmin(principal) || record.createdByDirectoryUserId === principal?.userId) return;
   const [allowed, assigned] = await Promise.all([sheetClassIds(db, record.id), context.directory.classesForUser(principal?.userId, principal?.role)]);
   if (!allowed.some((classId) => assigned.includes(classId))) throw new Error('Gradebook is outside your assigned classes');
 }
 async function ownedChild(db, table, childId, principal, label) {
   const rows = await db.query(`SELECT c.*,s."createdByDirectoryUserId" FROM ${table} c JOIN ${SHEET} s ON s."id"=c."scoreSheetId" WHERE c."id"=$1`, [id(childId)]);
   if (!rows.length) throw new Error(`${label} not found`);
-  if (principal?.role !== 'ADMIN' && rows[0].createdByDirectoryUserId !== principal?.userId) throw new Error(`Only the gradebook creator or an administrator may change this ${label.toLowerCase()}`);
+  if (!isAdmin(principal) && rows[0].createdByDirectoryUserId !== principal?.userId) throw new Error(`Only the gradebook creator or an administrator may change this ${label.toLowerCase()}`);
   return rows[0];
 }
 async function assertStudentInSheet(context, db, sheetId, studentId) {
@@ -40,7 +41,7 @@ async function assertStudentInSheet(context, db, sheetId, studentId) {
 function registerGradebooks(context) {
   const db = context.database; const view = 'wattanam.examination.gradebook.view'; const manage = 'wattanam.examination.gradebook.manage';
   context.routes.register({ method: 'GET', path: 'gradebooks', permission: view, handler: async (request) => {
-    if (request?.principal?.role === 'ADMIN') return db.query(`SELECT * FROM ${SHEET} ORDER BY "createdAt" DESC LIMIT 500`);
+    if (isAdmin(request?.principal)) return db.query(`SELECT * FROM ${SHEET} ORDER BY "createdAt" DESC LIMIT 500`);
     const classes = await context.directory.classesForUser(request?.principal?.userId, request?.principal?.role);
     return db.query(`SELECT DISTINCT s.* FROM ${SHEET} s LEFT JOIN ${SHEET_CLASS} c ON c."scoreSheetId"=s."id" WHERE s."createdByDirectoryUserId"=$1 OR c."academicClassId"=ANY($2::text[]) ORDER BY s."createdAt" DESC LIMIT 500`, [request?.principal?.userId, classes]);
   }});
